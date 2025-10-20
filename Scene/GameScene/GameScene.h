@@ -1,9 +1,9 @@
 #pragma once
+#include "Camera/CameraController.h"
 #include "Scene.h"
+#include "Texture/TextureManager/TextureManager.h"
 #include "model3D/model3D.h"
 #include <dinput.h>
-#include "Texture/TextureManager/TextureManager.h"
-#include "Camera/CameraController.h"
 
 class GameScene final : public Scene {
 public:
@@ -15,12 +15,10 @@ public:
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
+  Matrix4x4 view_, proj_;
+
   // テクスチャ
   TextureManager texMgr_;
-
-  Model3D *teapot = nullptr;
-  int tx_teapot = -1;
-  
   // カメラ
   CameraController camera_;
 };

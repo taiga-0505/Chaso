@@ -1,6 +1,8 @@
 #include "App.h"
 #include "GameScene/GameScene.h"
+#include "RenderCommon.h"
 #include "ResultScene/ResultScene.h"
+#include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
 #include "imgui/imgui.h"
@@ -38,22 +40,85 @@ bool App::Init() {
   // ===== PipelineManager =====
   pm_.Init(device, coreDesc_.rtvFormat, coreDesc_.dsvFormat);
 
+  // ===========================================
+  // ModelPSO ブレンド違いをキー名で登録
+  // ===========================================
+
   // GraphicsPipeline一括構築（既存のObject3D）
   pipeObj_ = pm_.CreateFromFiles("object3d", L"Shader/Object3D.VS.hlsl",
                                  L"Shader/Object3D.PS.hlsl",
                                  InputLayoutType::Object3D);
+
+  pm_.CreateModelPipeline("ObjBlendModeNone", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeNone);
+
+  pm_.CreateModelPipeline("ObjBlendModeNormal", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
+
+  pm_.CreateModelPipeline("ObjBlendModeAdd", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
+
+  pm_.CreateModelPipeline("ObjBlendModeSubtract", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
+
+  pm_.CreateModelPipeline("ObjBlendModeMultiply", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
+
+  pm_.CreateModelPipeline("ObjBlendModeScreen", L"Shader/Object3D.VS.hlsl",
+                          L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
+
+  // デフォルト（Normal）を SceneContext へ（objectPSO）
+  sceneCtx_.objectPSO = pm_.Get("ObjBlendModeNone");
+
+  // ===========================================
+  // SpritePSO ブレンド違いをキー名で登録
+  // ===========================================
+
+  /*pipeSprite_ = pm_.CreateFromFiles("sprite", L"Shader/Sprite.VS.hlsl",
+                                 L"Shader/Sprite.PS.hlsl",
+     InputLayoutType::Sprite);*/
+
+  pm_.CreateSpritePipeline("BlendModeNone", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeNone);
+
+  pm_.CreateSpritePipeline("BlendModeNormal", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
+
+  pm_.CreateSpritePipeline("BlendModeAdd", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
+
+  pm_.CreateSpritePipeline("BlendModeSubtract", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
+
+  pm_.CreateSpritePipeline("BlendModeMultiply", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
+
+  pm_.CreateSpritePipeline("BlendModeScreen", L"Shader/Object3D.VS.hlsl",
+                           L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
+
+  // デフォルト（Normal）を SceneContext へ
+  pipeSprite_ = pm_.Get("BlendModeNormal");
 
   // ===== SceneContext の紐づけ =====
   sceneCtx_.core = &core_;
   sceneCtx_.input = input_.get();
   sceneCtx_.app = &appConfig_;
   sceneCtx_.imgui = &imgui_;
+  sceneCtx_.objectPSO = pipeObj_;
+  sceneCtx_.spritePSO = pipeSprite_;
+  sceneCtx_.pipelineManager = &pm_;
+
+  RC::Init(sceneCtx_);
+
+  // ===== FadeのためのScene初期化 =====
+  sceneMgr_.Init(sceneCtx_); // appが必要なため、ここで初期化
 
   // ===== シーン登録 =====
   sceneMgr_.Register(std::make_unique<TitleScene>());
   sceneMgr_.Register(std::make_unique<SelectScene>());
   sceneMgr_.Register(std::make_unique<GameScene>());
   sceneMgr_.Register(std::make_unique<ResultScene>());
+  sceneMgr_.Register(std::make_unique<SampleScene>());
 
   // ===== 最初のシーンへ即時遷移 =====
 #ifdef _DEBUG
@@ -86,18 +151,21 @@ int App::Run() {
 void App::Update() {
 
   ImGui::Begin("Scene");
-  ImGui::Text("Current: %s", sceneMgr_.CurrentName().c_str());
-  if (ImGui::Button("Go Title"))
-    sceneMgr_.RequestChange("Title");
-  ImGui::SameLine();
-  if (ImGui::Button("Go Select"))
-    sceneMgr_.RequestChange("Select");
-  ImGui::SameLine();
-  if (ImGui::Button("Go Game"))
-    sceneMgr_.RequestChange("Game");
-  ImGui::SameLine();
-  if (ImGui::Button("Go Result"))
-    sceneMgr_.RequestChange("Result");
+  const char *sceneNames[] = {"Title", "Select", "Game", "Result", "Sample"};
+  const char *currentSceneName = sceneMgr_.CurrentName().c_str();
+
+  if (ImGui::BeginCombo("##Scene", currentSceneName)) {
+    for (int i = 0; i < IM_ARRAYSIZE(sceneNames); i++) {
+      bool is_selected = (strcmp(currentSceneName, sceneNames[i]) == 0);
+      if (ImGui::Selectable(sceneNames[i], is_selected)) {
+        sceneMgr_.RequestChange(sceneNames[i]);
+      }
+      if (is_selected) {
+        ImGui::SetItemDefaultFocus();
+      }
+    }
+    ImGui::EndCombo();
+  }
   ImGui::End();
 
   input_->Update();
@@ -105,21 +173,16 @@ void App::Update() {
   sceneMgr_.Update(sceneCtx_);
 }
 
-void App::Render() {
-
-  // ルートシグネチャ/PSO/トポロジ設定
-  cl->SetGraphicsRootSignature(pipeObj_->Root());
-  cl->SetPipelineState(pipeObj_->PSO());
-  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-  sceneMgr_.Render(sceneCtx_, cl);
-}
+void App::Render() { sceneMgr_.Render(sceneCtx_, cl); }
 
 void App::Term() {
+  core_.WaitForGPU();
   pm_.Term();
   imgui_.Shutdown();
 
   core_.Term();
+
+  RC::Term();
 
   if (input_) {
     input_.reset();

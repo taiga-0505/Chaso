@@ -9,7 +9,7 @@
 
 enum class InputLayoutType {
   Object3D,
-  // 他のレイアウトタイプをここに追加
+  Sprite,
 };
 
 struct PipelineDesc {
@@ -56,6 +56,23 @@ public:
     auto it = pipelines_.find(key);
     return (it == pipelines_.end()) ? nullptr : it->second.pipeline.get();
   }
+
+  GraphicsPipeline *CreateModelPipeline(const std::string &key,
+                                        const std::wstring &vsPath,
+                                        const std::wstring &psPath,
+                                        BlendMode mode);
+
+  GraphicsPipeline *GetModelPipeline(BlendMode mode);
+
+  GraphicsPipeline *CreateSpritePipeline(const std::wstring &vsPath,
+                                         const std::wstring &psPath);
+
+  GraphicsPipeline *CreateSpritePipeline(const std::string &key,
+                                         const std::wstring &vsPath,
+                                         const std::wstring &psPath,
+                                         BlendMode mode);
+
+  GraphicsPipeline *GetSpritePipeline(BlendMode mode);
 
 private:
   GraphicsPipeline *createFromBlobs_(const std::string &key,

@@ -3,12 +3,41 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include "Fade/Fade.h"
 
 class Scene::SceneManager {
 public:
+	// フェード用オブジェクト
+	std::unique_ptr<Fade> fade_ = nullptr;
+	static inline const float kFadeTime = 1.0f;
+
+	// シーン遷移のステップを管理する状態
+	enum class ChangePhase {
+		kNone,        // 通常時
+		kFadingOut,   // フェードアウト実行中
+		kChanging,    // シーンの即時切替 (ChangeImmediately) 実行
+		kFadingIn,    // フェードイン実行中
+	};
+	ChangePhase changePhase_ = ChangePhase::kNone;
+
+public:
+	// フェードを使用するために初期化
+	void Init(SceneContext& ctx) {
+		ID3D12Device* device = ctx.core->GetDevice();
+		auto& srvHeap = ctx.core->SRV();
+
+		float width = float(ctx.app->width);
+		float height = float(ctx.app->height);
+
+		// Fadeコンポーネントを初期化
+		fade_ = std::make_unique<Fade>();
+		fade_->Init(device, &srvHeap, width, height);
+	}
+
   void Register(std::unique_ptr<Scene> scene) {
     const std::string key = scene->Name();
-    scenes_.emplace(key, std::move(scene));
+    // 既存の同名シーンがあれば上書きする
+    scenes_[key] = std::move(scene);
   }
 
   // 次のフレームで切り替えたいシーン名を予約
@@ -26,17 +55,53 @@ public:
   }
 
   void Update(SceneContext &ctx) {
-    // 遷移要求があればここで切替
-    if (!requested_.empty()) {
-      ChangeImmediately(requested_, ctx);
-    }
-    if (current_)
-      current_->Update(*this, ctx);
+	  // 常にFadeの更新は行う（アニメーション処理）
+	  fade_->Update();
+
+	  switch (changePhase_) {
+	  case ChangePhase::kNone:
+		  // 遷移要求があればフェードアウト開始
+		  if (!requested_.empty()) {
+			  fade_->Start(Fade::Status::FadeOut, kFadeTime);
+			  changePhase_ = ChangePhase::kFadingOut;
+		  } else if (current_) {
+			  current_->Update(*this, ctx);
+		  }
+		  break;
+
+	  case ChangePhase::kFadingOut:
+		  if (fade_->IsFinished()) {
+			  // フェードアウト完了 -> シーン即時切替
+			  ChangeImmediately(requested_, ctx);
+			  requested_.clear();
+
+			  // 新しいシーンの表示前に、フェードインを開始
+			  fade_->Start(Fade::Status::FadeIn, kFadeTime); // 0.5秒でイン
+			  changePhase_ = ChangePhase::kFadingIn;
+		  }
+		  // フェード中はシーンのUpdateはスキップ
+		  break;
+
+	  case ChangePhase::kFadingIn:
+		  if (fade_->IsFinished()) {
+			  // フェードイン完了 -> 通常状態に戻る
+			  fade_->Stop();
+			  changePhase_ = ChangePhase::kNone;
+		  }
+		  // フェード中はシーンのUpdateはスキップ
+		  break;
+	  }
   }
 
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     if (current_)
       current_->Render(ctx, cl);
+
+	// フェードが実行中であれば、シーンの上に重ねて描画
+	if (changePhase_ == ChangePhase::kFadingOut ||
+		changePhase_ == ChangePhase::kFadingIn) {
+		fade_->Draw(cl);
+	}
   }
 
   const std::string &CurrentName() const { return currentName_; }

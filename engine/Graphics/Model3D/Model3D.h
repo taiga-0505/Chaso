@@ -6,6 +6,8 @@
 #include <d3d12.h>
 #include <string>
 #include <vector>
+#include <filesystem>
+
 // -------------------------------
 // 非スコープ enum: 無修飾で使える
 // -------------------------------
@@ -14,6 +16,8 @@ enum LightingMode {
   Lambert = 1,     // ランバート
   HalfLambert = 2, // ハーフランバート
 };
+
+class TextureManager; // 前方宣言
 
 class Model3D {
 public:
@@ -40,9 +44,7 @@ public:
   // Device依存リソースの作成（CB・VBなど）
   void Initialize(ID3D12Device *device);
 
-  // OBJ読み込み（function.hの挙動に合わせた軽量版）
-  bool LoadObjGeometryLikeFunction(const std::string &directoryPath,
-                                   const std::string &filename);
+  bool LoadObj(const std::string &objPath);
 
   // UV未設定(=0,0)に対し簡易的な球面UVを焼き込む
   void EnsureSphericalUVIfMissing();
@@ -51,6 +53,8 @@ public:
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {
     textureSrv_ = srvGPUHandle;
   }
+
+  void ResetTextureToMtl();
 
   // 構造体でまとめて渡す版（宣言時 or 後から）
   Model3D &SetLightingConfig(const LightingConfig &cfg) {
@@ -81,12 +85,23 @@ public:
   Transform &T() { return transform_; }
   Material *Mat() { return cbMat_.mapped; }
   DirectionalLight *Light() { return cbLight_.mapped; }
+  void SetVisible(bool v) { visible_ = v; }
+  bool Visible() const { return visible_; }
+  void ResetBatchCursor() { cbWvpBatchHead_ = 0; }
+
+  void SetTextureManager(TextureManager *tm) { texman_ = tm; }
 
   // 行列更新（view/projection は外部カメラから）
   void Update(const Matrix4x4 &view, const Matrix4x4 &proj);
 
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);
+
+  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &view,
+                 const Matrix4x4 &proj,
+                 const std::vector<Transform> &instances);
+
+  void DrawImGui(const char *name = nullptr);
 
 private:
   // ========== 内部ユーティリティ ==========
@@ -108,7 +123,10 @@ private:
     DirectionalLight *mapped = nullptr;
   };
 
-  // OBJローダ（最小移植）
+  bool LoadObjGeometryLikeFunction(const std::string &directoryPath,
+                                   const std::string &filename);
+
+  // OBJローダ
   bool LoadObjToVertices_(const std::string &directoryPath,
                           const std::string &filename,
                           std::vector<VertexData> &outVertices,
@@ -135,7 +153,17 @@ private:
 
   Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
   MaterialData materialFile_{};
-  bool visible_ = false;
+  bool visible_ = true;
+
+  ID3D12Resource *cbWvpBatch_ = nullptr;
+  uint32_t cbWvpBatchCapacity_ = 0; // 何個分確保しているか
+  uint8_t *cbWvpBatchMapped_ = nullptr;
+  uint32_t cbWvpBatchHead_ = 0;
+
+  TextureManager *texman_ = nullptr;
+
+  static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
+  void EnsureWvpBatchCapacity_(uint32_t count);
 
   LightingConfig initialLighting_{};
 };

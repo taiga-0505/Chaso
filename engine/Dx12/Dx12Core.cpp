@@ -1,5 +1,26 @@
 #include "Dx12Core.h"
 #include <cassert>
+#include <dxgidebug.h>
+#include <wrl.h>
+
+using Microsoft::WRL::ComPtr;
+// ---------- Debug helpers ----------
+static void ReportD3D12LiveObjects(ID3D12Device *device) {
+  if (!device)
+    return;
+  ComPtr<ID3D12DebugDevice> dbg;
+  if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&dbg)))) {
+    // DETAIL を使うと親子関係まで見える
+    dbg->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
+  }
+}
+static void ReportDXGILiveObjects() {
+  ComPtr<IDXGIDebug1> dxgiDebug;
+  if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug)))) {
+    // ALL で全カテゴリ。必要なら DXGI_DEBUG_D3D12 だけに絞ってもOK
+    dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+  }
+}
 
 void Dx12Core::Init(HWND hwnd, const Desc &d) {
   desc_ = d;
@@ -32,7 +53,7 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   // Depth
   depth_.Init(dev, d.width, d.height, dsv_, d.dsvFormat, d.dsvFormat);
 
-   ResetViewportScissorToBackbuffer(d.width, d.height);
+  ResetViewportScissorToBackbuffer(d.width, d.height);
 
   // Pipeline（頂点レイアウトは最小例。必要なら外から差し替え可）
   D3D12_INPUT_ELEMENT_DESC inputElems[3] = {
@@ -95,12 +116,22 @@ void Dx12Core::EndFrame() {
 void Dx12Core::WaitForGPU() { cmd_.FlushGPU(); }
 
 void Dx12Core::Term() {
+  // 1) GPU 完全停止
   cmd_.FlushGPU();
-  depth_.Term();
-  swap_.Term();
-  srv_.Term();
-  dsv_.Term();
+  // 2) フレーム依存のリソースから順に解放
+  //    - BackBuffer を握るのは swap_ なので、先に Depth → SwapChain
+  //    の順で。
+  //    - RTV/DSV/SRV ヒープは BackBuffer/Depth が落ちた後に。
+  depth_.Term(); // DSV リソース
+  swap_.Term();  // BackBuffer リソース + SwapChain
   rtv_.Term();
+  dsv_.Term();
+  srv_.Term();
+  // 3) コマンド系（Allocator/List/Queue/Fence 等）
   cmd_.Term();
+  // 4) Live Objects レポート（デバイス・ファクトリが生きているうちに）
+  ReportD3D12LiveObjects(device_.GetDevice());
+  ReportDXGILiveObjects();
+  // 5) 最後にデバイス/ファクトリ
   device_.Term();
 }

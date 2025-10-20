@@ -22,6 +22,7 @@ class TitleScene;
 class SelectScene;
 class GameScene;
 class ResultScene;
+class SampleScene;
 
 class App {
 public:
@@ -57,6 +58,7 @@ private:
   // パイプライン
   PipelineManager pm_;
   GraphicsPipeline *pipeObj_ = nullptr;
+  GraphicsPipeline *pipeSprite_ = nullptr;
 
   // === シーン管理 ===
   Scene::SceneManager sceneMgr_;

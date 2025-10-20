@@ -95,6 +95,196 @@ bool PipelineManager::Rebuild(const std::string &key) {
   return true;
 }
 
+GraphicsPipeline *PipelineManager::CreateModelPipeline(
+    const std::string &key, const std::wstring &vsPath,
+    const std::wstring &psPath, BlendMode mode) {
+  // コンパイル（既存手順と同じ）
+  ShaderDesc vs{}, ps{};
+  vs.path = vsPath.c_str();
+  vs.target = L"vs_6_0";
+  vs.entry = L"main";
+  ps.path = psPath.c_str();
+  ps.target = L"ps_6_0";
+  ps.entry = L"main";
+#ifdef _DEBUG
+  vs.optimize = ps.optimize = false;
+  vs.debugInfo = ps.debugInfo = true;
+#else
+  vs.optimize = ps.optimize = true;
+  vs.debugInfo = ps.debugInfo = false;
+#endif
+  auto VS = compiler_.Compile(vs);
+  auto PS = compiler_.Compile(ps);
+  assert(VS.HasBlob() && PS.HasBlob());
+
+  // 入力レイアウト（既存の Object3D を使用）
+  auto layout = GetInputLayout(InputLayoutType::Object3D);
+
+  auto gp = std::make_unique<GraphicsPipeline>();
+  gp->Init(device_);
+
+  GPipelineOptions opt{};
+  opt.enableAlphaBlend = (mode != kBlendModeNone); // None 以外はブレンドON
+  opt.enableDepth = true;                          // モデルは深度ON
+  opt.cull = D3D12_CULL_MODE_BACK;                 // 既定の背面カリング
+  opt.blendMode = mode;
+
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
+                             VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
+                             PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
+              rtvFmt_, dsvFmt_, opt);
+
+  Entry e;
+  e.desc.inputLayout = std::move(layout);
+  e.pipeline = std::move(gp);
+  auto &ref = pipelines_[key] = std::move(e);
+  return ref.pipeline.get();
+}
+
+GraphicsPipeline *PipelineManager::GetModelPipeline(BlendMode mode) {
+  // App 側で登録するキーと対応させる
+  const char *key = "ObjBlendModeNormal";
+  switch (mode) {
+  case kBlendModeNone:
+    key = "ObjBlendModeNone";
+    break;
+  case kBlendModeNormal:
+    key = "ObjBlendModeNormal";
+    break;
+  case kBlendModeAdd:
+    key = "ObjBlendModeAdd";
+    break;
+  case kBlendModeSubtract:
+    key = "ObjBlendModeSubtract";
+    break;
+  case kBlendModeMultiply:
+    key = "ObjBlendModeMultiply";
+    break;
+  case kBlendModeScreen:
+    key = "ObjBlendModeScreen";
+    break;
+  }
+  return Get(key);
+}
+
+GraphicsPipeline *
+PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
+                                      const std::wstring &psPath) {
+  // 1) シェーダをコンパイル（既存と同じ手順）
+  ShaderDesc vs{}, ps{};
+  vs.path = vsPath.c_str();
+  vs.target = L"vs_6_0";
+  vs.entry = L"main";
+  ps.path = psPath.c_str();
+  ps.target = L"ps_6_0";
+  ps.entry = L"main";
+#ifdef _DEBUG
+  vs.optimize = ps.optimize = false;
+  vs.debugInfo = ps.debugInfo = true;
+#else
+  vs.optimize = ps.optimize = true;
+  vs.debugInfo = ps.debugInfo = false;
+#endif
+  auto VS = compiler_.Compile(vs);
+  auto PS = compiler_.Compile(ps);
+  assert(VS.HasBlob() && PS.HasBlob());
+
+  // 2) 入力レイアウト（Object3Dの定義を流用）
+  auto layout = GetInputLayout(
+      InputLayoutType::Object3D); // 既存関数を利用
+                                  // :contentReference[oaicite:5]{index=5}
+
+  // 3) PSO 構築（BuildEx を使用）
+  auto gp = std::make_unique<GraphicsPipeline>();
+  gp->Init(device_);
+
+  GPipelineOptions opt{};
+  opt.enableAlphaBlend = true;     // 半透明ON
+  opt.enableDepth = false;         // 深度OFF
+  opt.cull = D3D12_CULL_MODE_NONE; // カリングなし
+
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
+                             VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
+                             PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
+              rtvFmt_, dsvFmt_, opt);
+
+  // 4) マップには任意のキーで登録（ここでは "sprite"）
+  Entry e;
+  e.desc.inputLayout = std::move(layout);
+  e.pipeline = std::move(gp);
+  auto &ref = pipelines_["sprite"] = std::move(e);
+  return ref.pipeline.get();
+}
+
+GraphicsPipeline *PipelineManager::CreateSpritePipeline(
+    const std::string &key, const std::wstring &vsPath,
+    const std::wstring &psPath, BlendMode mode) {
+  // 既存のコンパイル手順は流用
+  ShaderDesc vs{}, ps{};
+  vs.path = vsPath.c_str();
+  vs.target = L"vs_6_0";
+  vs.entry = L"main";
+  ps.path = psPath.c_str();
+  ps.target = L"ps_6_0";
+  ps.entry = L"main";
+  auto VS = compiler_.Compile(vs);
+  auto PS = compiler_.Compile(ps);
+  assert(VS.HasBlob() && PS.HasBlob());
+
+  auto layout = GetInputLayout(InputLayoutType::Object3D);
+
+  auto gp = std::make_unique<GraphicsPipeline>();
+  gp->Init(device_);
+
+  GPipelineOptions opt{};
+  opt.enableAlphaBlend = (mode != kBlendModeNone);
+  opt.enableDepth = false;
+  opt.cull = D3D12_CULL_MODE_NONE;
+  opt.blendMode = mode;
+
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
+                             VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
+                             PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
+              rtvFmt_, dsvFmt_, opt);
+
+  Entry e;
+  e.desc.inputLayout = std::move(layout);
+  e.pipeline = std::move(gp);
+  auto &ref = pipelines_[key] = std::move(e);
+  return ref.pipeline.get();
+}
+
+GraphicsPipeline *PipelineManager::GetSpritePipeline(BlendMode mode) {
+  const char *key = "BlendModeNormal";
+  switch (mode) {
+  case kBlendModeNone:
+    key = "BlendModeNone";
+    break;
+  case kBlendModeNormal:
+    key = "BlendModeNormal";
+    break;
+  case kBlendModeAdd:
+    key = "BlendModeAdd";
+    break;
+  case kBlendModeSubtract:
+    key = "BlendModeSubtract";
+    break;
+  case kBlendModeMultiply:
+    key = "BlendModeMultiply";
+    break;
+  case kBlendModeScreen:
+    key = "BlendModeScreen";
+    break;
+  }
+  return Get(key);
+}
+
 GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
                                                     const PipelineDesc &desc,
                                                     IDxcBlob *vs,

@@ -9,7 +9,7 @@
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   // COM 初期化
   HRESULT hrCoInt = CoInitializeEx(0, COINIT_MULTITHREADED);
-  (void)hrCoInt; // 必要なら戻り値チェック
+  (void)hrCoInt;
 
   App app;
   if (!app.Init()) {

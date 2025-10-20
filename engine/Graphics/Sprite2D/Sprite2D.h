@@ -24,6 +24,8 @@ public:
   void SetSize(float w, float h); // ピクセル指定（scale.x=w, scale.y=h）
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
+  void SetColor(const Vector4& color) { cbMat_.map->color = Vector4( color.x, color.y, color.z, color.w ); }  // 乗算カラー
+  Vector4 GetColor() { return cbMat_.map->color; }
 
   Transform &T() { return transform_; }  // 位置/回転Z/スケールへアクセス
   Material *Mat() { return cbMat_.map; } // 乗算カラーやuvTransform

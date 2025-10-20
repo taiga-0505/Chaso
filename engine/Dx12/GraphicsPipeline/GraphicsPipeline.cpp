@@ -42,6 +42,120 @@ void GraphicsPipeline::Build(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   Build(inputElems, elemCount, vs, ps, rtvFmt, dsvFmt, cull, fill);
 }
 
+void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
+                               UINT elemCount, D3D12_SHADER_BYTECODE vs,
+                               D3D12_SHADER_BYTECODE ps, DXGI_FORMAT rtvFmt,
+                               DXGI_FORMAT dsvFmt,
+                               const GPipelineOptions &opt) {
+  // ルートシグネチャ
+  buildRootSignature_();
+
+  // PSO
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
+  d.pRootSignature = root_;
+  d.VS = vs;
+  d.PS = ps;
+
+  // 入力レイアウト
+  D3D12_INPUT_LAYOUT_DESC ild{};
+  ild.pInputElementDescs = inputElems;
+  ild.NumElements = elemCount;
+  d.InputLayout = ild;
+
+  // ラスタライザ
+  D3D12_RASTERIZER_DESC rs{};
+  rs.FillMode = opt.fill;
+  rs.CullMode = opt.cull;
+  rs.FrontCounterClockwise = FALSE;
+  rs.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+  rs.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+  rs.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+  rs.DepthClipEnable = TRUE;
+  rs.MultisampleEnable = FALSE;
+  rs.AntialiasedLineEnable = FALSE;
+  d.RasterizerState = rs;
+
+  // ブレンド
+  D3D12_BLEND_DESC b{};
+  b.AlphaToCoverageEnable = FALSE;
+  b.IndependentBlendEnable = FALSE;
+  auto &rt = b.RenderTarget[0];
+  rt.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+  BlendMode m = opt.blendMode;
+  if (opt.enableAlphaBlend && m == kBlendModeNone)
+    m = kBlendModeNormal;
+
+  if (m == kBlendModeNone) {
+    rt.BlendEnable = FALSE;
+    rt.SrcBlend = D3D12_BLEND_ONE;
+    rt.DestBlend = D3D12_BLEND_ZERO;
+    rt.BlendOp = D3D12_BLEND_OP_ADD;
+    rt.SrcBlendAlpha = D3D12_BLEND_ONE;
+    rt.DestBlendAlpha = D3D12_BLEND_ZERO;
+    rt.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+  } else {
+    rt.BlendEnable = TRUE;
+    switch (m) {
+    case kBlendModeNormal: // Src * SrcA + Dest * (1 - SrcA)
+      rt.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+      rt.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+      rt.BlendOp = D3D12_BLEND_OP_ADD;
+      break;
+    case kBlendModeAdd: // Src * SrcA + Dest * 1
+      rt.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+      rt.DestBlend = D3D12_BLEND_ONE;
+      rt.BlendOp = D3D12_BLEND_OP_ADD;
+      break;
+    case kBlendModeSubtract: // Dest * 1 - Src * SrcA
+      rt.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+      rt.DestBlend = D3D12_BLEND_ONE;
+      rt.BlendOp = D3D12_BLEND_OP_REV_SUBTRACT; // D - S
+      break;
+    case kBlendModeMultiply: // Src * 0 + Dest * Src
+      rt.SrcBlend = D3D12_BLEND_ZERO;
+      rt.DestBlend = D3D12_BLEND_SRC_COLOR;
+      rt.BlendOp = D3D12_BLEND_OP_ADD;
+      break;
+    case kBlendModeScreen: // Src * (1 - Dest) + Dest * 1
+      rt.SrcBlend = D3D12_BLEND_INV_DEST_COLOR;
+      rt.DestBlend = D3D12_BLEND_ONE;
+      rt.BlendOp = D3D12_BLEND_OP_ADD;
+      break;
+    default:
+      break;
+    }
+    // アルファのブレンドは基本「保持」寄りに
+    rt.SrcBlendAlpha = D3D12_BLEND_ONE;
+    rt.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+    rt.BlendOpAlpha = (m == kBlendModeSubtract) ? D3D12_BLEND_OP_REV_SUBTRACT
+                                                : D3D12_BLEND_OP_ADD;
+  }
+  d.BlendState = b;
+
+  // 深度ステンシル
+  D3D12_DEPTH_STENCIL_DESC ds{};
+  ds.DepthEnable = opt.enableDepth ? TRUE : FALSE;
+  ds.DepthWriteMask = opt.enableDepth ? D3D12_DEPTH_WRITE_MASK_ALL
+                                      : D3D12_DEPTH_WRITE_MASK_ZERO;
+  ds.DepthFunc = opt.enableDepth ? D3D12_COMPARISON_FUNC_LESS_EQUAL
+                                 : D3D12_COMPARISON_FUNC_ALWAYS;
+  ds.StencilEnable = FALSE;
+  d.DepthStencilState = ds;
+  d.DSVFormat = dsvFmt;
+
+  // RT
+  d.NumRenderTargets = 1;
+  d.RTVFormats[0] = rtvFmt;
+
+  d.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  d.SampleDesc.Count = 1;
+  d.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+
+  HRESULT hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
+  assert(SUCCEEDED(hr));
+}
+
 void GraphicsPipeline::buildRootSignature_() {
   // ルートパラメータ
   D3D12_ROOT_PARAMETER params[4] = {};

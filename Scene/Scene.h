@@ -11,6 +11,8 @@ class Input;
 class DebugCamera;
 class MainCamera;
 class ImGuiManager;
+class GraphicsPipeline;
+class PipelineManager;
 
 // シーンが使う共有コンテキスト
 struct SceneContext {
@@ -19,6 +21,9 @@ struct SceneContext {
   const AppConfig *app = nullptr;
   ImGuiManager *imgui =
       nullptr; // ImGuiウィンドウを出すだけなら不要だが念のため
+  GraphicsPipeline *objectPSO = nullptr;
+  GraphicsPipeline *spritePSO = nullptr;
+  PipelineManager *pipelineManager = nullptr;
 };
 
 // シーン基底クラス

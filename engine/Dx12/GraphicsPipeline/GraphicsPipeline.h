@@ -3,6 +3,29 @@
 #include <d3d12.h>
 #include <vector>
 
+enum BlendMode {
+  // ブレンド無し
+  kBlendModeNone,
+  // 通常のαブレンド Src * SrcA + Dest * (1 - SrcA)
+  kBlendModeNormal,
+  // 加算 Src * SrcA + Dest * 1
+  kBlendModeAdd,
+  // 減算 Dest * 1 - Src * SrcA
+  kBlendModeSubtract,
+  // 乗算 Src * 0 + Dest * Src
+  kBlendModeMultiply,
+  // スクリーン Src * (1 - Dest) + Dest * 1
+  kBlendModeScreen,
+};
+
+struct GPipelineOptions {
+  bool enableAlphaBlend = false; // ← スプライトは true
+  bool enableDepth = true;       // ← スプライトは false
+  D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK;
+  D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID;
+  BlendMode blendMode = kBlendModeNormal;
+};
+
 class GraphicsPipeline {
 public:
   void Init(ID3D12Device *device) { device_ = device; }
@@ -27,6 +50,11 @@ public:
              struct IDxcBlob *vs, struct IDxcBlob *ps, DXGI_FORMAT rtvFmt,
              DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
              D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
+
+  void BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
+               D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
+               DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
+               const GPipelineOptions &opt);
 
   // バインド用
   ID3D12RootSignature *Root() const { return root_; }

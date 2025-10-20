@@ -1,9 +1,7 @@
 #include "CommandContext.h"
 
-void CommandContext::Init(
-    ID3D12Device *device,
-    D3D12_COMMAND_LIST_TYPE type,
-    uint32_t frameCount) {
+void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
+                          uint32_t frameCount) {
   assert(device);
   device_ = device;
   type_ = type;
@@ -113,7 +111,7 @@ void CommandContext::FlushGPU() {
 // 便利: 単発トランジション
 void CommandContext::Transition(ID3D12Resource *res,
                                 D3D12_RESOURCE_STATES before,
-                D3D12_RESOURCE_STATES after) {
+                                D3D12_RESOURCE_STATES after) {
   D3D12_RESOURCE_BARRIER b{};
   b.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   b.Transition.pResource = res;

@@ -48,12 +48,8 @@ PixelShaderOutput main(VertexShaderOutput input)
             lighting = NdotL * 0.5f + 0.5f; // Half Lambert
             lighting = lighting * lighting;
         }
-        output.color =
-        gMaterial.color
-        * textureColor
-        * gDirectionalLight.color
-        * lighting
-        * gDirectionalLight.intensity;
+        output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * lighting * gDirectionalLight.intensity;
+        output.color.a = gMaterial.color.a * textureColor.a;
     }
     else
     {
