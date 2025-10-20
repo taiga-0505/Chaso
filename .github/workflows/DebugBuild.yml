@@ -3,10 +3,12 @@ on:
   push:
     branches:
       - master
+      
 env:
   SOLUTION_FILE_PATH: project/CG2.sln
   
   CONFIGURATION: Debug
+  
 jobs:
   build:
     runs-on: windows-2022
