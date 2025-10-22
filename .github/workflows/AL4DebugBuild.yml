@@ -1,4 +1,4 @@
-name: DebugBuild
+name: AL4DebugBuild
 on:
   push:
     branches:
