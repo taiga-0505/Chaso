@@ -1,4 +1,4 @@
-name: GE3DebugBuild
+name: DebugBuild
 on:
   push:
     branches:
