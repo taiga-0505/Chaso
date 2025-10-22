@@ -19,6 +19,7 @@ App::~App() { Term(); }
 bool App::Init() {
   // ===== Window =====
   window_ = std::make_unique<Window>();
+  appConfig_.title = "AL4";
   window_->Initialize(appConfig_.title.c_str(), appConfig_.width,
                       appConfig_.height);
 
