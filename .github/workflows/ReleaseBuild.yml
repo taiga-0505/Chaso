@@ -21,6 +21,6 @@ jobs:
         with:
           msbuild-architecture: x64
 
-      - name: Build
+      - name: Release
         shell: cmd
         run: msbuild "${{ env.SOLUTION_FILE_PATH }}" /p:Platform=x64 /p:Configuration="${{ env.CONFIGURATION }}"
