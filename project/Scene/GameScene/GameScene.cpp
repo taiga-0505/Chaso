@@ -9,9 +9,6 @@ void GameScene::OnEnter(SceneContext &ctx) {
   ID3D12Device *device = ctx.core->GetDevice();
   auto &srvHeap = ctx.core->SRV();
 
-  // TextureManager 初期化
-  texMgr_.Init(device, &srvHeap);
-
   // ===== Camera =====
   camera_.Initialize(ctx.input, Vector3{0.0f, 0.0f, -5.0f},
                      Vector3{0.0f, 0.0f, 0.0f}, 0.45f,

@@ -34,6 +34,12 @@ struct AABB {
   Vector3 min = {-1.0f, -1.0f, -1.0f};
   Vector3 max = {1.0f, 1.0f, 1.0f};
   uint32_t color = 0x000000FF;
+
+  static bool CheckCollision(const AABB &a, const AABB &b) {
+    return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
+           (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
+           (a.min.z <= b.max.z && a.max.z >= b.min.z);
+  }
 };
 
 // 線

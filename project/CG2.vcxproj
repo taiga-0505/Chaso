@@ -223,6 +223,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClInclude Include="App\AppConfig.h" />
     <ClInclude Include="engine\Camera\CameraController.h" />
     <ClInclude Include="engine\Common\Math\MathTypes.h" />
+    <ClInclude Include="engine\Common\Math\MathUtility.h" />
     <ClInclude Include="engine\Common\RenderCommon.h" />
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />

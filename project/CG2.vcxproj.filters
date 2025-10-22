@@ -79,33 +79,6 @@
     <Filter Include="App">
       <UniqueIdentifier>{03a228b7-78ef-4dae-b33a-133cccd5991f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="App\Graphics">
-      <UniqueIdentifier>{3a0028c9-5354-42d0-b1c3-07955e8194eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sphere">
-      <UniqueIdentifier>{be017e9a-89cd-4a6c-b2fd-b1547098472b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Fade">
-      <UniqueIdentifier>{ac1109e6-922c-462e-beb6-58479bd17853}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sound">
-      <UniqueIdentifier>{2f749b2c-cac3-482a-b54f-e7d2bab3cf3b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture">
-      <UniqueIdentifier>{f3cb27ce-1137-455d-b0f6-c5e6b69c1d0f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture\Texture2D">
-      <UniqueIdentifier>{580cd230-b879-4744-a741-419edcb88539}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture\TextureManager">
-      <UniqueIdentifier>{c16cce8f-55b2-4c40-98a1-1c9604f800aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sprite2D">
-      <UniqueIdentifier>{8a6fcfb6-f98b-48ec-b8da-674b5a1ca3f1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Model3D">
-      <UniqueIdentifier>{a89c7c72-ef9e-4bae-92e8-d54ad51c581b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="engine\DX12\CommandContext">
       <UniqueIdentifier>{629047fe-cea3-4743-8a14-65cc73a8bd76}</UniqueIdentifier>
     </Filter>
@@ -123,6 +96,36 @@
     </Filter>
     <Filter Include="engine\DX12\SwapChain">
       <UniqueIdentifier>{65d067ac-1e04-47fa-9b25-3f820a0595bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics">
+      <UniqueIdentifier>{3a0028c9-5354-42d0-b1c3-07955e8194eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Sphere">
+      <UniqueIdentifier>{be017e9a-89cd-4a6c-b2fd-b1547098472b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Fade">
+      <UniqueIdentifier>{ac1109e6-922c-462e-beb6-58479bd17853}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Sound">
+      <UniqueIdentifier>{2f749b2c-cac3-482a-b54f-e7d2bab3cf3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Texture">
+      <UniqueIdentifier>{f3cb27ce-1137-455d-b0f6-c5e6b69c1d0f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Texture\Texture2D">
+      <UniqueIdentifier>{580cd230-b879-4744-a741-419edcb88539}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Texture\TextureManager">
+      <UniqueIdentifier>{c16cce8f-55b2-4c40-98a1-1c9604f800aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Sprite2D">
+      <UniqueIdentifier>{8a6fcfb6-f98b-48ec-b8da-674b5a1ca3f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Model3D">
+      <UniqueIdentifier>{a89c7c72-ef9e-4bae-92e8-d54ad51c581b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player">
+      <UniqueIdentifier>{d609dfcc-0be0-4ae2-a998-fecb67736b2c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -151,7 +154,7 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Sound\Sound.cpp">
-      <Filter>App\Graphics\Sound</Filter>
+      <Filter>engine\Graphics\Sound</Filter>
     </ClCompile>
     <ClCompile Include="engine\Input\Input.cpp">
       <Filter>engine\Input</Filter>
@@ -172,7 +175,7 @@
       <Filter>engine\Window</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp">
-      <Filter>App\Graphics\Sphere</Filter>
+      <Filter>engine\Graphics\Sphere</Filter>
     </ClCompile>
     <ClCompile Include="engine\Common\Math\Math.cpp">
       <Filter>engine\Common\Math</Filter>
@@ -187,7 +190,7 @@
       <Filter>engine\DX12</Filter>
     </ClCompile>
     <ClCompile Include="Scene\Fade\Fade.cpp">
-      <Filter>App\Graphics\Fade</Filter>
+      <Filter>engine\Graphics\Fade</Filter>
     </ClCompile>
     <ClCompile Include="Scene\GameScene\GameScene.cpp">
       <Filter>Scene\GameScene</Filter>
@@ -211,16 +214,16 @@
       <Filter>engine\ImGuiManager</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Texture\TextureManager\TextureManager.cpp">
-      <Filter>App\Graphics\Texture\TextureManager</Filter>
+      <Filter>engine\Graphics\Texture\TextureManager</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Texture\Texture2D\Texture2D.cpp">
-      <Filter>App\Graphics\Texture\Texture2D</Filter>
+      <Filter>engine\Graphics\Texture\Texture2D</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp">
-      <Filter>App\Graphics\Sprite2D</Filter>
+      <Filter>engine\Graphics\Sprite2D</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Model3D\Model3D.cpp">
-      <Filter>App\Graphics\Model3D</Filter>
+      <Filter>engine\Graphics\Model3D</Filter>
     </ClCompile>
     <ClCompile Include="engine\Dx12\PipelineManager.cpp">
       <Filter>engine\DX12</Filter>
@@ -287,7 +290,7 @@
       <Filter>imgui</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Sound\Sound.h">
-      <Filter>App\Graphics\Sound</Filter>
+      <Filter>engine\Graphics\Sound</Filter>
     </ClInclude>
     <ClInclude Include="engine\Input\Input.h">
       <Filter>engine\Input</Filter>
@@ -308,7 +311,7 @@
       <Filter>engine\Window</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h">
-      <Filter>App\Graphics\Sphere</Filter>
+      <Filter>engine\Graphics\Sphere</Filter>
     </ClInclude>
     <ClInclude Include="engine\Common\Math\Math.h">
       <Filter>engine\Common\Math</Filter>
@@ -326,7 +329,7 @@
       <Filter>engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Scene\Fade\Fade.h">
-      <Filter>App\Graphics\Fade</Filter>
+      <Filter>engine\Graphics\Fade</Filter>
     </ClInclude>
     <ClInclude Include="Scene\GameScene\GameScene.h">
       <Filter>Scene\GameScene</Filter>
@@ -356,16 +359,16 @@
       <Filter>Scene\TitleScene</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Texture\Texture2D\Texture2D.h">
-      <Filter>App\Graphics\Texture\Texture2D</Filter>
+      <Filter>engine\Graphics\Texture\Texture2D</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Texture\TextureManager\TextureManager.h">
-      <Filter>App\Graphics\Texture\TextureManager</Filter>
+      <Filter>engine\Graphics\Texture\TextureManager</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h">
-      <Filter>App\Graphics\Sprite2D</Filter>
+      <Filter>engine\Graphics\Sprite2D</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Model3D\Model3D.h">
-      <Filter>App\Graphics\Model3D</Filter>
+      <Filter>engine\Graphics\Model3D</Filter>
     </ClInclude>
     <ClInclude Include="engine\Dx12\Dx12Core.h">
       <Filter>engine\DX12</Filter>
@@ -399,6 +402,9 @@
     </ClInclude>
     <ClInclude Include="engine\Dx12\SwapChain\SwapChain.h">
       <Filter>engine\DX12\SwapChain</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Common\Math\MathUtility.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
