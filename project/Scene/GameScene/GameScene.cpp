@@ -1,6 +1,4 @@
 #include "GameScene.h"
-#include "Dx12Core.h"
-#include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "imgui/imgui.h"

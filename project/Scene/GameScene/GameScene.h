@@ -1,7 +1,6 @@
 #pragma once
 #include "Camera/CameraController.h"
 #include "Scene.h"
-#include <dinput.h>
 
 class GameScene final : public Scene {
 public:
