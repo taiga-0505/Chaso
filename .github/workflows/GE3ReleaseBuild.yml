@@ -1,4 +1,4 @@
-name: ReleaseBuild
+name: GE3ReleaseBuild
 on:
   push:
     branches:
