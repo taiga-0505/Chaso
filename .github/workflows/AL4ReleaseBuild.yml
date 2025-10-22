@@ -1,4 +1,4 @@
-name: ReleaseBuild
+name: AL4ReleaseBuild
 on:
   push:
     branches:
