@@ -92,6 +92,7 @@ public:
         // 新しいシーンの表示前に、フェードインを開始
         fade_->Start(Fade::Status::FadeIn, kFadeTime); // 0.5秒でイン
         changePhase_ = ChangePhase::kFadingIn;
+		current_->Update(*this, ctx); // フェードイン開始前に1フレーム更新しておく
       }
       // フェード中はシーンのUpdateはスキップ
       break;

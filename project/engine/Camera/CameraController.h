@@ -40,6 +40,10 @@ public:
   void SetUseDebug(bool v) { useDebug_ = v; }
   bool IsUsingDebug() const { return useDebug_; }
 
+  // --- 追従用：外部からメインカメラの姿勢を更新 ---
+  void SetMainPosition(const Vector3 &pos);
+  void SetMainRotation(const Vector3 &rot);
+
 private:
   Input *input_ = nullptr;
   DebugCamera debug_;

@@ -3,8 +3,8 @@
 
 // 画角やクリップは共通、初期姿勢だけ可変にしておきます
 void CameraController::Initialize(Input *input, const Vector3 &mainPos,
-                                const Vector3 &mainRot,
-                float fovY, float aspect, float nearZ, float farZ) {
+                                  const Vector3 &mainRot, float fovY,
+                                  float aspect, float nearZ, float farZ) {
   input_ = input;
   debug_.Initialize(input_, fovY, aspect, nearZ, farZ);
   main_.Initialize(mainPos, mainRot, fovY, aspect, nearZ, farZ);
@@ -56,4 +56,12 @@ void CameraController::DrawImGui() {
     ImGui::Text(" マウスホイール押しながらドラッグ : 上下左右移動");
     ImGui::End();
   }
+}
+
+void CameraController::SetMainPosition(const Vector3 &pos) {
+  main_.SetPosition(pos);
+}
+
+void CameraController::SetMainRotation(const Vector3 &rot) {
+  main_.SetRotation(rot);
 }

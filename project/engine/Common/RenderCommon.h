@@ -3,6 +3,7 @@
 #include <string>
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Math/Math.h"
+#include "Model3D/Model3D.h"
 #include "Scene.h"
 
 // D3D12 GPUハンドルを返すために必要
@@ -37,6 +38,10 @@ void DrawImGui3D(int modelHandle, const char *name);
 void UnloadModel(int modelHandle);
 
 Transform *GetModelTransformPtr(int modelHandle);
+void SetModelColor(int modelHandle, const Vector4 &color);
+void SetModelLightingMode(int modelHandle, LightingMode m);
+
+void ResetCursor(int modelHandle);
 
 // ===============================
 // 2D用
