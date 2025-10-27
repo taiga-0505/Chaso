@@ -246,6 +246,9 @@
     <ClCompile Include="engine\Dx12\SwapChain\SwapChain.cpp">
       <Filter>engine\DX12\SwapChain</Filter>
     </ClCompile>
+    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\Object3d.VS.hlsl">
@@ -399,6 +402,9 @@
     </ClInclude>
     <ClInclude Include="engine\Dx12\SwapChain\SwapChain.h">
       <Filter>engine\DX12\SwapChain</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\GameOverScene\GameOverScene.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

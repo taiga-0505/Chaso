@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -104,7 +104,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -130,7 +130,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -179,6 +179,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClCompile Include="engine\Window\Window.cpp" />
     <ClCompile Include="engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
     <ClCompile Include="Scene\Fade\Fade.cpp" />
+    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp" />
     <ClCompile Include="Scene\GameScene\GameScene.cpp" />
     <ClCompile Include="Scene\ResultScene\ResultScene.cpp" />
     <ClCompile Include="Scene\SampleScene\SampleScene.cpp" />
@@ -257,6 +258,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClInclude Include="engine\Graphics\Texture\TextureManager\TextureManager.h" />
     <ClInclude Include="engine\Window\Window.h" />
     <ClInclude Include="Scene\Fade\Fade.h" />
+    <ClInclude Include="Scene\GameOverScene\GameOverScene.h" />
     <ClInclude Include="Scene\GameScene\GameScene.h" />
     <ClInclude Include="Scene\ResultScene\ResultScene.h" />
     <ClInclude Include="Scene\SampleScene\SampleScene.h" />

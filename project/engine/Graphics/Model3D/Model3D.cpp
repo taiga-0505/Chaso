@@ -23,6 +23,10 @@ Model3D::~Model3D() {
     cbMat_.resource->Release();
   if (cbLight_.resource)
     cbLight_.resource->Release();
+  if (cbWvpBatch_) {
+    cbWvpBatch_->Release();
+    cbWvpBatch_ = nullptr;
+  }
 }
 
 void Model3D::Initialize(ID3D12Device *device) {
@@ -193,6 +197,12 @@ void Model3D::ResetTextureToMtl() {
     textureSrv_ = {};
   } else {
     textureSrv_ = srv;
+  }
+}
+
+void Model3D::SetColor(const Vector4 &color) {
+  if (cbMat_.mapped) {
+    cbMat_.mapped->color = color;
   }
 }
 

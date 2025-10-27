@@ -32,6 +32,9 @@ private:
   int plane = -1;
   Transform* planeTransform_;
 
+  int plane2 = -1;
+  Transform *plane2Transform_;
+
   int blockModel = -1;
   int tx_block = -1;
 

@@ -4,9 +4,9 @@
 #include "function/function.h"
 #include <array>
 #include <d3d12.h>
+#include <filesystem>
 #include <string>
 #include <vector>
-#include <filesystem>
 
 // -------------------------------
 // 非スコープ enum: 無修飾で使える
@@ -84,6 +84,7 @@ public:
   // 外から Transform / CB を直接いじりたい場合のアクセサ
   Transform &T() { return transform_; }
   Material *Mat() { return cbMat_.mapped; }
+  void SetColor(const Vector4 &color);
   DirectionalLight *Light() { return cbLight_.mapped; }
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
