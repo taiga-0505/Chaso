@@ -1,4 +1,5 @@
 #include "App.h"
+#include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
 #include "RenderCommon.h"
 #include "ResultScene/ResultScene.h"
@@ -10,11 +11,22 @@
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
+#include <dxgidebug.h>
+#include <wrl.h>
+inline void ReportDXGI(const char *tag) {
+  using Microsoft::WRL::ComPtr;
+  ComPtr<IDXGIDebug> dbg;
+  if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dbg)))) {
+    OutputDebugStringA(
+        ("==== DXGI LIVE REPORT @" + std::string(tag) + " ====\n").c_str());
+    dbg->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+  }
+}
 
 Log logger;
 
 App::App() {}
-App::~App() { Term(); }
+App::~App() {}
 
 bool App::Init() {
   // ===== Window =====
@@ -118,6 +130,7 @@ bool App::Init() {
   sceneMgr_.Register(std::make_unique<SelectScene>());
   sceneMgr_.Register(std::make_unique<GameScene>());
   sceneMgr_.Register(std::make_unique<ResultScene>());
+  sceneMgr_.Register(std::make_unique<GameOverScene>());
   sceneMgr_.Register(std::make_unique<SampleScene>());
 
   // ===== 最初のシーンへ即時遷移 =====
@@ -150,8 +163,11 @@ int App::Run() {
 
 void App::Update() {
 
+#ifdef _DEBUG
+
   ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title", "Select", "Game", "Result", "Sample"};
+  const char *sceneNames[] = {"Title",  "Select",   "Game",
+                              "Result", "GameOver", "Sample"};
   const char *currentSceneName = sceneMgr_.CurrentName().c_str();
 
   if (ImGui::BeginCombo("##Scene", currentSceneName)) {
@@ -168,6 +184,24 @@ void App::Update() {
   }
   ImGui::End();
 
+  // === FPS overlay ===
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui::SetNextWindowBgAlpha(0.35f);
+  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+  ImGuiWindowFlags flags =
+      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+      ImGuiWindowFlags_NoNav;
+
+  if (ImGui::Begin("Perf", nullptr, flags)) {
+    const float fps = io.Framerate;
+    ImGui::Text("FPS: %.1f", fps);
+    ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
+  }
+  ImGui::End();
+
+#endif // _DEBUG
+
   input_->Update();
 
   sceneMgr_.Update(sceneCtx_);
@@ -177,17 +211,23 @@ void App::Render() { sceneMgr_.Render(sceneCtx_, cl); }
 
 void App::Term() {
   core_.WaitForGPU();
+
+  sceneMgr_.Term();
+
+  // 3) 描画層
+  ReportDXGI("before RC::Term");
+  RC::Term();
+  ReportDXGI("after RC::Term");
+
   pm_.Term();
   imgui_.Shutdown();
 
+  // 4) コア（SwapChain/デバイスなど最終）
+  ReportDXGI("before core_.Term");
   core_.Term();
+  ReportDXGI("after core_.Term");
 
-  RC::Term();
-
-  if (input_) {
-    input_.reset();
-  }
-  if (window_) {
-    window_.reset();
-  }
+  // 5) 入力/ウィンドウ
+  input_.reset();
+  window_.reset();
 }

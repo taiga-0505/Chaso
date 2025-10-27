@@ -169,54 +169,45 @@ GraphicsPipeline *PipelineManager::GetModelPipeline(BlendMode mode) {
   return Get(key);
 }
 
+
 GraphicsPipeline *
 PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
-                                      const std::wstring &psPath) {
+                                                        const std::wstring& psPath) {
   // 1) シェーダをコンパイル（既存と同じ手順）
   ShaderDesc vs{}, ps{};
-  vs.path = vsPath.c_str();
-  vs.target = L"vs_6_0";
-  vs.entry = L"main";
-  ps.path = psPath.c_str();
-  ps.target = L"ps_6_0";
-  ps.entry = L"main";
+  vs.path = vsPath.c_str(); vs.target = L"vs_6_0"; vs.entry = L"main";
+  ps.path = psPath.c_str(); ps.target = L"ps_6_0"; ps.entry = L"main";
 #ifdef _DEBUG
-  vs.optimize = ps.optimize = false;
-  vs.debugInfo = ps.debugInfo = true;
+  vs.optimize = ps.optimize = false; vs.debugInfo = ps.debugInfo = true;
 #else
-  vs.optimize = ps.optimize = true;
-  vs.debugInfo = ps.debugInfo = false;
+  vs.optimize = ps.optimize = true;  vs.debugInfo = ps.debugInfo = false;
 #endif
   auto VS = compiler_.Compile(vs);
   auto PS = compiler_.Compile(ps);
   assert(VS.HasBlob() && PS.HasBlob());
 
   // 2) 入力レイアウト（Object3Dの定義を流用）
-  auto layout = GetInputLayout(
-      InputLayoutType::Object3D); // 既存関数を利用
-                                  // :contentReference[oaicite:5]{index=5}
+  auto layout = GetInputLayout(InputLayoutType::Object3D); // 既存関数を利用 :contentReference[oaicite:5]{index=5}
 
   // 3) PSO 構築（BuildEx を使用）
   auto gp = std::make_unique<GraphicsPipeline>();
   gp->Init(device_);
 
   GPipelineOptions opt{};
-  opt.enableAlphaBlend = true;     // 半透明ON
-  opt.enableDepth = false;         // 深度OFF
+  opt.enableAlphaBlend = true;              // 半透明ON
+  opt.enableDepth = false;                  // 深度OFF
   opt.cull = D3D12_CULL_MODE_NONE; // カリングなし
 
-  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
-                             VS.Blob()->GetBufferSize()};
-  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
-                             PS.Blob()->GetBufferSize()};
-  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
-              rtvFmt_, dsvFmt_, opt);
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(), VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(), PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()),
+              vsBC, psBC, rtvFmt_, dsvFmt_, opt);
 
   // 4) マップには任意のキーで登録（ここでは "sprite"）
   Entry e;
   e.desc.inputLayout = std::move(layout);
   e.pipeline = std::move(gp);
-  auto &ref = pipelines_["sprite"] = std::move(e);
+  auto& ref = pipelines_["sprite"] = std::move(e);
   return ref.pipeline.get();
 }
 

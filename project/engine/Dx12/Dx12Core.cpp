@@ -55,6 +55,12 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
 
   ResetViewportScissorToBackbuffer(d.width, d.height);
 
+  // FPS固定の初期化（VSyncは切らずに追加待ちを入れる運用）
+  if (fixFpsEnabled_) {
+    fixFps_ = std::make_unique<FixFps>();
+    fixFps_->Initialize();
+  }
+
   // Pipeline（頂点レイアウトは最小例。必要なら外から差し替え可）
   D3D12_INPUT_ELEMENT_DESC inputElems[3] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
@@ -111,6 +117,11 @@ void Dx12Core::EndFrame() {
   // vsync=1, tearingなら 0 でもOK（好みで）
   swap_.Present(1, 0);
   cmd_.WaitForFrame(backIndex_);
+
+  // ← VSync & フェンス待ち直後でFPS固定を実行
+  if (fixFps_) {
+    fixFps_->Update();
+  }
 }
 
 void Dx12Core::WaitForGPU() { cmd_.FlushGPU(); }
@@ -134,4 +145,16 @@ void Dx12Core::Term() {
   ReportDXGILiveObjects();
   // 5) 最後にデバイス/ファクトリ
   device_.Term();
+}
+
+void Dx12Core::EnableFixFps(bool enable) {
+  fixFpsEnabled_ = enable;
+  if (enable) {
+    if (!fixFps_) {
+      fixFps_ = std::make_unique<FixFps>();
+      fixFps_->Initialize();
+    }
+  } else {
+    fixFps_.reset();
+  }
 }

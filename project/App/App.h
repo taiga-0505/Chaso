@@ -22,6 +22,7 @@ class TitleScene;
 class SelectScene;
 class GameScene;
 class ResultScene;
+class GameOverScene;
 class SampleScene;
 
 class App {

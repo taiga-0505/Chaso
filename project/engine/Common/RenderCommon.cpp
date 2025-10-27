@@ -1,6 +1,5 @@
 #include "RenderCommon.h"
 #include "Dx12/Dx12Core.h"
-#include "Model3D/Model3D.h"
 #include "PipelineManager.h"
 #include "Sprite2D/Sprite2D.h"
 #include "Texture/TextureManager/TextureManager.h"
@@ -210,6 +209,24 @@ Transform *GetModelTransformPtr(int modelHandle) {
   if (!IsValidModel_(modelHandle))
     return nullptr;
   return &gModels[modelHandle].ptr->T();
+}
+
+void SetModelColor(int modelHandle, const Vector4 &color) {
+  if (!IsValidModel_(modelHandle))
+    return;
+  gModels[modelHandle].ptr->SetColor(color);
+}
+
+void SetModelLightingMode(int modelHandle, LightingMode m) {
+    if (!IsValidModel_(modelHandle))
+    return;
+    gModels[modelHandle].ptr->SetLightingMode(m);
+}
+
+void ResetCursor(int modelHandle) {
+    if (!IsValidModel_(modelHandle))
+    return;
+    gModels[modelHandle].ptr->ResetBatchCursor();
 }
 
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {

@@ -46,8 +46,6 @@ IDXGIAdapter4 *Device::pickHardwareAdapter_() {
       break;
     }
   }
-  if (result)
-    result->AddRef();
   return result;
 }
 
@@ -57,8 +55,6 @@ IDXGIAdapter4 *Device::getWarpAdapter_() {
   if (SUCCEEDED(factory_->EnumWarpAdapter(IID_PPV_ARGS(&warp)))) {
     warp->QueryInterface(IID_PPV_ARGS(&out));
   }
-  if (out)
-    out->AddRef();
   return out;
 }
 
