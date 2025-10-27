@@ -1,8 +1,8 @@
 #include "App.h"
+#include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
 #include "RenderCommon.h"
 #include "ResultScene/ResultScene.h"
-#include "GameOverScene/GameOverScene.h"
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
@@ -163,8 +163,11 @@ int App::Run() {
 
 void App::Update() {
 
+#ifdef _DEBUG
+
   ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title", "Select", "Game", "Result","GameOver", "Sample"};
+  const char *sceneNames[] = {"Title",  "Select",   "Game",
+                              "Result", "GameOver", "Sample"};
   const char *currentSceneName = sceneMgr_.CurrentName().c_str();
 
   if (ImGui::BeginCombo("##Scene", currentSceneName)) {
@@ -180,6 +183,24 @@ void App::Update() {
     ImGui::EndCombo();
   }
   ImGui::End();
+
+  // === FPS overlay ===
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui::SetNextWindowBgAlpha(0.35f);
+  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+  ImGuiWindowFlags flags =
+      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+      ImGuiWindowFlags_NoNav;
+
+  if (ImGui::Begin("Perf", nullptr, flags)) {
+    const float fps = io.Framerate;
+    ImGui::Text("FPS: %.1f", fps);
+    ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
+  }
+  ImGui::End();
+
+#endif // _DEBUG
 
   input_->Update();
 

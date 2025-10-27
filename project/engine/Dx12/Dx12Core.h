@@ -7,6 +7,8 @@
 #include "SwapChain/SwapChain.h"
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <memory>
+#include "FixFps/FixFps.h"
 
 class Dx12Core {
 public:
@@ -24,6 +26,9 @@ public:
 
   void Init(HWND hwnd, const Desc &d);
   void Term();
+
+  // FPS固定 ON/OFF（既定: ON）
+  void EnableFixFps(bool enable = true);
 
   // 毎フレーム
   void BeginFrame(); // フレーム開始（allocator/list reset を内包）
@@ -81,4 +86,6 @@ private:
   bool allowTearing_ = false;
   D3D12_VIEWPORT viewport_{};
   D3D12_RECT scissor_{};
+  std::unique_ptr<FixFps> fixFps_;
+  bool fixFpsEnabled_ = true;
 };
