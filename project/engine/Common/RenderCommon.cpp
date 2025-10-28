@@ -19,6 +19,13 @@ struct SpriteSlot {
   int texHandle = -1;
 };
 
+struct SphereSlot {
+  std::unique_ptr<Sphere> ptr;
+  bool inUse = false;
+  int defaultTexHandle = -1; // 生成時に渡されたテクスチャを保持
+};
+
+std::vector<SphereSlot> gSpheres;
 std::vector<SpriteSlot> gSprites;
 
 // --- グローバル状態（アプリ全体で共有） ---
@@ -46,6 +53,21 @@ bool IsValidModel_(int h) {
   return (h >= 0 && h < (int)gModels.size() && gModels[h].inUse &&
           gModels[h].ptr);
 }
+
+int AllocSphereSlot_() {
+  for (int i = 0; i < (int)gSpheres.size(); ++i) {
+    if (!gSpheres[i].inUse)
+      return i;
+  }
+  gSpheres.emplace_back();
+  return (int)gSpheres.size() - 1;
+}
+
+bool IsValidSphere_(int h) {
+  return (h >= 0 && h < (int)gSpheres.size() && gSpheres[h].inUse &&
+          gSpheres[h].ptr);
+}
+
 } // namespace
 
 // ====== 起動時一回 ======
@@ -59,6 +81,7 @@ void Init(SceneContext &ctx) {
   gTexMan.Init(gDevice, gSrvHeap);
 
   gModels.clear();
+  gSpheres.clear();
   gView = MakeIdentity4x4();
   gProj = MakeIdentity4x4();
   gCL = nullptr;
@@ -71,6 +94,7 @@ void Term() {
     return;
   gModels.clear();
   gSprites.clear();
+  gSpheres.clear();
   gTexMan.Term();
   gCtxRef = nullptr;
   gDevice = nullptr;
@@ -218,22 +242,46 @@ void SetModelColor(int modelHandle, const Vector4 &color) {
 }
 
 void SetModelLightingMode(int modelHandle, LightingMode m) {
-    if (!IsValidModel_(modelHandle))
+  if (!IsValidModel_(modelHandle))
     return;
-    gModels[modelHandle].ptr->SetLightingMode(m);
+  gModels[modelHandle].ptr->SetLightingMode(m);
 }
 
 void ResetCursor(int modelHandle) {
-    if (!IsValidModel_(modelHandle))
+  if (!IsValidModel_(modelHandle))
     return;
-    gModels[modelHandle].ptr->ResetBatchCursor();
+  gModels[modelHandle].ptr->ResetBatchCursor();
 }
 
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  // 2D描画用に、一時的にビューポートとシザーを全画面に設定する
+  // (Dx12Core に保存されている設定は変更しない)
+
+  // 1. 全画面のビューポートを「ローカル変数」として作成
+  D3D12_VIEWPORT viewport{};
+  viewport.TopLeftX = 0.0f;
+  viewport.TopLeftY = 0.0f;
+  viewport.Width = static_cast<float>(ctx.app->width);
+  viewport.Height = static_cast<float>(ctx.app->height);
+  viewport.MinDepth = 0.0f;
+  viewport.MaxDepth = 1.0f;
+
+  // 2. 全画面のシザー矩形を「ローカル変数」として作成
+  D3D12_RECT scissor{};
+  scissor.left = 0;
+  scissor.top = 0;
+  scissor.right = static_cast<LONG>(ctx.app->width);
+  scissor.bottom = static_cast<LONG>(ctx.app->height);
+
+  // 3. コマンドリストに「直接」セットする
+  cl->RSSetViewports(1, &viewport);
+  cl->RSSetScissorRects(1, &scissor);
+
   cl->SetGraphicsRootSignature(ctx.spritePSO->Root());
   cl->SetPipelineState(ctx.spritePSO->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   gCL = cl;
+  gCtxRef = &ctx;
 }
 
 int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
@@ -329,10 +377,106 @@ void DrawImGui2D(int spriteHandle, const char *name) {
   m->DrawImGui(name);
 }
 
-void RC::SetBlendMode(BlendMode blendMode) {
-  gCurrentBlendMode = blendMode;
+// ====== Sphere 生成 ======
+int GenerateSphereEx(int textureHandle, float radius, unsigned int sliceCount,
+                     unsigned int stackCount, bool inward) {
+  if (!gInitialized || !gDevice)
+    return -1;
+
+  const int handle = AllocSphereSlot_();
+  auto s = std::make_unique<Sphere>();
+  s->Initialize(gDevice, radius, sliceCount, stackCount, inward);
+
+  // テクスチャ指定があれば設定
+  if (textureHandle >= 0) {
+    s->SetTexture(gTexMan.GetSrv(textureHandle));
+  }
+
+  gSpheres[handle].ptr = std::move(s);
+  gSpheres[handle].inUse = true;
+  gSpheres[handle].defaultTexHandle = textureHandle;
+
+  return handle;
 }
+
+int GenerateSphere(int textureHandle) {
+  // 既定の 0.5f, 16x16, inward=true
+  return GenerateSphereEx(textureHandle);
+}
+
+// ====== Sphere 描画 ======
+void DrawSphere(int sphereHandle, int texHandle) {
+  if (!gInitialized || !gCL)
+    return;
+  if (!IsValidSphere_(sphereHandle))
+    return;
+
+  auto &s = gSpheres[sphereHandle].ptr;
+
+  // ブレンドモードに応じた PSO を適用（モデルと同じパイプラインを流用）
+  if (gCtxRef && gCtxRef->pipelineManager) {
+    GraphicsPipeline *pso =
+        gCtxRef->pipelineManager->GetModelPipeline(gCurrentBlendMode);
+    gCL->SetGraphicsRootSignature(pso->Root());
+    gCL->SetPipelineState(pso->PSO());
+    gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  }
+
+  // テクスチャ差し替え（明示指定 > 生成時指定）
+  int useTex =
+      (texHandle >= 0) ? texHandle : gSpheres[sphereHandle].defaultTexHandle;
+  if (useTex >= 0) {
+    s->SetTexture(gTexMan.GetSrv(useTex));
+  }
+  // ※ useTex < 0 の場合、RootParam2 に無効 SRV を渡すことになるので、
+  //   必ず有効なテクスチャをどちらかで設定してください。
+
+  // カメラ反映 → 描画
+  s->Update(gView, gProj);
+  s->Draw(gCL);
+}
+
+void DrawSphereImGui(int sphereHandle, const char *name) {
+  if (!IsValidSphere_(sphereHandle))
+    return;
+  auto &s = gSpheres[sphereHandle].ptr;
+  s->DrawImGui(name);
+}
+
+// ====== Sphere 後始末 ======
+void UnloadSphere(int sphereHandle) {
+  if (!IsValidSphere_(sphereHandle))
+    return;
+  gSpheres[sphereHandle].ptr.reset();
+  gSpheres[sphereHandle].inUse = false;
+  gSpheres[sphereHandle].defaultTexHandle = -1;
+}
+
+// ====== Sphere 付随ユーティリティ ======
+Transform *GetSphereTransformPtr(int sphereHandle) {
+  if (!IsValidSphere_(sphereHandle))
+    return nullptr;
+  return &gSpheres[sphereHandle].ptr->T();
+}
+
+void SetSphereColor(int sphereHandle, const Vector4 &color) {
+  if (!IsValidSphere_(sphereHandle))
+    return;
+  if (auto *mat = gSpheres[sphereHandle].ptr->Mat()) {
+    mat->color = color;
+  }
+}
+
+void SetSphereLightingMode(int sphereHandle, LightingMode m) {
+  if (!IsValidSphere_(sphereHandle))
+    return;
+  if (auto *mat = gSpheres[sphereHandle].ptr->Mat()) {
+    mat->lightingMode = (int)m; // Material のメンバは int
+  }
+}
+
+void RC::SetBlendMode(BlendMode blendMode) { gCurrentBlendMode = blendMode; }
 
 BlendMode GetBlendMode() { return gCurrentBlendMode; }
 
-} // namespace RenderCommon
+} // namespace RC

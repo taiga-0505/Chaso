@@ -4,6 +4,8 @@
 #include "imgui/imgui_impl_dx12.h"
 #include "imgui/imgui_impl_win32.h"
 
+#pragma comment(lib, "winmm.lib") // timeGetTimeを使う場合に必要
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd,
                                                              UINT msg,
                                                              WPARAM wparam,
@@ -55,6 +57,8 @@ void Window::UpdateBackgroundBrush() {
 void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
                         const int32_t kClientHeight) {
   log.Initialize();
+
+  timeBeginPeriod(1); // タイマー精度を1msに設定
 
   // ==============================
   // ウィンドウの初期化

@@ -1,10 +1,11 @@
 #pragma once
-#include <d3d12.h>
-#include <string>
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Math/Math.h"
 #include "Model3D/Model3D.h"
 #include "Scene.h"
+#include "Sphere/Sphere.h"
+#include <d3d12.h>
+#include <string>
 
 // D3D12 GPUハンドルを返すために必要
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
@@ -57,6 +58,32 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h);
 void DrawImGui2D(int spriteHandle, const char *name);
 
 // ===============================
+// 天球用
+// ===============================
+
+// 最小形：半径0.5, 16x16, 内向き（キューブマップ等のスカイ用）
+// ※ 必ず有効なテクスチャハンドルを渡してください
+int GenerateSphere(int textureHandle);
+
+// 拡張版：パラメータ指定で生成
+int GenerateSphereEx(int textureHandle = -1, float radius = 0.5f,
+                     unsigned int sliceCount = 16, unsigned int stackCount = 16,
+                     bool inward = true);
+
+// 描画（texHandle を指定すると一時差し替え。省略なら生成時のテクスチャ）
+void DrawSphere(int sphereHandle, int texHandle = -1);
+
+void DrawSphereImGui(int sphereHandle, const char *name = nullptr);
+
+// 後始末
+void UnloadSphere(int sphereHandle);
+
+// 変換・見た目
+Transform *GetSphereTransformPtr(int sphereHandle);
+void SetSphereColor(int sphereHandle, const Vector4 &color);
+void SetSphereLightingMode(int sphereHandle, LightingMode m);
+
+// ===============================
 // 共通関数
 // ===============================
 
@@ -69,5 +96,4 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle);
 void SetBlendMode(BlendMode blendMode);
 BlendMode GetBlendMode();
 
-
-} // namespace RenderCommon
+} // namespace RC

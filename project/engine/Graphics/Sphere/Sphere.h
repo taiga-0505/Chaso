@@ -1,7 +1,7 @@
 #pragma once
+#include "Math/MathTypes.h"
 #include "function/function.h"
 #include "struct.h"
-#include "Math/MathTypes.h"
 #include <d3d12.h>
 #include <vector>
 
@@ -12,13 +12,16 @@ public:
 
   // Device依存リソースの作成 + 球メッシュ生成
   void Initialize(ID3D12Device *device, float radius = 0.5f,
-                  UINT sliceCount = 16, UINT stackCount = 16);
+                  UINT sliceCount = 16, UINT stackCount = 16,
+                  bool inward = true);
 
   // 毎フレームの行列更新（外部カメラの View/Proj を渡す）
   void Update(const Matrix4x4 &view, const Matrix4x4 &proj);
 
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);
+
+  void DrawImGui(const char *name = nullptr);
 
   // 外からテクスチャSRV(GPUハンドル)をセット
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {
@@ -29,10 +32,13 @@ public:
   Transform &T() { return transform_; }
   Material *Mat() { return cbMat_.mapped; }
   DirectionalLight *Light() { return cbLight_.mapped; }
+  void SetVisible(bool v) { visible_ = v; }
+  bool Visible() const { return visible_; }
 
 private:
   // メッシュ生成
-  void BuildGeometry(float radius, UINT sliceCount, UINT stackCount);
+  void BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
+                     bool inward);
   void UploadVB_();
   void UploadIB_();
 
@@ -76,4 +82,7 @@ private:
 
   // 変換
   Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
+
+  bool inward_ = true; // 内向きメッシュにするか
+  bool visible_ = true;
 };

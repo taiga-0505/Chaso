@@ -12,7 +12,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // Camera
   // =============================
 
-  camera_.Initialize(ctx.input, Vector3{0.0f, 0.0f, -5.0f},
+  camera_.Initialize(ctx.input, Vector3{0.0f, 0.0f, -10.0f},
                      Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
@@ -27,6 +27,12 @@ void SampleScene::OnEnter(SceneContext &ctx) {
 
   model = RC::LoadModel("Resources/model/teapot");
   tx_model = RC::LoadTex("Resources/uvChecker.png");
+
+  // 天球
+  txSphere_ = RC::LoadTex("Resources/sky_sphere.png", false);
+  sphere = RC::GenerateSphereEx(txSphere_, 40.0f);
+  sphereT_ = RC::GetSphereTransformPtr(sphere);
+  RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
 
   // =============================
   // Sprite初期化
@@ -55,6 +61,9 @@ void SampleScene::OnExit(SceneContext &) {
     delete sound;
     sound = nullptr;
   }
+
+  RC::UnloadSphere(sphere);
+  sphere = -1;
 }
 
 void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -63,15 +72,21 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   // ImGui
   // ===========================================
 
+#ifdef _DEBUG
+
   RC::DrawImGui3D(plane, "plane");
 
   RC::DrawImGui3D(model, "model");
 
   RC::DrawImGui2D(sprite, "sprite");
 
+  RC::DrawSphereImGui(sphere, "skyDome");
+
   sound->SoundImGui("Alarm01");
 
   camera_.DrawImGui();
+
+#endif // _DEBUG
 
   // ===========================================
   // 更新処理
@@ -86,6 +101,9 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   proj_ = camera_.GetProjection();
 
   RC::SetCamera(view_, proj_);
+
+  // === 天球回転 ===
+  sphereT_->rotation.y += 0.001f;
 }
 
 void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
@@ -93,6 +111,9 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // 3D描画
   // ===========================================
   RC::PreDraw3D(ctx, cl);
+
+  // === 天球 ===
+  RC::DrawSphere(sphere);
 
   // モデルの描画
   RC::DrawModel(plane);
@@ -125,9 +146,6 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
 
   RC::DrawModelBatch(blockModel, instances);
-
-  // まとめて描画（内部で各TransformのWVPを計算してくれる）
-  // block_model->DrawBatch(cl, view_, proj_, instances);
 
   // ===========================================
   // 2D描画
