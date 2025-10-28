@@ -1,12 +1,8 @@
 #pragma once
 #include "Camera/CameraController.h"
 #include "Scene.h"
-#include "Sprite2D/Sprite2D.h"
-#include "Texture/TextureManager/TextureManager.h"
-#include "model3D/model3D.h"
-#include <dinput.h>
 #include "Sound/Sound.h"
-#include "GraphicsPipeline/GraphicsPipeline.h"
+#include <dinput.h>
 
 class SampleScene final : public Scene {
 public:
@@ -30,13 +26,18 @@ private:
   // ===============
 
   int plane = -1;
-  Transform* planeTransform_;
+  Transform *planeTransform_;
 
   int blockModel = -1;
   int tx_block = -1;
 
   int model = -1;
   int tx_model = -1;
+
+  // ===== 天球 =====
+  int sphere = -1;
+  int txSphere_ = -1;
+  Transform *sphereT_ = nullptr;
 
   // ===============
   // スプライト
@@ -52,10 +53,7 @@ private:
   static const int mapHeight = 5;
 
   int map[mapHeight][mapWidth] = {
-      {1, 1, 1, 1, 1},
-      {1, 0, 0, 0, 1},
-      {1, 0, 1, 0, 1},
-      {1, 0, 0, 0, 1},
-      {1, 1, 1, 1, 1},
+      {1, 1, 1, 1, 1}, {1, 0, 0, 0, 1}, {1, 0, 1, 0, 1},
+      {1, 0, 0, 0, 1}, {1, 1, 1, 1, 1},
   };
 };
