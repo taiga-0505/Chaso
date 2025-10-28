@@ -25,11 +25,15 @@ struct FormatChunk {
 
 struct SoundData {
   WAVEFORMATEX wfex;
-  BYTE *pBuffer;           // 音声データのバッファ
-  unsigned int bufferSize; // バッファのサイズ
+  BYTE *pBuffer;           // 音声データのバッファ（PCM）
+  unsigned int bufferSize; // バッファのサイズ（バイト）
 };
 
+// 既存のWAVローダ（互換維持）
 SoundData SoundLoadWave(const char *filename);
+
+// 新規：拡張子で自動判定して読み込む（.wav / .mp3）
+SoundData SoundLoadAudio(const char *filename);
 
 void SoundUnload(SoundData *soundData);
 
@@ -45,12 +49,12 @@ public:
   Sound();
   ~Sound();
 
-  void Initialize(const char *filename);
+  void Initialize(const char *filename); // 内部で SoundLoadAudio を使う
 
   void SoundImGui(const char *soundname);
 
-  void SetVolume(float volume); // 音量設定用メソッド追加
-  float GetVolume() const;      // 音量取得用メソッド追加
+  void SetVolume(float volume); // 音量設定
+  float GetVolume() const;      // 音量取得
 
 private:
   ComPtr<IXAudio2> xAudio2;
