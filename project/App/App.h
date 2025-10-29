@@ -1,22 +1,14 @@
 #pragma once
 #include "AppConfig.h"
-#include "Camera/CameraController.h"
 #include "Dx12Core.h"
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "ImGuiManager/ImGuiManager.h"
 #include "Input/Input.h"
-#include "Log/Log.h"
 #include "PipelineManager.h"
 #include "Scene.h"
 #include "SceneManager.h"
-#include "Sphere/Sphere.h"
-#include "Texture/TextureManager/TextureManager.h"
 #include "Window/Window.h"
-
-#include <Windows.h>
 #include <memory>
-
-extern Log logger;
 
 class TitleScene;
 class SelectScene;

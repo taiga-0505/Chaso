@@ -5,6 +5,8 @@
 #include <windows.h>
 #include "Math/MathTypes.h"
 
+using namespace RC;
+
 // printf関数の表示位置
 static const int kRowHeight = 20;
 static const int kColumnWidth = 60;

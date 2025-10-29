@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include <dinput.h>
+#include <RC.h>
 
 class TitleScene final : public Scene {
 public:

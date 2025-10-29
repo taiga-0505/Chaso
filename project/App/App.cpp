@@ -1,7 +1,7 @@
 #include "App.h"
+#include "RC.h"
 #include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
-#include "RenderCommon.h"
 #include "ResultScene/ResultScene.h"
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
@@ -22,8 +22,6 @@ inline void ReportDXGI(const char *tag) {
     dbg->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
   }
 }
-
-Log logger;
 
 App::App() {}
 App::~App() {}

@@ -172,7 +172,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClCompile Include="engine\Dx12\Dx12Core.cpp" />
     <ClCompile Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="engine\Dx12\SwapChain\SwapChain.cpp" />
-    <ClCompile Include="engine\Common\function\function.cpp" />
     <ClCompile Include="engine\ImGuiManager\ImGuiManager.cpp" />
     <ClCompile Include="engine\Input\Input.cpp" />
     <ClCompile Include="engine\Common\Log\Log.cpp" />
@@ -233,6 +232,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
     <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h" />
+    <ClInclude Include="engine\RC.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
     <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />

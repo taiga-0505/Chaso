@@ -8,6 +8,8 @@ using Microsoft::WRL::ComPtr;
 
 #pragma comment(lib, "xaudio2.lib")
 
+namespace RC {
+
 struct ChunkHeader {
   char id[4];   // チャンクの識別子
   int32_t size; // チャンクのサイズ
@@ -65,3 +67,5 @@ private:
   bool isLoop = false;
   float volume = 1.0f;
 };
+
+} // namespace RC

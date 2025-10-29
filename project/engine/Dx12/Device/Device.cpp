@@ -4,7 +4,8 @@
 #include <dxgi1_6.h>
 #include <format>
 
-extern Log logger;
+Log logger;
+
 using Microsoft::WRL::ComPtr;
 
 void Device::enableDebug_(bool gpuValidation) {
@@ -82,8 +83,6 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
     // GetDesc3 は IDXGIAdapter4
     hr = adapter_->GetDesc3(&desc);
     assert(SUCCEEDED(hr));
-    // logger.ConvertString(L"...") で wstring を UTF-8
-    // に（あなたの実装に合わせる）
     logger.WriteLog(logger.ConvertString(
         std::format(L"Use Adapter: {}\n", desc.Description)));
   }

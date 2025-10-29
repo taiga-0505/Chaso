@@ -1,8 +1,6 @@
 #pragma once
-#include "Camera/CameraController.h"
+#include "RC.h"
 #include "Scene.h"
-#include "Texture/TextureManager/TextureManager.h"
-#include "model3D/model3D.h"
 #include <dinput.h>
 
 class GameScene final : public Scene {
@@ -15,10 +13,8 @@ public:
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
-  Matrix4x4 view_, proj_;
+  RC::Matrix4x4 view_, proj_;
 
-  // テクスチャ
-  TextureManager texMgr_;
   // カメラ
-  CameraController camera_;
+  RC::CameraController camera_;
 };
