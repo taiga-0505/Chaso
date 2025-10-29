@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include <dinput.h>
+#include "RC.h"
 
 class GameOverScene final : public Scene {
 public:

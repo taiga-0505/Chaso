@@ -4,6 +4,8 @@
 #include "MainCamera/MainCamera.h"
 #include "Math/Math.h"
 
+namespace RC {
+
 struct CameraMatrices {
   Matrix4x4 view;
   Matrix4x4 proj;
@@ -51,3 +53,5 @@ private:
   bool useDebug_ = false;
   bool showGuide_ = false;
 };
+
+} // namespace RC

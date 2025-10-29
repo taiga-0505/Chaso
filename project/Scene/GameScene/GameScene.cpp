@@ -4,7 +4,6 @@
 #include "imgui/imgui.h"
 
 void GameScene::OnEnter(SceneContext &ctx) {
-
   // ===== Camera =====
   camera_.Initialize(ctx.input, Vector3{5.0f, 5.0f, -30.0f},
                      Vector3{0.0f, 0.0f, 0.0f}, 0.45f,

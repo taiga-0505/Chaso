@@ -165,9 +165,6 @@
     <ClCompile Include="engine\Common\Log\Log.cpp">
       <Filter>engine\Common\Log</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Common\function\function.cpp">
-      <Filter>engine\Common\function</Filter>
-    </ClCompile>
     <ClCompile Include="engine\Window\Window.cpp">
       <Filter>engine\Window</Filter>
     </ClCompile>
@@ -418,6 +415,7 @@
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="engine\RC.h">
     <ClInclude Include="Player\Player.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

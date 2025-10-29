@@ -1,16 +1,18 @@
 #pragma once
 
+namespace RC {
+
 struct Vector2 {
   float x, y;
 };
 
 struct Vector2Int { // グリッド座標のために追加
-	int x, y;
+  int x, y;
 
-	// 比較演算子
-	bool operator==(const Vector2Int& other) const {
-		return x == other.x && y == other.y;
-	}
+  // 比較演算子
+  bool operator==(const Vector2Int &other) const {
+    return x == other.x && y == other.y;
+  }
 };
 
 struct Vector3 {
@@ -29,3 +31,5 @@ struct Matrix4x4 {
 
 // 回転軸
 enum ShaftType { X, Y, Z };
+
+} // namespace RC

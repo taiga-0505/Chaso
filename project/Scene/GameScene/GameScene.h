@@ -1,8 +1,9 @@
 #pragma once
-#include "Camera/CameraController.h"
+#include "RC.h"
+#include "Scene.h"
+#include <dinput.h>
 #include "MapChipField/MapChipField.h"
 #include "Player/Player.h"
-#include "Scene.h"
 #include "memory.h"
 
 class GameScene final : public Scene {
@@ -15,9 +16,10 @@ public:
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
-  Matrix4x4 view_, proj_;
+  RC::Matrix4x4 view_, proj_;
+
   // カメラ
-  CameraController camera_;
+  RC::CameraController camera_;
 
   // ブロック
   int blockModel = -1;

@@ -1,6 +1,8 @@
 #include "CameraController.h"
 #include "imGui/imGui.h"
 
+namespace RC {
+
 // 画角やクリップは共通、初期姿勢だけ可変にしておきます
 void CameraController::Initialize(Input *input, const Vector3 &mainPos,
                                   const Vector3 &mainRot, float fovY,
@@ -65,3 +67,5 @@ void CameraController::SetMainPosition(const Vector3 &pos) {
 void CameraController::SetMainRotation(const Vector3 &rot) {
   main_.SetRotation(rot);
 }
+
+} // namespace RC

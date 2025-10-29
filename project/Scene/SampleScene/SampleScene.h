@@ -1,8 +1,7 @@
 #pragma once
-#include "Camera/CameraController.h"
 #include "Scene.h"
-#include "Sound/Sound.h"
 #include <dinput.h>
+#include <RC.h>
 
 class SampleScene final : public Scene {
 public:
@@ -16,10 +15,10 @@ public:
 private:
   Matrix4x4 view_, proj_;
 
-  Sound *sound = nullptr;
+  RC::Sound *sound = nullptr;
 
   // カメラ
-  CameraController camera_;
+  RC::CameraController camera_;
 
   // ===============
   // 3Dモデル

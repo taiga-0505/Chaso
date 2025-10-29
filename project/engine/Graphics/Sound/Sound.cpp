@@ -17,6 +17,8 @@
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 
+namespace RC {
+
 // =========================
 // ユーティリティ
 // =========================
@@ -327,3 +329,5 @@ void Sound::SetVolume(float volume_) {
 }
 
 float Sound::GetVolume() const { return volume; }
+
+} // namespace RC
