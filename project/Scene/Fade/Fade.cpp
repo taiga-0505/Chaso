@@ -1,6 +1,8 @@
 #include "Fade.h"
 #include <algorithm>
 
+using namespace RC;
+
 void Fade::Init(ID3D12Device* device, DescriptorHeap* srvHeap, float width, float height) {
 	// TextureManager 初期化
 	texMgr_.Init(device, srvHeap);

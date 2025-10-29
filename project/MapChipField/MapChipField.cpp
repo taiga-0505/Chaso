@@ -6,6 +6,8 @@
 #include <fstream>
 #include <sstream>
 
+using namespace RC;
+
 void MapChipField::SetFromArray(int width, int height, const TileId *grid) {
   width_ = width;
   height_ = height;

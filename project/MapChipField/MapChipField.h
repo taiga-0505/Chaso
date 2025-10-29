@@ -79,15 +79,15 @@ public:
   }
 
   // インデックス←→ワールド
-  Index WorldToIndex(const Vector3 &pos) const;
-  Vector3 IndexToCenter(Index idx) const; // z=0
+  Index WorldToIndex(const RC::Vector3 &pos) const;
+  RC::Vector3 IndexToCenter(Index idx) const; // z=0
   Rect RectAt(Index idx) const;
 
   // AABB に重なる“必要タイル”の列挙（solid のみ or 任意フラグ）
   std::vector<Index>
   CollectTilesOverlapping(const Rect &aabb,
                           uint32_t requiredFlags = kSolid) const;
-  std::vector<Index> CollectTilesNear(const Vector3 &center, float halfW,
+  std::vector<Index> CollectTilesNear(const RC::Vector3 &center, float halfW,
                                       float halfH,
                                       uint32_t requiredFlags = kSolid) const;
 

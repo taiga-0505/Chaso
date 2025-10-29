@@ -84,7 +84,7 @@ public:
   // 外から Transform / CB を直接いじりたい場合のアクセサ
   Transform &T() { return transform_; }
   Material *Mat() { return cbMat_.mapped; }
-  void SetColor(const Vector4 &color);
+  void SetColor(const RC::Vector4 &color);
   DirectionalLight *Light() { return cbLight_.mapped; }
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
@@ -93,13 +93,13 @@ public:
   void SetTextureManager(TextureManager *tm) { texman_ = tm; }
 
   // 行列更新（view/projection は外部カメラから）
-  void Update(const Matrix4x4 &view, const Matrix4x4 &proj);
+  void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
-  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &view,
-                 const Matrix4x4 &proj,
+  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
+                 const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances);
 
   void DrawImGui(const char *name = nullptr);

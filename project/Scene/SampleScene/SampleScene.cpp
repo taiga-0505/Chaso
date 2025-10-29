@@ -12,8 +12,8 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // Camera
   // =============================
 
-  camera_.Initialize(ctx.input, Vector3{0.0f, 0.0f, -10.0f},
-                     Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
+  camera_.Initialize(ctx.input, RC::Vector3{0.0f, 0.0f, -10.0f},
+                     RC::Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
   // =============================
@@ -44,7 +44,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // Sound初期化
   // =============================
 
-  sound = new Sound();
+  sound = new RC::Sound();
   sound->Initialize("Resources/Sounds/Alarm01.wav");
 }
 

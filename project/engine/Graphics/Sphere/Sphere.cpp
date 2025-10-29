@@ -8,6 +8,8 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+using namespace RC;
+
 Sphere::~Sphere() {
   if (vb_.resource)
     vb_.resource->Release();

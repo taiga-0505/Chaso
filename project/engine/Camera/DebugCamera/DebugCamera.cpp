@@ -5,6 +5,8 @@
 #include <cmath>           // sinf, cosf
 #include <dinput.h>        // DIK_W など
 
+using namespace RC;
+
 void DebugCamera::Initialize(Input *input, float fovY, float aspect,
                              float nearZ, float farZ) {
   input_ = input;
