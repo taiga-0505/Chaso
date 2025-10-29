@@ -1,9 +1,9 @@
 #pragma once
 #include "Camera/CameraController.h"
+#include "MapChipField/MapChipField.h"
+#include "Player/Player.h"
 #include "Scene.h"
-#include "Texture/TextureManager/TextureManager.h"
-#include "model3D/model3D.h"
-#include <dinput.h>
+#include "memory.h"
 
 class GameScene final : public Scene {
 public:
@@ -16,9 +16,17 @@ public:
 
 private:
   Matrix4x4 view_, proj_;
-
-  // テクスチャ
-  TextureManager texMgr_;
   // カメラ
   CameraController camera_;
+
+  // ブロック
+  int blockModel = -1;
+
+  // ===== MapChipField =====
+  MapChipField map_;
+  float kBlockSize = 1.0f;
+
+  // プレイヤー
+  int playerModel = -1;
+  std::unique_ptr<Player> player_;
 };
