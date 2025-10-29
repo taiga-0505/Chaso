@@ -22,7 +22,7 @@ private:
 
   Transform *transform_ = nullptr;
 
-  Vector3 velocity_ = {};
+  RC::Vector3 velocity_ = {};
 
   float moveSpeed_ = 0.1f;
   float jumpStrength_ = 0.2f;

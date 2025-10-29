@@ -17,15 +17,15 @@ public:
   void Reset();
 
   /// シェーダ等に渡すためのアクセサ
-  const Matrix4x4 &GetView() const { return view_; }
-  const Matrix4x4 &GetProjection() const { return proj_; }
+  const RC::Matrix4x4 &GetView() const { return view_; }
+  const RC::Matrix4x4 &GetProjection() const { return proj_; }
 
 private:
   Input *input_ = nullptr;           // キー入力
-  Vector3 rotation_ = {0, 0, 0};     // 各軸回転角
-  Vector3 translation_ = {0, 0, -8}; // カメラ位置
-  Matrix4x4 view_;                   // ビュー行列
-  Matrix4x4 proj_;                   // 射影行列
+  RC::Vector3 rotation_ = {0, 0, 0}; // 各軸回転角
+  RC::Vector3 translation_ = {0, 0, -8}; // カメラ位置
+  RC::Matrix4x4 view_;                   // ビュー行列
+  RC::Matrix4x4 proj_;                   // 射影行列
 
   float deltaTIme_ = 1.0f / 60.0f;
 

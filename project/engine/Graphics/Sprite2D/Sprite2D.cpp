@@ -1,6 +1,8 @@
 #include "Sprite2D.h"
 #include <cassert>
 
+using namespace RC;
+
 // ---- 内部ユーティリティ ----
 static void WriteQuadVertices(ID3D12Resource *vb) {
   VertexData *v = nullptr;

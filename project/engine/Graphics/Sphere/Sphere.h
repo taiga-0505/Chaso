@@ -16,7 +16,7 @@ public:
                   bool inward = true);
 
   // 毎フレームの行列更新（外部カメラの View/Proj を渡す）
-  void Update(const Matrix4x4 &view, const Matrix4x4 &proj);
+  void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);

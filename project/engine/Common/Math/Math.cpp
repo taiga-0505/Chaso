@@ -3,6 +3,8 @@
 #include <cmath>
 #include <math.h>
 
+using namespace RC;
+
 //==================================
 // Vector3 関連関数
 //==================================

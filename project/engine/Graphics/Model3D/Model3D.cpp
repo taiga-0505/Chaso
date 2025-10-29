@@ -10,6 +10,8 @@
 #include <numbers>
 #include <sstream>
 
+using namespace RC;
+
 namespace fs = std::filesystem;
 
 static constexpr float kPi = std::numbers::pi_v<float>;

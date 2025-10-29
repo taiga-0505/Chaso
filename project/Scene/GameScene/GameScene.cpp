@@ -5,8 +5,8 @@
 
 void GameScene::OnEnter(SceneContext &ctx) {
   // ===== Camera =====
-  camera_.Initialize(ctx.input, Vector3{5.0f, 5.0f, -30.0f},
-                     Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
+  camera_.Initialize(ctx.input, RC::Vector3{5.0f, 5.0f, -30.0f},
+                     RC::Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
   // ===== block =====

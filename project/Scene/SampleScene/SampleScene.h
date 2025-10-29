@@ -13,7 +13,7 @@ public:
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
-  Matrix4x4 view_, proj_;
+  RC::Matrix4x4 view_, proj_;
 
   RC::Sound *sound = nullptr;
 
