@@ -2,6 +2,9 @@
 #include "RC.h"
 #include "Scene.h"
 #include <dinput.h>
+#include "MapChipField/MapChipField.h"
+#include "Player/Player.h"
+#include "memory.h"
 
 class GameScene final : public Scene {
 public:
@@ -17,4 +20,15 @@ private:
 
   // カメラ
   RC::CameraController camera_;
+
+  // ブロック
+  int blockModel = -1;
+
+  // ===== MapChipField =====
+  MapChipField map_;
+  float kBlockSize = 1.0f;
+
+  // プレイヤー
+  int playerModel = -1;
+  std::unique_ptr<Player> player_;
 };
