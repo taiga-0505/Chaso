@@ -63,12 +63,7 @@ void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
   // ==============================
   // ウィンドウの初期化
   // ==============================
-  std::wstring wTitle;
-  if (windowTitle) {
-    wTitle = std::wstring(windowTitle, windowTitle + std::strlen(windowTitle));
-  } else {
-    wTitle = L"No Title";
-  }
+  std::wstring wTitle = windowTitle ? Utf8ToWString(windowTitle) : L"No Title";
 
   // ==============================
   // ウィンドウクラスの設定
@@ -106,6 +101,30 @@ void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
   // ウィンドウを表示
   ShowWindow(hwnd, SW_SHOW);
 }
+
+static std::wstring Utf8ToWStringImpl(const char *s) {
+  if (!s)
+    return L"";
+  int lenW = MultiByteToWideChar(CP_UTF8, 0, s, -1, nullptr, 0);
+  if (lenW <= 0)
+    return L"";
+  std::wstring w(lenW - 1, L'\0'); // 終端NULぶんは削る
+  MultiByteToWideChar(CP_UTF8, 0, s, -1, w.data(), lenW);
+  return w;
+}
+
+// クラスの静的メンバとして
+std::wstring Window::Utf8ToWString(const char *s) {
+  return Utf8ToWStringImpl(s);
+}
+
+void Window::SetTitleUTF8(const char *utf8) {
+  if (!hwnd)
+    return;
+  std::wstring w = Utf8ToWStringImpl(utf8);
+  SetWindowTextW(hwnd, w.c_str());
+}
+
 
 // クリア色の更新（GDI 背景も同期）
 void Window::SetClearColor(float r, float g, float b, float a) {

@@ -21,6 +21,8 @@ public:
                   const int32_t kClientWidth = kDefaultWidth,
                   const int32_t kClientHeight = kDefaultHeight);
 
+   void SetTitleUTF8(const char *utf8);
+
   // クリア色の設定＆クリア実行
   void SetClearColor(float r, float g, float b, float a = 1.0f);
 
@@ -41,6 +43,8 @@ public:
 
 private:
   WNDCLASS wc{};
+
+  static std::wstring Utf8ToWString(const char *s);
 
   // Window が保持するクリア色と背景ブラシ
   float clearColor_[4] = {0.1f, 0.25f, 0.5f, 1.0f}; // 指定した色でクリアする
