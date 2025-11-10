@@ -39,13 +39,6 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // =============================
 
   sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
-
-  // =============================
-  // Sound初期化
-  // =============================
-
-  sound = new Sound();
-  sound->Initialize("Resources/Sounds/Alarm01.wav");
 }
 
 void SampleScene::OnExit(SceneContext &) {
@@ -56,11 +49,6 @@ void SampleScene::OnExit(SceneContext &) {
   model = -1;
   RC::UnloadModel(blockModel);
   blockModel = -1;
-
-  if (sound) {
-    delete sound;
-    sound = nullptr;
-  }
 
   RC::UnloadSphere(sphere);
   sphere = -1;
