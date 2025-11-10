@@ -77,7 +77,7 @@ public:
     if (FAILED(hr) || !v)
       return;
 
-    const float vol = std::max(0.0f, volume_ * volScale);
+    const float vol = (std::max)(0.0f, volume_ * volScale);
     v->SetVolume(vol);
 
     XAUDIO2_BUFFER buf{};
@@ -116,7 +116,7 @@ public:
 
   // マスター音量（0.0〜1.0想定）
   void SetMasterVolume(float v) {
-    volume_ = std::max(0.0f, v);
+    volume_ = (std::max)(0.0f, v);
     // 再生中にも反映
     for (auto &av : actives_) {
       if (av.v)
