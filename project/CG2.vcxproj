@@ -184,13 +184,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
     <ClCompile Include="MapChipField\MapChipField.cpp" />
     <ClCompile Include="Player\Player.cpp" />
-    <ClCompile Include="Scene\Fade\Fade.cpp" />
-    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp" />
-    <ClCompile Include="Scene\GameScene\GameScene.cpp" />
-    <ClCompile Include="Scene\ResultScene\ResultScene.cpp" />
-    <ClCompile Include="Scene\SampleScene\SampleScene.cpp" />
-    <ClCompile Include="Scene\SelectScene\SelectScene.cpp" />
-    <ClCompile Include="Scene\TitleScene\TitleScene.cpp" />
+    <ClCompile Include="Game\Scene\Fade\Fade.cpp" />
+    <ClCompile Include="Game\Scene\GameOverScene\GameOverScene.cpp" />
+    <ClCompile Include="Game\Scene\GameScene\GameScene.cpp" />
+    <ClCompile Include="Game\Scene\ResultScene\ResultScene.cpp" />
+    <ClCompile Include="Game\Scene\SampleScene\SampleScene.cpp" />
+    <ClCompile Include="Game\Scene\SelectScene\SelectScene.cpp" />
+    <ClCompile Include="Game\Scene\TitleScene\TitleScene.cpp" />
     <ClCompile Include="Shader\ShaderCompiler\ShaderCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -270,15 +270,15 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Game\Game.h" />
     <ClInclude Include="MapChipField\MapChipField.h" />
     <ClInclude Include="Player\Player.h" />
-    <ClInclude Include="Scene\Fade\Fade.h" />
-    <ClInclude Include="Scene\GameOverScene\GameOverScene.h" />
-    <ClInclude Include="Scene\GameScene\GameScene.h" />
-    <ClInclude Include="Scene\ResultScene\ResultScene.h" />
-    <ClInclude Include="Scene\SampleScene\SampleScene.h" />
-    <ClInclude Include="Scene\Scene.h" />
-    <ClInclude Include="Scene\SceneManager.h" />
-    <ClInclude Include="Scene\SelectScene\SelectScene.h" />
-    <ClInclude Include="Scene\TitleScene\TitleScene.h" />
+    <ClInclude Include="Game\Scene\Fade\Fade.h" />
+    <ClInclude Include="Game\Scene\GameOverScene\GameOverScene.h" />
+    <ClInclude Include="Game\Scene\GameScene\GameScene.h" />
+    <ClInclude Include="Game\Scene\ResultScene\ResultScene.h" />
+    <ClInclude Include="Game\Scene\SampleScene\SampleScene.h" />
+    <ClInclude Include="Game\Scene\Scene.h" />
+    <ClInclude Include="Game\Scene\SceneManager.h" />
+    <ClInclude Include="Game\Scene\SelectScene\SelectScene.h" />
+    <ClInclude Include="Game\Scene\TitleScene\TitleScene.h" />
     <ClInclude Include="Shader\ShaderCompiler\ShaderCompiler.h" />
   </ItemGroup>
   <ItemGroup>

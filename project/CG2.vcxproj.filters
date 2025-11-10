@@ -43,13 +43,13 @@
     <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp">
       <Filter>engine\Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp">
+    <ClCompile Include="Game\Scene\GameOverScene\GameOverScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\GameScene\GameScene.cpp">
+    <ClCompile Include="Game\Scene\GameScene\GameScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\Fade\Fade.cpp">
+    <ClCompile Include="Game\Scene\Fade\Fade.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
     <ClCompile Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.cpp">
@@ -100,13 +100,13 @@
     <ClCompile Include="engine\Common\RenderCommon.cpp">
       <Filter>engine\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\ResultScene\ResultScene.cpp">
+    <ClCompile Include="Game\Scene\ResultScene\ResultScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\SampleScene\SampleScene.cpp">
+    <ClCompile Include="Game\Scene\SampleScene\SampleScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\SelectScene\SelectScene.cpp">
+    <ClCompile Include="Game\Scene\SelectScene\SelectScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
     <ClCompile Include="Shader\ShaderCompiler\ShaderCompiler.cpp">
@@ -115,7 +115,7 @@
     <ClCompile Include="engine\Graphics\Sound\Sound.cpp">
       <Filter>engine\Sound</Filter>
     </ClCompile>
-    <ClCompile Include="Scene\TitleScene\TitleScene.cpp">
+    <ClCompile Include="Game\Scene\TitleScene\TitleScene.cpp">
       <Filter>engine\Dx12</Filter>
     </ClCompile>
     <ClCompile Include="engine\Dx12\SwapChain\SwapChain.cpp">
@@ -181,13 +181,13 @@
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h">
       <Filter>engine\Dx12</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\GameOverScene\GameOverScene.h">
+    <ClInclude Include="Game\Scene\GameOverScene\GameOverScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\GameScene\GameScene.h">
+    <ClInclude Include="Game\Scene\GameScene\GameScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\Fade\Fade.h">
+    <ClInclude Include="Game\Scene\Fade\Fade.h">
       <Filter>engine\Dx12</Filter>
     </ClInclude>
     <ClInclude Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.h">
@@ -250,19 +250,19 @@
     <ClInclude Include="engine\Common\RenderCommon.h">
       <Filter>engine\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\ResultScene\ResultScene.h">
+    <ClInclude Include="Game\Scene\ResultScene\ResultScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\SampleScene\SampleScene.h">
+    <ClInclude Include="Game\Scene\SampleScene\SampleScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\Scene.h">
+    <ClInclude Include="Game\Scene\Scene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\SceneManager.h">
+    <ClInclude Include="Game\Scene\SceneManager.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\SelectScene\SelectScene.h">
+    <ClInclude Include="Game\Scene\SelectScene\SelectScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
     <ClInclude Include="Shader\ShaderCompiler\ShaderCompiler.h">
@@ -274,7 +274,7 @@
     <ClInclude Include="engine\Graphics\Sound\Sound.h">
       <Filter>engine\Sound</Filter>
     </ClInclude>
-    <ClInclude Include="Scene\TitleScene\TitleScene.h">
+    <ClInclude Include="Game\Scene\TitleScene\TitleScene.h">
       <Filter>engine\Dx12</Filter>
     </ClInclude>
     <ClInclude Include="engine\Common\struct.h">
