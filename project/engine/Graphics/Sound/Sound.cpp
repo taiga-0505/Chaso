@@ -17,8 +17,6 @@
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 
-namespace RC {
-
 // =========================
 // ユーティリティ
 // =========================
@@ -330,4 +328,24 @@ void Sound::SetVolume(float volume_) {
 
 float Sound::GetVolume() const { return volume; }
 
-} // namespace RC
+void Sound::Play(bool loop) {
+    isLoop = loop;
+  voice = SoundPlayWave(xAudio2.Get(), soundData, volume, isLoop);
+}
+
+void Sound::Stop() {
+  SoundStopWave(voice);
+  voice = nullptr;
+}
+
+void Sound::AllStop() {
+  Stop(); 
+}
+
+void Sound::Unload() {
+  if (voice) {
+    SoundStopWave(voice);
+    voice = nullptr;
+  }
+  SoundUnload(&soundData);
+}

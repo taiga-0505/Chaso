@@ -8,8 +8,6 @@ using Microsoft::WRL::ComPtr;
 
 #pragma comment(lib, "xaudio2.lib")
 
-namespace RC {
-
 struct ChunkHeader {
   char id[4];   // チャンクの識別子
   int32_t size; // チャンクのサイズ
@@ -58,6 +56,13 @@ public:
   void SetVolume(float volume); // 音量設定
   float GetVolume() const;      // 音量取得
 
+  void Play(bool loop = false); // 再生
+  void Stop();                  // 停止
+
+  void AllStop(); // 全サウンド停止
+
+  void Unload(); // サウンドデータ解放
+
 private:
   ComPtr<IXAudio2> xAudio2;
   IXAudio2MasteringVoice *masteringVoice = nullptr;
@@ -67,5 +72,3 @@ private:
   bool isLoop = false;
   float volume = 1.0f;
 };
-
-} // namespace RC

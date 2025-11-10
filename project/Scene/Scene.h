@@ -13,6 +13,8 @@ class MainCamera;
 class ImGuiManager;
 class GraphicsPipeline;
 class PipelineManager;
+class BgmManager;
+class SeManager;
 
 // シーンが使う共有コンテキスト
 struct SceneContext {
@@ -24,6 +26,8 @@ struct SceneContext {
   GraphicsPipeline *objectPSO = nullptr;
   GraphicsPipeline *spritePSO = nullptr;
   PipelineManager *pipelineManager = nullptr;
+  BgmManager *bgmManager = nullptr; // BGM管理
+  SeManager *seManager = nullptr; // 効果音管理
 };
 
 // シーン基底クラス

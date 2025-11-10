@@ -1,436 +1,115 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="ソース ファイル">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="ヘッダー ファイル">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="リソース ファイル">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Shader">
-      <UniqueIdentifier>{62b34166-6d1e-4731-a82e-2052c3aacf7a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="imgui">
-      <UniqueIdentifier>{8585f2e6-20ff-46aa-92e5-0921a7ed643e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine">
-      <UniqueIdentifier>{16642f8f-f9ca-4ac9-a55e-da6389302489}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12">
-      <UniqueIdentifier>{2cfedf24-bbc2-4594-9b18-91360f8d447d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Camera">
-      <UniqueIdentifier>{dfd3f30f-7b48-4da7-a14f-052a8eb6d75a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Camera\DebugCamera">
-      <UniqueIdentifier>{d1231415-a393-41a4-b062-414a7805f7bd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Camera\MainCamera">
-      <UniqueIdentifier>{db439094-418b-4cb1-ab78-41b982cb0bc2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Common">
-      <UniqueIdentifier>{cf963979-1105-4c0e-838c-13b48fe390a0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Common\function">
-      <UniqueIdentifier>{becb17b1-166a-417d-b6ed-149169cb7182}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Common\Math">
-      <UniqueIdentifier>{837e9f71-7e9c-4aba-8ee4-e4a33ead2874}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Common\Log">
-      <UniqueIdentifier>{efb89020-66b8-4362-b5a7-dfc3d6bb7843}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene">
-      <UniqueIdentifier>{417867d0-94aa-4711-b162-eb0dc7b4d3eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene\GameScene">
-      <UniqueIdentifier>{eef6d10b-b3d8-4b28-95f6-bc928d64f623}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene\SelectScene">
-      <UniqueIdentifier>{8439177c-df6d-4a53-906c-a443cad4b19a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene\ResultScene">
-      <UniqueIdentifier>{142d22ca-04c2-42fc-9829-16d8ab1424f7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene\SampleScene">
-      <UniqueIdentifier>{9cef9eaa-b2d0-455c-a2c8-f3eaa7885b90}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Window">
-      <UniqueIdentifier>{d832c6c2-4566-4623-a353-26a0acd3445a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\Input">
-      <UniqueIdentifier>{ffb8b074-5a38-4d82-9639-f3f2e3f4bb0b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Shader\ShaderCompiler">
-      <UniqueIdentifier>{1f01263d-a1fc-4eb7-926f-bbfff02283b8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\ImGuiManager">
-      <UniqueIdentifier>{9114b586-867c-43b0-8162-b6fbc0573032}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Scene\TitleScene">
-      <UniqueIdentifier>{77e4d7c9-7199-4461-80ce-d582416a05f0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App">
-      <UniqueIdentifier>{03a228b7-78ef-4dae-b33a-133cccd5991f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics">
-      <UniqueIdentifier>{3a0028c9-5354-42d0-b1c3-07955e8194eb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sphere">
-      <UniqueIdentifier>{be017e9a-89cd-4a6c-b2fd-b1547098472b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Fade">
-      <UniqueIdentifier>{ac1109e6-922c-462e-beb6-58479bd17853}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sound">
-      <UniqueIdentifier>{2f749b2c-cac3-482a-b54f-e7d2bab3cf3b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture">
-      <UniqueIdentifier>{f3cb27ce-1137-455d-b0f6-c5e6b69c1d0f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture\Texture2D">
-      <UniqueIdentifier>{580cd230-b879-4744-a741-419edcb88539}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Texture\TextureManager">
-      <UniqueIdentifier>{c16cce8f-55b2-4c40-98a1-1c9604f800aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Sprite2D">
-      <UniqueIdentifier>{8a6fcfb6-f98b-48ec-b8da-674b5a1ca3f1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="App\Graphics\Model3D">
-      <UniqueIdentifier>{a89c7c72-ef9e-4bae-92e8-d54ad51c581b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\CommandContext">
-      <UniqueIdentifier>{629047fe-cea3-4743-8a14-65cc73a8bd76}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\DepthStencil">
-      <UniqueIdentifier>{33113510-ee59-4320-a67d-d287bc1f4645}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\DescriptorHeap">
-      <UniqueIdentifier>{3b7fc644-b0c9-4aaa-ad13-293a75d28ebd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\Device">
-      <UniqueIdentifier>{4228f345-fa7f-4bcd-a259-9afada609060}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\GraphicsPipeline">
-      <UniqueIdentifier>{b2f1f5ad-efcc-4510-a901-ae60abc55232}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\DX12\SwapChain">
-      <UniqueIdentifier>{65d067ac-1e04-47fa-9b25-3f820a0595bc}</UniqueIdentifier>
-    </Filter>
+    <FxCompile Include="Shader\Object3d.PS.hlsl" />
+    <FxCompile Include="Shader\Object3d.VS.hlsl" />
+    <FxCompile Include="Shader\Sprite.PS.hlsl" />
+    <FxCompile Include="Shader\Sprite.VS.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_demo.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_draw.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_impl_dx12.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_impl_win32.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_tables.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="externals\imgui\imgui_widgets.cpp">
-      <Filter>imgui</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Sound\Sound.cpp">
-      <Filter>App\Graphics\Sound</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Input\Input.cpp">
-      <Filter>engine\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Camera\DebugCamera\DebugCamera.cpp">
-      <Filter>engine\Camera\DebugCamera</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Camera\MainCamera\MainCamera.cpp">
-      <Filter>engine\Camera\MainCamera</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Common\Log\Log.cpp">
-      <Filter>engine\Common\Log</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Window\Window.cpp">
-      <Filter>engine\Window</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp">
-      <Filter>App\Graphics\Sphere</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Common\Math\Math.cpp">
-      <Filter>engine\Common\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Common\RenderCommon.cpp">
-      <Filter>engine\Common</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Camera\CameraController.cpp">
-      <Filter>engine\Camera</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\Dx12Core.cpp">
-      <Filter>engine\DX12</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\Fade\Fade.cpp">
-      <Filter>App\Graphics\Fade</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\GameScene\GameScene.cpp">
-      <Filter>Scene\GameScene</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\SelectScene\SelectScene.cpp">
-      <Filter>Scene\SelectScene</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\ResultScene\ResultScene.cpp">
-      <Filter>Scene\ResultScene</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\SampleScene\SampleScene.cpp">
-      <Filter>Scene\SampleScene</Filter>
-    </ClCompile>
-    <ClCompile Include="Shader\ShaderCompiler\ShaderCompiler.cpp">
-      <Filter>Shader\ShaderCompiler</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\TitleScene\TitleScene.cpp">
-      <Filter>Scene\TitleScene</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\ImGuiManager\ImGuiManager.cpp">
-      <Filter>engine\ImGuiManager</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Texture\TextureManager\TextureManager.cpp">
-      <Filter>App\Graphics\Texture\TextureManager</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Texture\Texture2D\Texture2D.cpp">
-      <Filter>App\Graphics\Texture\Texture2D</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp">
-      <Filter>App\Graphics\Sprite2D</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Graphics\Model3D\Model3D.cpp">
-      <Filter>App\Graphics\Model3D</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\PipelineManager.cpp">
-      <Filter>engine\DX12</Filter>
-    </ClCompile>
-    <ClCompile Include="App\App.cpp">
-      <Filter>App</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\CommandContext\CommandContext.cpp">
-      <Filter>engine\DX12\CommandContext</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\DepthStencil\DepthStencil.cpp">
-      <Filter>engine\DX12\DepthStencil</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\DescriptorHeap\DescriptorHeap.cpp">
-      <Filter>engine\DX12\DescriptorHeap</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\Device\Device.cpp">
-      <Filter>engine\DX12\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.cpp">
-      <Filter>engine\DX12\GraphicsPipeline</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\SwapChain\SwapChain.cpp">
-      <Filter>engine\DX12\SwapChain</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Player\Player.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="MapChipField\MapChipField.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
+    <ClCompile Include="App\App.cpp" />
+    <ClCompile Include="engine\Camera\CameraController.cpp" />
+    <ClCompile Include="engine\Common\RenderCommon.cpp" />
+    <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp" />
+    <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
+    <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
+    <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
+    <ClCompile Include="externals\imgui\imgui.cpp" />
+    <ClCompile Include="externals\imgui\imgui_demo.cpp" />
+    <ClCompile Include="externals\imgui\imgui_draw.cpp" />
+    <ClCompile Include="externals\imgui\imgui_impl_dx12.cpp" />
+    <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="externals\imgui\imgui_tables.cpp" />
+    <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="engine\Common\Math\Math.cpp" />
+    <ClCompile Include="engine\Camera\DebugCamera\DebugCamera.cpp" />
+    <ClCompile Include="engine\Dx12\CommandContext\CommandContext.cpp" />
+    <ClCompile Include="engine\Dx12\DepthStencil\DepthStencil.cpp" />
+    <ClCompile Include="engine\Dx12\DescriptorHeap\DescriptorHeap.cpp" />
+    <ClCompile Include="engine\Dx12\Device\Device.cpp" />
+    <ClCompile Include="engine\Dx12\Dx12Core.cpp" />
+    <ClCompile Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.cpp" />
+    <ClCompile Include="engine\Dx12\SwapChain\SwapChain.cpp" />
+    <ClCompile Include="engine\ImGuiManager\ImGuiManager.cpp" />
+    <ClCompile Include="engine\Input\Input.cpp" />
+    <ClCompile Include="engine\Common\Log\Log.cpp" />
+    <ClCompile Include="engine\Camera\MainCamera\MainCamera.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\Model3D.cpp" />
+    <ClCompile Include="engine\Graphics\Sound\Sound.cpp" />
+    <ClCompile Include="engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
+    <ClCompile Include="engine\Window\Window.cpp" />
+    <ClCompile Include="engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
+    <ClCompile Include="MapChipField\MapChipField.cpp" />
+    <ClCompile Include="Player\Player.cpp" />
+    <ClCompile Include="Scene\Fade\Fade.cpp" />
+    <ClCompile Include="Scene\GameOverScene\GameOverScene.cpp" />
+    <ClCompile Include="Scene\GameScene\GameScene.cpp" />
+    <ClCompile Include="Scene\ResultScene\ResultScene.cpp" />
+    <ClCompile Include="Scene\SampleScene\SampleScene.cpp" />
+    <ClCompile Include="Scene\SelectScene\SelectScene.cpp" />
+    <ClCompile Include="Scene\TitleScene\TitleScene.cpp" />
+    <ClCompile Include="Shader\ShaderCompiler\ShaderCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\Object3d.VS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\Object3d.PS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\Sprite.VS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\Sprite.PS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
+    <ClInclude Include="App\App.h" />
+    <ClInclude Include="App\AppConfig.h" />
+    <ClInclude Include="engine\Camera\CameraController.h" />
+    <ClInclude Include="engine\Common\Math\MathTypes.h" />
+    <ClInclude Include="engine\Common\RenderCommon.h" />
+    <ClInclude Include="engine\Dx12\FixFps\FixFps.h" />
+    <ClInclude Include="engine\Dx12\PipelineManager.h" />
+    <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
+    <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h" />
+    <ClInclude Include="engine\RC.h" />
+    <ClInclude Include="externals\imgui\imconfig.h" />
+    <ClInclude Include="externals\imgui\imgui.h" />
+    <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />
+    <ClInclude Include="externals\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="externals\imgui\imgui_internal.h" />
+    <ClInclude Include="externals\imgui\imstb_rectpack.h" />
+    <ClInclude Include="externals\imgui\imstb_textedit.h" />
+    <ClInclude Include="externals\imgui\imstb_truetype.h" />
+    <ClInclude Include="engine\Common\Math\Math.h" />
+    <ClInclude Include="engine\Camera\DebugCamera\DebugCamera.h" />
+    <ClInclude Include="engine\Dx12\CommandContext\CommandContext.h" />
+    <ClInclude Include="engine\Dx12\DepthStencil\DepthStencil.h" />
+    <ClInclude Include="engine\Dx12\DescriptorHeap\DescriptorHeap.h" />
+    <ClInclude Include="engine\Dx12\DescriptorHeap\DescriptorHelpers.h" />
+    <ClInclude Include="engine\Dx12\Device\Device.h" />
+    <ClInclude Include="engine\Dx12\Dx12Core.h" />
+    <ClInclude Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.h" />
+    <ClInclude Include="engine\Dx12\SwapChain\SwapChain.h" />
+    <ClInclude Include="engine\Common\function\function.h" />
+    <ClInclude Include="engine\ImGuiManager\ImGuiManager.h" />
+    <ClInclude Include="engine\Input\Input.h" />
+    <ClInclude Include="engine\Common\Log\Log.h" />
+    <ClInclude Include="engine\Camera\MainCamera\MainCamera.h" />
+    <ClInclude Include="engine\Graphics\Model3D\Model3D.h" />
+    <ClInclude Include="engine\Graphics\Sound\Sound.h" />
+    <ClInclude Include="engine\Common\struct.h" />
+    <ClInclude Include="engine\Graphics\Texture\Texture2D\Texture2D.h" />
+    <ClInclude Include="engine\Graphics\Texture\TextureManager\TextureManager.h" />
+    <ClInclude Include="engine\Window\Window.h" />
+    <ClInclude Include="MapChipField\MapChipField.h" />
+    <ClInclude Include="Player\Player.h" />
+    <ClInclude Include="Scene\Fade\Fade.h" />
+    <ClInclude Include="Scene\GameOverScene\GameOverScene.h" />
+    <ClInclude Include="Scene\GameScene\GameScene.h" />
+    <ClInclude Include="Scene\ResultScene\ResultScene.h" />
+    <ClInclude Include="Scene\SampleScene\SampleScene.h" />
+    <ClInclude Include="Scene\Scene.h" />
+    <ClInclude Include="Scene\SceneManager.h" />
+    <ClInclude Include="Scene\SelectScene\SelectScene.h" />
+    <ClInclude Include="Scene\TitleScene\TitleScene.h" />
+    <ClInclude Include="Shader\ShaderCompiler\ShaderCompiler.h" />
+    <ClInclude Include="engine\Graphics\Sound\BgmManager.h" />
+    <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="externals\imgui\imconfig.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imgui.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imgui_impl_dx12.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imgui_impl_win32.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imgui_internal.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imstb_rectpack.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imstb_textedit.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="externals\imgui\imstb_truetype.h">
-      <Filter>imgui</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Sound\Sound.h">
-      <Filter>App\Graphics\Sound</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Input\Input.h">
-      <Filter>engine\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Camera\DebugCamera\DebugCamera.h">
-      <Filter>engine\Camera\DebugCamera</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Camera\MainCamera\MainCamera.h">
-      <Filter>engine\Camera\MainCamera</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\Log\Log.h">
-      <Filter>engine\Common\Log</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\function\function.h">
-      <Filter>engine\Common\function</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Window\Window.h">
-      <Filter>engine\Window</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Sphere\Sphere.h">
-      <Filter>App\Graphics\Sphere</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\Math\Math.h">
-      <Filter>engine\Common\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\Math\MathTypes.h">
-      <Filter>engine\Common\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\struct.h">
-      <Filter>engine\Common</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Common\RenderCommon.h">
-      <Filter>engine\Common</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Camera\CameraController.h">
-      <Filter>engine\Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\Fade\Fade.h">
-      <Filter>App\Graphics\Fade</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\GameScene\GameScene.h">
-      <Filter>Scene\GameScene</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\SelectScene\SelectScene.h">
-      <Filter>Scene\SelectScene</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\ResultScene\ResultScene.h">
-      <Filter>Scene\ResultScene</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\SampleScene\SampleScene.h">
-      <Filter>Scene\SampleScene</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\Scene.h">
-      <Filter>Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\SceneManager.h">
-      <Filter>Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Shader\ShaderCompiler\ShaderCompiler.h">
-      <Filter>Shader\ShaderCompiler</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\ImGuiManager\ImGuiManager.h">
-      <Filter>engine\ImGuiManager</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\TitleScene\TitleScene.h">
-      <Filter>Scene\TitleScene</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Texture\Texture2D\Texture2D.h">
-      <Filter>App\Graphics\Texture\Texture2D</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Texture\TextureManager\TextureManager.h">
-      <Filter>App\Graphics\Texture\TextureManager</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h">
-      <Filter>App\Graphics\Sprite2D</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Graphics\Model3D\Model3D.h">
-      <Filter>App\Graphics\Model3D</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\Dx12Core.h">
-      <Filter>engine\DX12</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\PipelineManager.h">
-      <Filter>engine\DX12</Filter>
-    </ClInclude>
-    <ClInclude Include="App\App.h">
-      <Filter>App</Filter>
-    </ClInclude>
-    <ClInclude Include="App\AppConfig.h">
-      <Filter>App</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\CommandContext\CommandContext.h">
-      <Filter>engine\DX12\CommandContext</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\DepthStencil\DepthStencil.h">
-      <Filter>engine\DX12\DepthStencil</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\DescriptorHeap\DescriptorHelpers.h">
-      <Filter>engine\DX12\DescriptorHeap</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\DescriptorHeap\DescriptorHeap.h">
-      <Filter>engine\DX12\DescriptorHeap</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\Device\Device.h">
-      <Filter>engine\DX12\Device</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\GraphicsPipeline\GraphicsPipeline.h">
-      <Filter>engine\DX12\GraphicsPipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\SwapChain\SwapChain.h">
-      <Filter>engine\DX12\SwapChain</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene\GameOverScene\GameOverScene.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Dx12\FixFps\FixFps.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\RC.h">
-    <ClInclude Include="Player\Player.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="MapChipField\MapChipField.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
+    <None Include="Shader\Object3d.hlsli" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="externals\imgui\LICENSE.txt">
-      <Filter>imgui</Filter>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Shader\Object3d.hlsli">
-      <Filter>Shader</Filter>
-    </None>
+    <Text Include="externals\imgui\LICENSE.txt" />
   </ItemGroup>
 </Project>

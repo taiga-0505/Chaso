@@ -232,6 +232,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll"       "$(Target
     <ClInclude Include="engine\Common\RenderCommon.h" />
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h" />
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
+    <ClInclude Include="engine\Graphics\Sound\BgmManager.h" />
+    <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
     <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h" />
     <ClInclude Include="engine\RC.h" />
