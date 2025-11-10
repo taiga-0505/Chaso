@@ -1,6 +1,8 @@
 #pragma once
 #include "Scene.h"
 #include "SceneManager.h"
+#include "Sound/BgmManager.h"
+#include "Sound/SeManager.h"
 #include <string>
 
 class Game {
@@ -22,8 +24,11 @@ public:
   const std::string &CurrentSceneName() const;
 
 private:
-  void registerScenes_(); // シーン登録をひとまとめに
+  void registerScenes_();     // シーン登録をひとまとめに
+  void registerAudioPaths_(); // オーディオパス登録をひとまとめに
 
 private:
   Scene::SceneManager sceneMgr_;
+  BgmManager bgm_;
+  SeManager se_;
 };

@@ -31,13 +31,32 @@ void Game::registerScenes_() {
   sceneMgr_.Register(std::make_unique<SampleScene>());
 }
 
+void Game::registerAudioPaths_() {
+  // --- BGM ---
+  // bgm_.SetPath(BgmGroup::Main, "Resources/audio/bgm_main.mp3");
+  // bgm_.SetPath(BgmGroup::Clear, "Resources/audio/bgm_result.mp3");
+  // bgm_.SetPath(BgmGroup::GameOver, "Resources/audio/bgm_gameover.mp3");
+
+  // --- SE ---
+  // se_.SetPath(SeId::Cursor, "Resources/audio/se_cursor.wav");
+  // se_.SetPath(SeId::Decide, "Resources/audio/se_decide.wav");
+  // se_.SetPath(SeId::Cancel, "Resources/audio/se_cancel.wav");
+  // se_.SetPath(SeId::Hit, "Resources/audio/se_hit.wav");
+  // se_.SetPath(SeId::Damage, "Resources/audio/se_damage.wav");
+  // se_.SetPath(SeId::Clear, "Resources/audio/se_clear.wav");
+}
+
 void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }
 
 void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   sceneMgr_.Render(ctx, cl);
 }
 
-void Game::Term() { sceneMgr_.Term(); }
+void Game::Term() {
+  sceneMgr_.Term();
+  se_.Term();
+  bgm_.Stop();
+}
 
 void Game::RequestChange(const std::string &name) {
   sceneMgr_.RequestChange(name);
