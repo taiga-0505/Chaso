@@ -1,7 +1,7 @@
 #include "App.h"
-#include "RC.h"
 #include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
+#include "RC.h"
 #include "ResultScene/ResultScene.h"
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
@@ -118,25 +118,12 @@ bool App::Init() {
   sceneCtx_.spritePSO = pipeSprite_;
   sceneCtx_.pipelineManager = &pm_;
 
+  // ===== RC初期化 =====
   RC::Init(sceneCtx_);
 
-  // ===== FadeのためのScene初期化 =====
-  sceneMgr_.Init(sceneCtx_); // appが必要なため、ここで初期化
+  // ===== Game初期化 =====
+  game_.Init(sceneCtx_);
 
-  // ===== シーン登録 =====
-  sceneMgr_.Register(std::make_unique<TitleScene>());
-  sceneMgr_.Register(std::make_unique<SelectScene>());
-  sceneMgr_.Register(std::make_unique<GameScene>());
-  sceneMgr_.Register(std::make_unique<ResultScene>());
-  sceneMgr_.Register(std::make_unique<GameOverScene>());
-  sceneMgr_.Register(std::make_unique<SampleScene>());
-
-  // ===== 最初のシーンへ即時遷移 =====
-#ifdef _DEBUG
-  sceneMgr_.ChangeImmediately("Game", sceneCtx_);
-#else
-  sceneMgr_.ChangeImmediately("Title", sceneCtx_);
-#endif // _DEBUG
   return true;
 }
 
@@ -161,56 +148,19 @@ int App::Run() {
 
 void App::Update() {
 
-#ifdef _DEBUG
-
-  ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title",  "Select",   "Game",
-                              "Result", "GameOver", "Sample"};
-  const char *currentSceneName = sceneMgr_.CurrentName().c_str();
-
-  if (ImGui::BeginCombo("##Scene", currentSceneName)) {
-    for (int i = 0; i < IM_ARRAYSIZE(sceneNames); i++) {
-      bool is_selected = (strcmp(currentSceneName, sceneNames[i]) == 0);
-      if (ImGui::Selectable(sceneNames[i], is_selected)) {
-        sceneMgr_.RequestChange(sceneNames[i]);
-      }
-      if (is_selected) {
-        ImGui::SetItemDefaultFocus();
-      }
-    }
-    ImGui::EndCombo();
-  }
-  ImGui::End();
-
-  // === FPS overlay ===
-  ImGuiIO &io = ImGui::GetIO();
-  ImGui::SetNextWindowBgAlpha(0.35f);
-  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-  ImGuiWindowFlags flags =
-      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-      ImGuiWindowFlags_NoNav;
-
-  if (ImGui::Begin("Perf", nullptr, flags)) {
-    const float fps = io.Framerate;
-    ImGui::Text("FPS: %.1f", fps);
-    ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
-  }
-  ImGui::End();
-
-#endif // _DEBUG
+  game_.DrawDebugUI();
 
   input_->Update();
 
-  sceneMgr_.Update(sceneCtx_);
+  game_.Update(sceneCtx_);
 }
 
-void App::Render() { sceneMgr_.Render(sceneCtx_, cl); }
+void App::Render() { game_.Render(sceneCtx_, cl); }
 
 void App::Term() {
   core_.WaitForGPU();
 
-  sceneMgr_.Term();
+  game_.Term();
 
   // 3) 描画層
   ReportDXGI("before RC::Term");
