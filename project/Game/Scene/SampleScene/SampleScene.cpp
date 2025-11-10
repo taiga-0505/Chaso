@@ -70,8 +70,6 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   RC::DrawSphereImGui(sphere, "skyDome");
 
-  sound->SoundImGui("Alarm01");
-
   camera_.DrawImGui();
 
 #endif // _DEBUG
