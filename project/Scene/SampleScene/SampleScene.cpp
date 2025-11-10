@@ -44,7 +44,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // Sound初期化
   // =============================
 
-  sound = new RC::Sound();
+  sound = new Sound();
   sound->Initialize("Resources/Sounds/Alarm01.wav");
 }
 

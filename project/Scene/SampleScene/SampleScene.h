@@ -15,7 +15,7 @@ public:
 private:
   RC::Matrix4x4 view_, proj_;
 
-  RC::Sound *sound = nullptr;
+  Sound *sound = nullptr;
 
   // カメラ
   RC::CameraController camera_;
