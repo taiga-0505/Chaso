@@ -17,7 +17,6 @@ private:
 
   Sound *sound = nullptr;
 
-
   // カメラ
   RC::CameraController camera_;
 
