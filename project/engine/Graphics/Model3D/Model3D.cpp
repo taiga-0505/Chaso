@@ -294,7 +294,6 @@ void Model3D::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   cbWvpBatchHead_ += static_cast<uint32_t>(instances.size());
 }
 
-
 // =========================
 // 内部：OBJローダ
 // =========================
@@ -451,7 +450,7 @@ void Model3D::ApplyLightingIfReady_() {
   }
 }
 
-void Model3D::DrawImGui(const char *name) {
+void Model3D::DrawImGui(const char *name, bool showLightingUi) {
   std::string label = name ? std::string(name) : std::string("Model3D");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     return;
@@ -512,41 +511,41 @@ void Model3D::DrawImGui(const char *name) {
   }
   ImGui::Dummy(ImVec2(0, 6));
 
-  // ---- Lighting ----
-  ImGui::TextUnformatted("Lighting");
-  if (cbMat_.mapped && cbLight_.mapped) {
-    // ライティングモード（enumと同期）
-    static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
-    int mode = cbMat_.mapped->lightingMode;
-    if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
-                     IM_ARRAYSIZE(kModes))) {
-      cbMat_.mapped->lightingMode = mode;
-    }
-
-    // 平行光（色・方向・強さ）
-    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
-                      &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
-    // 方向スライダ（-1..1）+ 正規化
-    bool dirChanged = ImGui::DragFloat3(
-        (std::string("光方向(x,y,z)##") + label).c_str(),
-        &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
-    if (dirChanged) {
-      Vector3 d = cbLight_.mapped->direction;
-      float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
-      if (len > 1e-6f) {
-        d.x /= len;
-        d.y /= len;
-        d.z /= len;
-        cbLight_.mapped->direction = d;
+  if (showLightingUi) {
+    // ---- Lighting ----
+    ImGui::TextUnformatted("Lighting");
+    if (cbMat_.mapped && cbLight_.mapped) {
+      // ライティングモード（enumと同期）
+      static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
+      int mode = cbMat_.mapped->lightingMode;
+      if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
+                       IM_ARRAYSIZE(kModes))) {
+        cbMat_.mapped->lightingMode = mode;
       }
-    }
-    ImGui::DragFloat((std::string("強さ##") + label).c_str(),
-                     &cbLight_.mapped->intensity, 0.01f, 0.0f, 16.0f, "%.2f");
-  } else {
-    ImGui::TextDisabled("Light / Material CB not ready.");
-  }
-  ImGui::Dummy(ImVec2(0, 6));
 
+      // 平行光（色・方向・強さ）
+      ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
+                        &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
+      bool dirChanged = ImGui::DragFloat3(
+          (std::string("光方向(x,y,z)##") + label).c_str(),
+          &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
+      if (dirChanged) {
+        Vector3 d = cbLight_.mapped->direction;
+        float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+        if (len > 1e-6f) {
+          d.x /= len;
+          d.y /= len;
+          d.z /= len;
+          cbLight_.mapped->direction = d;
+        }
+      }
+      ImGui::DragFloat((std::string("強さ##") + label).c_str(),
+                       &cbLight_.mapped->intensity, 0.01f, 0.0f, 16.0f, "%.2f");
+    } else {
+      ImGui::TextDisabled("Light / Material CB not ready.");
+    }
+    ImGui::Dummy(ImVec2(0, 6));
+  }
   // ---- メッシュ情報/便利ボタン ----
 
   // .mtl側の map_Kd を再バインド（TextureManagerがあれば）

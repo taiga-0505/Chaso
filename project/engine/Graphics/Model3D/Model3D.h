@@ -7,17 +7,13 @@
 #include <filesystem>
 #include <string>
 #include <vector>
-
-// -------------------------------
-// 非スコープ enum: 無修飾で使える
-// -------------------------------
-enum LightingMode {
-  None = 0,        // ライティング無し
-  Lambert = 1,     // ランバート
-  HalfLambert = 2, // ハーフランバート
-};
+#include "struct.h"
 
 class TextureManager; // 前方宣言
+
+struct MaterialData {
+  std::string textureFilePath; // テクスチャファイルのパス
+};
 
 class Model3D {
 public:
@@ -102,7 +98,7 @@ public:
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances);
 
-  void DrawImGui(const char *name = nullptr);
+  void DrawImGui(const char *name = nullptr, bool showLightingUi = true);
 
 private:
   // ========== 内部ユーティリティ ==========

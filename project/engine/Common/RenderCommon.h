@@ -20,6 +20,22 @@ void Term();
 void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj);
 
 // ==============================
+// ライト用
+// ==============================
+
+class Light;
+
+int CreateLight();
+void DestroyLight(int lightHandle);
+
+void SetActiveLight(int lightHandle);
+int GetActiveLightHandle();
+
+Light *GetLightPtr(int lightHandle);
+
+void DrawImGuiLight(int lightHandle, const char *name);
+
+// ==============================
 // モデル用
 // ==============================
 

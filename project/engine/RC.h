@@ -11,3 +11,5 @@
 
 // 数学関連の共通ヘッダ(Vector , Matrix等)
 #include "Math/MathTypes.h"
+
+#include "Light/Light.h"

@@ -141,36 +141,36 @@ void Sphere::DrawImGui(const char *name) {
     ImGui::TextDisabled("Material CB not ready.");
   }
   ImGui::Dummy(ImVec2(0, 6));
-  // ---- Lighting ----
-  ImGui::TextUnformatted("Lighting");
-  if (cbMat_.mapped && cbLight_.mapped) {
-    static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
-    int mode = cbMat_.mapped->lightingMode;
-    if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
-                     IM_ARRAYSIZE(kModes))) {
-      cbMat_.mapped->lightingMode = mode;
-    }
-    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
-                      &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
-    bool dirChanged = ImGui::DragFloat3(
-        (std::string("光方向(x,y,z)##") + label).c_str(),
-        &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
-    if (dirChanged) {
-      Vector3 d = cbLight_.mapped->direction;
-      float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
-      if (len > 1e-6f) {
-        d.x /= len;
-        d.y /= len;
-        d.z /= len;
-        cbLight_.mapped->direction = d;
-      }
-    }
-    ImGui::DragFloat((std::string("強さ##") + label).c_str(),
-                     &cbLight_.mapped->intensity, 0.01f, 0.0f, 16.0f, "%.2f");
+  //// ---- Lighting ----
+  //ImGui::TextUnformatted("Lighting");
+  //if (cbMat_.mapped && cbLight_.mapped) {
+  //  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
+  //  int mode = cbMat_.mapped->lightingMode;
+  //  if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
+  //                   IM_ARRAYSIZE(kModes))) {
+  //    cbMat_.mapped->lightingMode = mode;
+  //  }
+  //  ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
+  //                    &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
+  //  bool dirChanged = ImGui::DragFloat3(
+  //      (std::string("光方向(x,y,z)##") + label).c_str(),
+  //      &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
+  //  if (dirChanged) {
+  //    Vector3 d = cbLight_.mapped->direction;
+  //    float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+  //    if (len > 1e-6f) {
+  //      d.x /= len;
+  //      d.y /= len;
+  //      d.z /= len;
+  //      cbLight_.mapped->direction = d;
+  //    }
+  //  }
+  //  ImGui::DragFloat((std::string("強さ##") + label).c_str(),
+  //                   &cbLight_.mapped->intensity, 0.01f, 0.0f, 16.0f, "%.2f");
 
-  } else {
-    ImGui::TextDisabled("Light / Material CB not ready.");
-  }
+  //} else {
+  //  ImGui::TextDisabled("Light / Material CB not ready.");
+  //}
 }
 
 void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
