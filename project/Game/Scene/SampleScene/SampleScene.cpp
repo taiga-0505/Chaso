@@ -17,6 +17,19 @@ void SampleScene::OnEnter(SceneContext &ctx) {
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
   // =============================
+  // Light初期化
+  // =============================
+
+  light = RC::CreateLight();
+  RC::SetActiveLight(light);
+
+  if (auto *sun = RC::GetLightPtr(light)) {
+    sun->SetDirection({0.0f, -1.0f, 0.2f});   // ちょいナナメ上
+    sun->SetColor({1.0f, 0.95f, 0.9f, 1.0f}); // ほんのり暖色
+    sun->SetIntensity(1.5f);
+  }
+
+  // =============================
   // モデル初期化
   // =============================
 
@@ -52,6 +65,8 @@ void SampleScene::OnExit(SceneContext &) {
 
   RC::UnloadSphere(sphere);
   sphere = -1;
+
+  light = -1;
 }
 
 void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -62,13 +77,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
 #ifdef _DEBUG
 
-  RC::DrawImGui3D(plane, "plane");
-
-  RC::DrawImGui3D(model, "model");
-
-  RC::DrawImGui2D(sprite, "sprite");
-
-  RC::DrawSphereImGui(sphere, "skyDome");
+  DrawImGui();
 
   camera_.DrawImGui();
 
@@ -139,4 +148,48 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw2D(ctx, cl);
 
   RC::DrawSprite(sprite);
+}
+
+void SampleScene::DrawImGui() {
+  ImGui::Begin("Debug");
+  // -------------------
+  // Light
+  // -------------------
+  RC::DrawImGuiLight(light, "light");
+
+  if (ImGui::BeginTabBar("MainDebugTabBar")) {
+    // -------------------
+    // ModelTab
+    // -------------------
+    if (ImGui::BeginTabItem("ModelTab")) {
+
+      RC::DrawImGui3D(plane, "plane");
+
+      RC::DrawImGui3D(model, "model");
+
+      RC::DrawSphereImGui(sphere, "skyDome");
+
+      ImGui::EndTabItem();
+    }
+
+    // -------------------
+    // SpriteTab
+    // -------------------
+    if (ImGui::BeginTabItem("SpriteTab")) {
+
+      RC::DrawImGui2D(sprite, "sprite");
+
+      ImGui::EndTabItem();
+    }
+    
+    // -------------------
+    // SoundTab
+    // -------------------
+    if (ImGui::BeginTabItem("SoundTab")) {
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+  }
+
+  ImGui::End();
 }

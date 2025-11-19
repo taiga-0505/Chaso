@@ -126,7 +126,7 @@ GraphicsPipeline *PipelineManager::CreateModelPipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone); // None 以外はブレンドON
   opt.enableDepth = true;                          // モデルは深度ON
-  opt.cull = D3D12_CULL_MODE_BACK;                 // 既定の背面カリング
+  opt.cull = D3D12_CULL_MODE_NONE;                 // 既定の背面カリング
   opt.blendMode = mode;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
@@ -186,9 +186,8 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   auto PS = compiler_.Compile(ps);
   assert(VS.HasBlob() && PS.HasBlob());
 
-  // 2) 入力レイアウト（Object3Dの定義を流用）
-  auto layout = GetInputLayout(InputLayoutType::Object3D); // 既存関数を利用 :contentReference[oaicite:5]{index=5}
-
+  // 2) 入力レイアウト
+  auto layout = GetInputLayout(InputLayoutType::Sprite);
   // 3) PSO 構築（BuildEx を使用）
   auto gp = std::make_unique<GraphicsPipeline>();
   gp->Init(device_);
@@ -196,7 +195,7 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   GPipelineOptions opt{};
   opt.enableAlphaBlend = true;              // 半透明ON
   opt.enableDepth = false;                  // 深度OFF
-  opt.cull = D3D12_CULL_MODE_NONE; // カリングなし
+  opt.cull = D3D12_CULL_MODE_BACK; // カリングなし
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(), VS.Blob()->GetBufferSize()};
   D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(), PS.Blob()->GetBufferSize()};
@@ -226,7 +225,7 @@ GraphicsPipeline *PipelineManager::CreateSpritePipeline(
   auto PS = compiler_.Compile(ps);
   assert(VS.HasBlob() && PS.HasBlob());
 
-  auto layout = GetInputLayout(InputLayoutType::Object3D);
+  auto layout = GetInputLayout(InputLayoutType::Sprite);
 
   auto gp = std::make_unique<GraphicsPipeline>();
   gp->Init(device_);
@@ -234,7 +233,7 @@ GraphicsPipeline *PipelineManager::CreateSpritePipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone);
   opt.enableDepth = false;
-  opt.cull = D3D12_CULL_MODE_NONE;
+  opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
@@ -306,6 +305,17 @@ PipelineManager::GetInputLayout(InputLayoutType type) {
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
+
+  case InputLayoutType::Sprite:
+    return {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
   }
-  return {}; // 不明なタイプ
+
+  return {};
 }

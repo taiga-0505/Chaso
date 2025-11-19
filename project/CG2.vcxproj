@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -105,7 +105,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,7 +132,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -153,6 +153,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Common\RenderCommon.cpp" />
     <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp" />
     <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
+    <ClCompile Include="engine\Graphics\Light\Light.cpp" />
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp" />
@@ -191,10 +192,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Game\Scene\SampleScene\SampleScene.cpp" />
     <ClCompile Include="Game\Scene\SelectScene\SelectScene.cpp" />
     <ClCompile Include="Game\Scene\TitleScene\TitleScene.cpp" />
-    <ClCompile Include="Shader\ShaderCompiler\ShaderCompiler.cpp" />
+    <ClCompile Include="Resources\Shader\ShaderCompiler\ShaderCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader\Object3d.PS.hlsl">
+    <FxCompile Include="Resources\Shader\Object3d.PS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Pixel</ShaderType>
@@ -204,7 +205,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shader\Object3d.VS.hlsl">
+    <FxCompile Include="Resources\Shader\Object3d.VS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Development|x64'">Vertex</ShaderType>
@@ -214,12 +215,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shader\Sprite.PS.hlsl">
+    <FxCompile Include="Resources\Shader\Sprite.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shader\Sprite.VS.hlsl">
+    <FxCompile Include="Resources\Shader\Sprite.VS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -233,6 +234,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Common\RenderCommon.h" />
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h" />
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
+    <ClInclude Include="engine\Graphics\Light\Light.h" />
     <ClInclude Include="engine\Graphics\Sound\BgmManager.h" />
     <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
@@ -279,7 +281,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Game\Scene\SceneManager.h" />
     <ClInclude Include="Game\Scene\SelectScene\SelectScene.h" />
     <ClInclude Include="Game\Scene\TitleScene\TitleScene.h" />
-    <ClInclude Include="Shader\ShaderCompiler\ShaderCompiler.h" />
+    <ClInclude Include="Resources\Shader\ShaderCompiler\ShaderCompiler.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />
@@ -290,7 +292,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shader\Object3d.hlsli" />
+    <None Include="Resources\Shader\Object3d.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

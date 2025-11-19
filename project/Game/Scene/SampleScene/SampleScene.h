@@ -11,12 +11,16 @@ public:
 
   void Update(SceneManager &sm, SceneContext &ctx) override;
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
+  void DrawImGui();
 
 private:
   RC::Matrix4x4 view_, proj_;
 
   // カメラ
   RC::CameraController camera_;
+
+  // Light
+  int light = -1;
 
   // ===============
   // 3Dモデル

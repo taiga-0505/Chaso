@@ -1,5 +1,6 @@
 #include "RenderCommon.h"
 #include "Dx12/Dx12Core.h"
+#include "Light/Light.h"
 #include "PipelineManager.h"
 #include "Sprite2D/Sprite2D.h"
 #include "Texture/TextureManager/TextureManager.h"
@@ -25,19 +26,28 @@ struct SphereSlot {
   int defaultTexHandle = -1; // 生成時に渡されたテクスチャを保持
 };
 
-std::vector<SphereSlot> gSpheres;
-std::vector<SpriteSlot> gSprites;
+struct LightSlot {
+  RC::Light light;
+  bool inUse = false;
+};
+
+std::vector<ModelSlot> gModels;   // モデルスロット
+std::vector<SphereSlot> gSpheres; // スフィアスロット
+std::vector<SpriteSlot> gSprites; // スプライトスロット
+std::vector<LightSlot> gLights;   // ライトスロット
 
 // --- グローバル状態（アプリ全体で共有） ---
 ID3D12Device *gDevice = nullptr;
 DescriptorHeap *gSrvHeap = nullptr;
 TextureManager gTexMan;                   // IDベースで管理
-std::vector<ModelSlot> gModels;           // モデルスロット
 Matrix4x4 gView, gProj;                   // 今フレのカメラ
 ID3D12GraphicsCommandList *gCL = nullptr; // 現在のコマンドリスト
 SceneContext *gCtxRef = nullptr;
 bool gInitialized = false;
 static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNormal;
+
+// 現在アクティブなライトハンドル
+int gActiveLightHandle = -1;
 
 // 空きスロット探す（なければ拡張）
 int AllocModelSlot_() {
@@ -68,6 +78,19 @@ bool IsValidSphere_(int h) {
           gSpheres[h].ptr);
 }
 
+int AllocLightSlot_() {
+  for (int i = 0; i < (int)gLights.size(); ++i) {
+    if (!gLights[i].inUse)
+      return i;
+  }
+  gLights.emplace_back();
+  return (int)gLights.size() - 1;
+}
+
+bool IsValidLight_(int h) {
+  return (h >= 0 && h < (int)gLights.size() && gLights[h].inUse);
+}
+
 } // namespace
 
 // ====== 起動時一回 ======
@@ -82,6 +105,8 @@ void Init(SceneContext &ctx) {
 
   gModels.clear();
   gSpheres.clear();
+  gLights.clear();
+  gActiveLightHandle = -1;
   gView = MakeIdentity4x4();
   gProj = MakeIdentity4x4();
   gCL = nullptr;
@@ -95,6 +120,8 @@ void Term() {
   gModels.clear();
   gSprites.clear();
   gSpheres.clear();
+  gLights.clear();
+  gActiveLightHandle = -1;
   gTexMan.Term();
   gCtxRef = nullptr;
   gDevice = nullptr;
@@ -107,6 +134,55 @@ void Term() {
 void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj) {
   gView = view;
   gProj = proj;
+}
+
+// ====== Light 管理 ======
+
+int CreateLight() {
+  if (!gInitialized)
+    return -1;
+
+  const int h = AllocLightSlot_();
+  gLights[h].inUse = true;
+  gLights[h].light = Light{}; // 既定値で初期化
+
+  // 最初に作られたライトを自動でアクティブにする
+  if (gActiveLightHandle < 0) {
+    gActiveLightHandle = h;
+  }
+
+  return h;
+}
+
+void DestroyLight(int lightHandle) {
+  if (!IsValidLight_(lightHandle))
+    return;
+
+  gLights[lightHandle].inUse = false;
+
+  if (gActiveLightHandle == lightHandle) {
+    gActiveLightHandle = -1;
+  }
+}
+
+void SetActiveLight(int lightHandle) {
+  if (!IsValidLight_(lightHandle))
+    return;
+  gActiveLightHandle = lightHandle;
+}
+
+int GetActiveLightHandle() { return gActiveLightHandle; }
+
+Light *GetLightPtr(int lightHandle) {
+  if (!IsValidLight_(lightHandle))
+    return nullptr;
+  return &gLights[lightHandle].light;
+}
+
+void DrawImGuiLight(int lightHandle, const char *name) {
+  if (!IsValidLight_(lightHandle))
+    return;
+  gLights[lightHandle].light.DrawImGui(name);
 }
 
 // ====== ロード ======
@@ -149,6 +225,28 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   cl->SetPipelineState(ctx.objectPSO->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   gCL = cl; // DrawModel から使う
+
+  // アクティブライトを全 Model3D に流し込む
+  if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
+    const Light &srcLight = gLights[gActiveLightHandle].light;
+    const DirectionalLight &srcDir = srcLight.Data();
+    const int mode = srcLight.GetLightingMode();
+
+    for (auto &slot : gModels) {
+      if (!slot.inUse || !slot.ptr)
+        continue;
+
+      // ライト方向/色/強さ
+      if (auto *dst = slot.ptr->Light()) { // DirectionalLight*
+        *dst = srcDir;
+      }
+
+      // マテリアル側の lightingMode も上書き
+      if (auto *mat = slot.ptr->Mat()) { // Material*
+        mat->lightingMode = mode;
+      }
+    }
+  }
 
   // 各モデルのバッチカーソルをリセット
   for (auto &slot : gModels) {
@@ -218,7 +316,12 @@ void DrawImGui3D(int modelHandle, const char *name) {
   if (!IsValidModel_(modelHandle))
     return;
   auto &m = gModels[modelHandle].ptr;
-  m->DrawImGui(name);
+
+  // Light がアクティブならモデル側の Lighting UI は隠す
+  bool showLightingUi =
+      !(gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle));
+
+  m->DrawImGui(name, showLightingUi);
 }
 
 // ====== 解放 ======
@@ -367,7 +470,7 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h) {
   auto &s = gSprites[spriteHandle];
   if (!s.inUse || !s.ptr)
     return;
-  s.ptr->SetScreenSize(w, h);
+  s.ptr->SetSize(w, h);
 }
 
 void DrawImGui2D(int spriteHandle, const char *name) {

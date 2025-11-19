@@ -5,21 +5,17 @@ using namespace RC;
 
 // ---- 内部ユーティリティ ----
 static void WriteQuadVertices(ID3D12Resource *vb) {
-  VertexData *v = nullptr;
+  SpriteVertex *v = nullptr;
   vb->Map(0, nullptr, reinterpret_cast<void **>(&v));
   // 左下, 左上, 右下, 右上（UVは上0 下1）
   v[0].position = {0.0f, 1.0f, 0.0f, 1.0f};
   v[0].texcoord = {0.0f, 1.0f};
-  v[0].normal = {0, 0, -1};
   v[1].position = {0.0f, 0.0f, 0.0f, 1.0f};
   v[1].texcoord = {0.0f, 0.0f};
-  v[1].normal = {0, 0, -1};
   v[2].position = {1.0f, 1.0f, 0.0f, 1.0f};
   v[2].texcoord = {1.0f, 1.0f};
-  v[2].normal = {0, 0, -1};
   v[3].position = {1.0f, 0.0f, 0.0f, 1.0f};
   v[3].texcoord = {1.0f, 0.0f};
-  v[3].normal = {0, 0, -1};
   vb->Unmap(0, nullptr);
 }
 
@@ -81,11 +77,12 @@ void Sprite2D::Initialize(ID3D12Device *device, float screenWidth,
   cbMat_.map->uvTransform = MakeIdentity4x4();
 
   // VB (4頂点)
-  vb_.res = CreateBufferResource(device_, sizeof(VertexData) * 4);
+  vb_.res = CreateBufferResource(device_, sizeof(SpriteVertex) * 4);
   WriteQuadVertices(vb_.res);
   vb_.view.BufferLocation = vb_.res->GetGPUVirtualAddress();
-  vb_.view.SizeInBytes = sizeof(VertexData) * 4;
-  vb_.view.StrideInBytes = sizeof(VertexData);
+  vb_.view.SizeInBytes = sizeof(SpriteVertex) * 4;
+  vb_.view.StrideInBytes = sizeof(SpriteVertex);
+
 
   // IB (6 index)
   ib_.res = CreateBufferResource(device_, sizeof(uint32_t) * 6);

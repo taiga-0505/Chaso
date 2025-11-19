@@ -4,9 +4,14 @@
 #include <string>
 
 #include "Math/Math.h" // Matrix4x4, Transform, Make* 系
-#include "function/function.h" // CreateBufferResource, VertexData, Material, TransformationMatrix など
+#include "function/function.h" // CreateBufferResource
 
 #include "imgui/imgui.h"
+
+struct SpriteVertex {
+  RC::Vector4 position; // 頂点の位置
+  RC::Vector2 texcoord; // テクスチャ座標
+};
 
 class Sprite2D {
 public:

@@ -55,27 +55,27 @@ bool App::Init() {
   // ===========================================
 
   // GraphicsPipeline一括構築（既存のObject3D）
-  pipeObj_ = pm_.CreateFromFiles("object3d", L"Shader/Object3D.VS.hlsl",
-                                 L"Shader/Object3D.PS.hlsl",
+  pipeObj_ = pm_.CreateFromFiles("object3d", L"Resources/Shader/Object3D.VS.hlsl",
+                                 L"Resources/Shader/Object3D.PS.hlsl",
                                  InputLayoutType::Object3D);
 
-  pm_.CreateModelPipeline("ObjBlendModeNone", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeNone);
+  pm_.CreateModelPipeline("ObjBlendModeNone", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeNone);
 
-  pm_.CreateModelPipeline("ObjBlendModeNormal", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
+  pm_.CreateModelPipeline("ObjBlendModeNormal", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeNormal);
 
-  pm_.CreateModelPipeline("ObjBlendModeAdd", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
+  pm_.CreateModelPipeline("ObjBlendModeAdd", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeAdd);
 
-  pm_.CreateModelPipeline("ObjBlendModeSubtract", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
+  pm_.CreateModelPipeline("ObjBlendModeSubtract", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeSubtract);
 
-  pm_.CreateModelPipeline("ObjBlendModeMultiply", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
+  pm_.CreateModelPipeline("ObjBlendModeMultiply", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeMultiply);
 
-  pm_.CreateModelPipeline("ObjBlendModeScreen", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
+  pm_.CreateModelPipeline("ObjBlendModeScreen", L"Resources/Shader/Object3D.VS.hlsl",
+                          L"Resources/Shader/Object3D.PS.hlsl", kBlendModeScreen);
 
   // デフォルト（Normal）を SceneContext へ（objectPSO）
   sceneCtx_.objectPSO = pm_.Get("ObjBlendModeNone");
@@ -84,27 +84,27 @@ bool App::Init() {
   // SpritePSO ブレンド違いをキー名で登録
   // ===========================================
 
-  /*pipeSprite_ = pm_.CreateFromFiles("sprite", L"Shader/Sprite.VS.hlsl",
-                                 L"Shader/Sprite.PS.hlsl",
-     InputLayoutType::Sprite);*/
+  pipeSprite_ =
+      pm_.CreateFromFiles("sprite", L"Resources/Shader/Sprite.VS.hlsl",
+                          L"Resources/Shader/Sprite.PS.hlsl", InputLayoutType::Sprite);
 
-  pm_.CreateSpritePipeline("BlendModeNone", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeNone);
+  pm_.CreateSpritePipeline("BlendModeNone", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeNone);
 
-  pm_.CreateSpritePipeline("BlendModeNormal", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
+  pm_.CreateSpritePipeline("BlendModeNormal", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeNormal);
 
-  pm_.CreateSpritePipeline("BlendModeAdd", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
+  pm_.CreateSpritePipeline("BlendModeAdd", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeAdd);
 
-  pm_.CreateSpritePipeline("BlendModeSubtract", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
+  pm_.CreateSpritePipeline("BlendModeSubtract", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeSubtract);
 
-  pm_.CreateSpritePipeline("BlendModeMultiply", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
+  pm_.CreateSpritePipeline("BlendModeMultiply", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeMultiply);
 
-  pm_.CreateSpritePipeline("BlendModeScreen", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
+  pm_.CreateSpritePipeline("BlendModeScreen", L"Resources/Shader/Sprite.VS.hlsl",
+                           L"Resources/Shader/Sprite.PS.hlsl", kBlendModeScreen);
 
   // デフォルト（Normal）を SceneContext へ
   pipeSprite_ = pm_.Get("BlendModeNormal");
