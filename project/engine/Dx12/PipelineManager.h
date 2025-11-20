@@ -48,6 +48,8 @@ public:
 
   bool Rebuild(const std::string &key);
 
+  void RegisterDefaultPipelines();
+
   // 取得系
   bool Exists(const std::string &key) const {
     return pipelines_.count(key) > 0;
