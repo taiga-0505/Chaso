@@ -95,6 +95,42 @@ bool PipelineManager::Rebuild(const std::string &key) {
   return true;
 }
 
+void PipelineManager::RegisterDefaultPipelines() {
+  // ==============================
+  // Object3D 用
+  // ==============================
+  const std::wstring objVs = L"Resources/Shader/Object3D.VS.hlsl";
+  const std::wstring objPs = L"Resources/Shader/Object3D.PS.hlsl";
+
+  // 互換用のベース PSO（必要なら）※App で "object3d" として作っていたもの
+  CreateFromFiles("object3d", objVs, objPs, InputLayoutType::Object3D);
+
+  // ブレンド違い
+  CreateModelPipeline("ObjBlendModeNone", objVs, objPs, kBlendModeNone);
+  CreateModelPipeline("ObjBlendModeNormal", objVs, objPs, kBlendModeNormal);
+  CreateModelPipeline("ObjBlendModeAdd", objVs, objPs, kBlendModeAdd);
+  CreateModelPipeline("ObjBlendModeSubtract", objVs, objPs, kBlendModeSubtract);
+  CreateModelPipeline("ObjBlendModeMultiply", objVs, objPs, kBlendModeMultiply);
+  CreateModelPipeline("ObjBlendModeScreen", objVs, objPs, kBlendModeScreen);
+
+  // ==============================
+  // Sprite 用
+  // ==============================
+  const std::wstring sprVs = L"Resources/Shader/Sprite.VS.hlsl";
+  const std::wstring sprPs = L"Resources/Shader/Sprite.PS.hlsl";
+
+  // 互換用のベース PSO（必要なら）※App で "sprite" として作っていたもの
+  CreateFromFiles("sprite", sprVs, sprPs, InputLayoutType::Sprite);
+
+  // ブレンド違い
+  CreateSpritePipeline("BlendModeNone", sprVs, sprPs, kBlendModeNone);
+  CreateSpritePipeline("BlendModeNormal", sprVs, sprPs, kBlendModeNormal);
+  CreateSpritePipeline("BlendModeAdd", sprVs, sprPs, kBlendModeAdd);
+  CreateSpritePipeline("BlendModeSubtract", sprVs, sprPs, kBlendModeSubtract);
+  CreateSpritePipeline("BlendModeMultiply", sprVs, sprPs, kBlendModeMultiply);
+  CreateSpritePipeline("BlendModeScreen", sprVs, sprPs, kBlendModeScreen);
+}
+
 GraphicsPipeline *PipelineManager::CreateModelPipeline(
     const std::string &key, const std::wstring &vsPath,
     const std::wstring &psPath, BlendMode mode) {

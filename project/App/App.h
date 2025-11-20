@@ -50,8 +50,6 @@ private:
 
   // パイプライン
   PipelineManager pm_;
-  GraphicsPipeline *pipeObj_ = nullptr;
-  GraphicsPipeline *pipeSprite_ = nullptr;
 
   // === シーン管理 ===
   // === Game（シーン切替などゲーム側の責務） ===
