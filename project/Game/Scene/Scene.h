@@ -20,7 +20,7 @@ class SeManager;
 struct SceneContext {
   Dx12Core *core = nullptr;      // コマンドリスト等のアクセスに使う場合
   Input *input = nullptr;        // 入力（キー遷移など）
-  const AppConfig *app = nullptr;
+  AppConfig *app = nullptr;
   ImGuiManager *imgui =
       nullptr; // ImGuiウィンドウを出すだけなら不要だが念のため
   GraphicsPipeline *objectPSO = nullptr;

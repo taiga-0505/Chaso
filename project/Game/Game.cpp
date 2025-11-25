@@ -8,6 +8,7 @@
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
+#include "ParticlesScene/ParticlesScene.h"
 
 void Game::Init(SceneContext &ctx) {
   sceneMgr_.Init(ctx);
@@ -15,7 +16,7 @@ void Game::Init(SceneContext &ctx) {
 
   // ここで最初のシーンを決める（Gameの責務）
 #ifdef _DEBUG
-  const char *boot = "Sample"; // デバッグ時は直接Gameへ
+  const char *boot = "Particles"; // デバッグ時は直接Gameへ
 #else
   const char *boot = "Title"; // リリースはTitleから
 #endif
@@ -29,6 +30,7 @@ void Game::registerScenes_() {
   sceneMgr_.Register(std::make_unique<ResultScene>());
   sceneMgr_.Register(std::make_unique<GameOverScene>());
   sceneMgr_.Register(std::make_unique<SampleScene>());
+  sceneMgr_.Register(std::make_unique<ParticlesScene>());
 }
 
 void Game::registerAudioPaths_() {
@@ -69,8 +71,8 @@ const std::string &Game::CurrentSceneName() const {
 void Game::DrawDebugUI() {
 #ifdef _DEBUG
   ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title",  "Select",   "Game",
-                              "Result", "GameOver", "Sample"};
+  const char *sceneNames[] = {"Title",  "Select",   "Game",      "Result",
+                              "GameOver", "Sample", "Particles"};
   const char *currentSceneName = CurrentSceneName().c_str();
 
   if (ImGui::BeginCombo("##Scene", currentSceneName)) {
