@@ -1,6 +1,8 @@
 #include "FixFps.h"
 
-void FixFps::Initialize() { reference_ = std::chrono::steady_clock::now(); }
+void FixFps::Initialize() {
+    reference_ = std::chrono::steady_clock::now(); 
+}
 
 void FixFps::Update() {
 

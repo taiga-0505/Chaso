@@ -1,18 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <FxCompile Include="Resources\Shader\Object3d.PS.hlsl">
+    <FxCompile Include="Resources\Shader\Object3d\Object3d.PS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Object3d.VS.hlsl">
+    <FxCompile Include="Resources\Shader\Object3d\Object3d.VS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Sprite.VS.hlsl">
+    <FxCompile Include="Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Sprite.PS.hlsl">
+    <FxCompile Include="Resources\Shader\Sprite\Sprite.PS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\Shader\Particle\Particle.PS.hlsl" />
+    <FxCompile Include="Resources\Shader\Particle\Particle.VS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -144,7 +146,8 @@
     </ClCompile>
     <ClCompile Include="Game\Game.cpp" />
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
-    <ClCompile Include="Game\Scene\ParticlesScene\ParticlesScene.cpp" />
+    <ClCompile Include="Game\Scene\ParticleScene\ParticleScene.cpp" />
+    <ClCompile Include="engine\Graphics\Particle\Particle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -308,7 +311,8 @@
     </ClInclude>
     <ClInclude Include="Game\Game.h" />
     <ClInclude Include="engine\Graphics\Light\Light.h" />
-    <ClInclude Include="Game\Scene\ParticlesScene\ParticlesScene.h" />
+    <ClInclude Include="Game\Scene\ParticleScene\ParticleScene.h" />
+    <ClInclude Include="engine\Graphics\Particle\Particle.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -384,8 +388,9 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Shader\Object3d.hlsli">
+    <None Include="Resources\Shader\Object3d\Object3d.hlsli">
       <Filter>Shader</Filter>
     </None>
+    <None Include="Resources\Shader\Particle\Particle.hlsli" />
   </ItemGroup>
 </Project>

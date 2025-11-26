@@ -99,8 +99,8 @@ void PipelineManager::RegisterDefaultPipelines() {
   // ==============================
   // Object3D 用
   // ==============================
-  const std::wstring objVs = L"Resources/Shader/Object3D.VS.hlsl";
-  const std::wstring objPs = L"Resources/Shader/Object3D.PS.hlsl";
+  const std::wstring objVs = L"Resources/Shader/Object3d/Object3D.VS.hlsl";
+  const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
 
   // 互換用のベース PSO（必要なら）※App で "object3d" として作っていたもの
   CreateFromFiles("object3d", objVs, objPs, InputLayoutType::Object3D);
@@ -116,8 +116,8 @@ void PipelineManager::RegisterDefaultPipelines() {
   // ==============================
   // Sprite 用
   // ==============================
-  const std::wstring sprVs = L"Resources/Shader/Sprite.VS.hlsl";
-  const std::wstring sprPs = L"Resources/Shader/Sprite.PS.hlsl";
+  const std::wstring sprVs = L"Resources/Shader/Sprite/Sprite.VS.hlsl";
+  const std::wstring sprPs = L"Resources/Shader/Sprite/Sprite.PS.hlsl";
 
   // 互換用のベース PSO（必要なら）※App で "sprite" として作っていたもの
   CreateFromFiles("sprite", sprVs, sprPs, InputLayoutType::Sprite);
@@ -129,6 +129,23 @@ void PipelineManager::RegisterDefaultPipelines() {
   CreateSpritePipeline("BlendModeSubtract", sprVs, sprPs, kBlendModeSubtract);
   CreateSpritePipeline("BlendModeMultiply", sprVs, sprPs, kBlendModeMultiply);
   CreateSpritePipeline("BlendModeScreen", sprVs, sprPs, kBlendModeScreen);
+
+  // =============================
+  // Particle 用
+  // =============================
+  const std::wstring ptlVs = L"Resources/Shader/Particle/Particle.VS.hlsl";
+  const std::wstring ptlPs = L"Resources/Shader/Particle/Particle.PS.hlsl";
+  CreateFromFiles("particle", ptlVs, ptlPs, InputLayoutType::Particle);
+
+  // ブレンド違い
+  CreateParticlePipeline("PtlBlendModeNone", ptlVs, ptlPs, kBlendModeNone);
+  CreateParticlePipeline("PtlBlendModeNormal", ptlVs, ptlPs, kBlendModeNormal);
+  CreateParticlePipeline("PtlBlendModeAdd", ptlVs, ptlPs, kBlendModeAdd);
+  CreateParticlePipeline("PtlBlendModeSubtract", ptlVs, ptlPs,
+                         kBlendModeSubtract);
+  CreateParticlePipeline("PtlBlendModeMultiply", ptlVs, ptlPs,
+                         kBlendModeMultiply);
+  CreateParticlePipeline("PtlBlendModeScreen", ptlVs, ptlPs, kBlendModeScreen);
 }
 
 GraphicsPipeline *PipelineManager::CreateModelPipeline(
@@ -205,18 +222,23 @@ GraphicsPipeline *PipelineManager::GetModelPipeline(BlendMode mode) {
   return Get(key);
 }
 
-
 GraphicsPipeline *
 PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
-                                                        const std::wstring& psPath) {
+                                      const std::wstring &psPath) {
   // 1) シェーダをコンパイル（既存と同じ手順）
   ShaderDesc vs{}, ps{};
-  vs.path = vsPath.c_str(); vs.target = L"vs_6_0"; vs.entry = L"main";
-  ps.path = psPath.c_str(); ps.target = L"ps_6_0"; ps.entry = L"main";
+  vs.path = vsPath.c_str();
+  vs.target = L"vs_6_0";
+  vs.entry = L"main";
+  ps.path = psPath.c_str();
+  ps.target = L"ps_6_0";
+  ps.entry = L"main";
 #ifdef _DEBUG
-  vs.optimize = ps.optimize = false; vs.debugInfo = ps.debugInfo = true;
+  vs.optimize = ps.optimize = false;
+  vs.debugInfo = ps.debugInfo = true;
 #else
-  vs.optimize = ps.optimize = true;  vs.debugInfo = ps.debugInfo = false;
+  vs.optimize = ps.optimize = true;
+  vs.debugInfo = ps.debugInfo = false;
 #endif
   auto VS = compiler_.Compile(vs);
   auto PS = compiler_.Compile(ps);
@@ -229,20 +251,22 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   gp->Init(device_);
 
   GPipelineOptions opt{};
-  opt.enableAlphaBlend = true;              // 半透明ON
-  opt.enableDepth = false;                  // 深度OFF
+  opt.enableAlphaBlend = true;     // 半透明ON
+  opt.enableDepth = false;         // 深度OFF
   opt.cull = D3D12_CULL_MODE_BACK; // カリングなし
 
-  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(), VS.Blob()->GetBufferSize()};
-  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(), PS.Blob()->GetBufferSize()};
-  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()),
-              vsBC, psBC, rtvFmt_, dsvFmt_, opt);
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
+                             VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
+                             PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
+              rtvFmt_, dsvFmt_, opt);
 
   // 4) マップには任意のキーで登録（ここでは "sprite"）
   Entry e;
   e.desc.inputLayout = std::move(layout);
   e.pipeline = std::move(gp);
-  auto& ref = pipelines_["sprite"] = std::move(e);
+  auto &ref = pipelines_["sprite"] = std::move(e);
   return ref.pipeline.get();
 }
 
@@ -311,6 +335,67 @@ GraphicsPipeline *PipelineManager::GetSpritePipeline(BlendMode mode) {
   return Get(key);
 }
 
+GraphicsPipeline *PipelineManager::CreateParticlePipeline(
+    const std::string &key, const std::wstring &vsPath,
+    const std::wstring &psPath, BlendMode mode) {
+  // 既存のコンパイル手順は流用
+  ShaderDesc vs{}, ps{};
+  vs.path = vsPath.c_str();
+  vs.target = L"vs_6_0";
+  vs.entry = L"main";
+  ps.path = psPath.c_str();
+  ps.target = L"ps_6_0";
+  ps.entry = L"main";
+  auto VS = compiler_.Compile(vs);
+  auto PS = compiler_.Compile(ps);
+  assert(VS.HasBlob() && PS.HasBlob());
+  auto layout = GetInputLayout(InputLayoutType::Particle);
+  auto gp = std::make_unique<GraphicsPipeline>();
+  gp->Init(device_);
+
+  GPipelineOptions opt{};
+  opt.enableAlphaBlend = (mode != kBlendModeNone);
+  opt.enableDepth = false;
+  opt.cull = D3D12_CULL_MODE_BACK;
+  opt.blendMode = mode;
+  D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
+                             VS.Blob()->GetBufferSize()};
+  D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
+                             PS.Blob()->GetBufferSize()};
+  gp->BuildEx(layout.data(), static_cast<UINT>(layout.size()), vsBC, psBC,
+              rtvFmt_, dsvFmt_, opt);
+  Entry e;
+  e.desc.inputLayout = std::move(layout);
+  e.pipeline = std::move(gp);
+  auto &ref = pipelines_[key] = std::move(e);
+  return ref.pipeline.get();
+}
+
+GraphicsPipeline *PipelineManager::GetParticlePipeline(BlendMode mode) {
+  const char *key = "PtlBlendModeNormal";
+  switch (mode) {
+  case kBlendModeNone:
+    key = "PtlBlendModeNone";
+    break;
+  case kBlendModeNormal:
+    key = "PtlBlendModeNormal";
+    break;
+  case kBlendModeAdd:
+    key = "PtlBlendModeAdd";
+    break;
+  case kBlendModeSubtract:
+    key = "PtlBlendModeSubtract";
+    break;
+  case kBlendModeMultiply:
+    key = "PtlBlendModeMultiply";
+    break;
+  case kBlendModeScreen:
+    key = "PtlBlendModeScreen";
+    break;
+  }
+  return Get(key);
+}
+
 GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
                                                     const PipelineDesc &desc,
                                                     IDxcBlob *vs,
@@ -348,6 +433,19 @@ PipelineManager::GetInputLayout(InputLayoutType type) {
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
+
+  case InputLayoutType::Particle:
+    return {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };

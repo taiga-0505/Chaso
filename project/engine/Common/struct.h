@@ -22,6 +22,16 @@ struct VertexData {
   RC::Vector3 normal;   // 法線ベクトル
 };
 
+
+struct MaterialData {
+  std::string textureFilePath; // テクスチャファイルのパス
+};
+
+struct ModelData {
+  std::vector<VertexData> vertices; // 頂点データの配列
+  MaterialData material;        // マテリアルデータ
+};
+
 struct Material {
   RC::Vector4 color;     // 色 (RGBA)
   int lightingMode;      // 0:なし, 1:Lambert, 2:Half Lambert

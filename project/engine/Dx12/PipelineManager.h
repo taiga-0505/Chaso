@@ -10,6 +10,7 @@
 enum class InputLayoutType {
   Object3D,
   Sprite,
+  Particle,
 };
 
 struct PipelineDesc {
@@ -75,6 +76,12 @@ public:
                                          BlendMode mode);
 
   GraphicsPipeline *GetSpritePipeline(BlendMode mode);
+
+  GraphicsPipeline *CreateParticlePipeline(const std::string &key,
+                                           const std::wstring &vsPath,
+                                           const std::wstring &psPath,
+                                           BlendMode mode);
+  GraphicsPipeline *GetParticlePipeline(BlendMode mode);
 
 private:
   GraphicsPipeline *createFromBlobs_(const std::string &key,

@@ -8,7 +8,7 @@
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
-#include "ParticlesScene/ParticlesScene.h"
+#include "ParticleScene/ParticleScene.h"
 
 void Game::Init(SceneContext &ctx) {
   sceneMgr_.Init(ctx);
@@ -16,7 +16,7 @@ void Game::Init(SceneContext &ctx) {
 
   // ここで最初のシーンを決める（Gameの責務）
 #ifdef _DEBUG
-  const char *boot = "Particles"; // デバッグ時は直接Gameへ
+  const char *boot = "Particle"; // デバッグ時は直接Gameへ
 #else
   const char *boot = "Title"; // リリースはTitleから
 #endif
@@ -30,7 +30,7 @@ void Game::registerScenes_() {
   sceneMgr_.Register(std::make_unique<ResultScene>());
   sceneMgr_.Register(std::make_unique<GameOverScene>());
   sceneMgr_.Register(std::make_unique<SampleScene>());
-  sceneMgr_.Register(std::make_unique<ParticlesScene>());
+  sceneMgr_.Register(std::make_unique<ParticleScene>());
 }
 
 void Game::registerAudioPaths_() {
@@ -48,7 +48,9 @@ void Game::registerAudioPaths_() {
   // se_.SetPath(SeId::Clear, "Resources/audio/se_clear.wav");
 }
 
-void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }
+void Game::Update(SceneContext &ctx) {
+    sceneMgr_.Update(ctx); 
+}
 
 void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   sceneMgr_.Render(ctx, cl);
@@ -72,7 +74,7 @@ void Game::DrawDebugUI() {
 #ifdef _DEBUG
   ImGui::Begin("Scene");
   const char *sceneNames[] = {"Title",  "Select",   "Game",      "Result",
-                              "GameOver", "Sample", "Particles"};
+                              "GameOver", "Sample", "Particle"};
   const char *currentSceneName = CurrentSceneName().c_str();
 
   if (ImGui::BeginCombo("##Scene", currentSceneName)) {
@@ -89,6 +91,7 @@ void Game::DrawDebugUI() {
   }
   ImGui::End();
 
+#endif
   // === FPS overlay ===
   ImGuiIO &io = ImGui::GetIO();
   ImGui::SetNextWindowBgAlpha(0.35f);
@@ -103,5 +106,4 @@ void Game::DrawDebugUI() {
     ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
   }
   ImGui::End();
-#endif
 }
