@@ -11,10 +11,6 @@
 
 class TextureManager; // 前方宣言
 
-struct MaterialData {
-  std::string textureFilePath; // テクスチャファイルのパス
-};
-
 class Model3D {
 public:
   // -------------------------------

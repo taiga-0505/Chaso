@@ -25,6 +25,7 @@ struct SceneContext {
       nullptr; // ImGuiウィンドウを出すだけなら不要だが念のため
   GraphicsPipeline *objectPSO = nullptr;
   GraphicsPipeline *spritePSO = nullptr;
+  GraphicsPipeline *particlePSO = nullptr;
   PipelineManager *pipelineManager = nullptr;
   BgmManager *bgmManager = nullptr; // BGM管理
   SeManager *seManager = nullptr; // 効果音管理

@@ -13,3 +13,5 @@
 #include "Math/MathTypes.h"
 
 #include "Light/Light.h"
+
+#include "Particle/Particle.h"
