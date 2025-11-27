@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <function/function.h>
 #include <imgui/imgui.h>
+#include "PipelineManager.h"
 
 namespace RC {
 
@@ -95,7 +96,7 @@ void Particle::Initialize(SceneContext &ctx) {
   cbMatMapped_ = nullptr;
 
   // テクスチャ
-  int texHandle = RC::LoadTex("Resources/uvChecker.png", true);
+  int texHandle = RC::LoadTex("Resources/circle.png", true);
   textureSrv_ = RC::GetSrv(texHandle);
 
   // ParticleData 初期化
@@ -179,8 +180,18 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     return;
   }
 
-  cl->SetGraphicsRootSignature(ctx.particlePSO->Root());
-  cl->SetPipelineState(ctx.particlePSO->PSO());
+  GraphicsPipeline *pso = ctx.particlePSO;
+
+  if (ctx.pipelineManager) {
+    pso = ctx.pipelineManager->GetParticlePipeline(RC::GetBlendMode());
+  }
+
+  if (!pso) {
+    return;
+  }
+
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
 
   // IA 設定
   cl->IASetVertexBuffers(0, 1, &vbView_);
@@ -199,11 +210,7 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     cl->SetGraphicsRootDescriptorTable(2, textureSrv_);
   }
 
-  RC::SetBlendMode(kBlendModeNormal);
-
   cl->DrawInstanced(vertexCount_, numInstance, 0, 0);
-
-  RC::SetBlendMode(kBlendModeNone);
 }
 
 void Particle::DrawImGui() {

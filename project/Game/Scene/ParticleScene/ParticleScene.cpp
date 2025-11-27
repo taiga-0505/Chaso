@@ -52,6 +52,8 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   //RC::DrawModel(plane);
 
+  
+  RC::SetBlendMode(kBlendModeAdd);
   particle_.Render(ctx,cl);
 
   RC::PreDraw2D(ctx, cl);

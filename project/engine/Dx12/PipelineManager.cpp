@@ -179,6 +179,7 @@ GraphicsPipeline *PipelineManager::CreateModelPipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone); // None 以外はブレンドON
   opt.enableDepth = true;                          // モデルは深度ON
+  opt.enableDepthWrite = true;
   opt.cull = D3D12_CULL_MODE_NONE;                 // 既定の背面カリング
   opt.blendMode = mode;
   opt.rootType = RootSignatureType::Object3D;
@@ -254,6 +255,7 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   GPipelineOptions opt{};
   opt.enableAlphaBlend = true;     // 半透明ON
   opt.enableDepth = false;         // 深度OFF
+  opt.enableDepthWrite = false;
   opt.cull = D3D12_CULL_MODE_BACK; // カリングなし
   opt.rootType = RootSignatureType::Sprite;
 
@@ -295,6 +297,7 @@ GraphicsPipeline *PipelineManager::CreateSpritePipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone);
   opt.enableDepth = false;
+  opt.enableDepthWrite = false;
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
   opt.rootType = RootSignatureType::Sprite;
@@ -358,7 +361,8 @@ GraphicsPipeline *PipelineManager::CreateParticlePipeline(
 
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone);
-  opt.enableDepth = false;
+  opt.enableDepth = true;       // 深度テストする
+  opt.enableDepthWrite = false; // でも書き込まない
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
   opt.rootType = RootSignatureType::Particle;
