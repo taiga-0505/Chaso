@@ -23,9 +23,10 @@ public:
 private:
 private:
   ModelData modelData;
-  static const int instanceCount = 10;
+  uint32_t numInstance = 0;
+  static const int kNumMaxInstance = 10;
 
-  ParticleData particles[instanceCount];
+  ParticleData particles[kNumMaxInstance];
 
   ID3D12Device *device_ = nullptr;
 
@@ -57,6 +58,8 @@ private:
   RC::Vector2 uvScale_{1.0f, 1.0f};
   RC::Vector2 uvTranslate_{0.0f, 0.0f};
   float uvRotate_ = 0.0f;
+
+  float deltaTime = 1.0f / 60.0f;
 
   // ランダム
   std::random_device seedGenerator;
