@@ -136,13 +136,21 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   // 深度ステンシル
   D3D12_DEPTH_STENCIL_DESC ds{};
   ds.DepthEnable = opt.enableDepth ? TRUE : FALSE;
-  ds.DepthWriteMask = opt.enableDepth ? D3D12_DEPTH_WRITE_MASK_ALL
-                                      : D3D12_DEPTH_WRITE_MASK_ZERO;
+
+  // 深度テストするかどうか と、書き込むかどうかを分ける
+  if (opt.enableDepth && opt.enableDepthWrite) {
+    ds.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+  } else {
+    ds.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+  }
+
   ds.DepthFunc = opt.enableDepth ? D3D12_COMPARISON_FUNC_LESS_EQUAL
                                  : D3D12_COMPARISON_FUNC_ALWAYS;
   ds.StencilEnable = FALSE;
+
   d.DepthStencilState = ds;
   d.DSVFormat = dsvFmt;
+
 
   // RT
   d.NumRenderTargets = 1;

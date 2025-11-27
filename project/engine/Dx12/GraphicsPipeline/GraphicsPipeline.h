@@ -27,6 +27,7 @@ enum class RootSignatureType {
 struct GPipelineOptions {
   bool enableAlphaBlend = false; // ← スプライトは true
   bool enableDepth = true;       // ← スプライトは false
+  bool enableDepthWrite = true; // 深度を書き込むかどうか
   D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK;
   D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID;
   BlendMode blendMode = kBlendModeNormal;
