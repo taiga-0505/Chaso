@@ -1,13 +1,27 @@
 #pragma once
-#include <cstdint>
-#include <vector>
-#include <string>
 #include "Math/MathTypes.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 struct Transform {
   RC::Vector3 scale;
   RC::Vector3 rotation;
   RC::Vector3 translation;
+
+  // Overload the "+=" operator for Transform
+  Transform &operator+=(const RC::Vector3 &velocity) {
+    this->translation.x += velocity.x;
+    this->translation.y += velocity.y;
+    this->translation.z += velocity.z;
+    return *this;
+  }
+};
+
+struct ParticleData {
+  Transform transform;
+  RC::Vector3 velocity;
+  RC::Vector4 color;
 };
 
 struct Segment {
@@ -22,20 +36,24 @@ struct VertexData {
   RC::Vector3 normal;   // 法線ベクトル
 };
 
-
 struct MaterialData {
   std::string textureFilePath; // テクスチャファイルのパス
 };
 
 struct ModelData {
   std::vector<VertexData> vertices; // 頂点データの配列
-  MaterialData material;        // マテリアルデータ
+  MaterialData material;            // マテリアルデータ
 };
 
 struct Material {
-  RC::Vector4 color;     // 色 (RGBA)
-  int lightingMode;      // 0:なし, 1:Lambert, 2:Half Lambert
-  float padding[3];      // アラインメント調整
+  RC::Vector4 color;         // 色 (RGBA)
+  int lightingMode;          // 0:なし, 1:Lambert, 2:Half Lambert
+  float padding[3];          // アラインメント調整
+  RC::Matrix4x4 uvTransform; // UV変換行列
+};
+
+struct SpriteMaterial {
+  RC::Vector4 color;         // 色 (RGBA)
   RC::Matrix4x4 uvTransform; // UV変換行列
 };
 
@@ -44,10 +62,17 @@ struct TransformationMatrix {
   RC::Matrix4x4 World;
 };
 
+struct ParticleForGPU {
+  RC::Matrix4x4 WVP;
+  RC::Matrix4x4 World;
+  RC::Vector4 color;
+};
+;
+
 struct DirectionalLight {
-  RC::Vector4 color; // 光の色 (RGBA)
+  RC::Vector4 color;     // 光の色 (RGBA)
   RC::Vector3 direction; // 光の方向
-  float intensity;   // 光の強度
+  float intensity;       // 光の強度
 };
 
 // -------------------------------

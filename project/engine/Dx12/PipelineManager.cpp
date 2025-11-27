@@ -130,12 +130,12 @@ void PipelineManager::RegisterDefaultPipelines() {
   CreateSpritePipeline("BlendModeMultiply", sprVs, sprPs, kBlendModeMultiply);
   CreateSpritePipeline("BlendModeScreen", sprVs, sprPs, kBlendModeScreen);
 
-  // =============================
-  // Particle 用
-  // =============================
+  //// =============================
+  //// Particle 用
+  //// =============================
   const std::wstring ptlVs = L"Resources/Shader/Particle/Particle.VS.hlsl";
   const std::wstring ptlPs = L"Resources/Shader/Particle/Particle.PS.hlsl";
-  CreateFromFiles("particle", ptlVs, ptlPs, InputLayoutType::Particle);
+  //CreateFromFiles("particle", ptlVs, ptlPs, InputLayoutType::Particle);
 
   // ブレンド違い
   CreateParticlePipeline("PtlBlendModeNone", ptlVs, ptlPs, kBlendModeNone);
@@ -181,6 +181,7 @@ GraphicsPipeline *PipelineManager::CreateModelPipeline(
   opt.enableDepth = true;                          // モデルは深度ON
   opt.cull = D3D12_CULL_MODE_NONE;                 // 既定の背面カリング
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Object3D;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -254,6 +255,7 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   opt.enableAlphaBlend = true;     // 半透明ON
   opt.enableDepth = false;         // 深度OFF
   opt.cull = D3D12_CULL_MODE_BACK; // カリングなし
+  opt.rootType = RootSignatureType::Sprite;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -295,6 +297,7 @@ GraphicsPipeline *PipelineManager::CreateSpritePipeline(
   opt.enableDepth = false;
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Sprite;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -358,6 +361,8 @@ GraphicsPipeline *PipelineManager::CreateParticlePipeline(
   opt.enableDepth = false;
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Particle;
+
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
   D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
