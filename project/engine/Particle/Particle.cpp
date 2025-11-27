@@ -120,7 +120,6 @@ void Particle::Finalize() {
   }
 
   if (cbMat_) {
-    cbMat_->Unmap(0, nullptr);
     cbMat_->Release();
     cbMat_ = nullptr;
     cbMatMapped_ = nullptr;
