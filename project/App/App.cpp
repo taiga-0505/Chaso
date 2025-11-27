@@ -59,7 +59,7 @@ bool App::Init() {
   sceneCtx_.imgui = &imgui_;
   sceneCtx_.objectPSO = pm_.GetModelPipeline(kBlendModeNone);
   sceneCtx_.spritePSO = pm_.GetSpritePipeline(kBlendModeNormal);
-  sceneCtx_.particlePSO = pm_.GetParticlePipeline(kBlendModeNone);
+  sceneCtx_.particlePSO = pm_.GetParticlePipeline(kBlendModeNormal);
   sceneCtx_.pipelineManager = &pm_;
 
   // ===== RC初期化 =====

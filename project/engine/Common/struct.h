@@ -22,6 +22,8 @@ struct ParticleData {
   Transform transform;
   RC::Vector3 velocity;
   RC::Vector4 color;
+  float lifeTime;
+  float currentTime;
 };
 
 struct Segment {

@@ -70,7 +70,7 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==========
   // 2) Instancing 用 StructuredBuffer
   // ==========
-  instanceBufferId_ = sbMgr_->Create(sizeof(ParticleForGPU), instanceCount);
+  instanceBufferId_ = sbMgr_->Create(sizeof(ParticleForGPU), kNumMaxInstance);
   instancingData_ =
       reinterpret_cast<ParticleForGPU *>(sbMgr_->Map(instanceBufferId_));
   instanceSrv_ = sbMgr_->GetSrv(instanceBufferId_);
@@ -83,7 +83,7 @@ void Particle::Initialize(SceneContext &ctx) {
   instanceSrv_ = sbMgr_->GetSrv(instanceBufferId_);
 
   instancingResource =
-      CreateBufferResource(device_, sizeof(ParticleForGPU) * instanceCount);
+      CreateBufferResource(device_, sizeof(ParticleForGPU) * kNumMaxInstance);
 
   // 4) Material CB（1個だけ） b0
   cbMat_ = CreateBufferResource(device_, Align256(sizeof(SpriteMaterial)));
@@ -95,11 +95,11 @@ void Particle::Initialize(SceneContext &ctx) {
   cbMatMapped_ = nullptr;
 
   // テクスチャ
-  int texHandle = RC::LoadTex("Resources/r.png", true);
+  int texHandle = RC::LoadTex("Resources/uvChecker.png", true);
   textureSrv_ = RC::GetSrv(texHandle);
 
   // ParticleData 初期化
-  for (int i = 0; i < instanceCount; ++i) {
+  for (int i = 0; i < kNumMaxInstance; ++i) {
 
     particles[i] = MakeNewParticle(randomEngine);
   }
@@ -134,20 +134,25 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     return;
   }
 
-  if (enableUpdate_) {
-    for (int i = 0; i < instanceCount; ++i) {
-      particles[i].transform += particles[i].velocity;
+  numInstance = 0;
+  for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
+    auto &p = particles[index];
+
+    // 死んでたらスキップ
+    if (p.lifeTime <= p.currentTime) {
+      continue;
     }
-  }
 
-  for (int i = 0; i < instanceCount; ++i) {
-    auto &p = particles[i];
+    // 生きてるやつだけ更新
+    if (enableUpdate_) {
+      p.transform += p.velocity;
+      p.currentTime += deltaTime;
+    }
 
-    // Transform からワールド行列を作成
+    // ワールド行列
     const RC::Vector3 &s = p.transform.scale;
     const RC::Vector3 &r = p.transform.rotation;
     const RC::Vector3 &t = p.transform.translation;
-
     Matrix4x4 world = MakeAffineMatrix(s, r, t);
 
     ParticleForGPU wvp{};
@@ -155,7 +160,13 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     wvp.WVP = Multiply(world, Multiply(view, proj));
     wvp.color = p.color;
 
-    instancingData_[i] = wvp;
+    // 0 → lifeTime に近づくほど α が 0 に近づく
+    float alpha = 1.0f - (p.currentTime / p.lifeTime);
+    wvp.color.w = alpha;
+
+    // 生きてる順に先頭から詰めて書く
+    instancingData_[numInstance] = wvp;
+    ++numInstance;
   }
 }
 
@@ -188,7 +199,11 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     cl->SetGraphicsRootDescriptorTable(2, textureSrv_);
   }
 
-  cl->DrawInstanced(vertexCount_, instanceCount, 0, 0);
+  RC::SetBlendMode(kBlendModeNormal);
+
+  cl->DrawInstanced(vertexCount_, numInstance, 0, 0);
+
+  RC::SetBlendMode(kBlendModeNone);
 }
 
 void Particle::DrawImGui() {
@@ -219,7 +234,7 @@ void Particle::DrawImGui() {
       ImGui::DragFloat3("All Velocity", &allVel.x, 0.001f);
 
       if (ImGui::Button("Apply To All")) {
-        for (int i = 0; i < instanceCount; ++i) {
+        for (int i = 0; i < kNumMaxInstance; ++i) {
           particles[i].transform.translation = allPos;
           particles[i].transform.rotation = allRot;
           particles[i].transform.scale = allScale;
@@ -233,9 +248,18 @@ void Particle::DrawImGui() {
       static RC::Vector3 addPos{0.0f, 0.0f, 0.0f};
       ImGui::DragFloat3("Add Position", &addPos.x, 0.01f);
       if (ImGui::Button("Offset All")) {
-        for (int i = 0; i < instanceCount; ++i) {
+        for (int i = 0; i < kNumMaxInstance; ++i) {
           particles[i].transform.translation =
               Add(particles[i].transform.translation, addPos);
+        }
+      }
+      // 回転だけオフセット加算したいとき用
+      static RC::Vector3 addRot{0.0f, 0.0f, 0.0f};
+      ImGui::DragFloat3("Add Rotation", &addRot.x, 0.01f);
+      if (ImGui::Button("Offset Rotation All")) {
+        for (int i = 0; i < kNumMaxInstance; ++i) {
+          particles[i].transform.rotation =
+              Add(particles[i].transform.rotation, addRot);
         }
       }
 
@@ -247,7 +271,7 @@ void Particle::DrawImGui() {
       ImGui::Separator();
 
       if (ImGui::Button("Reset All Transform/Velocity")) {
-        for (int i = 0; i < instanceCount; ++i) {
+        for (int i = 0; i < kNumMaxInstance; ++i) {
           particles[i].transform.translation = {0.0f, 0.0f, 0.0f};
           particles[i].transform.rotation = {0.0f, 0.0f, 0.0f};
           particles[i].transform.scale = {1.0f, 1.0f, 1.0f};
@@ -289,7 +313,7 @@ void Particle::DrawImGui() {
     // 各パーティクル個別編集
     // ====================
     if (ImGui::TreeNode("Particles")) {
-      for (int i = 0; i < instanceCount; ++i) {
+      for (int i = 0; i < kNumMaxInstance; ++i) {
         auto &p = particles[i];
 
         char label[32];
@@ -331,6 +355,10 @@ ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
   std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
   particle.color = {distColor(randomEngine), distColor(randomEngine),
                     distColor(randomEngine), 1.0f};
+
+  std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+  particle.lifeTime = distTime(randomEngine);
+  particle.currentTime = 0.0f;
 
   return particle;
 }
