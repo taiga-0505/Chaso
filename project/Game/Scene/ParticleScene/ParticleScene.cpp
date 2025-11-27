@@ -15,7 +15,7 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
 
   plane = RC::LoadModel("Resources/model/plane");
 
-  particle_.Initialize(ctx.core->GetDevice());
+  particle_.Initialize(ctx);
 }
 
 void ParticleScene::OnExit(SceneContext &ctx) {
@@ -29,6 +29,7 @@ void ParticleScene::OnExit(SceneContext &ctx) {
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   //RC::DrawImGui3D(plane, "plane");
+  particle_.DrawImGui();
 
   // ===========================================
   // 更新処理
@@ -51,7 +52,7 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   //RC::DrawModel(plane);
 
-  particle_.Render(cl);
+  particle_.Render(ctx,cl);
 
   RC::PreDraw2D(ctx, cl);
 }

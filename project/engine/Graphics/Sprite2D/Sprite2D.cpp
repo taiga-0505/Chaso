@@ -70,10 +70,9 @@ void Sprite2D::Initialize(ID3D12Device *device, float screenWidth,
   cbWVP_.map->WVP = MakeIdentity4x4();
 
   // CB: Material（lightingMode=0, color=白, uvTransform=I）
-  cbMat_.res = CreateBufferResource(device_, sizeof(Material));
+  cbMat_.res = CreateBufferResource(device_, sizeof(SpriteMaterial));
   cbMat_.res->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.map));
   cbMat_.map->color = {1, 1, 1, 1};
-  cbMat_.map->lightingMode = 0; // スプライトは既定でライティング無し
   cbMat_.map->uvTransform = MakeIdentity4x4();
 
   // VB (4頂点)

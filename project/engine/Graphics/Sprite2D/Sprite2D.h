@@ -35,7 +35,7 @@ public:
   RC::Vector4 GetColor() { return cbMat_.map->color; }
 
   Transform &T() { return transform_; }  // 位置/回転Z/スケールへアクセス
-  Material *Mat() { return cbMat_.map; } // 乗算カラーやuvTransform
+  SpriteMaterial *Mat() { return cbMat_.map; } // 乗算カラーやuvTransform
   RC::Matrix4x4 &UVTransform() { return cbMat_.map->uvTransform; }
 
   void DrawImGui(const char *name);
@@ -55,7 +55,7 @@ private:
   };
   struct CBM {
     ID3D12Resource *res = nullptr;
-    Material *map = nullptr;
+    SpriteMaterial *map = nullptr;
   };
 
   void Release();
