@@ -9,13 +9,19 @@ struct Transform {
   RC::Vector3 rotation;
   RC::Vector3 translation;
 
-  // Overload the "+=" operator for Transform
   Transform &operator+=(const RC::Vector3 &velocity) {
     this->translation.x += velocity.x;
     this->translation.y += velocity.y;
     this->translation.z += velocity.z;
     return *this;
   }
+};
+
+struct Emitter {
+  Transform transform;
+  uint32_t count;      // 一度に放出するパーティクル数
+  float frequency;     // 放出間隔（秒）
+  float frequencyTime; // 放出間隔タイマー
 };
 
 struct ParticleData {

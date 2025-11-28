@@ -112,6 +112,13 @@ void Particle::Initialize(SceneContext &ctx) {
   // パーティクル配列の初期生成
   // ==================
   particles.clear();
+
+  emitter_.transform.scale = {1.0f, 1.0f, 1.0f};
+  emitter_.transform.rotation = {0.0f, 0.0f, 0.0f};
+  emitter_.transform.translation = {0.0f, 0.0f, 0.0f};
+  emitter_.count = 3;
+  emitter_.frequency = 0.5f;
+  emitter_.frequencyTime = 0.0f;
 }
 
 void Particle::Finalize() {
@@ -177,6 +184,15 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     billboardMatrix.m[3][1] = 0.0f;
     billboardMatrix.m[3][2] = 0.0f;
     billboardMatrix.m[3][3] = 1.0f;
+  }
+
+  if (enableUpdate_) {
+    emitter_.frequencyTime += deltaTime;
+    if (emitter_.frequencyTime >= emitter_.frequency) {
+      // 周期が来たらパーティクルを追加
+      particles.splice(particles.end(), Emit(emitter_, randomEngine));
+      emitter_.frequencyTime -= emitter_.frequency;
+    }
   }
 
   // ==================
@@ -321,9 +337,7 @@ void Particle::DrawImGui() {
 
     // 「ボタンを押したら3つ追加」
     if (ImGui::Button("Add Particle (3)")) {
-      for (int i = 0; i < 3; ++i) {
-        particles.push_back(MakeNewParticle(randomEngine));
-      }
+      particles.splice(particles.end(), Emit(emitter_, randomEngine));
     }
 
     ImGui::SameLine();
@@ -333,10 +347,16 @@ void Particle::DrawImGui() {
 
     if (ImGui::Button("Respawn All Particles (Max)")) {
       particles.clear();
-      for (int i = 0; i < kNumMaxInstance; ++i) {
-        particles.push_back(MakeNewParticle(randomEngine));
+      for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+        particles.push_back(MakeNewParticle(randomEngine,emitter_.transform.translation));
       }
     }
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Emitter");
+
+    ImGui::DragFloat3("EmitterTranslate", &emitter_.transform.translation.x,
+                      0.01f, -100.0f, 100.0f);
 
     // ==================
     // 全パーティクル一括操作
@@ -464,7 +484,8 @@ void Particle::DrawImGui() {
 #endif // _DEBUG
 }
 
-ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
+ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine,
+                                       const Vector3 &translate) {
 
   // ==================
   // 1個分のパーティクルをランダム初期化
@@ -480,6 +501,8 @@ ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
       distribution(randomEngine),
   };
 
+  particle.transform.translation = Add(translate, particle.transform.translation);
+
   particle.velocity = {distribution(randomEngine) * 0.01f,
                        distribution(randomEngine) * 0.01f,
                        distribution(randomEngine) * 0.01f};
@@ -493,6 +516,16 @@ ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
   particle.currentTime = 0.0f;
 
   return particle;
+}
+
+std::list<ParticleData> Particle::Emit(const Emitter &emitter,
+                                       std::mt19937 &randomEngine) {
+  std::list<ParticleData> newParticles;
+  for (uint32_t count = 0; count < emitter.count; ++count) {
+    newParticles.push_back(
+        MakeNewParticle(randomEngine, emitter_.transform.translation));
+  }
+  return newParticles;
 }
 
 } // namespace RC
