@@ -17,7 +17,5 @@ private:
   // カメラ
   RC::CameraController camera_;
 
-  int plane;
-
   RC::Particle particle_;
 };

@@ -37,6 +37,31 @@ public:
   std::list<ParticleData> Emit(const Emitter &emitter,
                                std::mt19937 &randomEngine);
 
+  // ==============================
+  // キー操作用のユーティリティ
+  // ==============================
+  // Update を止める / 動かす
+  void SetEnableUpdate(bool enable);
+  void ToggleEnableUpdate();
+  bool IsEnableUpdate() const { return enableUpdate_; }
+
+  // 風（加速度フィールド）ON/OFF
+  void SetUseAccelerationField(bool enable);
+  void ToggleUseAccelerationField();
+  bool IsUseAccelerationField() const { return useAccelerationField_; }
+
+  // 全部リスポーン（最大数で再生成）
+  void RespawnAllMax();
+
+  // 全部削除
+  void ClearAll();
+
+  // エミッタの位置を移動させる
+  void MoveEmitter(const Vector3 &delta);
+
+  // エミッタからパーティクルを追加
+  void AddParticlesFromEmitter();
+
 private:
   // ==================
   // 定数

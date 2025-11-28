@@ -19,10 +19,6 @@ void Particle::Initialize(SceneContext &ctx) {
   device_ = ctx.core->GetDevice();
   sbMgr_ = &ctx.core->StructuredBuffers();
 
-  visible_ = true;
-  enableUpdate_ = false; // 最初は止めておく
-  useBillboard_ = true;  // デフォルトでカメラ向きに
-
   uvScale_ = {1.0f, 1.0f};
   uvTranslate_ = {0.0f, 0.0f};
   uvRotate_ = 0.0f;
@@ -112,6 +108,10 @@ void Particle::Initialize(SceneContext &ctx) {
   // パーティクル配列の初期生成
   // ==================
   particles.clear();
+  for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+    particles.push_back(
+        MakeNewParticle(randomEngine, emitter_.transform.translation));
+  }
 
   // =================
   // エミッタ初期化
@@ -369,9 +369,8 @@ void Particle::DrawImGui() {
 
     ImGui::Text("Count : %d", static_cast<int>(particles.size()));
 
-    // 「ボタンを押したら3つ追加」
     if (ImGui::Button("Add Particle (3)")) {
-      particles.splice(particles.end(), Emit(emitter_, randomEngine));
+      AddParticlesFromEmitter();
     }
 
     ImGui::SameLine();
@@ -382,7 +381,8 @@ void Particle::DrawImGui() {
     if (ImGui::Button("Respawn All Particles (Max)")) {
       particles.clear();
       for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
-        particles.push_back(MakeNewParticle(randomEngine,emitter_.transform.translation));
+        particles.push_back(
+            MakeNewParticle(randomEngine, emitter_.transform.translation));
       }
     }
 
@@ -566,6 +566,40 @@ bool Particle::IsCollision(const AABB &aabb, const Vector3 &point) {
     return (point.x >= aabb.min.x && point.x <= aabb.max.x) &&
          (point.y >= aabb.min.y && point.y <= aabb.max.y) &&
          (point.z >= aabb.min.z && point.z <= aabb.max.z);
+}
+
+// ==============================
+// キー操作用ユーティリティ
+// ==============================
+
+void Particle::SetEnableUpdate(bool enable) { enableUpdate_ = enable; }
+
+void Particle::ToggleEnableUpdate() { enableUpdate_ = !enableUpdate_; }
+
+void Particle::SetUseAccelerationField(bool enable) {
+  useAccelerationField_ = enable;
+}
+
+void Particle::ToggleUseAccelerationField() {
+  useAccelerationField_ = !useAccelerationField_;
+}
+
+void Particle::RespawnAllMax() {
+  particles.clear();
+  for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+    particles.push_back(
+        MakeNewParticle(randomEngine, emitter_.transform.translation));
+  }
+}
+
+void Particle::ClearAll() { particles.clear(); }
+
+void Particle::MoveEmitter(const Vector3 &delta) {
+  emitter_.transform.translation = Add(emitter_.transform.translation, delta);
+}
+
+void Particle::AddParticlesFromEmitter() {
+  particles.splice(particles.end(), Emit(emitter_, randomEngine));
 }
 
 } // namespace RC
