@@ -1,4 +1,5 @@
 #pragma once
+#include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Scene.h"
 #include "struct.h"
 #include <d3d12.h>
@@ -30,9 +31,11 @@ public:
 
   // 1個分のパーティクルをランダムに生成するヘルパー
   // （外からも使えそうなので一応 public のままにしておく）
-  ParticleData MakeNewParticle(std::mt19937 &randomEngine,const Vector3& translate);
+  ParticleData MakeNewParticle(std::mt19937 &randomEngine,
+                               const Vector3 &translate);
 
-  std::list<ParticleData> Emit(const Emitter &emitter, std::mt19937 &randomEngine);
+  std::list<ParticleData> Emit(const Emitter &emitter,
+                               std::mt19937 &randomEngine);
 
 private:
   // ==================
@@ -94,6 +97,8 @@ private:
   // ランダム関連
   std::random_device seedGenerator;
   std::mt19937 randomEngine{seedGenerator()};
+
+  BlendMode blendMode_ = kBlendModeAdd;
 };
 
 } // namespace RC

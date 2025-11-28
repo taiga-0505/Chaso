@@ -276,6 +276,9 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     return;
   }
 
+  BlendMode prevBlend = RC::GetBlendMode();
+  RC::SetBlendMode(blendMode_);
+
   // ==================
   // 使用するパイプラインステートを決定
   // ==================
@@ -287,6 +290,7 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
 
   if (!pso) {
+    RC::SetBlendMode(prevBlend);
     return;
   }
 
@@ -318,7 +322,10 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // ==================
   // インスタンシング描画
   // ==================
+
   cl->DrawInstanced(vertexCount_, numInstance, 0, 0);
+
+  RC::SetBlendMode(prevBlend);
 }
 
 void Particle::DrawImGui() {
@@ -332,6 +339,18 @@ void Particle::DrawImGui() {
     ImGui::Checkbox("Visible", &visible_);
     ImGui::Checkbox("Enable Update", &enableUpdate_);
     ImGui::Checkbox("Use Billboard", &useBillboard_);
+
+    {
+      static const char *kBlendNames[] = {
+          "None", "Normal", "Add", "Subtract", "Multiply", "Screen",
+      };
+
+      int current = static_cast<int>(blendMode_);
+      if (ImGui::Combo("Blend Mode", &current, kBlendNames,
+                       IM_ARRAYSIZE(kBlendNames))) {
+        blendMode_ = static_cast<BlendMode>(current);
+      }
+    }
 
     ImGui::Text("Count : %d", static_cast<int>(particles.size()));
 
