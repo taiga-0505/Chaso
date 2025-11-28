@@ -1,33 +1,42 @@
 #include "Particle.h"
 #include "Dx12Core.h"
+#include "PipelineManager.h"
 #include "RenderCommon.h"
 #include <Math/Math.h>
 #include <cstdio>
 #include <function/function.h>
 #include <imgui/imgui.h>
-#include "PipelineManager.h"
+#include <numbers>
 
 namespace RC {
 
 void Particle::Initialize(SceneContext &ctx) {
 
+  // ==================
+  // デバイス／StructuredBufferManager を取得
+  // ＋ ImGui 用パラメータ初期化
+  // ==================
   device_ = ctx.core->GetDevice();
   sbMgr_ = &ctx.core->StructuredBuffers();
 
-  // ImGui／挙動用のパラメータ初期化
   visible_ = true;
-  enableUpdate_ = false;
+  enableUpdate_ = false; // 最初は止めておく
+  useBillboard_ = true;  // デフォルトでカメラ向きに
+
   uvScale_ = {1.0f, 1.0f};
   uvTranslate_ = {0.0f, 0.0f};
   uvRotate_ = 0.0f;
 
+  // ==================
+  // 板ポリゴン用の頂点データ作成
+  //   - 左上(-1,  1) 右上(1,  1)
+  //   - 左下(-1, -1) 右下(1, -1)
+  //   2枚の三角形で1枚の四角形を作る
+  // ==================
   modelData.vertices.clear();
   // modelData.vertices.reserve(6);
 
-  // 左上(-1,  1)  右上(1,  1)  左下(-1, -1)  右下(1, -1)
   // 1枚目: 左上 -> 右上 -> 左下 （時計回り）
-  // 2枚目: 左下 -> 右上 -> 右下 （時計回り）
-
   modelData.vertices.push_back({.position = {-1.0f, 1.0f, 0.0f, 1.0f},
                                 .texcoord = {0.0f, 0.0f},
                                 .normal = {0.0f, 0.0f, 1.0f}}); // 左上
@@ -40,6 +49,7 @@ void Particle::Initialize(SceneContext &ctx) {
                                 .texcoord = {0.0f, 1.0f},
                                 .normal = {0.0f, 0.0f, 1.0f}}); // 左下
 
+  // 2枚目: 左下 -> 右上 -> 右下 （時計回り）
   modelData.vertices.push_back({.position = {-1.0f, -1.0f, 0.0f, 1.0f},
                                 .texcoord = {0.0f, 1.0f},
                                 .normal = {0.0f, 0.0f, 1.0f}}); // 左下
@@ -55,9 +65,12 @@ void Particle::Initialize(SceneContext &ctx) {
   vertexCount_ = static_cast<uint32_t>(modelData.vertices.size());
   assert(vertexCount_ > 0);
 
-  // 2) 頂点バッファ
+  // ==================
+  // 頂点バッファ生成 ＆ 転送
+  // ==================
   vbResource_ =
       CreateBufferResource(device_, sizeof(VertexData) * vertexCount_);
+
   VertexData *vbMapped = nullptr;
   vbResource_->Map(0, nullptr, reinterpret_cast<void **>(&vbMapped));
   std::memcpy(vbMapped, modelData.vertices.data(),
@@ -68,25 +81,19 @@ void Particle::Initialize(SceneContext &ctx) {
   vbView_.StrideInBytes = sizeof(VertexData);
   vbView_.SizeInBytes = sizeof(VertexData) * vertexCount_;
 
-  // ==========
-  // 2) Instancing 用 StructuredBuffer
-  // ==========
+  // ==================
+  // Instancing 用 StructuredBuffer
+  //   - ParticleForGPU を kNumMaxInstance 個分確保
+  //   - CPU から常に Map して直接書き込む
+  // ==================
   instanceBufferId_ = sbMgr_->Create(sizeof(ParticleForGPU), kNumMaxInstance);
   instancingData_ =
-      reinterpret_cast<ParticleForGPU *>(sbMgr_->Map(instanceBufferId_));
-  instanceSrv_ = sbMgr_->GetSrv(instanceBufferId_);
-
-  // Map して CPU から書き込めるようにしておく
-  instancingData_ =
       static_cast<ParticleForGPU *>(sbMgr_->Map(instanceBufferId_));
-
-  // 描画時に使う SRV
   instanceSrv_ = sbMgr_->GetSrv(instanceBufferId_);
 
-  instancingResource =
-      CreateBufferResource(device_, sizeof(ParticleForGPU) * kNumMaxInstance);
-
-  // 4) Material CB（1個だけ） b0
+  // ==================
+  // Material 用定数バッファ (b0)
+  // ==================
   cbMat_ = CreateBufferResource(device_, Align256(sizeof(SpriteMaterial)));
   cbMat_->Map(0, nullptr, reinterpret_cast<void **>(&cbMatMapped_));
   *cbMatMapped_ = SpriteMaterial{}; // 一旦 0 クリア
@@ -95,19 +102,25 @@ void Particle::Initialize(SceneContext &ctx) {
   cbMat_->Unmap(0, nullptr);
   cbMatMapped_ = nullptr;
 
-  // テクスチャ
+  // ==================
+  // テクスチャ読み込み
+  // ==================
   int texHandle = RC::LoadTex("Resources/circle.png", true);
   textureSrv_ = RC::GetSrv(texHandle);
 
-  // ParticleData 初期化
-  for (int i = 0; i < kNumMaxInstance; ++i) {
-
-    particles[i] = MakeNewParticle(randomEngine);
-  }
+  // ==================
+  // パーティクル配列の初期生成
+  // ==================
+  particles.clear();
 }
 
 void Particle::Finalize() {
 
+  particles.clear();
+
+  // ==================
+  // GPUリソース破棄
+  // ==================
   if (sbMgr_ && instanceBufferId_ >= 0) {
     sbMgr_->Destroy(instanceBufferId_);
     instanceBufferId_ = -1;
@@ -126,6 +139,8 @@ void Particle::Finalize() {
     cbMatMapped_ = nullptr;
   }
 
+  vertexCount_ = 0;
+  numInstance = 0;
   device_ = nullptr;
   sbMgr_ = nullptr;
 }
@@ -135,12 +150,49 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     return;
   }
 
-  numInstance = 0;
-  for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
-    auto &p = particles[index];
+  // ==================
+  // ビルボード用の回転行列を作成
+  // ==================
+  Matrix4x4 cameraWorld = Inverse(view);
 
-    // 死んでたらスキップ
+  Matrix4x4 billboardMatrix = MakeIdentity4x4();
+
+  if (useBillboard_) {
+    // 右方向
+    billboardMatrix.m[0][0] = cameraWorld.m[0][0];
+    billboardMatrix.m[0][1] = cameraWorld.m[0][1];
+    billboardMatrix.m[0][2] = cameraWorld.m[0][2];
+
+    // 上方向
+    billboardMatrix.m[1][0] = cameraWorld.m[1][0];
+    billboardMatrix.m[1][1] = cameraWorld.m[1][1];
+    billboardMatrix.m[1][2] = cameraWorld.m[1][2];
+
+    // 前方向（Z軸）はカメラに正面を向けるために反転しておく
+    billboardMatrix.m[2][0] = -cameraWorld.m[2][0];
+    billboardMatrix.m[2][1] = -cameraWorld.m[2][1];
+    billboardMatrix.m[2][2] = -cameraWorld.m[2][2];
+
+    billboardMatrix.m[3][0] = 0.0f;
+    billboardMatrix.m[3][1] = 0.0f;
+    billboardMatrix.m[3][2] = 0.0f;
+    billboardMatrix.m[3][3] = 1.0f;
+  }
+
+  // ==================
+  // 生きているパーティクルだけ更新して
+  // GPU用の instancing バッファに詰める
+  //   ※ CPU側は std::list なので、ここで寿命切れを erase していく
+  // ==================
+  numInstance = 0;
+
+  auto it = particles.begin();
+  while (it != particles.end()) {
+    ParticleData &p = *it;
+
+    // すでに寿命が尽きているものは list から削除
     if (p.lifeTime <= p.currentTime) {
+      it = particles.erase(it);
       continue;
     }
 
@@ -148,26 +200,50 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     if (enableUpdate_) {
       p.transform += p.velocity;
       p.currentTime += deltaTime;
+
+      // Z軸まわりに1秒で1回転させる
+      float spinSpeed =
+          2.0f * std::numbers::pi_v<float>; // 2π rad/sec = 1回転/秒
+      p.transform.rotation.z += spinSpeed * deltaTime;
     }
 
-    // ワールド行列
-    const RC::Vector3 &s = p.transform.scale;
-    const RC::Vector3 &r = p.transform.rotation;
-    const RC::Vector3 &t = p.transform.translation;
-    Matrix4x4 world = MakeAffineMatrix(s, r, t);
+    if (numInstance < kNumMaxInstance) {
 
-    ParticleForGPU wvp{};
-    wvp.World = world;
-    wvp.WVP = Multiply(world, Multiply(view, proj));
-    wvp.color = p.color;
+      // パーティクルごとのワールド行列
+      const RC::Vector3 &s = p.transform.scale;
+      const RC::Vector3 &r = p.transform.rotation;
+      const RC::Vector3 &t = p.transform.translation;
 
-    // 0 → lifeTime に近づくほど α が 0 に近づく
-    float alpha = 1.0f - (p.currentTime / p.lifeTime);
-    wvp.color.w = alpha;
+      Matrix4x4 world{};
 
-    // 生きてる順に先頭から詰めて書く
-    instancingData_[numInstance] = wvp;
-    ++numInstance;
+      if (useBillboard_) {
+        Matrix4x4 scaleMat = MakeScaleMatrix(s);
+        Matrix4x4 rotateZMat = MakeRotateMatrix(Z, r.z);
+        Matrix4x4 translateMat = MakeTranslateMatrix(t);
+
+        Matrix4x4 sr = Multiply(scaleMat, rotateZMat); // scale * rotateZ
+        Matrix4x4 srb =
+            Multiply(sr, billboardMatrix);   // (scale * rotateZ) * billboard
+        world = Multiply(srb, translateMat); // ... * translate
+      } else {
+        // 通常の SRT
+        world = MakeAffineMatrix(s, r, t);
+      }
+
+      // GPU 用データに詰め替え
+      ParticleForGPU wvp{};
+      wvp.World = world;
+      wvp.WVP = Multiply(world, Multiply(view, proj));
+      wvp.color = p.color;
+
+      float alpha = 1.0f - (p.currentTime / p.lifeTime);
+      wvp.color.w = alpha;
+
+      instancingData_[numInstance] = wvp;
+      ++numInstance;
+
+      ++it;
+    }
   }
 }
 
@@ -176,13 +252,21 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     return;
   }
 
+  if (numInstance == 0) {
+    return;
+  }
+
   if (!vbResource_ || instanceSrv_.ptr == 0 || vertexCount_ == 0) {
     return;
   }
 
+  // ==================
+  // 使用するパイプラインステートを決定
+  // ==================
   GraphicsPipeline *pso = ctx.particlePSO;
 
   if (ctx.pipelineManager) {
+    // 現在のブレンドモードからパーティクル用PSOを取得
     pso = ctx.pipelineManager->GetParticlePipeline(RC::GetBlendMode());
   }
 
@@ -193,23 +277,31 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   cl->SetGraphicsRootSignature(pso->Root());
   cl->SetPipelineState(pso->PSO());
 
-  // IA 設定
+  // ==================
+  // IA 設定（板ポリの頂点バッファ）
+  // ==================
   cl->IASetVertexBuffers(0, 1, &vbView_);
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  // 0: Material (b0, PS)
+  // ==================
+  // ルートシグネチャへ各種リソースをバインド
+  //   0: Material (b0, PS)
+  //   1: インスタンス用 StructuredBuffer (t0, VS)
+  //   2: テクスチャ (t1, PS)
+  // ==================
   if (cbMat_) {
     cl->SetGraphicsRootConstantBufferView(0, cbMat_->GetGPUVirtualAddress());
   }
 
-  // 1: インスタンス用 StructuredBuffer (t0, VS) の SRV テーブル
   cl->SetGraphicsRootDescriptorTable(1, instanceSrv_);
 
-  // 2: テクスチャ (t1, PS) の SRV テーブル
   if (textureSrv_.ptr != 0) {
     cl->SetGraphicsRootDescriptorTable(2, textureSrv_);
   }
 
+  // ==================
+  // インスタンシング描画
+  // ==================
   cl->DrawInstanced(vertexCount_, numInstance, 0, 0);
 }
 
@@ -217,15 +309,38 @@ void Particle::DrawImGui() {
 
 #ifdef _DEBUG
   if (ImGui::TreeNode("Particle")) {
-    // 表示／非表示
+
+    // ==================
+    // 基本フラグ
+    // ==================
     ImGui::Checkbox("Visible", &visible_);
-
-    // Update を動かすかどうか
     ImGui::Checkbox("Enable Update", &enableUpdate_);
+    ImGui::Checkbox("Use Billboard", &useBillboard_);
 
-    // =======================
-    // ★ 全パーティクル一括操作
-    // =======================
+    ImGui::Text("Count : %d", static_cast<int>(particles.size()));
+
+    // 「ボタンを押したら3つ追加」
+    if (ImGui::Button("Add Particle (3)")) {
+      for (int i = 0; i < 3; ++i) {
+        particles.push_back(MakeNewParticle(randomEngine));
+      }
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Clear All")) {
+      particles.clear();
+    }
+
+    if (ImGui::Button("Respawn All Particles (Max)")) {
+      particles.clear();
+      for (int i = 0; i < kNumMaxInstance; ++i) {
+        particles.push_back(MakeNewParticle(randomEngine));
+      }
+    }
+
+    // ==================
+    // 全パーティクル一括操作
+    // ==================
     if (ImGui::TreeNode("All Particles")) {
 
       // 上書き用の値
@@ -241,11 +356,11 @@ void Particle::DrawImGui() {
       ImGui::DragFloat3("All Velocity", &allVel.x, 0.001f);
 
       if (ImGui::Button("Apply To All")) {
-        for (int i = 0; i < kNumMaxInstance; ++i) {
-          particles[i].transform.translation = allPos;
-          particles[i].transform.rotation = allRot;
-          particles[i].transform.scale = allScale;
-          particles[i].velocity = allVel;
+        for (auto &p : particles) {
+          p.transform.translation = allPos;
+          p.transform.rotation = allRot;
+          p.transform.scale = allScale;
+          p.velocity = allVel;
         }
       }
 
@@ -255,43 +370,50 @@ void Particle::DrawImGui() {
       static RC::Vector3 addPos{0.0f, 0.0f, 0.0f};
       ImGui::DragFloat3("Add Position", &addPos.x, 0.01f);
       if (ImGui::Button("Offset All")) {
-        for (int i = 0; i < kNumMaxInstance; ++i) {
-          particles[i].transform.translation =
-              Add(particles[i].transform.translation, addPos);
+        for (auto &p : particles) {
+          p.transform.translation = Add(p.transform.translation, addPos);
         }
       }
+
       // 回転だけオフセット加算したいとき用
       static RC::Vector3 addRot{0.0f, 0.0f, 0.0f};
       ImGui::DragFloat3("Add Rotation", &addRot.x, 0.01f);
       if (ImGui::Button("Offset Rotation All")) {
-        for (int i = 0; i < kNumMaxInstance; ++i) {
-          particles[i].transform.rotation =
-              Add(particles[i].transform.rotation, addRot);
+        for (auto &p : particles) {
+          p.transform.rotation = Add(p.transform.rotation, addRot);
         }
       }
 
       ImGui::SameLine();
       if (ImGui::Button("Reset Offset")) {
         addPos = {0.0f, 0.0f, 0.0f};
+        addRot = {0.0f, 0.0f, 0.0f};
       }
 
       ImGui::Separator();
 
       if (ImGui::Button("Reset All Transform/Velocity")) {
-        for (int i = 0; i < kNumMaxInstance; ++i) {
-          particles[i].transform.translation = {0.0f, 0.0f, 0.0f};
-          particles[i].transform.rotation = {0.0f, 0.0f, 0.0f};
-          particles[i].transform.scale = {1.0f, 1.0f, 1.0f};
-          particles[i].velocity = {0.0f, 0.0f, 0.0f};
+        for (auto &p : particles) {
+          p.transform.translation = {0.0f, 0.0f, 0.0f};
+          p.transform.rotation = {0.0f, 0.0f, 0.0f};
+          p.transform.scale = {1.0f, 1.0f, 1.0f};
+          p.velocity = {0.0f, 0.0f, 0.0f};
         }
+      }
+
+      ImGui::Text("Z軸回転");
+      static float zRot = 0.0f;
+      ImGui::DragFloat("##Z Rotation", &zRot, 0.01f);
+      for (auto &p : particles) {
+        p.transform.rotation.z = zRot;
       }
 
       ImGui::TreePop();
     }
 
-    // ================
-    // UV Transform一括
-    // ================
+    // ==================
+    // UV Transform 一括（ここはもともとのまま）
+    // ==================
     if (ImGui::TreeNode("UV Transform")) {
       bool uvChanged = false;
 
@@ -301,7 +423,6 @@ void Particle::DrawImGui() {
       uvChanged |= ImGui::DragFloat("UV Rotate", &uvRotate_, 0.01f);
 
       if (uvChanged && cbMat_) {
-        // マテリアルのUV行列を更新（全パーティクル共通）
         SpriteMaterial *mapped = nullptr;
         if (SUCCEEDED(
                 cbMat_->Map(0, nullptr, reinterpret_cast<void **>(&mapped)))) {
@@ -316,15 +437,14 @@ void Particle::DrawImGui() {
       ImGui::TreePop();
     }
 
-    // ====================
-    // 各パーティクル個別編集
-    // ====================
+    // ==================
+    // 各パーティクル個別編集（list をインデックス付きで表示）
+    // ==================
     if (ImGui::TreeNode("Particles")) {
-      for (int i = 0; i < kNumMaxInstance; ++i) {
-        auto &p = particles[i];
-
+      int i = 0;
+      for (auto &p : particles) {
         char label[32];
-        std::snprintf(label, sizeof(label), "Particle %d", i);
+        std::snprintf(label, sizeof(label), "Particle %d", i++);
 
         if (ImGui::TreeNode(label)) {
           ImGui::DragFloat3("Translation", &p.transform.translation.x, 0.01f);
@@ -346,7 +466,11 @@ void Particle::DrawImGui() {
 
 ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
 
+  // ==================
+  // 1個分のパーティクルをランダム初期化
+  // ==================
   std::uniform_real_distribution<float> distribution{-1.0f, 1.0f};
+
   ParticleData particle;
   particle.transform.scale = {1.0f, 1.0f, 1.0f};
   particle.transform.rotation = {0.0f, 0.0f, 0.0f};
@@ -355,6 +479,7 @@ ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine) {
       distribution(randomEngine),
       distribution(randomEngine),
   };
+
   particle.velocity = {distribution(randomEngine) * 0.01f,
                        distribution(randomEngine) * 0.01f,
                        distribution(randomEngine) * 0.01f};

@@ -102,7 +102,7 @@ void PipelineManager::RegisterDefaultPipelines() {
   const std::wstring objVs = L"Resources/Shader/Object3d/Object3D.VS.hlsl";
   const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
 
-  // 互換用のベース PSO（必要なら）※App で "object3d" として作っていたもの
+  // 互換用のベース PSO（必要なら
   CreateFromFiles("object3d", objVs, objPs, InputLayoutType::Object3D);
 
   // ブレンド違い
