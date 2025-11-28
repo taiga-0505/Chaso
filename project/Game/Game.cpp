@@ -18,7 +18,7 @@ void Game::Init(SceneContext &ctx) {
 #ifdef _DEBUG
   const char *boot = "Particle"; // デバッグ時は直接Gameへ
 #else
-  const char *boot = "Title"; // リリースはTitleから
+  const char *boot = "Particle"; // リリースはTitleから
 #endif
   sceneMgr_.ChangeImmediately(boot, ctx);
 }
@@ -91,7 +91,6 @@ void Game::DrawDebugUI() {
   }
   ImGui::End();
 
-#endif
   // === FPS overlay ===
   ImGuiIO &io = ImGui::GetIO();
   ImGui::SetNextWindowBgAlpha(0.35f);
@@ -106,4 +105,7 @@ void Game::DrawDebugUI() {
     ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
   }
   ImGui::End();
+
+#endif
+  
 }
