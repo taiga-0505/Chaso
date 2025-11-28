@@ -18,4 +18,6 @@ private:
   RC::CameraController camera_;
 
   RC::Particle particle_;
+
+  int guide;
 };
