@@ -2,9 +2,9 @@
 #include "Scene.h"
 #include "struct.h"
 #include <d3d12.h>
+#include <list>
 #include <random>
 #include <wrl/client.h>
-#include <list>
 
 class StructuredBufferManager;
 
@@ -30,13 +30,15 @@ public:
 
   // 1個分のパーティクルをランダムに生成するヘルパー
   // （外からも使えそうなので一応 public のままにしておく）
-  ParticleData MakeNewParticle(std::mt19937 &randomEngine);
+  ParticleData MakeNewParticle(std::mt19937 &randomEngine,const Vector3& translate);
+
+  std::list<ParticleData> Emit(const Emitter &emitter, std::mt19937 &randomEngine);
 
 private:
   // ==================
   // 定数
   // ==================
-  static const int kNumMaxInstance = 10; // 同時に存在できるパーティクル数
+  const uint32_t kNumMaxInstance = 100; // 同時に存在できるパーティクル数
 
   static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
 
@@ -73,6 +75,8 @@ private:
   // パーティクル状態（CPU側）
   // ==================
   std::list<ParticleData> particles;
+
+  Emitter emitter_{};
 
   // 表示／Update 制御フラグ
   bool visible_ = true;      // 描画するか
