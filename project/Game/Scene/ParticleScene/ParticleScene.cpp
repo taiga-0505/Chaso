@@ -14,53 +14,55 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
   particle_.Initialize(ctx);
+
+  guide = RC::LoadSprite("Resources/guide.png", ctx, true);
+  RC::SetSpriteScreenSize(guide, 400, 190);
 }
 
-void ParticleScene::OnExit(SceneContext &ctx) {
-
-  particle_.Finalize();
-}
+void ParticleScene::OnExit(SceneContext &ctx) { particle_.Finalize(); }
 
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   particle_.DrawImGui();
 
-  // ==============================
-  // 操作説明（ImGui）
-  // ==============================
-  // 左上に固定（少しだけ余白を空けたいなら (10,10) とか）
-  ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_Always);
-  // サイズも固定したいなら（お好みで調整）
-  ImGui::SetNextWindowSize(ImVec2(420.0f, 220.0f), ImGuiCond_Always);
+  //// ==============================
+  //// 操作説明（ImGui）
+  //// ==============================
+  //// 左上に固定（少しだけ余白を空けたいなら (10,10) とか）
+  // ImGui::SetNextWindowPos(ImVec2(10.0f, 10.0f), ImGuiCond_Always);
+  //// サイズも固定したいなら（お好みで調整）
+  // ImGui::SetNextWindowSize(ImVec2(420.0f, 220.0f), ImGuiCond_Always);
 
-  // ウィンドウ用フラグ
-  ImGuiWindowFlags flags =
-      ImGuiWindowFlags_NoTitleBar |     // タイトルバー無し
-      ImGuiWindowFlags_NoResize |       // リサイズ不可
-      ImGuiWindowFlags_NoMove |         // 移動不可
-      ImGuiWindowFlags_NoCollapse |     // 畳めない
-      ImGuiWindowFlags_NoSavedSettings; // 位置/サイズを保存しない（毎回固定）
+  //// ウィンドウ用フラグ
+  // ImGuiWindowFlags flags =
+  //     ImGuiWindowFlags_NoTitleBar |     // タイトルバー無し
+  //     ImGuiWindowFlags_NoResize |       // リサイズ不可
+  //     ImGuiWindowFlags_NoMove |         // 移動不可
+  //     ImGuiWindowFlags_NoCollapse |     // 畳めない
+  //     ImGuiWindowFlags_NoSavedSettings; //
+  //     位置/サイズを保存しない（毎回固定）
 
-  // このウィンドウだけ角を丸くする
-  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
-                      10.0f); // 角丸半径（お好みで）
+  //// このウィンドウだけ角を丸くする
+  // ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
+  //                     10.0f); // 角丸半径（お好みで）
 
-  ImGui::Begin("パーティクルシーンの操作", nullptr, flags);
+  // ImGui::Begin("パーティクルシーンの操作", nullptr, flags);
 
-  ImGui::Text("パーティクル操作");
-  ImGui::BulletText("Spaceキー : Update の一時停止 / 再開");
-  ImGui::BulletText("1キー      : 風(加速度フィールド)の ON / OFF 切り替え");
-  ImGui::BulletText("2キー      : 全パーティクルを最大数でリスポーン");
-  ImGui::BulletText("3キー      : 全パーティクルを全削除");
-  ImGui::BulletText("4キー      : エミッタからパーティクルを追加発生");
+  // ImGui::Text("パーティクル操作");
+  // ImGui::BulletText("Spaceキー : Update の一時停止 / 再開");
+  // ImGui::BulletText("1キー      : 風(加速度フィールド)の ON / OFF 切り替え");
+  // ImGui::BulletText("2キー      : パーティクルを最大数でリスポーン");
+  // ImGui::BulletText("3キー      : パーティクルをすべて削除");
+  // ImGui::BulletText("4キー      : エミッタからパーティクルを追加発生");
 
-  ImGui::Separator();
-  ImGui::Text("エミッタ移動（キーを押している間、移動し続けます）");
-  ImGui::BulletText("A / D キー : X軸 方向に移動（A: -X, D: +X）");
-  ImGui::BulletText("W / S キー : Y軸 方向に移動（W: +Y, S: -Y）");
-  ImGui::BulletText("Q / E キー : Z軸 方向に移動（Q: +Z, E: -Z）");
+  // ImGui::Separator();
+  // ImGui::Text("エミッタ移動（キーを押している間,移動し続けます）");
+  // ImGui::BulletText("A / D キー : X軸 方向に移動（A: -X, D: +X）");
+  // ImGui::BulletText("W / S キー : Y軸 方向に移動（W: +Y, S: -Y）");
+  // ImGui::BulletText("Q / E キー : Z軸 方向に移動（Q: +Z, E: -Z）");
 
-  ImGui::End();
+  // ImGui::End();
+  // ImGui::PopStyleVar();
 
   // ===========================================
   // 更新処理
@@ -141,8 +143,10 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   ctx.core->Clear(0.05f, 0.05f, 0.05f, 1.0f);
   RC::PreDraw3D(ctx, cl);
-  
-  particle_.Render(ctx,cl);
+
+  particle_.Render(ctx, cl);
 
   RC::PreDraw2D(ctx, cl);
+
+  RC::DrawSprite(guide);
 }
