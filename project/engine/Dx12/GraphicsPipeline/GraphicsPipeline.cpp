@@ -171,7 +171,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   }
 
   D3D12_ROOT_PARAMETER params[4] = {};
-  D3D12_DESCRIPTOR_RANGE range{};
+  D3D12_DESCRIPTOR_RANGE ranges[2] = {}; // ← ここを共通で使う
   UINT paramCount = 0;
 
   switch (type) {
@@ -187,15 +187,16 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[1].Descriptor.ShaderRegister = 0;
 
     // 2: SRV table t0 (PS)  Texture
-    range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    range.BaseShaderRegister = 0;
-    range.NumDescriptors = 1;
-    range.OffsetInDescriptorsFromTableStart =
+    ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[0].BaseShaderRegister = 0;
+    ranges[0].NumDescriptors = 1;
+    ranges[0].OffsetInDescriptorsFromTableStart =
         D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[2].DescriptorTable.NumDescriptorRanges = 1;
-    params[2].DescriptorTable.pDescriptorRanges = &range;
+    params[2].DescriptorTable.pDescriptorRanges = &ranges[0];
 
     // 3: CBV b1 (PS)  DirectionalLight
     params[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -206,7 +207,6 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     break;
 
   case RootSignatureType::Sprite:
-    // Sprite はライト無しなので 3 つだけ
     // 0: CBV b0 (PS)  Material
     params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -218,57 +218,55 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[1].Descriptor.ShaderRegister = 0;
 
     // 2: SRV table t0 (PS)  Texture
-    range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    range.BaseShaderRegister = 0;
-    range.NumDescriptors = 1;
-    range.OffsetInDescriptorsFromTableStart =
+    ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[0].BaseShaderRegister = 0;
+    ranges[0].NumDescriptors = 1;
+    ranges[0].OffsetInDescriptorsFromTableStart =
         D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[2].DescriptorTable.NumDescriptorRanges = 1;
-    params[2].DescriptorTable.pDescriptorRanges = &range;
+    params[2].DescriptorTable.pDescriptorRanges = &ranges[0];
 
     paramCount = 3;
     break;
 
-  case RootSignatureType::Particle: {
+  case RootSignatureType::Particle:
     // 0: CBV b0 (PS) Material
     params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[0].Descriptor.ShaderRegister = 0; // b0
 
-    // 1: Instancing 用 StructuredBuffer の SRV テーブル (t0, VS)
-    D3D12_DESCRIPTOR_RANGE rangeInst{};
-    rangeInst.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    rangeInst.BaseShaderRegister = 0; // t0
-    rangeInst.NumDescriptors = 1;
-    rangeInst.OffsetInDescriptorsFromTableStart =
+    // 1: Instancing 用 StructuredBuffer (t0, VS)
+    ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[0].BaseShaderRegister = 0; // t0
+    ranges[0].NumDescriptors = 1;
+    ranges[0].OffsetInDescriptorsFromTableStart =
         D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     params[1].DescriptorTable.NumDescriptorRanges = 1;
-    params[1].DescriptorTable.pDescriptorRanges = &rangeInst;
+    params[1].DescriptorTable.pDescriptorRanges = &ranges[0];
 
-    // 2: Texture 用 SRV テーブル (t0, PS)
-    D3D12_DESCRIPTOR_RANGE rangeTex{};
-    rangeTex.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    rangeTex.BaseShaderRegister = 0; // t0 (PS 側)
-    rangeTex.NumDescriptors = 1;
-    rangeTex.OffsetInDescriptorsFromTableStart =
+    // 2: Texture 用 SRV (t0, PS)
+    ranges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[1].BaseShaderRegister = 0; // t0 (PS)
+    ranges[1].NumDescriptors = 1;
+    ranges[1].OffsetInDescriptorsFromTableStart =
         D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[2].DescriptorTable.NumDescriptorRanges = 1;
-    params[2].DescriptorTable.pDescriptorRanges = &rangeTex;
+    params[2].DescriptorTable.pDescriptorRanges = &ranges[1];
 
     paramCount = 3;
     break;
   }
-  }
 
-  // 共通の静的サンプラ s0
+  // 共通サンプラ
   D3D12_STATIC_SAMPLER_DESC samp{};
   samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
   samp.AddressU = samp.AddressV = samp.AddressW =
@@ -289,12 +287,15 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   ID3DBlob *err = nullptr;
   HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
                                            &sig, &err);
+
   if (FAILED(hr)) {
     if (err) {
       OutputDebugStringA((char *)err->GetBufferPointer());
       err->Release();
     }
-    assert(false);
+    if (sig)
+      sig->Release();
+    return; // ここで抜ける（Release でもクラッシュしない）
   }
 
   hr = device_->CreateRootSignature(0, sig->GetBufferPointer(),
@@ -303,6 +304,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     sig->Release();
   assert(SUCCEEDED(hr));
 }
+
 
 void GraphicsPipeline::buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                                  UINT elemCount, D3D12_SHADER_BYTECODE vs,
