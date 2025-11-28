@@ -17,11 +17,21 @@ struct Transform {
   }
 };
 
+struct AABB {
+  RC::Vector3 min = {-1.0f, -1.0f, -1.0f};
+  RC::Vector3 max = {1.0f, 1.0f, 1.0f};
+};
+
 struct Emitter {
   Transform transform;
   uint32_t count;      // 一度に放出するパーティクル数
   float frequency;     // 放出間隔（秒）
   float frequencyTime; // 放出間隔タイマー
+};
+
+struct AccelerationField {
+  RC::Vector3 acceleration; // 加速度ベクトル
+  AABB area;
 };
 
 struct ParticleData {

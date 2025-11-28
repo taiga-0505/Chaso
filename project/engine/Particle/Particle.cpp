@@ -113,12 +113,22 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==================
   particles.clear();
 
+  // =================
+  // エミッタ初期化
+  // =================
   emitter_.transform.scale = {1.0f, 1.0f, 1.0f};
   emitter_.transform.rotation = {0.0f, 0.0f, 0.0f};
   emitter_.transform.translation = {0.0f, 0.0f, 0.0f};
   emitter_.count = 3;
   emitter_.frequency = 0.5f;
   emitter_.frequencyTime = 0.0f;
+
+  // ==================
+  // 重力フィールド初期化
+  // ==================
+  accelerationField_.acceleration = {0.05f, 0.0f, 0.0f}; // 強めの右向き重力
+  accelerationField_.area.min = {-1.0f, -1.0f, -1.0f};
+  accelerationField_.area.max = {1.0f, 1.0f, 1.0f};
 }
 
 void Particle::Finalize() {
@@ -221,6 +231,10 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
       float spinSpeed =
           2.0f * std::numbers::pi_v<float>; // 2π rad/sec = 1回転/秒
       p.transform.rotation.z += spinSpeed * deltaTime;
+
+      if (IsCollision(accelerationField_.area, p.transform.translation) && useAccelerationField_) {
+          p.velocity = Add(p.velocity, Multiply(accelerationField_.acceleration, deltaTime));
+      }
     }
 
     if (numInstance < kNumMaxInstance) {
@@ -339,6 +353,7 @@ void Particle::DrawImGui() {
     ImGui::Checkbox("Visible", &visible_);
     ImGui::Checkbox("Enable Update", &enableUpdate_);
     ImGui::Checkbox("Use Billboard", &useBillboard_);
+    ImGui::Checkbox("Use AccelerationField", &useAccelerationField_);
 
     {
       static const char *kBlendNames[] = {
@@ -545,6 +560,12 @@ std::list<ParticleData> Particle::Emit(const Emitter &emitter,
         MakeNewParticle(randomEngine, emitter_.transform.translation));
   }
   return newParticles;
+}
+
+bool Particle::IsCollision(const AABB &aabb, const Vector3 &point) {
+    return (point.x >= aabb.min.x && point.x <= aabb.max.x) &&
+         (point.y >= aabb.min.y && point.y <= aabb.max.y) &&
+         (point.z >= aabb.min.z && point.z <= aabb.max.z);
 }
 
 } // namespace RC

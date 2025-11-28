@@ -80,11 +80,15 @@ private:
   std::list<ParticleData> particles;
 
   Emitter emitter_{};
+  AccelerationField accelerationField_;
+
+  bool IsCollision(const AABB &aabb, const Vector3 &point);
 
   // 表示／Update 制御フラグ
   bool visible_ = true;      // 描画するか
   bool enableUpdate_ = true; // 位置や時間を進めるか
   bool useBillboard_ = true; // カメラの方を向かせるか
+  bool useAccelerationField_ = false; // 加速度を使うか
 
   // UV トランスフォーム（全パーティクル共通）
   RC::Vector2 uvScale_{1.0f, 1.0f};
