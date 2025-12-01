@@ -34,12 +34,13 @@ public:
   ParticleData MakeNewParticle(std::mt19937 &randomEngine,
                                const Vector3 &translate);
 
-  std::list<ParticleData> Emit(const Emitter &emitter,
+  virtual std::list<ParticleData> Emit(const Emitter &emitter,
                                std::mt19937 &randomEngine);
 
   // ==============================
   // キー操作用のユーティリティ
   // ==============================
+
   // Update を止める / 動かす
   void SetEnableUpdate(bool enable);
   void ToggleEnableUpdate();
@@ -61,6 +62,34 @@ public:
 
   // エミッタからパーティクルを追加
   void AddParticlesFromEmitter();
+
+  // emitter の自動生成を ON/OFF
+  void SetEmitterAutoSpawn(bool enable);
+
+protected:
+  // ==============================
+  // エフェクトごとに差し替え可能なフック
+  // ==============================
+
+  // 使用するテクスチャのパス
+  //  派生クラスでオーバーライドして差し替え可能
+  virtual const char *GetTexturePath() const;
+
+  // 1個分のパーティクル初期化
+  //  位置・速度・色・寿命などを決める処理
+  virtual void InitParticleCore(ParticleData &particle,
+                                std::mt19937 &randomEngine,
+                                const Vector3 &emitterTranslate);
+
+  // 1個分のパーティクル更新
+  //  位置や回転、色などを進める処理
+  virtual void UpdateOneParticle(ParticleData &particle, float deltaTime);
+
+  Emitter &EmitterRef() { return emitter_; }
+  const Emitter &EmitterRef() const { return emitter_; }
+
+  
+  std::list<ParticleData> particles;
 
 private:
   // ==================
@@ -102,7 +131,6 @@ private:
   // ==================
   // パーティクル状態（CPU側）
   // ==================
-  std::list<ParticleData> particles;
 
   Emitter emitter_{};
   AccelerationField accelerationField_;
@@ -110,10 +138,11 @@ private:
   bool IsCollision(const AABB &aabb, const Vector3 &point);
 
   // 表示／Update 制御フラグ
-  bool visible_ = true;      // 描画するか
-  bool enableUpdate_ = true; // 位置や時間を進めるか
-  bool useBillboard_ = true; // カメラの方を向かせるか
+  bool visible_ = true;               // 描画するか
+  bool enableUpdate_ = true;          // 位置や時間を進めるか
+  bool useBillboard_ = true;          // カメラの方を向かせるか
   bool useAccelerationField_ = false; // 加速度を使うか
+  bool useEmitterAutoSpawn_ = true;   // エミッタの自動スポーンを使うか
 
   // UV トランスフォーム（全パーティクル共通）
   RC::Vector2 uvScale_{1.0f, 1.0f};

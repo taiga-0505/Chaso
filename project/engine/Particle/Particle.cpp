@@ -101,7 +101,7 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==================
   // テクスチャ読み込み
   // ==================
-  int texHandle = RC::LoadTex("Resources/circle.png", true);
+  int texHandle = RC::LoadTex(GetTexturePath(), true);
   textureSrv_ = RC::GetSrv(texHandle);
 
   // ==================
@@ -126,9 +126,9 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==================
   // 重力フィールド初期化
   // ==================
-  accelerationField_.acceleration = {0.05f, 0.0f, 0.0f}; // 強めの右向き重力
-  accelerationField_.area.min = {-1.0f, -1.0f, -1.0f};
-  accelerationField_.area.max = {1.0f, 1.0f, 1.0f};
+  accelerationField_.acceleration = {0.01f, 0.0f, 0.0f}; // 強めの右向き重力
+  accelerationField_.area.min = {-8.0f, -8.0f, -1.0f};
+  accelerationField_.area.max = {8.0f, 8.0f, 1.0f};
 }
 
 void Particle::Finalize() {
@@ -196,7 +196,7 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     billboardMatrix.m[3][3] = 1.0f;
   }
 
-  if (enableUpdate_) {
+  if (enableUpdate_ && useEmitterAutoSpawn_) {
     emitter_.frequencyTime += deltaTime;
     if (emitter_.frequencyTime >= emitter_.frequency) {
       // 周期が来たらパーティクルを追加
@@ -224,17 +224,7 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 
     // 生きてるやつだけ更新
     if (enableUpdate_) {
-      p.transform += p.velocity;
-      p.currentTime += deltaTime;
-
-      // Z軸まわりに1秒で1回転させる
-      float spinSpeed =
-          2.0f * std::numbers::pi_v<float>; // 2π rad/sec = 1回転/秒
-      p.transform.rotation.z += spinSpeed * deltaTime;
-
-      if (IsCollision(accelerationField_.area, p.transform.translation) && useAccelerationField_) {
-          p.velocity = Add(p.velocity, Multiply(accelerationField_.acceleration, deltaTime));
-      }
+      UpdateOneParticle(p, deltaTime);
     }
 
     if (numInstance < kNumMaxInstance) {
@@ -521,34 +511,8 @@ void Particle::DrawImGui() {
 ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine,
                                        const Vector3 &translate) {
 
-  // ==================
-  // 1個分のパーティクルをランダム初期化
-  // ==================
-  std::uniform_real_distribution<float> distribution{-1.0f, 1.0f};
-
-  ParticleData particle;
-  particle.transform.scale = {1.0f, 1.0f, 1.0f};
-  particle.transform.rotation = {0.0f, 0.0f, 0.0f};
-  particle.transform.translation = {
-      distribution(randomEngine),
-      distribution(randomEngine),
-      distribution(randomEngine),
-  };
-
-  particle.transform.translation = Add(translate, particle.transform.translation);
-
-  particle.velocity = {distribution(randomEngine) * 0.01f,
-                       distribution(randomEngine) * 0.01f,
-                       distribution(randomEngine) * 0.01f};
-
-  std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
-  particle.color = {distColor(randomEngine), distColor(randomEngine),
-                    distColor(randomEngine), 1.0f};
-
-  std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
-  particle.lifeTime = distTime(randomEngine);
-  particle.currentTime = 0.0f;
-
+  ParticleData particle{};
+  InitParticleCore(particle, randomEngine, translate);
   return particle;
 }
 
@@ -562,8 +526,62 @@ std::list<ParticleData> Particle::Emit(const Emitter &emitter,
   return newParticles;
 }
 
+const char *Particle::GetTexturePath() const {
+  // デフォルトのテクスチャ
+  return "Resources/Particle/circle.png";
+}
+
+void Particle::InitParticleCore(ParticleData &particle,
+                                std::mt19937 &randomEngine,
+                                const Vector3 &translate) {
+  // ==================
+  // 1個分のパーティクルをランダム初期化（今までの実装をそのまま移植）
+  // ==================
+  std::uniform_real_distribution<float> distribution{-1.0f, 1.0f};
+
+  particle.transform.scale = {1.0f, 1.0f, 1.0f};
+  particle.transform.rotation = {0.0f, 0.0f, 0.0f};
+  particle.transform.translation = {
+      distribution(randomEngine),
+      distribution(randomEngine),
+      distribution(randomEngine),
+  };
+
+  // エミッタ位置をオフセット
+  particle.transform.translation =
+      Add(translate, particle.transform.translation);
+
+  particle.velocity = {distribution(randomEngine) * 0.01f,
+                       distribution(randomEngine) * 0.01f,
+                       distribution(randomEngine) * 0.01f};
+
+  std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+  particle.color = {distColor(randomEngine), distColor(randomEngine),
+                    distColor(randomEngine), 1.0f};
+
+  std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+  particle.lifeTime = distTime(randomEngine);
+  particle.currentTime = 0.0f;
+}
+
+void Particle::UpdateOneParticle(ParticleData &p, float dt) {
+  // 位置・時間更新
+  p.transform += p.velocity;
+  p.currentTime += dt;
+
+  // Z軸まわりに1秒で1回転させる
+  float spinSpeed = 2.0f * std::numbers::pi_v<float>; // 2π rad/sec = 1回転/秒
+  p.transform.rotation.z += spinSpeed * dt;
+
+  // 加速度フィールドが有効なら速度に反映
+  if (IsCollision(accelerationField_.area, p.transform.translation) &&
+      useAccelerationField_) {
+    p.velocity = Add(p.velocity, Multiply(accelerationField_.acceleration, dt));
+  }
+}
+
 bool Particle::IsCollision(const AABB &aabb, const Vector3 &point) {
-    return (point.x >= aabb.min.x && point.x <= aabb.max.x) &&
+  return (point.x >= aabb.min.x && point.x <= aabb.max.x) &&
          (point.y >= aabb.min.y && point.y <= aabb.max.y) &&
          (point.z >= aabb.min.z && point.z <= aabb.max.z);
 }
@@ -600,6 +618,10 @@ void Particle::MoveEmitter(const Vector3 &delta) {
 
 void Particle::AddParticlesFromEmitter() {
   particles.splice(particles.end(), Emit(emitter_, randomEngine));
+}
+
+void Particle::SetEmitterAutoSpawn(bool enable) {
+  useEmitterAutoSpawn_ = enable;
 }
 
 } // namespace RC

@@ -1,7 +1,6 @@
 #pragma once
 #include "Scene.h"
 #include <RC.h>
-#include <dinput.h>
 
 class ParticleScene final : public Scene {
 public:
@@ -18,6 +17,23 @@ private:
   RC::CameraController camera_;
 
   RC::Particle particle_;
+
+  RC::FireParticle fire_particle_;
+
+  RC::RainParticle rain_particle_;
+
+  RC::SnowParticle snow_particle_;
+
+  RC::CircleParticle circle_particle_;
+
+  RC::ExplosionParticle explosion_particle_;
+
+  bool isParticle = true;
+  bool isFire = false;
+  bool isRain = false;
+  bool isSnow = false;
+  bool isCircle = false;
+  bool isExplosion = false;
 
   int guide;
 };
