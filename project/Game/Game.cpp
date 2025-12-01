@@ -16,9 +16,9 @@ void Game::Init(SceneContext &ctx) {
 
   // ここで最初のシーンを決める（Gameの責務）
 #ifdef _DEBUG
-  const char *boot = "Particle"; // デバッグ時は直接Gameへ
+  const char *boot = "Sample"; // デバッグ時は直接Gameへ
 #else
-  const char *boot = "Particle"; // リリースはTitleから
+  const char *boot = "Title"; // リリースはTitleから
 #endif
   sceneMgr_.ChangeImmediately(boot, ctx);
 }

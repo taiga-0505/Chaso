@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -105,7 +105,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,7 +132,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,7 +157,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
+    <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
+    <ClCompile Include="engine\Particle\Explosion\ExplosionParticle.cpp" />
+    <ClCompile Include="engine\Particle\Fire\FireParticle.cpp" />
     <ClCompile Include="engine\Particle\Particle.cpp" />
+    <ClCompile Include="engine\Particle\Rain\RainParticle.cpp" />
+    <ClCompile Include="engine\Particle\Snow\SnowParticle.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp" />
     <ClCompile Include="externals\imgui\imgui_demo.cpp" />
     <ClCompile Include="externals\imgui\imgui_draw.cpp" />
@@ -254,7 +259,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
     <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h" />
+    <ClInclude Include="engine\Particle\Circle\CircleParticle.h" />
+    <ClInclude Include="engine\Particle\Explosion\ExplosionParticle.h" />
+    <ClInclude Include="engine\Particle\Fire\FireParticle.h" />
     <ClInclude Include="engine\Particle\Particle.h" />
+    <ClInclude Include="engine\Particle\Rain\RainParticle.h" />
+    <ClInclude Include="engine\Particle\Snow\SnowParticle.h" />
     <ClInclude Include="engine\RC.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
