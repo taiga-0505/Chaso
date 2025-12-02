@@ -43,6 +43,8 @@ void ParticleScene::OnExit(SceneContext &ctx) {
 
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
+    particle_.DrawImGui();
+
   // ===========================================
   // 更新処理
   // ===========================================
