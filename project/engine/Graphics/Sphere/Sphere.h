@@ -34,6 +34,8 @@ public:
   DirectionalLight *Light() { return cbLight_.mapped; }
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
+  void SetInward(bool inward) { inward_ = inward; }
+  bool GetInward() const { return inward_; }
 
 private:
   // メッシュ生成

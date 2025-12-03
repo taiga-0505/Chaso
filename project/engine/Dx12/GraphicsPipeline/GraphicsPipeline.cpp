@@ -170,7 +170,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     root_ = nullptr;
   }
 
-  D3D12_ROOT_PARAMETER params[4] = {};
+  D3D12_ROOT_PARAMETER params[5] = {};
   D3D12_DESCRIPTOR_RANGE ranges[2] = {}; // ← ここを共通で使う
   UINT paramCount = 0;
 
@@ -203,7 +203,12 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[3].Descriptor.ShaderRegister = 1;
 
-    paramCount = 4;
+    // 4: CBV b2 (PS)  camera
+    params[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[4].Descriptor.ShaderRegister = 2;
+
+    paramCount = 5;
     break;
 
   case RootSignatureType::Sprite:

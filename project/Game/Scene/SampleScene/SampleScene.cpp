@@ -47,6 +47,12 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   sphereT_ = RC::GetSphereTransformPtr(sphere);
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
 
+  txball = RC::LoadTex("Resources/monsterBall.png", false);
+  ball = RC::GenerateSphereEx(txball, 1.0f,16,16,false);
+  ballT_ = RC::GetSphereTransformPtr(ball);
+  RC::SetSphereColor(ball, {1.0f, 1.0f, 1.0f, 1.0f});
+  ballT_->rotation.y = -1.6f;
+
   // =============================
   // Sprite初期化
   // =============================
@@ -65,6 +71,13 @@ void SampleScene::OnExit(SceneContext &) {
 
   RC::UnloadSphere(sphere);
   sphere = -1;
+
+  RC::UnloadSprite(sprite);
+  sprite = -1;
+
+  RC::UnloadModel(ball);
+  ball = -1;
+
 
   light = -1;
 }
@@ -95,7 +108,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();
 
-  RC::SetCamera(view_, proj_);
+  RC::SetCamera(view_, proj_,camera_.GetWorldPos());
 
   // === 天球回転 ===
   sphereT_->rotation.y += 0.001f;
@@ -109,6 +122,8 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   // === 天球 ===
   RC::DrawSphere(sphere);
+
+  RC::DrawSphere(ball);
 
   // モデルの描画
   RC::DrawModel(plane);
@@ -168,6 +183,8 @@ void SampleScene::DrawImGui() {
       RC::DrawImGui3D(model, "model");
 
       RC::DrawSphereImGui(sphere, "skyDome");
+
+      RC::DrawSphereImGui(ball, "ball");
 
       ImGui::EndTabItem();
     }

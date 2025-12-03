@@ -42,7 +42,7 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::TextUnformatted("Lighting");
 
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
+  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phog"};
   int mode = lightingMode_;
   if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
                    IM_ARRAYSIZE(kModes))) {
