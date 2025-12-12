@@ -41,6 +41,8 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   srv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, d.srvHeapCapacity,
             true);
 
+  sbMgr_.Init(GetDevice(), &srv_); 
+
   // SwapChain
   swap_.SetRtvHeap(rtv_.Heap(), rtv_.Increment());
   // スワップチェーンは UNORM で作成（RTVはSRGBビューで作る）
@@ -135,6 +137,7 @@ void Dx12Core::Term() {
   //    - RTV/DSV/SRV ヒープは BackBuffer/Depth が落ちた後に。
   depth_.Term(); // DSV リソース
   swap_.Term();  // BackBuffer リソース + SwapChain
+  sbMgr_.Term();
   rtv_.Term();
   dsv_.Term();
   srv_.Term();

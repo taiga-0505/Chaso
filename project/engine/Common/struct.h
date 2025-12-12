@@ -1,13 +1,49 @@
 #pragma once
-#include <cstdint>
-#include <vector>
-#include <string>
 #include "Math/MathTypes.h"
+#include <cstdint>
+#include <string>
+#include <vector>
 
 struct Transform {
   RC::Vector3 scale;
   RC::Vector3 rotation;
   RC::Vector3 translation;
+
+  Transform &operator+=(const RC::Vector3 &velocity) {
+    this->translation.x += velocity.x;
+    this->translation.y += velocity.y;
+    this->translation.z += velocity.z;
+    return *this;
+  }
+};
+
+struct CameraForGPU {
+  RC::Vector3 worldPosition; // カメラのワールド座標位置
+};
+
+struct AABB {
+  RC::Vector3 min = {-1.0f, -1.0f, -1.0f};
+  RC::Vector3 max = {1.0f, 1.0f, 1.0f};
+};
+
+struct Emitter {
+  Transform transform;
+  uint32_t count;      // 一度に放出するパーティクル数
+  float frequency;     // 放出間隔（秒）
+  float frequencyTime; // 放出間隔タイマー
+};
+
+struct AccelerationField {
+  RC::Vector3 acceleration; // 加速度ベクトル
+  AABB area;
+};
+
+struct ParticleData {
+  Transform transform;
+  RC::Vector3 velocity;
+  RC::Vector4 color;
+  float lifeTime;
+  float currentTime;
 };
 
 struct Segment {
@@ -22,20 +58,25 @@ struct VertexData {
   RC::Vector3 normal;   // 法線ベクトル
 };
 
-
 struct MaterialData {
   std::string textureFilePath; // テクスチャファイルのパス
 };
 
 struct ModelData {
   std::vector<VertexData> vertices; // 頂点データの配列
-  MaterialData material;        // マテリアルデータ
+  MaterialData material;            // マテリアルデータ
 };
 
 struct Material {
-  RC::Vector4 color;     // 色 (RGBA)
-  int lightingMode;      // 0:なし, 1:Lambert, 2:Half Lambert
-  float padding[3];      // アラインメント調整
+  RC::Vector4 color;         // 色 (RGBA)
+  int lightingMode;          // 0:なし, 1:Lambert, 2:Half Lambert
+  float shininess;           // 光沢度
+  float padding[2];          // アラインメント調整
+  RC::Matrix4x4 uvTransform; // UV変換行列
+};
+
+struct SpriteMaterial {
+  RC::Vector4 color;         // 色 (RGBA)
   RC::Matrix4x4 uvTransform; // UV変換行列
 };
 
@@ -44,10 +85,17 @@ struct TransformationMatrix {
   RC::Matrix4x4 World;
 };
 
+struct ParticleForGPU {
+  RC::Matrix4x4 WVP;
+  RC::Matrix4x4 World;
+  RC::Vector4 color;
+};
+;
+
 struct DirectionalLight {
-  RC::Vector4 color; // 光の色 (RGBA)
+  RC::Vector4 color;     // 光の色 (RGBA)
   RC::Vector3 direction; // 光の方向
-  float intensity;   // 光の強度
+  float intensity;       // 光の強度
 };
 
 // -------------------------------
@@ -57,4 +105,5 @@ enum LightingMode {
   None = 0,        // ライティング無し
   Lambert = 1,     // ランバート
   HalfLambert = 2, // ハーフランバート
+  Phong = 3        // フォン
 };

@@ -54,6 +54,7 @@ void Model3D::Initialize(ID3D12Device *device) {
   cbLight_.mapped->color = {1, 1, 1, 1};
   cbLight_.mapped->direction = {0.0f, -1.0f, 0.0f};
   cbLight_.mapped->intensity = 1.0f;
+  cbMat_.mapped->shininess = 32.0f;
 
   // 初期ライティング（コンストラクタで渡された値）を反映
   ApplyLightingIfReady_();

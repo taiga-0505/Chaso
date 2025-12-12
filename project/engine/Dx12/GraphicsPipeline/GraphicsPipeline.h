@@ -18,12 +18,20 @@ enum BlendMode {
   kBlendModeScreen,
 };
 
+enum class RootSignatureType {
+  Object3D,
+  Sprite,
+  Particle,
+};
+
 struct GPipelineOptions {
   bool enableAlphaBlend = false; // ← スプライトは true
   bool enableDepth = true;       // ← スプライトは false
+  bool enableDepthWrite = true; // 深度を書き込むかどうか
   D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK;
   D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID;
   BlendMode blendMode = kBlendModeNormal;
+  RootSignatureType rootType = RootSignatureType::Object3D;
 };
 
 class GraphicsPipeline {
@@ -61,7 +69,8 @@ public:
   ID3D12PipelineState *PSO() const { return pso_; }
 
 private:
-  void buildRootSignature_();
+  void
+  buildRootSignature_(RootSignatureType type = RootSignatureType::Object3D);
   void buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
                  D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
                  DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull,

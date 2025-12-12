@@ -46,12 +46,16 @@ public:
   void SetMainPosition(const Vector3 &pos);
   void SetMainRotation(const Vector3 &rot);
 
+  RC::Vector3 GetWorldPos() const { return worldPos_; }
+
 private:
   Input *input_ = nullptr;
   DebugCamera debug_;
   MainCamera main_;
   bool useDebug_ = false;
   bool showGuide_ = false;
+
+  RC::Vector3 worldPos_{0, 0, 0};
 };
 
 } // namespace RC

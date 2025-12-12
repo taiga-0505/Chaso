@@ -45,7 +45,7 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();
-  RC::SetCamera(view_, proj_);
+  RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   player_->Update();
 }

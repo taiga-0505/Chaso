@@ -9,6 +9,7 @@
 #include <dxgi1_6.h>
 #include <memory>
 #include "FixFps/FixFps.h"
+#include "StructuredBufferManager/StructuredBufferManager.h"
 
 class Dx12Core {
 public:
@@ -45,6 +46,7 @@ public:
   DescriptorHeap &SRV() { return srv_; }
   DescriptorHeap &RTV() { return rtv_; }
   DescriptorHeap &DSV() { return dsv_; }
+  StructuredBufferManager &StructuredBuffers() { return sbMgr_; }
   D3D12_CPU_DESCRIPTOR_HANDLE CurrentRTV() const {
     return swap_.RtvAt(backIndex_);
   }
@@ -88,4 +90,5 @@ private:
   D3D12_RECT scissor_{};
   std::unique_ptr<FixFps> fixFps_;
   bool fixFpsEnabled_ = true;
+  StructuredBufferManager sbMgr_;
 };

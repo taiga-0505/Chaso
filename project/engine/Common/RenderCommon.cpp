@@ -31,6 +31,11 @@ struct LightSlot {
   bool inUse = false;
 };
 
+struct CameraCB {
+  RC::Vector3 worldPos;
+  float _pad; // 16バイトアライン
+};
+
 std::vector<ModelSlot> gModels;   // モデルスロット
 std::vector<SphereSlot> gSpheres; // スフィアスロット
 std::vector<SpriteSlot> gSprites; // スプライトスロット
@@ -43,6 +48,8 @@ TextureManager gTexMan;                   // IDベースで管理
 Matrix4x4 gView, gProj;                   // 今フレのカメラ
 ID3D12GraphicsCommandList *gCL = nullptr; // 現在のコマンドリスト
 SceneContext *gCtxRef = nullptr;
+static ID3D12Resource *gCameraCB = nullptr;
+static CameraCB *gCameraCBMapped = nullptr;
 bool gInitialized = false;
 static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNormal;
 
@@ -102,6 +109,9 @@ void Init(SceneContext &ctx) {
   gSrvHeap = &ctx.core->SRV();
 
   gTexMan.Init(gDevice, gSrvHeap);
+  gCameraCB = CreateBufferResource(
+      gDevice, sizeof(CameraCB));
+  gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
 
   gModels.clear();
   gSpheres.clear();
@@ -131,9 +141,14 @@ void Term() {
 }
 
 // ====== フレーム共有 ======
-void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj) {
+void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,const RC::Vector3 camWorldPos) {
   gView = view;
   gProj = proj;
+
+  if (gCameraCBMapped) {
+    gCameraCBMapped->worldPos = camWorldPos;
+    gCameraCBMapped->_pad = 0.0f;
+  }
 }
 
 // ====== Light 管理 ======
@@ -231,6 +246,7 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     const Light &srcLight = gLights[gActiveLightHandle].light;
     const DirectionalLight &srcDir = srcLight.Data();
     const int mode = srcLight.GetLightingMode();
+    const float shininess = srcLight.GetShininess();
 
     for (auto &slot : gModels) {
       if (!slot.inUse || !slot.ptr)
@@ -244,6 +260,32 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
       // マテリアル側の lightingMode も上書き
       if (auto *mat = slot.ptr->Mat()) { // Material*
         mat->lightingMode = mode;
+        mat->shininess = shininess;
+      }
+    }
+  }
+
+  // アクティブライトを外向きメッシュの Sphere に流し込む
+  if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
+    const Light &srcLight = gLights[gActiveLightHandle].light;
+    const DirectionalLight &srcDir = srcLight.Data();
+    const int mode = srcLight.GetLightingMode();
+    const float shininess = srcLight.GetShininess();
+
+    for (auto &slot : gSpheres) {
+      if (!slot.inUse || !slot.ptr)
+        continue;
+      // 内向きメッシュはスキップ
+      if (slot.ptr->GetInward())
+        continue;
+      // ライト方向/色/強さ
+      if (auto *dst = slot.ptr->Light()) { // DirectionalLight*
+        *dst = srcDir;
+      }
+      // マテリアル側の lightingMode も上書き
+      if (auto *mat = slot.ptr->Mat()) { // Material*
+        mat->lightingMode = mode;
+        mat->shininess = shininess;
       }
     }
   }
@@ -270,6 +312,11 @@ void DrawModel(int modelHandle, int texHandle) {
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  }
+
+  if (gCameraCB) {
+    gCL->SetGraphicsRootConstantBufferView(4,
+                                           gCameraCB->GetGPUVirtualAddress());
   }
 
   // 明示テクスチャが指定されていれば差し替え（-1 なら .mtl のまま）
@@ -303,6 +350,11 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // Phong用：Camera CBV（RootParam[4]）
+    if (gCameraCB) {
+      gCL->SetGraphicsRootConstantBufferView(4,
+                                             gCameraCB->GetGPUVirtualAddress());
+    }
   }
 
   if (texHandle >= 0) {
@@ -523,6 +575,11 @@ void DrawSphere(int sphereHandle, int texHandle) {
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // Phong用：Camera CBV（RootParam[4]）
+    if (gCameraCB) {
+      gCL->SetGraphicsRootConstantBufferView(4,
+                                             gCameraCB->GetGPUVirtualAddress());
+    }
   }
 
   // テクスチャ差し替え（明示指定 > 生成時指定）

@@ -102,7 +102,7 @@ void PipelineManager::RegisterDefaultPipelines() {
   const std::wstring objVs = L"Resources/Shader/Object3d/Object3D.VS.hlsl";
   const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
 
-  // 互換用のベース PSO（必要なら）※App で "object3d" として作っていたもの
+  // 互換用のベース PSO（必要なら
   CreateFromFiles("object3d", objVs, objPs, InputLayoutType::Object3D);
 
   // ブレンド違い
@@ -130,12 +130,12 @@ void PipelineManager::RegisterDefaultPipelines() {
   CreateSpritePipeline("BlendModeMultiply", sprVs, sprPs, kBlendModeMultiply);
   CreateSpritePipeline("BlendModeScreen", sprVs, sprPs, kBlendModeScreen);
 
-  // =============================
-  // Particle 用
-  // =============================
+  //// =============================
+  //// Particle 用
+  //// =============================
   const std::wstring ptlVs = L"Resources/Shader/Particle/Particle.VS.hlsl";
   const std::wstring ptlPs = L"Resources/Shader/Particle/Particle.PS.hlsl";
-  CreateFromFiles("particle", ptlVs, ptlPs, InputLayoutType::Particle);
+  //CreateFromFiles("particle", ptlVs, ptlPs, InputLayoutType::Particle);
 
   // ブレンド違い
   CreateParticlePipeline("PtlBlendModeNone", ptlVs, ptlPs, kBlendModeNone);
@@ -179,8 +179,10 @@ GraphicsPipeline *PipelineManager::CreateModelPipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone); // None 以外はブレンドON
   opt.enableDepth = true;                          // モデルは深度ON
+  opt.enableDepthWrite = true;
   opt.cull = D3D12_CULL_MODE_NONE;                 // 既定の背面カリング
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Object3D;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -253,7 +255,9 @@ PipelineManager::CreateSpritePipeline(const std::wstring &vsPath,
   GPipelineOptions opt{};
   opt.enableAlphaBlend = true;     // 半透明ON
   opt.enableDepth = false;         // 深度OFF
+  opt.enableDepthWrite = false;
   opt.cull = D3D12_CULL_MODE_BACK; // カリングなし
+  opt.rootType = RootSignatureType::Sprite;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -293,8 +297,10 @@ GraphicsPipeline *PipelineManager::CreateSpritePipeline(
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone);
   opt.enableDepth = false;
+  opt.enableDepthWrite = false;
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Sprite;
 
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
@@ -355,9 +361,12 @@ GraphicsPipeline *PipelineManager::CreateParticlePipeline(
 
   GPipelineOptions opt{};
   opt.enableAlphaBlend = (mode != kBlendModeNone);
-  opt.enableDepth = false;
+  opt.enableDepth = true;       // 深度テストする
+  opt.enableDepthWrite = false; // でも書き込まない
   opt.cull = D3D12_CULL_MODE_BACK;
   opt.blendMode = mode;
+  opt.rootType = RootSignatureType::Particle;
+
   D3D12_SHADER_BYTECODE vsBC{VS.Blob()->GetBufferPointer(),
                              VS.Blob()->GetBufferSize()};
   D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),

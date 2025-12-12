@@ -17,7 +17,8 @@ void Init(SceneContext &ctx);
 void Term();
 
 // 毎フレームのカメラ共有
-void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj);
+void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
+               const RC::Vector3 camWorldPos);
 
 // ==============================
 // ライト用

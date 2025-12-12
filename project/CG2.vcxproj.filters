@@ -147,7 +147,13 @@
     <ClCompile Include="Game\Game.cpp" />
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
     <ClCompile Include="Game\Scene\ParticleScene\ParticleScene.cpp" />
-    <ClCompile Include="engine\Graphics\Particle\Particle.cpp" />
+    <ClCompile Include="engine\Particle\Particle.cpp" />
+    <ClCompile Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.cpp" />
+    <ClCompile Include="engine\Particle\Fire\FireParticle.cpp" />
+    <ClCompile Include="engine\Particle\Rain\RainParticle.cpp" />
+    <ClCompile Include="engine\Particle\Snow\SnowParticle.cpp" />
+    <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
+    <ClCompile Include="engine\Particle\Explosion\ExplosionParticle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -312,7 +318,14 @@
     <ClInclude Include="Game\Game.h" />
     <ClInclude Include="engine\Graphics\Light\Light.h" />
     <ClInclude Include="Game\Scene\ParticleScene\ParticleScene.h" />
-    <ClInclude Include="engine\Graphics\Particle\Particle.h" />
+    <ClInclude Include="engine\Particle\Particle.h" />
+    <ClInclude Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.h" />
+    <ClInclude Include="engine\Common\Math\MathUtils.h" />
+    <ClInclude Include="engine\Particle\Fire\FireParticle.h" />
+    <ClInclude Include="engine\Particle\Rain\RainParticle.h" />
+    <ClInclude Include="engine\Particle\Snow\SnowParticle.h" />
+    <ClInclude Include="engine\Particle\Circle\CircleParticle.h" />
+    <ClInclude Include="engine\Particle\Explosion\ExplosionParticle.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

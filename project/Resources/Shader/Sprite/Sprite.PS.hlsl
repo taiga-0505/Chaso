@@ -8,8 +8,6 @@ struct SpriteVSOutput
 struct Material
 {
     float4 color; // 色 (RGBA)
-    int lightingMode; // 0:なし, 1:Lambert, 2:Half Lambert
-    float3 padding; // アラインメント調整
     float4x4 uvTransform; // UV変換行列
 };
 

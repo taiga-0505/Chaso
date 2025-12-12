@@ -21,6 +21,8 @@ public:
   const RC::Matrix4x4 &GetView() const { return view_; }
   const RC::Matrix4x4 &GetProjection() const { return proj_; }
 
+  RC::Vector3 GetPosition() const { return transform_.translation; }
+
   /// 外部から位置や回転を変更したいとき
   void SetPosition(const RC::Vector3 &pos) { transform_.translation = pos; }
   void SetRotation(const RC::Vector3 &rot) { transform_.rotation = rot; }
