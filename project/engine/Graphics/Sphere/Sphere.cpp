@@ -53,6 +53,7 @@ void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
   cbLight_.mapped->color = {1, 1, 1, 1};
   cbLight_.mapped->direction = {0.0f, -1.0f, 0.0f};
   cbLight_.mapped->intensity = 1.0f;
+  cbMat_.mapped->shininess = 32.0f;
 
   if (inward_) {
     cbMat_.mapped->lightingMode = 0;

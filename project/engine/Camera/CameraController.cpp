@@ -26,6 +26,13 @@ void CameraController::Update() {
   } else {
     main_.Update();
   }
+
+  if (useDebug_) {
+    worldPos_ = debug_.GetPosition();
+  } else {
+    worldPos_ = main_.GetPosition();
+  }
+
 }
 
 void CameraController::DrawImGui() {

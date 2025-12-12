@@ -20,6 +20,8 @@ public:
   const RC::Matrix4x4 &GetView() const { return view_; }
   const RC::Matrix4x4 &GetProjection() const { return proj_; }
 
+  RC::Vector3 GetPosition() const { return translation_; }
+
 private:
   Input *input_ = nullptr;           // キー入力
   RC::Vector3 rotation_ = {0, 0, 0}; // 各軸回転角

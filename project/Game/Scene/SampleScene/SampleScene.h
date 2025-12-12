@@ -40,6 +40,10 @@ private:
   int txSphere_ = -1;
   Transform *sphereT_ = nullptr;
 
+  int ball = -1;
+  int txball = -1;
+  Transform *ballT_ = nullptr;
+
   // ===============
   // スプライト
   // ===============

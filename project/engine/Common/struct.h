@@ -17,6 +17,10 @@ struct Transform {
   }
 };
 
+struct CameraForGPU {
+  RC::Vector3 worldPosition; // カメラのワールド座標位置
+};
+
 struct AABB {
   RC::Vector3 min = {-1.0f, -1.0f, -1.0f};
   RC::Vector3 max = {1.0f, 1.0f, 1.0f};
@@ -66,7 +70,8 @@ struct ModelData {
 struct Material {
   RC::Vector4 color;         // 色 (RGBA)
   int lightingMode;          // 0:なし, 1:Lambert, 2:Half Lambert
-  float padding[3];          // アラインメント調整
+  float shininess;           // 光沢度
+  float padding[2];          // アラインメント調整
   RC::Matrix4x4 uvTransform; // UV変換行列
 };
 
@@ -100,4 +105,5 @@ enum LightingMode {
   None = 0,        // ライティング無し
   Lambert = 1,     // ランバート
   HalfLambert = 2, // ハーフランバート
+  Phong = 3        // フォン
 };

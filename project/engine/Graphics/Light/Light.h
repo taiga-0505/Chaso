@@ -22,11 +22,15 @@ public:
   int GetLightingMode() const { return lightingMode_; }
   void SetLightingMode(int m) { lightingMode_ = m; }
 
+  void SetShininess(float s) { shininess_ = s; }
+  float GetShininess() const { return shininess_; }
+
   void DrawImGui(const char *name = nullptr);
 
 private:
   DirectionalLight data_{};
   int lightingMode_ = 2; // デフォルト: HalfLambert
+  float shininess_ = 32.0f;
 };
 
 } // namespace RC
