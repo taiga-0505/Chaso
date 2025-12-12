@@ -246,6 +246,7 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     const Light &srcLight = gLights[gActiveLightHandle].light;
     const DirectionalLight &srcDir = srcLight.Data();
     const int mode = srcLight.GetLightingMode();
+    const float shininess = srcLight.GetShininess();
 
     for (auto &slot : gModels) {
       if (!slot.inUse || !slot.ptr)
@@ -259,6 +260,7 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
       // マテリアル側の lightingMode も上書き
       if (auto *mat = slot.ptr->Mat()) { // Material*
         mat->lightingMode = mode;
+        mat->shininess = shininess;
       }
     }
   }
@@ -268,6 +270,8 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     const Light &srcLight = gLights[gActiveLightHandle].light;
     const DirectionalLight &srcDir = srcLight.Data();
     const int mode = srcLight.GetLightingMode();
+    const float shininess = srcLight.GetShininess();
+
     for (auto &slot : gSpheres) {
       if (!slot.inUse || !slot.ptr)
         continue;
@@ -281,6 +285,7 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
       // マテリアル側の lightingMode も上書き
       if (auto *mat = slot.ptr->Mat()) { // Material*
         mat->lightingMode = mode;
+        mat->shininess = shininess;
       }
     }
   }
@@ -345,6 +350,11 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // Phong用：Camera CBV（RootParam[4]）
+    if (gCameraCB) {
+      gCL->SetGraphicsRootConstantBufferView(4,
+                                             gCameraCB->GetGPUVirtualAddress());
+    }
   }
 
   if (texHandle >= 0) {
@@ -565,6 +575,11 @@ void DrawSphere(int sphereHandle, int texHandle) {
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // Phong用：Camera CBV（RootParam[4]）
+    if (gCameraCB) {
+      gCL->SetGraphicsRootConstantBufferView(4,
+                                             gCameraCB->GetGPUVirtualAddress());
+    }
   }
 
   // テクスチャ差し替え（明示指定 > 生成時指定）

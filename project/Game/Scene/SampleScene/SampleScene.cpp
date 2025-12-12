@@ -48,7 +48,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
 
   txball = RC::LoadTex("Resources/monsterBall.png", false);
-  ball = RC::GenerateSphereEx(txball, 1.0f,16,16,false);
+  ball = RC::GenerateSphereEx(txball, 1.0f, 16, 16, false);
   ballT_ = RC::GetSphereTransformPtr(ball);
   RC::SetSphereColor(ball, {1.0f, 1.0f, 1.0f, 1.0f});
   ballT_->rotation.y = -1.6f;
@@ -77,7 +77,6 @@ void SampleScene::OnExit(SceneContext &) {
 
   RC::UnloadModel(ball);
   ball = -1;
-
 
   light = -1;
 }
@@ -108,7 +107,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();
 
-  RC::SetCamera(view_, proj_,camera_.GetWorldPos());
+  RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   // === 天球回転 ===
   sphereT_->rotation.y += 0.001f;
@@ -198,7 +197,7 @@ void SampleScene::DrawImGui() {
 
       ImGui::EndTabItem();
     }
-    
+
     // -------------------
     // SoundTab
     // -------------------

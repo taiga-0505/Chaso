@@ -42,7 +42,7 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::TextUnformatted("Lighting");
 
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phog"};
+  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phong"};
   int mode = lightingMode_;
   if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
                    IM_ARRAYSIZE(kModes))) {
@@ -73,6 +73,11 @@ void Light::DrawImGui(const char *name) {
                    0.01f, 0.0f, 16.0f, "%.2f");
 
   ImGui::Dummy(ImVec2(0, 6));
+
+  if (lightingMode_ == Phong) { 
+    ImGui::DragFloat((std::string("光沢度(shininess)##") + label).c_str(),
+                     &shininess_, 0.5f, 1.0f, 256.0f, "%.1f");
+  }
 }
 
 } // namespace RC
