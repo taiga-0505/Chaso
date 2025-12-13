@@ -6,7 +6,6 @@
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
-#include "imgui/imgui.h"
 #include <cassert>
 
 #pragma comment(lib, "dxgi.lib")
@@ -56,7 +55,7 @@ bool App::Init() {
   sceneCtx_.core = &core_;
   sceneCtx_.input = input_.get();
   sceneCtx_.app = &appConfig_;
-  sceneCtx_.imgui = &imgui_;
+  sceneCtx_.imgui = (RC_ENABLE_IMGUI ? &imgui_ : nullptr);
   sceneCtx_.objectPSO = pm_.GetModelPipeline(kBlendModeNone);
   sceneCtx_.spritePSO = pm_.GetSpritePipeline(kBlendModeNormal);
   sceneCtx_.particlePSO = pm_.GetParticlePipeline(kBlendModeNormal);
@@ -78,11 +77,15 @@ int App::Run() {
       TranslateMessage(&msg_);
       DispatchMessage(&msg_);
     } else {
+#if RC_ENABLE_IMGUI
       imgui_.NewFrame();
+#endif
       Update();
       core_.BeginFrame();
       Render();
+#if RC_ENABLE_IMGUI
       imgui_.Render(cl);
+#endif
       core_.EndFrame();
     }
   }
@@ -91,7 +94,9 @@ int App::Run() {
 
 void App::Update() {
 
+#if RC_ENABLE_IMGUI
   game_.DrawDebugUI();
+#endif
 
   input_->Update();
 

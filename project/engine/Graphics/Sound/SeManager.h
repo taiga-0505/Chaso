@@ -1,6 +1,8 @@
 #pragma once
 #include "Sound.h" // SoundLoadAudio / SoundUnload / SoundData
+#include <algorithm>
 #include <cassert>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -26,8 +28,12 @@ public:
   void Init(float defaultVolume = 1.0f) {
     HRESULT hr = XAudio2Create(&xaudio_, 0, XAUDIO2_DEFAULT_PROCESSOR);
     assert(SUCCEEDED(hr));
-    hr = xaudio_->CreateMasteringVoice(&master_);
+
+    IXAudio2MasteringVoice *rawMaster = nullptr;
+    hr = xaudio_->CreateMasteringVoice(&rawMaster);
     assert(SUCCEEDED(hr));
+    master_.reset(rawMaster);
+
     volume_ = defaultVolume;
   }
 
@@ -40,10 +46,7 @@ public:
       }
     }
     entries_.clear();
-    if (master_) {
-      master_->DestroyVoice();
-      master_ = nullptr;
-    }
+    master_.reset();
     xaudio_.Reset();
   }
 
@@ -72,43 +75,41 @@ public:
       e.data = SoundLoadAudio(e.path.c_str()); // mp3/wav両対応
       e.loaded = true;
     }
-    IXAudio2SourceVoice *v = nullptr;
-    HRESULT hr = xaudio_->CreateSourceVoice(&v, &e.data.wfex);
-    if (FAILED(hr) || !v)
+    IXAudio2SourceVoice *raw = nullptr;
+    HRESULT hr = xaudio_->CreateSourceVoice(&raw, &e.data.wfex);
+    if (FAILED(hr) || !raw)
       return;
 
+    SourceVoicePtr v{raw};
     const float vol = (std::max)(0.0f, volume_ * volScale);
     v->SetVolume(vol);
 
     XAUDIO2_BUFFER buf{};
-    buf.pAudioData = e.data.pBuffer;
+    buf.pAudioData = e.data.pBuffer.get();
     buf.AudioBytes = e.data.bufferSize;
     buf.Flags = XAUDIO2_END_OF_STREAM;
     buf.LoopCount = 0; // SEは基本ループしない
     hr = v->SubmitSourceBuffer(&buf);
     if (FAILED(hr)) {
-      v->DestroyVoice();
       return;
     }
 
     v->Start();
     ActiveVoice av;
-    av.v = v;
+    av.v = std::move(v);
     av.slot = k;
     av.volScale = volScale;
-    actives_.push_back(av);
+    actives_.push_back(std::move(av));
   }
 
   // 鳴り終わったVoiceを掃除（毎フレ呼ぶ）
   void Update() {
     // 後ろから消す
     for (int i = (int)actives_.size() - 1; i >= 0; --i) {
-      auto *v = actives_[i].v;
+      auto *v = actives_[i].v.get();
       XAUDIO2_VOICE_STATE st{};
       v->GetState(&st);
       if (st.BuffersQueued == 0) {
-        v->Stop();
-        v->DestroyVoice();
         actives_.erase(actives_.begin() + i);
       }
     }
@@ -126,30 +127,42 @@ public:
   float MasterVolume() const { return volume_; }
 
   // 全停止（シーン切替時などに）
-  void StopAll() {
-    for (auto &av : actives_) {
-      if (av.v) {
-        av.v->Stop();
-        av.v->DestroyVoice();
-      }
-    }
-    actives_.clear();
-  }
+  void StopAll() { actives_.clear(); }
 
 private:
+  struct SourceVoiceDeleter {
+    void operator()(IXAudio2SourceVoice *v) const noexcept {
+      if (v) {
+        v->Stop(0);
+        v->DestroyVoice();
+      }
+    }
+  };
+  struct MasterVoiceDeleter {
+    void operator()(IXAudio2MasteringVoice *v) const noexcept {
+      if (v) {
+        v->DestroyVoice();
+      }
+    }
+  };
+  using SourceVoicePtr =
+      std::unique_ptr<IXAudio2SourceVoice, SourceVoiceDeleter>;
+  using MasterVoicePtr =
+      std::unique_ptr<IXAudio2MasteringVoice, MasterVoiceDeleter>;
+
   struct Entry {
     std::string path;
     SoundData data{}; // PCM
     bool loaded = false;
   };
   struct ActiveVoice {
-    IXAudio2SourceVoice *v = nullptr;
+    SourceVoicePtr v{};
     int slot = -1;
     float volScale = 1.0f;
   };
 
   ComPtr<IXAudio2> xaudio_;
-  IXAudio2MasteringVoice *master_ = nullptr;
+  MasterVoicePtr master_{};
 
   std::unordered_map<int, Entry> entries_;
   std::vector<ActiveVoice> actives_;

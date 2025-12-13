@@ -1,7 +1,6 @@
 #include "GameScene.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
-#include "imgui/imgui.h"
 
 void GameScene::OnEnter(SceneContext &ctx) {
   // ===== Camera =====
@@ -38,10 +37,12 @@ void GameScene::OnExit(SceneContext &) {
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
 
+#if RC_ENABLE_IMGUI
   camera_.DrawImGui();
-  camera_.Update();
-
   RC::DrawImGui3D(blockModel, "block");
+#endif
+
+  camera_.Update();
 
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();

@@ -1,6 +1,13 @@
 #pragma once
 #include <array>
 #include <string>
+#ifndef RC_ENABLE_IMGUI
+#if defined(_DEBUG)
+#define RC_ENABLE_IMGUI 1
+#else
+#define RC_ENABLE_IMGUI 0
+#endif
+#endif
 
 struct AppConfig {
   int width = 1280;

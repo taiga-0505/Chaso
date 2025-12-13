@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <memory>
 #include <windows.h>
 #include <wrl/client.h>
 #include <xaudio2.h>
@@ -24,17 +25,18 @@ struct FormatChunk {
 };
 
 struct SoundData {
-  WAVEFORMATEX wfex;
-  BYTE *pBuffer;           // 音声データのバッファ（PCM）
-  unsigned int bufferSize; // バッファのサイズ（バイト）
+  WAVEFORMATEX wfex{};               // PCM 前提
+  std::unique_ptr<BYTE[]> pBuffer{}; // 音声データ（PCM）
+  unsigned int bufferSize = 0;       // バイト数
 };
 
-// 既存のWAVローダ（互換維持）
+// WAVローダ（互換維持）
 SoundData SoundLoadWave(const char *filename);
 
-// 新規：拡張子で自動判定して読み込む（.wav / .mp3）
+// 拡張子で自動判定して読み込む（.wav / .mp3）
 SoundData SoundLoadAudio(const char *filename);
 
+// SoundData を空にする
 void SoundUnload(SoundData *soundData);
 
 IXAudio2SourceVoice *SoundPlayWave(IXAudio2 *xaudio2,
@@ -44,10 +46,14 @@ IXAudio2SourceVoice *SoundPlayWave(IXAudio2 *xaudio2,
 void SoundStopWave(IXAudio2SourceVoice *pSourceVoice);
 
 class Sound {
-
 public:
   Sound();
   ~Sound();
+
+  Sound(const Sound &) = delete;
+  Sound &operator=(const Sound &) = delete;
+  Sound(Sound &&) noexcept = default;
+  Sound &operator=(Sound &&) noexcept = default;
 
   void Initialize(const char *filename); // 内部で SoundLoadAudio を使う
 
@@ -64,10 +70,26 @@ public:
   void Unload(); // サウンドデータ解放
 
 private:
+  struct MasterVoiceDeleter {
+    void operator()(IXAudio2MasteringVoice *v) const noexcept {
+      if (v) {
+        v->DestroyVoice();
+      }
+    }
+  };
+  struct SourceVoiceDeleter {
+    void operator()(IXAudio2SourceVoice *v) const noexcept {
+      if (v) {
+        v->Stop(0);
+        v->DestroyVoice();
+      }
+    }
+  };
+
   ComPtr<IXAudio2> xAudio2;
-  IXAudio2MasteringVoice *masteringVoice = nullptr;
-  IXAudio2SourceVoice *voice = nullptr;
-  SoundData soundData;
+  std::unique_ptr<IXAudio2MasteringVoice, MasterVoiceDeleter> masteringVoice{};
+  std::unique_ptr<IXAudio2SourceVoice, SourceVoiceDeleter> voice{};
+  SoundData soundData{};
 
   bool isLoop = false;
   float volume = 1.0f;

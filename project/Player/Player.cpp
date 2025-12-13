@@ -12,12 +12,13 @@ void Player::Init(int modelIndex, SceneContext &ctx) {
   RC::SetModelLightingMode(model_, None);
 
   transform_->translation = {1.0f, 1.0f, 0.0f};
-
 }
 
 void Player::Update() {
 
+#if RC_ENABLE_IMGUI
   RC::DrawImGui3D(model_, "Player");
+#endif
 
   Move();
   Jump();
@@ -38,8 +39,7 @@ void Player::Move() {
     transform_->translation.y -= gravity_;
   }
 
-  //transform_->translation -= velocity_;
-
+  // transform_->translation -= velocity_;
 }
 
 void Player::Jump() {
