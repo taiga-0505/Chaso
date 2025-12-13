@@ -169,6 +169,16 @@ void Term() {
   gSpheres.clear();
   gLights.clear();
   gActiveLightHandle = -1;
+
+  if (gCameraCB) {
+    if (gCameraCBMapped) {
+      gCameraCB->Unmap(0, nullptr);
+      gCameraCBMapped = nullptr;
+    }
+    gCameraCB->Release();
+    gCameraCB = nullptr;
+  }
+
   gTexMan.Term();
   gCtxRef = nullptr;
   gDevice = nullptr;
