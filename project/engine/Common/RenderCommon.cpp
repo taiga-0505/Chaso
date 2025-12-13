@@ -5,6 +5,9 @@
 #include "Sprite2D/Sprite2D.h"
 #include "Texture/TextureManager/TextureManager.h"
 #include <algorithm>
+#include <unordered_map>
+#include <memory>
+#include <filesystem>
 
 namespace RC {
 
@@ -13,6 +16,39 @@ struct ModelSlot {
   std::unique_ptr<Model3D> ptr;
   bool inUse = false;
 };
+
+// ===== Mesh cache =====
+static std::unordered_map<std::string, std::weak_ptr<ModelMesh>> gMeshCache;
+
+static std::string NormalizeMeshKey_(const std::string &path) {
+  namespace fs = std::filesystem;
+  std::error_code ec;
+  fs::path p(path);
+
+  // 絶対パス化できるなら絶対パス、ダメなら相対のまま正規化
+  fs::path abs = fs::absolute(p, ec);
+  fs::path key = ec ? p.lexically_normal() : abs.lexically_normal();
+  return key.string();
+}
+
+static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
+                                                 const std::string &path) {
+  const std::string key = NormalizeMeshKey_(path);
+
+  if (auto it = gMeshCache.find(key); it != gMeshCache.end()) {
+    if (auto sp = it->second.lock()) {
+      return sp;
+    }
+  }
+
+  auto mesh = std::make_shared<ModelMesh>();
+  if (!mesh->LoadObj(device, path)) {
+    return nullptr;
+  }
+  gMeshCache[key] = mesh;
+  return mesh;
+}
+
 
 struct SpriteSlot {
   std::unique_ptr<Sprite2D> ptr;
@@ -128,6 +164,7 @@ void Term() {
   if (!gInitialized)
     return;
   gModels.clear();
+  gMeshCache.clear();
   gSprites.clear();
   gSpheres.clear();
   gLights.clear();
@@ -206,19 +243,24 @@ int LoadModel(const std::string &path) {
     return -1;
   const int handle = AllocModelSlot_();
 
-  auto m = std::make_unique<Model3D>();
-  m->Initialize(gDevice); // 戻り値はチェックしない
+  auto obj = std::make_unique<ModelObject>();
+  obj->Initialize(gDevice);
+  obj->SetTextureManager(&gTexMan);
 
-  m->SetTextureManager(&gTexMan);
-  if (!m->LoadObj(path)) {
+  auto mesh = GetOrLoadMesh_(gDevice, path);
+  if (!mesh) {
     gModels[handle].inUse = false;
+    gModels[handle].ptr.reset();
     return -1;
   }
 
-  gModels[handle].ptr = std::move(m);
+  obj->SetMesh(mesh);
+
+  gModels[handle].ptr = std::move(obj);
   gModels[handle].inUse = true;
   return handle;
 }
+
 
 int LoadTex(const std::string &path, bool srgb) {
   if (!gInitialized)
@@ -359,6 +401,8 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
 
   if (texHandle >= 0) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
   }
 
   m->DrawBatch(gCL, gView, gProj, instances);

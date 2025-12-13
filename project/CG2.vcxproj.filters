@@ -93,9 +93,6 @@
     <ClCompile Include="engine\Common\Math\Math.cpp">
       <Filter>engine\Common\Math</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Graphics\Model3D\Model3D.cpp">
-      <Filter>engine\Graphics\Model3D</Filter>
-    </ClCompile>
     <ClCompile Include="engine\Dx12\PipelineManager.cpp">
       <Filter>engine\Dx12</Filter>
     </ClCompile>
@@ -154,6 +151,8 @@
     <ClCompile Include="engine\Particle\Snow\SnowParticle.cpp" />
     <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
     <ClCompile Include="engine\Particle\Explosion\ExplosionParticle.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\ModelObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -249,9 +248,6 @@
     <ClInclude Include="engine\Common\Math\MathTypes.h">
       <Filter>engine\Common\Math</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Graphics\Model3D\Model3D.h">
-      <Filter>engine\Graphics\Model3D</Filter>
-    </ClInclude>
     <ClInclude Include="engine\Dx12\PipelineManager.h">
       <Filter>engine\Dx12</Filter>
     </ClInclude>
@@ -326,6 +322,8 @@
     <ClInclude Include="engine\Particle\Snow\SnowParticle.h" />
     <ClInclude Include="engine\Particle\Circle\CircleParticle.h" />
     <ClInclude Include="engine\Particle\Explosion\ExplosionParticle.h" />
+    <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
+    <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

@@ -1,11 +1,12 @@
 #pragma once
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Math/Math.h"
-#include "Model3D/Model3D.h"
 #include "Scene.h"
 #include "Sphere/Sphere.h"
 #include <d3d12.h>
 #include <string>
+#include <Model3D/ModelObject.h>
+#include <Model3D/ModelMesh.h>
 
 // D3D12 GPUハンドルを返すために必要
 struct D3D12_GPU_DESCRIPTOR_HANDLE;

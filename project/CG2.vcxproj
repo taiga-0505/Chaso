@@ -155,6 +155,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
     <ClCompile Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.cpp" />
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\ModelObject.cpp" />
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
     <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
@@ -186,7 +188,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Input\Input.cpp" />
     <ClCompile Include="engine\Common\Log\Log.cpp" />
     <ClCompile Include="engine\Camera\MainCamera\MainCamera.cpp" />
-    <ClCompile Include="engine\Graphics\Model3D\Model3D.cpp" />
     <ClCompile Include="engine\Graphics\Sound\Sound.cpp" />
     <ClCompile Include="engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
     <ClCompile Include="engine\Window\Window.cpp" />
@@ -255,6 +256,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
     <ClInclude Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.h" />
     <ClInclude Include="engine\Graphics\Light\Light.h" />
+    <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
+    <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
     <ClInclude Include="engine\Graphics\Sound\BgmManager.h" />
     <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
@@ -289,7 +292,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Input\Input.h" />
     <ClInclude Include="engine\Common\Log\Log.h" />
     <ClInclude Include="engine\Camera\MainCamera\MainCamera.h" />
-    <ClInclude Include="engine\Graphics\Model3D\Model3D.h" />
     <ClInclude Include="engine\Graphics\Sound\Sound.h" />
     <ClInclude Include="engine\Common\struct.h" />
     <ClInclude Include="engine\Graphics\Texture\Texture2D\Texture2D.h" />
