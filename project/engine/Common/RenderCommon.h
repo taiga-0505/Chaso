@@ -60,6 +60,8 @@ Transform *GetModelTransformPtr(int modelHandle);
 void SetModelColor(int modelHandle, const Vector4 &color);
 void SetModelLightingMode(int modelHandle, LightingMode m);
 
+void SetModelMesh(int modelHandle, const std::string &path);
+
 void ResetCursor(int modelHandle);
 
 // ===============================

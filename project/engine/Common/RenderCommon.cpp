@@ -446,6 +446,16 @@ void SetModelLightingMode(int modelHandle, LightingMode m) {
   gModels[modelHandle].ptr->SetLightingMode(m);
 }
 
+void SetModelMesh(int modelHandle, const std::string &path) {
+  if (!IsValidModel_(modelHandle))
+    return;
+  auto mesh = GetOrLoadMesh_(gDevice, path);
+  if (!mesh)
+    return;
+  gModels[modelHandle].ptr->SetMesh(mesh);
+  gModels[modelHandle].ptr->ResetTextureToMtl();
+}
+
 void ResetCursor(int modelHandle) {
   if (!IsValidModel_(modelHandle))
     return;
