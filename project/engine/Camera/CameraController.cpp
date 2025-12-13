@@ -32,10 +32,10 @@ void CameraController::Update() {
   } else {
     worldPos_ = main_.GetPosition();
   }
-
 }
 
 void CameraController::DrawImGui() {
+#if RC_ENABLE_IMGUI
   ImGui::Begin("カメラモード : Tab");
 
   if (useDebug_) {
@@ -65,6 +65,8 @@ void CameraController::DrawImGui() {
     ImGui::Text(" マウスホイール押しながらドラッグ : 上下左右移動");
     ImGui::End();
   }
+
+#endif
 }
 
 void CameraController::SetMainPosition(const Vector3 &pos) {
@@ -120,5 +122,4 @@ void CameraController::SetTransform(const Vector3 &pos, const Vector3 &rot) {
   }
   worldPos_ = pos;
 }
-
 } // namespace RC
