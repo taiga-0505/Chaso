@@ -20,6 +20,7 @@ mono_crash.*
 generated/
 logs/
 project/imgui.ini
+project/Resources/desktop.ini
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -320,3 +321,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/project/externals/DirectXTex/Shaders/Compiled/
