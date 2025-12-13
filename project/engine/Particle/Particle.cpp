@@ -201,6 +201,7 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     if (emitter_.frequencyTime >= emitter_.frequency) {
       // 周期が来たらパーティクルを追加
       particles.splice(particles.end(), Emit(emitter_, randomEngine));
+      TrimToMax_();
       emitter_.frequencyTime -= emitter_.frequency;
     }
   }
@@ -216,20 +217,18 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   while (it != particles.end()) {
     ParticleData &p = *it;
 
-    // すでに寿命が尽きているものは list から削除
     if (p.lifeTime <= p.currentTime) {
       it = particles.erase(it);
       continue;
     }
 
-    // 生きてるやつだけ更新
     if (enableUpdate_) {
       UpdateOneParticle(p, deltaTime);
     }
 
+    // numInstance が上限でも it は必ず進める
     if (numInstance < kNumMaxInstance) {
 
-      // パーティクルごとのワールド行列
       const RC::Vector3 &s = p.transform.scale;
       const RC::Vector3 &r = p.transform.rotation;
       const RC::Vector3 &t = p.transform.translation;
@@ -241,16 +240,13 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
         Matrix4x4 rotateZMat = MakeRotateMatrix(Z, r.z);
         Matrix4x4 translateMat = MakeTranslateMatrix(t);
 
-        Matrix4x4 sr = Multiply(scaleMat, rotateZMat); // scale * rotateZ
-        Matrix4x4 srb =
-            Multiply(sr, billboardMatrix);   // (scale * rotateZ) * billboard
-        world = Multiply(srb, translateMat); // ... * translate
+        Matrix4x4 sr = Multiply(scaleMat, rotateZMat);
+        Matrix4x4 srb = Multiply(sr, billboardMatrix);
+        world = Multiply(srb, translateMat);
       } else {
-        // 通常の SRT
         world = MakeAffineMatrix(s, r, t);
       }
 
-      // GPU 用データに詰め替え
       ParticleForGPU wvp{};
       wvp.World = world;
       wvp.WVP = Multiply(world, Multiply(view, proj));
@@ -261,9 +257,9 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 
       instancingData_[numInstance] = wvp;
       ++numInstance;
-
-      ++it;
     }
+
+    ++it;
   }
 }
 
@@ -521,7 +517,7 @@ std::list<ParticleData> Particle::Emit(const Emitter &emitter,
   std::list<ParticleData> newParticles;
   for (uint32_t count = 0; count < emitter.count; ++count) {
     newParticles.push_back(
-        MakeNewParticle(randomEngine, emitter_.transform.translation));
+        MakeNewParticle(randomEngine, emitter.transform.translation));
   }
   return newParticles;
 }
@@ -580,6 +576,13 @@ void Particle::UpdateOneParticle(ParticleData &p, float dt) {
   }
 }
 
+void Particle::TrimToMax_() {
+  // 「同時に存在できるパーティクル数」を超えたら古いのから落とす
+  while (particles.size() > kNumMaxInstance) {
+    particles.pop_front();
+  }
+}
+
 bool Particle::IsCollision(const AABB &aabb, const Vector3 &point) {
   return (point.x >= aabb.min.x && point.x <= aabb.max.x) &&
          (point.y >= aabb.min.y && point.y <= aabb.max.y) &&
@@ -618,6 +621,7 @@ void Particle::MoveEmitter(const Vector3 &delta) {
 
 void Particle::AddParticlesFromEmitter() {
   particles.splice(particles.end(), Emit(emitter_, randomEngine));
+  TrimToMax_();
 }
 
 void Particle::SetEmitterAutoSpawn(bool enable) {

@@ -91,3 +91,27 @@ void DebugCamera::Reset() {
   translation_ = {0.0f, 0.0f, -8.0f}; // 原点にリセット
   rotation_ = {0.0f, 0.0f, 0.0f};     // 回転なしにリセット
 }
+
+void DebugCamera::SetPosition(const Vector3 &pos) {
+  translation_ = pos;
+  RebuildView_();
+}
+
+void DebugCamera::SetRotation(const Vector3 &rot) {
+  rotation_ = rot;
+  RebuildView_();
+}
+
+void DebugCamera::SetTransform(const Vector3 &pos, const Vector3 &rot) {
+  translation_ = pos;
+  rotation_ = rot;
+  RebuildView_();
+}
+
+// ==================
+// view再計算
+// ==================
+void DebugCamera::RebuildView_() {
+  Matrix4x4 world = MakeAffineMatrix({1, 1, 1}, rotation_, translation_);
+  view_ = Inverse(world);
+}

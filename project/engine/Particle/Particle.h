@@ -35,7 +35,7 @@ public:
                                const Vector3 &translate);
 
   virtual std::list<ParticleData> Emit(const Emitter &emitter,
-                               std::mt19937 &randomEngine);
+                                       std::mt19937 &randomEngine);
 
   // ==============================
   // キー操作用のユーティリティ
@@ -88,10 +88,11 @@ protected:
   Emitter &EmitterRef() { return emitter_; }
   const Emitter &EmitterRef() const { return emitter_; }
 
-  
   std::list<ParticleData> particles;
 
 private:
+  void TrimToMax_();
+
   // ==================
   // 定数
   // ==================
