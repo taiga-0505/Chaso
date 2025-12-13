@@ -48,6 +48,20 @@ public:
 
   RC::Vector3 GetWorldPos() const { return worldPos_; }
 
+  // ==================
+  // デバッグカメラを外部から直接いじる
+  // ==================
+  void SetDebugPosition(const Vector3 &pos);
+  void SetDebugRotation(const Vector3 &rot);
+  void SetDebugTransform(const Vector3 &pos, const Vector3 &rot);
+
+  // ==================
+  // いま有効なカメラ（Main/Debug）を同じAPIでいじる
+  // ==================
+  void SetPosition(const Vector3 &pos);
+  void SetRotation(const Vector3 &rot);
+  void SetTransform(const Vector3 &pos, const Vector3 &rot);
+
 private:
   Input *input_ = nullptr;
   DebugCamera debug_;
