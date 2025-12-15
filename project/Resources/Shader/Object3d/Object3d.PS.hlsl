@@ -101,6 +101,6 @@ PixelShaderOutput main(VertexShaderOutput input)
         output.color.rgb = baseColor * lightCol * lighting;
         output.color.a = gMaterial.color.a * textureColor.a;
     }
-
+    
     return output;
 }

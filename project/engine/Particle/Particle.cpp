@@ -282,11 +282,14 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // ==================
   // 使用するパイプラインステートを決定
   // ==================
-  GraphicsPipeline *pso = ctx.particlePSO;
-
+  GraphicsPipeline *pso = nullptr;
   if (ctx.pipelineManager) {
-    // 現在のブレンドモードからパーティクル用PSOを取得
-    pso = ctx.pipelineManager->GetParticlePipeline(RC::GetBlendMode());
+    const BlendMode mode = RC::GetBlendMode();
+    pso = ctx.pipelineManager->Get(PipelineManager::MakeKey("particle", mode));
+    if (!pso && mode != kBlendModeNormal) {
+      pso = ctx.pipelineManager->Get(
+          PipelineManager::MakeKey("particle", kBlendModeNormal));
+    }
   }
 
   if (!pso) {

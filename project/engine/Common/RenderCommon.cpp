@@ -5,9 +5,10 @@
 #include "Sprite2D/Sprite2D.h"
 #include "Texture/TextureManager/TextureManager.h"
 #include <algorithm>
-#include <unordered_map>
-#include <memory>
 #include <filesystem>
+#include <memory>
+#include <string_view>
+#include <unordered_map>
 
 namespace RC {
 
@@ -49,7 +50,6 @@ static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
   return mesh;
 }
 
-
 struct SpriteSlot {
   std::unique_ptr<Sprite2D> ptr;
   bool inUse = false;
@@ -87,7 +87,7 @@ SceneContext *gCtxRef = nullptr;
 static ID3D12Resource *gCameraCB = nullptr;
 static CameraCB *gCameraCBMapped = nullptr;
 bool gInitialized = false;
-static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNormal;
+static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNone;
 
 // 現在アクティブなライトハンドル
 int gActiveLightHandle = -1;
@@ -134,6 +134,23 @@ bool IsValidLight_(int h) {
   return (h >= 0 && h < (int)gLights.size() && gLights[h].inUse);
 }
 
+// PipelineManager（prefix + BlendMode）から PSO を引く共通処理。
+// 見つからない場合は normal
+// にフォールバックする（登録漏れでも落ちないように）。
+static GraphicsPipeline *GetPipeline_(SceneContext *ctx,
+                                      std::string_view prefix, BlendMode mode) {
+  if (!ctx || !ctx->pipelineManager)
+    return nullptr;
+
+  GraphicsPipeline *pso =
+      ctx->pipelineManager->Get(PipelineManager::MakeKey(prefix, mode));
+  if (!pso && mode != kBlendModeNormal) {
+    pso = ctx->pipelineManager->Get(
+        PipelineManager::MakeKey(prefix, kBlendModeNormal));
+  }
+  return pso;
+}
+
 } // namespace
 
 // ====== 起動時一回 ======
@@ -144,9 +161,8 @@ void Init(SceneContext &ctx) {
   gDevice = ctx.core->GetDevice();
   gSrvHeap = &ctx.core->SRV();
 
-  gTexMan.Init(gDevice, gSrvHeap);
-  gCameraCB = CreateBufferResource(
-      gDevice, sizeof(CameraCB));
+  gTexMan.Init(&ctx.core->SRVMan());
+  gCameraCB = CreateBufferResource(gDevice, sizeof(CameraCB));
   gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
 
   gModels.clear();
@@ -188,7 +204,8 @@ void Term() {
 }
 
 // ====== フレーム共有 ======
-void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,const RC::Vector3 camWorldPos) {
+void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
+               const RC::Vector3 camWorldPos) {
   gView = view;
   gProj = proj;
 
@@ -271,7 +288,6 @@ int LoadModel(const std::string &path) {
   return handle;
 }
 
-
 int LoadTex(const std::string &path, bool srgb) {
   if (!gInitialized)
     return -1;
@@ -287,11 +303,22 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle) {
 
 // ====== 描画セットアップ ======
 void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
-  // 3D オブジェクト用 PSO/RtSig/トポロジ
-  cl->SetGraphicsRootSignature(ctx.objectPSO->Root());
-  cl->SetPipelineState(ctx.objectPSO->PSO());
+  // 失敗時に前フレームの gCL が残ると危険なので、先に更新しておく
+  gCL = cl;
+  gCtxRef = &ctx;
+
+  gCurrentBlendMode = kBlendModeNone;
+
+  auto *pso = GetPipeline_(&ctx, "object3d", gCurrentBlendMode);
+  if (!pso) {
+    gCL = nullptr;
+    gCtxRef = nullptr;
+    return;
+  }
+
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  gCL = cl; // DrawModel から使う
 
   // アクティブライトを全 Model3D に流し込む
   if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
@@ -356,15 +383,15 @@ void DrawModel(int modelHandle, int texHandle) {
   if (!IsValidModel_(modelHandle))
     return;
 
+  auto *pso = GetPipeline_(gCtxRef, "object3d", gCurrentBlendMode);
+  if (!pso)
+    return;
+
   auto &m = gModels[modelHandle].ptr;
 
-  if (gCtxRef && gCtxRef->pipelineManager) {
-    GraphicsPipeline *pso =
-        gCtxRef->pipelineManager->GetModelPipeline(gCurrentBlendMode);
-    gCL->SetGraphicsRootSignature(pso->Root());
-    gCL->SetPipelineState(pso->PSO());
-    gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  }
+  gCL->SetGraphicsRootSignature(pso->Root());
+  gCL->SetPipelineState(pso->PSO());
+  gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   if (gCameraCB) {
     gCL->SetGraphicsRootConstantBufferView(4,
@@ -396,17 +423,14 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
 
   auto &m = gModels[modelHandle].ptr;
 
-  if (gCtxRef && gCtxRef->pipelineManager) {
-    GraphicsPipeline *pso =
-        gCtxRef->pipelineManager->GetModelPipeline(gCurrentBlendMode);
+  if (auto *pso = GetPipeline_(gCtxRef, "object3d", gCurrentBlendMode)) {
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    // Phong用：Camera CBV（RootParam[4]）
-    if (gCameraCB) {
-      gCL->SetGraphicsRootConstantBufferView(4,
-                                             gCameraCB->GetGPUVirtualAddress());
-    }
+  }
+  if (gCameraCB) {
+    gCL->SetGraphicsRootConstantBufferView(4,
+                                           gCameraCB->GetGPUVirtualAddress());
   }
 
   if (texHandle >= 0) {
@@ -476,6 +500,12 @@ void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // 2D描画用に、一時的にビューポートとシザーを全画面に設定する
   // (Dx12Core に保存されている設定は変更しない)
 
+  // 失敗時に前フレームの gCL が残ると危険なので、先に更新しておく
+  gCL = cl;
+  gCtxRef = &ctx;
+
+  gCurrentBlendMode = kBlendModeNormal;
+
   // 1. 全画面のビューポートを「ローカル変数」として作成
   D3D12_VIEWPORT viewport{};
   viewport.TopLeftX = 0.0f;
@@ -492,15 +522,19 @@ void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   scissor.right = static_cast<LONG>(ctx.app->width);
   scissor.bottom = static_cast<LONG>(ctx.app->height);
 
-  // 3. コマンドリストに「直接」セットする
   cl->RSSetViewports(1, &viewport);
   cl->RSSetScissorRects(1, &scissor);
 
-  cl->SetGraphicsRootSignature(ctx.spritePSO->Root());
-  cl->SetPipelineState(ctx.spritePSO->PSO());
+  auto *pso = GetPipeline_(&ctx, "sprite", gCurrentBlendMode);
+  if (!pso) {
+    gCL = nullptr;
+    gCtxRef = nullptr;
+    return;
+  }
+
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  gCL = cl;
-  gCtxRef = &ctx;
 }
 
 int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
@@ -533,20 +567,18 @@ int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
 void DrawSprite(int spriteHandle) {
   if (!gInitialized || !gCL)
     return;
-  if (spriteHandle < 0 || spriteHandle >= (int)gSprites.size())
+
+  auto *pso = GetPipeline_(gCtxRef, "sprite", gCurrentBlendMode);
+  if (!pso)
     return;
+
+  gCL->SetGraphicsRootSignature(pso->Root());
+  gCL->SetPipelineState(pso->PSO());
+  gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   auto &s = gSprites[spriteHandle];
   if (!s.inUse || !s.ptr)
     return;
-
-  if (gCtxRef && gCtxRef->pipelineManager) {
-    GraphicsPipeline *pso =
-        gCtxRef->pipelineManager->GetSpritePipeline(gCurrentBlendMode);
-    gCL->SetGraphicsRootSignature(pso->Root());
-    gCL->SetPipelineState(pso->PSO());
-    gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  }
 
   s.ptr->Update();
   s.ptr->Draw(gCL);
@@ -632,18 +664,15 @@ void DrawSphere(int sphereHandle, int texHandle) {
 
   auto &s = gSpheres[sphereHandle].ptr;
 
-  // ブレンドモードに応じた PSO を適用（モデルと同じパイプラインを流用）
-  if (gCtxRef && gCtxRef->pipelineManager) {
-    GraphicsPipeline *pso =
-        gCtxRef->pipelineManager->GetModelPipeline(gCurrentBlendMode);
+  // Sphereはモデルと同じ object3d パイプラインを使う
+  if (auto *pso = GetPipeline_(gCtxRef, "object3d", gCurrentBlendMode)) {
     gCL->SetGraphicsRootSignature(pso->Root());
     gCL->SetPipelineState(pso->PSO());
     gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    // Phong用：Camera CBV（RootParam[4]）
-    if (gCameraCB) {
-      gCL->SetGraphicsRootConstantBufferView(4,
-                                             gCameraCB->GetGPUVirtualAddress());
-    }
+  }
+  if (gCameraCB) {
+    gCL->SetGraphicsRootConstantBufferView(4,
+                                           gCameraCB->GetGPUVirtualAddress());
   }
 
   // テクスチャ差し替え（明示指定 > 生成時指定）

@@ -11,24 +11,21 @@ class Input;
 class DebugCamera;
 class MainCamera;
 class ImGuiManager;
-class GraphicsPipeline;
 class PipelineManager;
 class BgmManager;
 class SeManager;
 
 // シーンが使う共有コンテキスト
 struct SceneContext {
-  Dx12Core *core = nullptr;      // コマンドリスト等のアクセスに使う場合
-  Input *input = nullptr;        // 入力（キー遷移など）
+  Dx12Core *core = nullptr;
+  Input *input = nullptr;
   AppConfig *app = nullptr;
-  ImGuiManager *imgui =
-      nullptr; // ImGuiウィンドウを出すだけなら不要だが念のため
-  GraphicsPipeline *objectPSO = nullptr;
-  GraphicsPipeline *spritePSO = nullptr;
-  GraphicsPipeline *particlePSO = nullptr;
+  ImGuiManager *imgui = nullptr;
+
   PipelineManager *pipelineManager = nullptr;
-  BgmManager *bgmManager = nullptr; // BGM管理
-  SeManager *seManager = nullptr; // 効果音管理
+
+  BgmManager *bgmManager = nullptr;
+  SeManager *seManager = nullptr;
 };
 
 // シーン基底クラス
