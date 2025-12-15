@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <d3d12.h>
 #include <vector>
+#include "SRVManager/SRVManager.h"
 
 class SRVManager;
 

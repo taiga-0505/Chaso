@@ -56,9 +56,6 @@ bool App::Init() {
   sceneCtx_.input = input_.get();
   sceneCtx_.app = &appConfig_;
   sceneCtx_.imgui = (RC_ENABLE_IMGUI ? &imgui_ : nullptr);
-  sceneCtx_.objectPSO = pm_.GetModelPipeline(kBlendModeNone);
-  sceneCtx_.spritePSO = pm_.GetSpritePipeline(kBlendModeNormal);
-  sceneCtx_.particlePSO = pm_.GetParticlePipeline(kBlendModeNormal);
   sceneCtx_.pipelineManager = &pm_;
 
   // ===== RC初期化 =====
