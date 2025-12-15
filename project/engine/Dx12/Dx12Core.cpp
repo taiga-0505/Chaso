@@ -41,7 +41,9 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   srv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, d.srvHeapCapacity,
             true);
 
-  sbMgr_.Init(GetDevice(), &srv_); 
+  srvMgr_.Init(dev, &srv_);
+
+  sbMgr_.Init(&srvMgr_);
 
   // SwapChain
   swap_.SetRtvHeap(rtv_.Heap(), rtv_.Increment());
@@ -138,6 +140,7 @@ void Dx12Core::Term() {
   depth_.Term(); // DSV リソース
   swap_.Term();  // BackBuffer リソース + SwapChain
   sbMgr_.Term();
+  srvMgr_.Term(); 
   rtv_.Term();
   dsv_.Term();
   srv_.Term();

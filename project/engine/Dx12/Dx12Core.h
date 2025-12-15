@@ -3,13 +3,14 @@
 #include "DepthStencil/DepthStencil.h"
 #include "DescriptorHeap/DescriptorHeap.h"
 #include "Device/Device.h"
+#include "FixFps/FixFps.h"
 #include "GraphicsPipeline/GraphicsPipeline.h"
+#include "SRVManager/SRVManager.h"
+#include "StructuredBufferManager/StructuredBufferManager.h"
 #include "SwapChain/SwapChain.h"
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <memory>
-#include "FixFps/FixFps.h"
-#include "StructuredBufferManager/StructuredBufferManager.h"
 
 class Dx12Core {
 public:
@@ -52,6 +53,9 @@ public:
   }
   D3D12_CPU_DESCRIPTOR_HANDLE Dsv() const { return depth_.Dsv(); }
 
+  SRVManager &SRVMan() { return srvMgr_; }
+  const SRVManager &SRVMan() const { return srvMgr_; }
+
   // クリアのヘルパー（任意）
   void Clear(float r = 0.1f, float g = 0.25f, float b = 0.5f, float a = 1.0f);
 
@@ -83,6 +87,7 @@ private:
   CommandContext cmd_;
   SwapChain swap_;
   DescriptorHeap rtv_, dsv_, srv_;
+  SRVManager srvMgr_;
   DepthStencil depth_;
   UINT backIndex_ = 0;
   bool allowTearing_ = false;

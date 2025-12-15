@@ -1,0 +1,101 @@
+#include "SRVManager.h"
+#include "DescriptorHeap/DescriptorHeap.h"
+
+void SRVManager::Init(ID3D12Device *device, DescriptorHeap *srvHeap) {
+  assert(device);
+  assert(srvHeap);
+  device_ = device;
+  srvHeap_ = srvHeap;
+
+  free_.clear();
+  used_.assign(srvHeap_->Capacity(), 0);
+}
+
+void SRVManager::Term() {
+  device_ = nullptr;
+  srvHeap_ = nullptr;
+  free_.clear();
+  used_.clear();
+}
+
+SRVManager::Handle SRVManager::Allocate() {
+  assert(device_);
+  assert(srvHeap_);
+
+  UINT idx = UINT_MAX;
+
+  if (!free_.empty()) {
+    idx = free_.back();
+    free_.pop_back();
+  } else {
+    // 新規確保：今のUsedが確保されるindex
+    idx = srvHeap_->Used();
+    srvHeap_->AllocateCPU(1); // offset_ を進める（DescriptorHeapの基本動作）
+                              // :contentReference[oaicite:2]{index=2}
+  }
+
+  assert(idx < srvHeap_->Capacity());
+  if (!used_.empty()) {
+    assert(used_[idx] == 0 && "SRV slot double-allocate?");
+    used_[idx] = 1;
+  }
+
+  Handle h{};
+  h.index = idx;
+  h.cpu = srvHeap_->CPUAt(idx);
+  h.gpu = srvHeap_->GPUAt(idx);
+  return h;
+}
+
+void SRVManager::Free(const Handle &h) {
+  if (!h.IsValid())
+    return;
+  assert(srvHeap_);
+  assert(h.index < srvHeap_->Capacity());
+
+  if (!used_.empty()) {
+    assert(used_[h.index] == 1 && "SRV slot double-free?");
+    used_[h.index] = 0;
+  }
+  free_.push_back(h.index);
+}
+
+SRVManager::Handle SRVManager::CreateTexture2D(ID3D12Resource *res,
+                                               DXGI_FORMAT fmt, UINT mipLevels,
+                                               UINT mostDetailedMip) {
+  assert(res);
+  auto h = Allocate();
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc{};
+  desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+  desc.Format = fmt;
+  desc.Texture2D.MostDetailedMip = mostDetailedMip;
+  desc.Texture2D.MipLevels = mipLevels;
+  desc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+  device_->CreateShaderResourceView(res, &desc, h.cpu);
+  return h;
+}
+
+SRVManager::Handle SRVManager::CreateStructuredBuffer(ID3D12Resource *res,
+                                                      UINT elementCount,
+                                                      UINT strideBytes) {
+  assert(res);
+  assert(elementCount > 0);
+  assert(strideBytes > 0);
+
+  auto h = Allocate();
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+  srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+  srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+  srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  srvDesc.Buffer.FirstElement = 0;
+  srvDesc.Buffer.NumElements = elementCount;
+  srvDesc.Buffer.StructureByteStride = strideBytes;
+  srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+  device_->CreateShaderResourceView(res, &srvDesc, h.cpu);
+  return h;
+}

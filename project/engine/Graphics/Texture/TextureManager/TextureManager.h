@@ -10,10 +10,7 @@ class TextureManager {
 public:
   using TextureID = int;
 
-  void Init(ID3D12Device *device, DescriptorHeap *srvHeap) {
-    device_ = device;
-    srvHeap_ = srvHeap;
-  }
+  void Init(SRVManager *srv) { srv_ = srv; }
   void Term();
 
   // 同じパスはキャッシュして再利用
@@ -30,8 +27,7 @@ public:
   Texture2D *GetTexture(TextureID id);
 
 private:
-  ID3D12Device *device_ = nullptr;    // 非所有
-  DescriptorHeap *srvHeap_ = nullptr; // 非所有（可視ヒープ）
+  SRVManager *srv_ = nullptr;
   std::unordered_map<std::string, Texture2D> cache_;
 
   int nextId_ = 1;

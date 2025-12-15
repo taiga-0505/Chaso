@@ -1,23 +1,24 @@
 #include "TextureManager.h"
 #include "DescriptorHeap/DescriptorHeap.h"
+#include "SRVManager/SRVManager.h"
 
 void TextureManager::Term() {
-  for (auto &[_, tex] : cache_)
-    tex.Term();
+  for (auto &[_, tex] : cache_) {
+    tex.Term(srv_); // ★必ず srv を渡す
+  }
   cache_.clear();
-  device_ = nullptr;
-  srvHeap_ = nullptr;
+  srv_ = nullptr;
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
                                                  bool srgb) {
+  assert(srv_);
   auto it = cache_.find(path);
   if (it != cache_.end() && it->second.IsLoaded()) {
     return it->second.GpuSrv();
   }
-  // 新規 or 未ロード
-  Texture2D &tex = cache_[path]; // 生成（未ロード）
-  tex.LoadFromFile(device_, *srvHeap_, path, srgb);
+  Texture2D &tex = cache_[path];
+  tex.LoadFromFile(*srv_, path, srgb);
   return tex.GpuSrv();
 }
 
@@ -31,23 +32,23 @@ Texture2D *TextureManager::Get(const std::string &path) {
 // TextureManager.cpp
 TextureManager::TextureID TextureManager::LoadID(const std::string &path,
                                                  bool srgb) {
-  // 既にIDがあるならそれを返す
-  auto itId = pathToId_.find(path);
-  if (itId != pathToId_.end()) {
-    // 読み込み済みでない可能性もあるので cache_ を確認し、未ロードならロード
-    auto itTex = cache_.find(path);
-    if (itTex == cache_.end() || !itTex->second.IsLoaded()) {
-      Texture2D &tex = cache_[path];
-      tex.LoadFromFile(device_, *srvHeap_, path, srgb);
+  assert(srv_);
+
+  // 既にIDがあるなら返す（未ロードならロード）
+  if (auto itId = pathToId_.find(path); itId != pathToId_.end()) {
+    auto &tex = cache_[path];
+    if (!tex.IsLoaded()) {
+      tex.LoadFromFile(*srv_, path, srgb);
     }
     return itId->second;
   }
 
-  // まだIDが無ければ生成・ロード
-  Texture2D &tex = cache_[path];
+  // 新規
+  auto &tex = cache_[path];
   if (!tex.IsLoaded()) {
-    tex.LoadFromFile(device_, *srvHeap_, path, srgb); // SRV作成まで内部で実施
+    tex.LoadFromFile(*srv_, path, srgb);
   }
+
   TextureID id = nextId_++;
   pathToId_[path] = id;
   idToPath_[id] = path;

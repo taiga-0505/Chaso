@@ -153,6 +153,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Common\RenderCommon.cpp" />
     <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp" />
     <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
+    <ClCompile Include="engine\Dx12\SRVManager\SRVManager.cpp" />
     <ClCompile Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.cpp" />
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
@@ -254,6 +255,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Common\RenderCommon.h" />
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h" />
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
+    <ClInclude Include="engine\Dx12\SRVManager\SRVManager.h" />
     <ClInclude Include="engine\Dx12\StructuredBufferManager\StructuredBufferManager.h" />
     <ClInclude Include="engine\Graphics\Light\Light.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
