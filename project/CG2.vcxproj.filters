@@ -153,6 +153,7 @@
     <ClCompile Include="engine\Particle\Explosion\ExplosionParticle.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelObject.cpp" />
+    <ClCompile Include="engine\Dx12\SRVManager\SRVManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -324,6 +325,7 @@
     <ClInclude Include="engine\Particle\Explosion\ExplosionParticle.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
+    <ClInclude Include="engine\Dx12\SRVManager\SRVManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

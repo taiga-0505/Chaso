@@ -3,17 +3,23 @@
 #include "DescriptorHeap/DescriptorHelpers.h"
 #include "function/function.h"
 
-void Texture2D::LoadFromFile(ID3D12Device *device, DescriptorHeap &srvHeap,
-                             const std::string &path, bool srgb) {
-  Term();
+void Texture2D::LoadFromFile(SRVManager &srv, const std::string &path,
+                             bool srgb) {
+  Term(&srv);
+  ID3D12Device *device = srv.Device();
 
   // ---- 1) 画像読み込み（存在しなければ白1x1）----
   std::wstring wpath(path.begin(), path.end());
   DirectX::ScratchImage image;
-  HRESULT hr = DirectX::LoadFromWICFile(
-      wpath.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+
+  const DirectX::WIC_FLAGS wicFlags =
+      srgb ? DirectX::WIC_FLAGS_FORCE_SRGB : DirectX::WIC_FLAGS_IGNORE_SRGB;
+
+  HRESULT hr =
+      DirectX::LoadFromWICFile(wpath.c_str(), wicFlags, nullptr, image);
+
   if (FAILED(hr)) {
-    // 白1x1を生成
+    // 白1x1を生成（ここはUNORMで作って、後でsrgbならMakeSRGBする）
     DirectX::ScratchImage white;
     white.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, 1);
     auto img = white.GetImage(0, 0, 0);
@@ -24,19 +30,27 @@ void Texture2D::LoadFromFile(ID3D12Device *device, DescriptorHeap &srvHeap,
     p[3] = 255;
     mipImages_ = std::move(white);
   } else {
-    // ミップ生成（失敗したら元画像を使用）
+    // ミップ生成（srgbならsRGBフィルタ、linearなら通常フィルタ）
+    const DirectX::TEX_FILTER_FLAGS mipFilter =
+        srgb ? DirectX::TEX_FILTER_SRGB : DirectX::TEX_FILTER_DEFAULT;
+
     DirectX::ScratchImage mips;
     hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(),
-                                  image.GetMetadata(), DirectX::TEX_FILTER_SRGB,
-                                  0, mips);
+                                  image.GetMetadata(), mipFilter, 0, mips);
+
     mipImages_ = SUCCEEDED(hr) ? std::move(mips) : std::move(image);
   }
 
   metadata_ = mipImages_.GetMetadata();
-  if (srgb)
-    metadata_.format = DirectX::MakeSRGB(metadata_.format);
 
-  // ---- 2) GPUテクスチャ作成（Upload書き戻しor DefaultでもOK）----
+  // srgb=trueならSRGB化、srgb=falseなら線形（非SRGB）に戻す
+  if (srgb) {
+    metadata_.format = DirectX::MakeSRGB(metadata_.format);
+  } else {
+    metadata_.format = DirectX::MakeLinear(metadata_.format);
+  }
+
+  // ---- 2) GPUテクスチャ作成（WriteBack方式：今の実装方針のまま）----
   D3D12_RESOURCE_DESC desc{};
   desc.Dimension = D3D12_RESOURCE_DIMENSION(metadata_.dimension);
   desc.Width = (UINT)metadata_.width;
@@ -65,27 +79,29 @@ void Texture2D::LoadFromFile(ID3D12Device *device, DescriptorHeap &srvHeap,
     assert(SUCCEEDED(hr));
   }
 
-  // ---- 4) SRV作成 ----
-  createSRV(device, srvHeap);
+  // ---- SRV作成 ----
+  srv_ = srv.CreateTexture2D(resource_, metadata_.format,
+                             (UINT)metadata_.mipLevels);
   path_ = path;
 }
 
-
-void Texture2D::createSRV(ID3D12Device *device, DescriptorHeap &srvHeap) {
-  cpuSrv_ = CreateSRV2D(device, srvHeap, resource_, metadata_.format,
-                        static_cast<UINT>(metadata_.mipLevels));
-  // 直近の割り当てインデックスの GPU ハンドルを取得
-  gpuSrv_ = srvHeap.GPUAt(srvHeap.Used() - 1);
-}
-
-void Texture2D::Term() {
+void Texture2D::Term(SRVManager *srv) {
+#if _DEBUG
+  if (!srv && srv_.IsValid()) {
+    assert(false && "Texture2D SRV is still allocated. Call Term(&srvMgr) "
+                    "before destruction.");
+  }
+#endif
   if (resource_) {
     resource_->Release();
     resource_ = nullptr;
   }
+  if (srv && srv_.IsValid()) {
+    // ※GPUが参照し終わったタイミングで呼ぶのが前提（終了時ならOK）
+    srv->Free(srv_);
+  }
+  srv_ = {};
   path_.clear();
-  cpuSrv_ = {};
-  gpuSrv_ = {};
   mipImages_ = DirectX::ScratchImage{};
   metadata_ = DirectX::TexMetadata{};
 }

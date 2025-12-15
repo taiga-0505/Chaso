@@ -1,41 +1,55 @@
 #pragma once
 #include "DirectXTex/DirectXTex.h"
+#include "SRVManager/SRVManager.h"
 #include <cassert>
 #include <d3d12.h>
 #include <string>
 
-class DescriptorHeap; // 循環防止の前方宣言
+class SRVManager;
 
 class Texture2D {
 public:
   Texture2D() = default;
   ~Texture2D() { Term(); }
 
-  // ファイルから読み込んで GPU リソース + SRV を作成
-  // srgb=true ならフォーマットを DirectX::MakeSRGB で寄せる
-  void LoadFromFile(ID3D12Device *device, DescriptorHeap &srvHeap,
-                    const std::string &path, bool srgb = true);
+  void LoadFromFile(SRVManager &srv, const std::string &path, bool srgb = true);
+  void Term(SRVManager *srv = nullptr);
 
-  void Term();
+  Texture2D(const Texture2D &) = delete;
+  Texture2D &operator=(const Texture2D &) = delete;
 
+  Texture2D(Texture2D &&o) noexcept { *this = std::move(o); }
+  Texture2D &operator=(Texture2D &&o) noexcept {
+    if (this == &o)
+      return *this;
+
+#if _DEBUG
+    // ここが非空でムーブ代入されるのは運用ミス
+    assert(resource_ == nullptr);
+    assert(!srv_.IsValid());
+#endif
+    path_ = std::move(o.path_);
+    resource_ = o.resource_;
+    o.resource_ = nullptr;
+    srv_ = o.srv_;
+    o.srv_ = {};
+    mipImages_ = std::move(o.mipImages_);
+    metadata_ = o.metadata_;
+    o.metadata_ = {};
+    return *this;
+  }
   // 取得系
   ID3D12Resource *Resource() const { return resource_; }
-  D3D12_GPU_DESCRIPTOR_HANDLE GpuSrv() const { return gpuSrv_; }
-  D3D12_CPU_DESCRIPTOR_HANDLE CpuSrv() const { return cpuSrv_; }
+  D3D12_GPU_DESCRIPTOR_HANDLE GpuSrv() const { return srv_.gpu; }
+  D3D12_CPU_DESCRIPTOR_HANDLE CpuSrv() const { return srv_.cpu; }
   const DirectX::TexMetadata &Metadata() const { return metadata_; }
   const std::string &Path() const { return path_; }
   bool IsLoaded() const { return resource_ != nullptr; }
 
 private:
-  // 内部ユーティリティ（実体は既存の関数群を利用）
-  void createSRV(ID3D12Device *device, DescriptorHeap &srvHeap);
-
-private:
   std::string path_;
-  ID3D12Resource *resource_ = nullptr; // 所有
+  ID3D12Resource *resource_ = nullptr;
+  SRVManager::Handle srv_{};
   DirectX::ScratchImage mipImages_;
   DirectX::TexMetadata metadata_{};
-
-  D3D12_CPU_DESCRIPTOR_HANDLE cpuSrv_{};
-  D3D12_GPU_DESCRIPTOR_HANDLE gpuSrv_{};
 };
