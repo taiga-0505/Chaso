@@ -104,6 +104,22 @@ void SetSphereColor(int sphereHandle, const Vector4 &color);
 void SetSphereLightingMode(int sphereHandle, LightingMode m);
 
 // ===============================
+// Primitive2D（即時描画）
+// ===============================
+
+// p0/p1 は「画面ピクセル座標」
+void DrawLine(const Vector2 &p0, const Vector2 &p1, float thickness,
+              const Vector4 &color, float feather = 1.0f);
+
+// mn/mx は「画面ピクセル座標」 (mn=左上, mx=右下想定)
+void DrawBox(const Vector2 &mn, const Vector2 &mx, bool stroke, float thickness,
+             const Vector4 &color, float feather = 1.0f);
+
+// center は「画面ピクセル座標」
+void DrawCircle(const Vector2 &center, float radius, bool stroke,
+                float thickness, const Vector4 &color, float feather = 1.0f);
+
+// ===============================
 // 共通関数
 // ===============================
 

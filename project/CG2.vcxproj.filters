@@ -15,6 +15,8 @@
     </FxCompile>
     <FxCompile Include="Resources\Shader\Particle\Particle.PS.hlsl" />
     <FxCompile Include="Resources\Shader\Particle\Particle.VS.hlsl" />
+    <FxCompile Include="Resources\Shader\Primitive2D\Primitive2D.PS.hlsl" />
+    <FxCompile Include="Resources\Shader\Primitive2D\Primitive2D.VS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -154,6 +156,7 @@
     <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelObject.cpp" />
     <ClCompile Include="engine\Dx12\SRVManager\SRVManager.cpp" />
+    <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -326,6 +329,7 @@
     <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
     <ClInclude Include="engine\Dx12\SRVManager\SRVManager.h" />
+    <ClInclude Include="engine\Graphics\Primitive2D\Primitive2D.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
