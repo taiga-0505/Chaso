@@ -158,6 +158,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Light\Light.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelMesh.cpp" />
     <ClCompile Include="engine\Graphics\Model3D\ModelObject.cpp" />
+    <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp" />
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
     <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
@@ -235,6 +236,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="Resources\Shader\Primitive2D\Primitive2D.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Resources\Shader\Primitive2D\Primitive2D.VS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="Resources\Shader\Sprite\Sprite.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -260,6 +267,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Graphics\Light\Light.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelMesh.h" />
     <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
+    <ClInclude Include="engine\Graphics\Primitive2D\Primitive2D.h" />
     <ClInclude Include="engine\Graphics\Sound\BgmManager.h" />
     <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
