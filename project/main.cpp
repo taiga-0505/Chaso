@@ -4,7 +4,6 @@
 #pragma warning(pop)
 
 #include "App.h"
-#include <objbase.h>
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   // COM 初期化
