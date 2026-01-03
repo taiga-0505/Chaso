@@ -1,11 +1,12 @@
 #pragma once
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Math/Math.h"
-#include "Model3D/Model3D.h"
 #include "Scene.h"
 #include "Sphere/Sphere.h"
 #include <d3d12.h>
 #include <string>
+#include <Model3D/ModelObject.h>
+#include <Model3D/ModelMesh.h>
 
 // D3D12 GPUハンドルを返すために必要
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
@@ -17,7 +18,24 @@ void Init(SceneContext &ctx);
 void Term();
 
 // 毎フレームのカメラ共有
-void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj);
+void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
+               const RC::Vector3 camWorldPos);
+
+// ==============================
+// ライト用
+// ==============================
+
+class Light;
+
+int CreateLight();
+void DestroyLight(int lightHandle);
+
+void SetActiveLight(int lightHandle);
+int GetActiveLightHandle();
+
+Light *GetLightPtr(int lightHandle);
+
+void DrawImGuiLight(int lightHandle, const char *name);
 
 // ==============================
 // モデル用
@@ -41,6 +59,8 @@ void UnloadModel(int modelHandle);
 Transform *GetModelTransformPtr(int modelHandle);
 void SetModelColor(int modelHandle, const Vector4 &color);
 void SetModelLightingMode(int modelHandle, LightingMode m);
+
+void SetModelMesh(int modelHandle, const std::string &path);
 
 void ResetCursor(int modelHandle);
 
@@ -82,6 +102,22 @@ void UnloadSphere(int sphereHandle);
 Transform *GetSphereTransformPtr(int sphereHandle);
 void SetSphereColor(int sphereHandle, const Vector4 &color);
 void SetSphereLightingMode(int sphereHandle, LightingMode m);
+
+// ===============================
+// Primitive2D（即時描画）
+// ===============================
+
+// p0/p1 は「画面ピクセル座標」
+void DrawLine(const Vector2 &p0, const Vector2 &p1, float thickness,
+              const Vector4 &color, float feather = 1.0f);
+
+// mn/mx は「画面ピクセル座標」 (mn=左上, mx=右下想定)
+void DrawBox(const Vector2 &mn, const Vector2 &mx, bool stroke, float thickness,
+             const Vector4 &color, float feather = 1.0f);
+
+// center は「画面ピクセル座標」
+void DrawCircle(const Vector2 &center, float radius, bool stroke,
+                float thickness, const Vector4 &color, float feather = 1.0f);
 
 // ===============================
 // 共通関数

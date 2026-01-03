@@ -17,8 +17,6 @@
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 
-namespace RC {
-
 // =========================
 // ユーティリティ
 // =========================
@@ -96,18 +94,18 @@ SoundData SoundLoadWave(const char *filename) {
     assert(0);
   }
 
-  char *pBuffer = new char[data.size];
-  file.read(pBuffer, data.size);
+  auto pBuffer = std::make_unique<BYTE[]>(static_cast<size_t>(data.size));
+  file.read(reinterpret_cast<char *>(pBuffer.get()), data.size);
 
   file.close();
 
   // ==========================
   // return
   // ==========================
-  SoundData soundData = {};
+  SoundData soundData{};
   soundData.wfex = format.fmt; // PCM 前提
-  soundData.pBuffer = reinterpret_cast<BYTE *>(pBuffer);
-  soundData.bufferSize = data.size;
+  soundData.pBuffer = std::move(pBuffer);
+  soundData.bufferSize = static_cast<unsigned int>(data.size);
 
   return soundData;
 }
@@ -193,8 +191,8 @@ static SoundData SoundLoadWithMediaFoundation(const wchar_t *wpath) {
   SoundData sd{};
   sd.wfex = *pwfx; // 構造体コピー（PCM）
   sd.bufferSize = static_cast<unsigned int>(pcmBytes.size());
-  sd.pBuffer = new BYTE[sd.bufferSize];
-  memcpy(sd.pBuffer, pcmBytes.data(), sd.bufferSize);
+  sd.pBuffer = std::make_unique<BYTE[]>(sd.bufferSize);
+  memcpy(sd.pBuffer.get(), pcmBytes.data(), sd.bufferSize);
 
   CoTaskMemFree(pwfx);
   return sd;
@@ -217,10 +215,10 @@ SoundData SoundLoadAudio(const char *filename) {
 }
 
 void SoundUnload(SoundData *soundData) {
-
-  delete[] soundData->pBuffer;
-
-  soundData->pBuffer = 0;
+  if (!soundData) {
+    return;
+  }
+  soundData->pBuffer.reset();
   soundData->bufferSize = 0;
   soundData->wfex = {};
 }
@@ -237,7 +235,7 @@ IXAudio2SourceVoice *SoundPlayWave(IXAudio2 *xaudio2,
   pSourceVoice->SetVolume(volume);
 
   XAUDIO2_BUFFER buf{};
-  buf.pAudioData = soundData.pBuffer;
+  buf.pAudioData = soundData.pBuffer.get();
   buf.AudioBytes = soundData.bufferSize;
   buf.Flags = XAUDIO2_END_OF_STREAM;
   buf.LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
@@ -264,30 +262,22 @@ Sound::Sound() {
 }
 
 Sound::~Sound() {
-  // 再生中なら停止
-  if (voice) {
-    SoundStopWave(voice);
-    voice = nullptr;
-  }
-  // サウンドデータの解放
-  SoundUnload(&soundData);
-  // マスターボイスの解放
-  if (masteringVoice) {
-    masteringVoice->DestroyVoice();
-    masteringVoice = nullptr;
-  }
+  // unique_ptr のデリータで止めて破棄される
+  Stop();
+  Unload();
+  masteringVoice.reset();
 }
 
 void Sound::Initialize(const char *filename) {
 
-  if (voice) {
-    SoundStopWave(voice);
-    voice = nullptr;
-  }
+  Stop();
   SoundUnload(&soundData);
+
   if (!masteringVoice) {
-    HRESULT hr = xAudio2->CreateMasteringVoice(&masteringVoice);
+    IXAudio2MasteringVoice *raw = nullptr;
+    HRESULT hr = xAudio2->CreateMasteringVoice(&raw);
     assert(SUCCEEDED(hr));
+    masteringVoice.reset(raw);
   }
   // ここを WAV 固定から、拡張子自動判定ローダに変更
   soundData = SoundLoadAudio(filename);
@@ -307,14 +297,13 @@ void Sound::SoundImGui(const char *soundname) {
     }
 
     if (ImGui::Button((std::string("再生##") + Label).c_str())) {
-      voice = SoundPlayWave(xAudio2.Get(), soundData, volume, isLoop);
+      voice.reset(SoundPlayWave(xAudio2.Get(), soundData, volume, isLoop));
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button((std::string("停止##") + Label).c_str())) {
-      SoundStopWave(voice);
-      voice = nullptr;
+      Stop();
     }
 
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
@@ -330,4 +319,16 @@ void Sound::SetVolume(float volume_) {
 
 float Sound::GetVolume() const { return volume; }
 
-} // namespace RC
+void Sound::Play(bool loop) {
+  isLoop = loop;
+  voice.reset(SoundPlayWave(xAudio2.Get(), soundData, volume, isLoop));
+}
+
+void Sound::Stop() { voice.reset(); }
+
+void Sound::AllStop() { Stop(); }
+
+void Sound::Unload() {
+  Stop();
+  SoundUnload(&soundData);
+}

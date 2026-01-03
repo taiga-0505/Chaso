@@ -1,12 +1,12 @@
 #pragma once
 #include "AppConfig.h"
 #include "Dx12Core.h"
+#include "Game.h"
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "ImGuiManager/ImGuiManager.h"
 #include "Input/Input.h"
 #include "PipelineManager.h"
 #include "Scene.h"
-#include "SceneManager.h"
 #include "Window/Window.h"
 #include <memory>
 
@@ -50,11 +50,10 @@ private:
 
   // パイプライン
   PipelineManager pm_;
-  GraphicsPipeline *pipeObj_ = nullptr;
-  GraphicsPipeline *pipeSprite_ = nullptr;
 
   // === シーン管理 ===
-  Scene::SceneManager sceneMgr_;
+  // === Game（シーン切替などゲーム側の責務） ===
+  Game game_;
   SceneContext sceneCtx_;
 
   // Win32

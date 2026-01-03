@@ -1,0 +1,64 @@
+# リポジトリ内の不要なファイルを見つけるためのGitHub Actions
+name: CheckUnwantedFiles
+
+on:
+  # GitHubのActionsタブから手動で実行できるようにする
+  workflow_dispatch:
+  # masterブランチへのプッシュでも実行する
+  push:
+    branches:
+      - master
+
+# 検出する不要なファイルのパターンを定義する環境変数。
+# ---- 重要 ----
+# プロジェクトのニーズに合わせて、これらのリストを変更してください。
+# パターンはスペース区切りで指定します。
+env:
+  # 特定のファイル名（拡張子など）のパターン
+  UNWANTED_NAME_PATTERNS: "*.pdb *.ilk *.user *.ncb *.suo *.log *.dmp *.zip imgui.ini desktop.ini dxcompiler.dll dxil.dll"
+
+  # ディレクトリ名のパターン（ビルド出力フォルダなど）
+  UNWANTED_DIR_PATTERNS: "generated x64 win32 arm64 .vs bin ipch logs Dump"
+
+jobs:
+  check-files:
+    name: 不要なファイルを検索
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: 不要なファイルとディレクトリを検索 (bash)
+        run: |
+          # ディレクトリ条件を構築（最初の不要な -o を後で削除）
+          DIR_CONDITIONS=()
+          for pattern in $UNWANTED_DIR_PATTERNS; do
+            DIR_CONDITIONS+=(-o -iname "$pattern")
+          done
+          unset DIR_CONDITIONS[0]
+
+          # ファイル条件を構築（最初の不要な -o を後で削除）
+          NAME_CONDITIONS=()
+          for pattern in $UNWANTED_NAME_PATTERNS; do
+            NAME_CONDITIONS+=(-o -iname "$pattern")
+          done
+          unset NAME_CONDITIONS[0]
+
+          # 1回の find 実行で全件を検索
+          # 1. .git を除外
+          # 2. 不要なディレクトリを検索(-type d)し、見つけたらパスを出力(-print)し、その中身を枝刈り(-prune)
+          # 3. または ( -o ) 不要なファイルを検索(-type f)し、パスを出力(-print)
+          UNWANTED_LIST=$(find . -path "./.git" -prune -o \
+            \( \( "${DIR_CONDITIONS[@]}" \) -a -type d -print -prune \) -o \
+            \( \( "${NAME_CONDITIONS[@]}" \) -a -type f -print \) \
+          )
+
+          # 検出結果があればエラーとして出力し、失敗させる
+          if [ -n "$UNWANTED_LIST" ]; then
+            echo "::error::不要なファイルまたはディレクトリが見つかりました！"
+            echo "$UNWANTED_LIST"
+            exit 1
+          fi
+
+          echo "リポジトリはクリーンです。"

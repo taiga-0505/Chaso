@@ -26,9 +26,16 @@ void CameraController::Update() {
   } else {
     main_.Update();
   }
+
+  if (useDebug_) {
+    worldPos_ = debug_.GetPosition();
+  } else {
+    worldPos_ = main_.GetPosition();
+  }
 }
 
 void CameraController::DrawImGui() {
+#if RC_ENABLE_IMGUI
   ImGui::Begin("カメラモード : Tab");
 
   if (useDebug_) {
@@ -58,6 +65,8 @@ void CameraController::DrawImGui() {
     ImGui::Text(" マウスホイール押しながらドラッグ : 上下左右移動");
     ImGui::End();
   }
+
+#endif
 }
 
 void CameraController::SetMainPosition(const Vector3 &pos) {
@@ -68,4 +77,49 @@ void CameraController::SetMainRotation(const Vector3 &rot) {
   main_.SetRotation(rot);
 }
 
+void CameraController::SetDebugPosition(const Vector3 &pos) {
+  debug_.SetPosition(pos);
+  if (useDebug_) {
+    worldPos_ = pos;
+  }
+}
+
+void CameraController::SetDebugRotation(const Vector3 &rot) {
+  debug_.SetRotation(rot);
+}
+
+void CameraController::SetDebugTransform(const Vector3 &pos,
+                                         const Vector3 &rot) {
+  debug_.SetTransform(pos, rot);
+  if (useDebug_) {
+    worldPos_ = pos;
+  }
+}
+
+void CameraController::SetPosition(const Vector3 &pos) {
+  if (useDebug_) {
+    debug_.SetPosition(pos);
+  } else {
+    main_.SetPosition(pos);
+  }
+  worldPos_ = pos; // アクティブ側の位置を即反映
+}
+
+void CameraController::SetRotation(const Vector3 &rot) {
+  if (useDebug_) {
+    debug_.SetRotation(rot);
+  } else {
+    main_.SetRotation(rot);
+  }
+}
+
+void CameraController::SetTransform(const Vector3 &pos, const Vector3 &rot) {
+  if (useDebug_) {
+    debug_.SetTransform(pos, rot);
+  } else {
+    main_.SetPosition(pos);
+    main_.SetRotation(rot);
+  }
+  worldPos_ = pos;
+}
 } // namespace RC

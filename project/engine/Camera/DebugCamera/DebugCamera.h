@@ -20,9 +20,17 @@ public:
   const RC::Matrix4x4 &GetView() const { return view_; }
   const RC::Matrix4x4 &GetProjection() const { return proj_; }
 
+  RC::Vector3 GetPosition() const { return translation_; }
+
+  void SetPosition(const RC::Vector3 &pos);
+  void SetRotation(const RC::Vector3 &rot);
+  void SetTransform(const RC::Vector3 &pos, const RC::Vector3 &rot);
+
 private:
-  Input *input_ = nullptr;           // キー入力
-  RC::Vector3 rotation_ = {0, 0, 0}; // 各軸回転角
+  void RebuildView_();
+
+  Input *input_ = nullptr;               // キー入力
+  RC::Vector3 rotation_ = {0, 0, 0};     // 各軸回転角
   RC::Vector3 translation_ = {0, 0, -8}; // カメラ位置
   RC::Matrix4x4 view_;                   // ビュー行列
   RC::Matrix4x4 proj_;                   // 射影行列

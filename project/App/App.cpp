@@ -1,12 +1,11 @@
 #include "App.h"
-#include "RC.h"
 #include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
+#include "RC.h"
 #include "ResultScene/ResultScene.h"
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
-#include "imgui/imgui.h"
 #include <cassert>
 
 #pragma comment(lib, "dxgi.lib")
@@ -50,93 +49,21 @@ bool App::Init() {
   // ===== PipelineManager =====
   pm_.Init(device, coreDesc_.rtvFormat, coreDesc_.dsvFormat);
 
-  // ===========================================
-  // ModelPSO ブレンド違いをキー名で登録
-  // ===========================================
-
-  // GraphicsPipeline一括構築（既存のObject3D）
-  pipeObj_ = pm_.CreateFromFiles("object3d", L"Shader/Object3D.VS.hlsl",
-                                 L"Shader/Object3D.PS.hlsl",
-                                 InputLayoutType::Object3D);
-
-  pm_.CreateModelPipeline("ObjBlendModeNone", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeNone);
-
-  pm_.CreateModelPipeline("ObjBlendModeNormal", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
-
-  pm_.CreateModelPipeline("ObjBlendModeAdd", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
-
-  pm_.CreateModelPipeline("ObjBlendModeSubtract", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
-
-  pm_.CreateModelPipeline("ObjBlendModeMultiply", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
-
-  pm_.CreateModelPipeline("ObjBlendModeScreen", L"Shader/Object3D.VS.hlsl",
-                          L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
-
-  // デフォルト（Normal）を SceneContext へ（objectPSO）
-  sceneCtx_.objectPSO = pm_.Get("ObjBlendModeNone");
-
-  // ===========================================
-  // SpritePSO ブレンド違いをキー名で登録
-  // ===========================================
-
-  /*pipeSprite_ = pm_.CreateFromFiles("sprite", L"Shader/Sprite.VS.hlsl",
-                                 L"Shader/Sprite.PS.hlsl",
-     InputLayoutType::Sprite);*/
-
-  pm_.CreateSpritePipeline("BlendModeNone", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeNone);
-
-  pm_.CreateSpritePipeline("BlendModeNormal", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeNormal);
-
-  pm_.CreateSpritePipeline("BlendModeAdd", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeAdd);
-
-  pm_.CreateSpritePipeline("BlendModeSubtract", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeSubtract);
-
-  pm_.CreateSpritePipeline("BlendModeMultiply", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeMultiply);
-
-  pm_.CreateSpritePipeline("BlendModeScreen", L"Shader/Object3D.VS.hlsl",
-                           L"Shader/Object3D.PS.hlsl", kBlendModeScreen);
-
-  // デフォルト（Normal）を SceneContext へ
-  pipeSprite_ = pm_.Get("BlendModeNormal");
+  pm_.RegisterDefaultPipelines();
 
   // ===== SceneContext の紐づけ =====
   sceneCtx_.core = &core_;
   sceneCtx_.input = input_.get();
   sceneCtx_.app = &appConfig_;
-  sceneCtx_.imgui = &imgui_;
-  sceneCtx_.objectPSO = pipeObj_;
-  sceneCtx_.spritePSO = pipeSprite_;
+  sceneCtx_.imgui = (RC_ENABLE_IMGUI ? &imgui_ : nullptr);
   sceneCtx_.pipelineManager = &pm_;
 
+  // ===== RC初期化 =====
   RC::Init(sceneCtx_);
 
-  // ===== FadeのためのScene初期化 =====
-  sceneMgr_.Init(sceneCtx_); // appが必要なため、ここで初期化
+  // ===== Game初期化 =====
+  game_.Init(sceneCtx_);
 
-  // ===== シーン登録 =====
-  sceneMgr_.Register(std::make_unique<TitleScene>());
-  sceneMgr_.Register(std::make_unique<SelectScene>());
-  sceneMgr_.Register(std::make_unique<GameScene>());
-  sceneMgr_.Register(std::make_unique<ResultScene>());
-  sceneMgr_.Register(std::make_unique<GameOverScene>());
-  sceneMgr_.Register(std::make_unique<SampleScene>());
-
-  // ===== 最初のシーンへ即時遷移 =====
-#ifdef _DEBUG
-  sceneMgr_.ChangeImmediately("Game", sceneCtx_);
-#else
-  sceneMgr_.ChangeImmediately("Title", sceneCtx_);
-#endif // _DEBUG
   return true;
 }
 
@@ -147,12 +74,15 @@ int App::Run() {
       TranslateMessage(&msg_);
       DispatchMessage(&msg_);
     } else {
-
+#if RC_ENABLE_IMGUI
       imgui_.NewFrame();
+#endif
       Update();
       core_.BeginFrame();
       Render();
+#if RC_ENABLE_IMGUI
       imgui_.Render(cl);
+#endif
       core_.EndFrame();
     }
   }
@@ -161,56 +91,21 @@ int App::Run() {
 
 void App::Update() {
 
-#ifdef _DEBUG
-
-  ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title",  "Select",   "Game",
-                              "Result", "GameOver", "Sample"};
-  const char *currentSceneName = sceneMgr_.CurrentName().c_str();
-
-  if (ImGui::BeginCombo("##Scene", currentSceneName)) {
-    for (int i = 0; i < IM_ARRAYSIZE(sceneNames); i++) {
-      bool is_selected = (strcmp(currentSceneName, sceneNames[i]) == 0);
-      if (ImGui::Selectable(sceneNames[i], is_selected)) {
-        sceneMgr_.RequestChange(sceneNames[i]);
-      }
-      if (is_selected) {
-        ImGui::SetItemDefaultFocus();
-      }
-    }
-    ImGui::EndCombo();
-  }
-  ImGui::End();
-
-  // === FPS overlay ===
-  ImGuiIO &io = ImGui::GetIO();
-  ImGui::SetNextWindowBgAlpha(0.35f);
-  ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-  ImGuiWindowFlags flags =
-      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-      ImGuiWindowFlags_NoNav;
-
-  if (ImGui::Begin("Perf", nullptr, flags)) {
-    const float fps = io.Framerate;
-    ImGui::Text("FPS: %.1f", fps);
-    ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
-  }
-  ImGui::End();
-
-#endif // _DEBUG
+#if RC_ENABLE_IMGUI
+  game_.DrawDebugUI();
+#endif
 
   input_->Update();
 
-  sceneMgr_.Update(sceneCtx_);
+  game_.Update(sceneCtx_);
 }
 
-void App::Render() { sceneMgr_.Render(sceneCtx_, cl); }
+void App::Render() { game_.Render(sceneCtx_, cl); }
 
 void App::Term() {
   core_.WaitForGPU();
 
-  sceneMgr_.Term();
+  game_.Term();
 
   // 3) 描画層
   ReportDXGI("before RC::Term");

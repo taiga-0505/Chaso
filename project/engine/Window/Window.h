@@ -21,7 +21,7 @@ public:
                   const int32_t kClientWidth = kDefaultWidth,
                   const int32_t kClientHeight = kDefaultHeight);
 
-   void SetTitleUTF8(const char *utf8);
+  void SetTitleUTF8(const char *utf8);
 
   // クリア色の設定＆クリア実行
   void SetClearColor(float r, float g, float b, float a = 1.0f);
@@ -53,7 +53,7 @@ private:
 
   // GDI 背景ブラシの更新（Initialize/SetClearColor から呼ぶ）
   void UpdateBackgroundBrush();
-  
-  RECT wrc;
-  HWND hwnd;
+
+  RECT wrc{0, 0, kDefaultWidth, kDefaultHeight};
+  HWND hwnd{};
 };
