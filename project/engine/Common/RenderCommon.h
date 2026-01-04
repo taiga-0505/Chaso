@@ -126,6 +126,9 @@ void DrawCircle(const Vector2 &center, float radius, bool stroke,
 int LoadTex(const std::string &path, bool srgb = true);
 D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle);
 
+ID3D12Device *GetDevice();
+bool IsInitialized();
+
 // ===============================
 // ブレンドモード切り替え
 // ===============================
