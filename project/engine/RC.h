@@ -22,5 +22,3 @@
 #include "Snow/SnowParticle.h"
 #include "Circle/CircleParticle.h"
 #include "Explosion/ExplosionParticle.h"
-
-#include "WorldTransform/WorldTransform.h"
