@@ -32,6 +32,7 @@ void ModelObject::Initialize(ID3D12Device *device) {
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
+  cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // Material CB
   cbMat_.resource = CreateBufferResource(device_, sizeof(Material));
@@ -88,6 +89,7 @@ void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
                                      transform_.translation);
   cbWvp_.mapped->World = world;
   cbWvp_.mapped->WVP = Multiply(world, Multiply(view, proj));
+  cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
 }
 
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
@@ -155,6 +157,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
     TransformationMatrix tm{};
     tm.World = world;
     tm.WVP = Multiply(world, Multiply(view, proj));
+    tm.worldInverseTranspose = Transpose(Inverse(world));
 
     const uint32_t dstIndex = base + i;
     auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_ +
@@ -213,7 +216,7 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
 
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phong"};
+  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phong", "Blinn-Phong"};
   int mode = cbMat_.mapped->lightingMode;
   if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
                    IM_ARRAYSIZE(kModes))) {

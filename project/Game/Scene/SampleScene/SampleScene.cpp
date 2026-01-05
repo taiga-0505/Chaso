@@ -163,9 +163,9 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawSprite(sprite);
 
-  RC::DrawLine({100, 100}, {400, 300}, 1.0f, {1, 0, 0, 1});
-  RC::DrawBox({50, 50}, {250, 180}, false, 4.0f, {0, 1, 0, 1});
-  RC::DrawCircle({600, 200}, 80.0f, false, 5.0f, {0, 0.7f, 1, 1});
+  //RC::DrawLine({100, 100}, {400, 300}, 1.0f, {1, 0, 0, 1});
+  //RC::DrawBox({50, 50}, {250, 180}, false, 4.0f, {0, 1, 0, 1});
+  //RC::DrawCircle({600, 200}, 80.0f, false, 5.0f, {0, 0.7f, 1, 1});
 }
 
 void SampleScene::DrawImGui() {

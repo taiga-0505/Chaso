@@ -38,6 +38,7 @@ void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
+  cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // CB: Material
   cbMat_.resource = CreateBufferResource(device_, sizeof(Material));
@@ -65,6 +66,7 @@ void Sphere::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
                                      transform_.translation);
   cbWvp_.mapped->World = world;
   cbWvp_.mapped->WVP = Multiply(world, Multiply(view, proj));
+  cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
 }
 
 void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {

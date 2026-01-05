@@ -3,7 +3,7 @@
 struct Material
 {
     float4 color; // 色 (RGBA)
-    int lightingMode; // 0:なし, 1:Lambert, 2:Half Lambert
+    int lightingMode; // 0:なし, 1:Lambert, 2:Half Lambert, 3:Phong, 4:Blinn-Phong
     float shininess;
     float2 padding; // アラインメント調整
     float4x4 uvTransform;
@@ -71,6 +71,30 @@ PixelShaderOutput main(VertexShaderOutput input)
 
         float3 diffuse = baseColor * lightCol * diffuseCos;
         float3 specular = lightCol * specularPow; // 白っぽいハイライト
+
+        output.color.rgb = diffuse + specular;
+        output.color.a = gMaterial.color.a * textureColor.a;
+    }
+    else if (gMaterial.lightingMode == 4)
+    {
+        // ===== Blinn-Phong =====
+        float3 N = normalize(input.normal);
+        float3 L = normalize(-gDirectionalLight.direction);
+        float3 V = normalize(gCamera.worldPosition - input.worldPosition);
+
+        // 拡散は Phong と同じ
+        float diffuseCos = max(dot(N, L), 0.0f);
+
+        // HalfVector を使う（資料のやつ）
+        float3 halfVector = normalize(L + V); // = normalize(-dir + toEye)
+        float NDotH = dot(N, halfVector);
+        float specularPow = pow(saturate(NDotH), gMaterial.shininess);
+
+        float3 lightCol = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
+        float3 baseColor = gMaterial.color.rgb * textureColor.rgb;
+
+        float3 diffuse = baseColor * lightCol * diffuseCos;
+        float3 specular = lightCol * specularPow;
 
         output.color.rgb = diffuse + specular;
         output.color.a = gMaterial.color.a * textureColor.a;
