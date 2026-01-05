@@ -163,7 +163,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawSprite(sprite);
 
-  RC::DrawBox({50, 50}, {250, 180}, {0, 1, 0, 1}, RC::kFillMode::kFill);
+  RC::DrawBox({50, 50}, {250, 180}, {0, 1, 0, 1}, kFill);
   RC::DrawCircle({400, 200}, 75.0f, {1, 1, 0, 1});
   RC::DrawLine({300, 300}, {500, 400}, {1, 0, 0, 1});
   RC::DrawTriangle({600, 100}, {700, 300}, {500, 300}, {0, 0, 1, 1});

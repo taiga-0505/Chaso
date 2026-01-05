@@ -109,3 +109,10 @@ enum LightingMode {
   Phong = 3,        // フォン
   BlinPhong = 4    // ブリンフォン
 };
+
+// 2Dプリミティブ用: 塗りつぶし/ワイヤー
+// 非スコープ enum: 無修飾で使える（Scene側で kFill / kWire だけでOK）
+enum kFillMode {
+  kFill = 0, // 塗りつぶし
+  kWire = 1, // 枠線（ワイヤー）
+};

@@ -109,9 +109,9 @@ void Primitive2D::SetLine(const Vector2 &p0, const Vector2 &p1, float thickness,
 }
 
 void Primitive2D::SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
-                          RC::kFillMode fillMode, float thickness,
+                          kFillMode fillMode, float thickness,
                           const RC::Vector4 &color, float feather) {
-  const bool stroke = (fillMode == kFillMode::kFrame);
+  const bool stroke = (fillMode == kWire);
   paramsCPU_.U = {SHAPE_RECT, stroke ? FLAG_STROKE : 0u, 0, 0};
   paramsCPU_.B = {mn.x, mn.y, mx.x, mx.y};
   paramsCPU_.C.z = thickness;
@@ -120,9 +120,9 @@ void Primitive2D::SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
 }
 
 void Primitive2D::SetCircle(const RC::Vector2 &c, float r,
-                            RC::kFillMode fillMode, float thickness,
+                            kFillMode fillMode, float thickness,
                             const RC::Vector4 &color, float feather) {
-  const bool stroke = (fillMode == kFillMode::kFrame);
+  const bool stroke = (fillMode == kWire);
   paramsCPU_.U = {SHAPE_CIRCLE, stroke ? FLAG_STROKE : 0u, 0, 0};
   paramsCPU_.D = {c.x, c.y, r, 0.0f};
   paramsCPU_.C.z = thickness;
@@ -131,10 +131,10 @@ void Primitive2D::SetCircle(const RC::Vector2 &c, float r,
 }
 
 void Primitive2D::SetTriangle(const RC::Vector2 &p0, const RC::Vector2 &p1,
-                              const RC::Vector2 &p2, RC::kFillMode fillMode,
+                              const RC::Vector2 &p2, kFillMode fillMode,
                               float thickness, const RC::Vector4 &color,
                               float feather) {
-  const bool stroke = (fillMode == kFillMode::kFrame);
+  const bool stroke = (fillMode == kWire);
   paramsCPU_.U = {SHAPE_TRIANGLE, stroke ? FLAG_STROKE : 0u, 0, 0};
   paramsCPU_.A = {p0.x, p0.y, p1.x, p1.y};
   // B.xy に p2 を入れる（B.zw は未使用）

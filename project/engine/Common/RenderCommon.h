@@ -7,6 +7,7 @@
 #include <Model3D/ModelObject.h>
 #include <d3d12.h>
 #include <string>
+#include "struct.h"
 
 // D3D12 GPUハンドルを返すために必要
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
@@ -310,14 +311,6 @@ void SetSphereLightingMode(int sphereHandle, LightingMode m);
 // ===============================
 
 /// <summary>
-/// 2Dプリミティブの塗りつぶし/枠線モード
-/// </summary>
-enum class kFillMode {
-  kFill,
-  kFrame,
-};
-
-/// <summary>
 /// 線描画
 /// </summary>
 /// <param name="pos1">座標1（画面ピクセル座標）</param>
@@ -337,7 +330,7 @@ void DrawLine(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
 /// <param name="fillMode">塗りつぶし設定</param>
 /// <param name="feather">アンチエイリアス幅（ピクセル）</param>
 void DrawBox(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
-             kFillMode fillMode = kFillMode::kFill, float feather = 1.0f);
+             kFillMode fillMode = kFill, float feather = 1.0f);
 
 /// <summary>
 /// 円描画
@@ -348,7 +341,7 @@ void DrawBox(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
 /// <param name="fillMode">塗りつぶし設定</param>
 /// <param name="feather">アンチエイリアス幅（ピクセル）</param>
 void DrawCircle(const Vector2 &center, float radius, const Vector4 &color,
-                kFillMode fillMode = kFillMode::kFill, float feather = 1.0f);
+                kFillMode fillMode = kFill, float feather = 1.0f);
 
 /// <summary>
 /// 三角形描画
@@ -360,7 +353,7 @@ void DrawCircle(const Vector2 &center, float radius, const Vector4 &color,
 /// <param name="fillMode">塗りつぶし設定</param>
 /// <param name="feather">アンチエイリアス幅（ピクセル）</param>
 void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
-                  const Vector4 &color, kFillMode fillMode = kFillMode::kFill,
+                  const Vector4 &color, kFillMode fillMode = kFill,
                   float feather = 1.0f);
 
 // ===============================

@@ -4,10 +4,7 @@
 
 #include "Math/Math.h"
 #include "function/function.h" // CreateBufferResource
-
-namespace RC {
-enum class kFillMode;
-}
+#include "struct.h"
 
 class Primitive2D {
 public:
@@ -23,15 +20,15 @@ public:
                const RC::Vector4 &color, float feather = 1.0f);
 
   void SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
-               RC::kFillMode fillMode, float thickness,
+               kFillMode fillMode, float thickness,
                const RC::Vector4 &color, float feather = 1.0f);
 
-  void SetCircle(const RC::Vector2 &c, float r, RC::kFillMode fillMode,
+  void SetCircle(const RC::Vector2 &c, float r, kFillMode fillMode,
                  float thickness, const RC::Vector4 &color,
                  float feather = 1.0f);
 
   void SetTriangle(const RC::Vector2 &p0, const RC::Vector2 &p1,
-                   const RC::Vector2 &p2, RC::kFillMode fillMode,
+                   const RC::Vector2 &p2, kFillMode fillMode,
                    float thickness, const RC::Vector4 &color,
                    float feather = 1.0f);
 
