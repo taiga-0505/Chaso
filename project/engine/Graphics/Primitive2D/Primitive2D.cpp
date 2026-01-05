@@ -1,6 +1,7 @@
 #include "Primitive2D.h"
-#include <cassert>
 #include "RenderCommon.h" // RC::LoadTex / RC::GetSrv
+#include <cassert>
+#include <cstring>
 
 namespace {
 int sWhiteTexHandle = -1;
@@ -35,6 +36,11 @@ void Primitive2D::Release() {
   if (vb_.res) {
     vb_.res->Release();
     vb_.res = nullptr;
+  }
+  if (cbParamsRes_) {
+    cbParamsRes_->Release();
+    cbParamsRes_ = nullptr;
+    cbParamsMap_ = nullptr;
   }
   if (cbParams_.res) {
     cbParams_.res->Release();
@@ -102,9 +108,10 @@ void Primitive2D::SetLine(const Vector2 &p0, const Vector2 &p1, float thickness,
   paramsCPU_.Color = color;
 }
 
-void Primitive2D::SetRect(const Vector2 &mn, const Vector2 &mx, bool stroke,
-                          float thickness, const Vector4 &color,
-                          float feather) {
+void Primitive2D::SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
+                          RC::kFillMode fillMode, float thickness,
+                          const RC::Vector4 &color, float feather) {
+  const bool stroke = (fillMode == kFillMode::kFrame);
   paramsCPU_.U = {SHAPE_RECT, stroke ? FLAG_STROKE : 0u, 0, 0};
   paramsCPU_.B = {mn.x, mn.y, mx.x, mx.y};
   paramsCPU_.C.z = thickness;
@@ -112,23 +119,38 @@ void Primitive2D::SetRect(const Vector2 &mn, const Vector2 &mx, bool stroke,
   paramsCPU_.Color = color;
 }
 
-void Primitive2D::SetCircle(const Vector2 &c, float r, bool stroke,
-                            float thickness, const Vector4 &color,
-                            float feather) {
-   paramsCPU_.U = {SHAPE_CIRCLE, stroke ? FLAG_STROKE : 0u, 0, 0};
-   paramsCPU_.D = {c.x, c.y, r, 0.0f};
-   paramsCPU_.C.z = thickness;
-   paramsCPU_.C.w = feather;
-   paramsCPU_.Color = color;
+void Primitive2D::SetCircle(const RC::Vector2 &c, float r,
+                            RC::kFillMode fillMode, float thickness,
+                            const RC::Vector4 &color, float feather) {
+  const bool stroke = (fillMode == kFillMode::kFrame);
+  paramsCPU_.U = {SHAPE_CIRCLE, stroke ? FLAG_STROKE : 0u, 0, 0};
+  paramsCPU_.D = {c.x, c.y, r, 0.0f};
+  paramsCPU_.C.z = thickness;
+  paramsCPU_.C.w = feather;
+  paramsCPU_.Color = color;
+}
+
+void Primitive2D::SetTriangle(const RC::Vector2 &p0, const RC::Vector2 &p1,
+                              const RC::Vector2 &p2, RC::kFillMode fillMode,
+                              float thickness, const RC::Vector4 &color,
+                              float feather) {
+  const bool stroke = (fillMode == kFillMode::kFrame);
+  paramsCPU_.U = {SHAPE_TRIANGLE, stroke ? FLAG_STROKE : 0u, 0, 0};
+  paramsCPU_.A = {p0.x, p0.y, p1.x, p1.y};
+  // B.xy に p2 を入れる（B.zw は未使用）
+  paramsCPU_.B = {p2.x, p2.y, 0.0f, 0.0f};
+  paramsCPU_.C.z = thickness;
+  paramsCPU_.C.w = feather;
+  paramsCPU_.Color = color;
 }
 
 void Primitive2D::SetSpriteRect(const Vector2 &mn, const Vector2 &mx,
                                 const Vector4 &color, const Vector2 &uvMin,
                                 const Vector2 &uvMax) {
-   paramsCPU_.U = {SHAPE_SPRITE, FLAG_TEX, 0, 0};
-   paramsCPU_.B = {mn.x, mn.y, mx.x, mx.y}; // PS側で使う想定
-   paramsCPU_.UVRect = {uvMin.x, uvMin.y, uvMax.x, uvMax.y};
-   paramsCPU_.Color = color;
+  paramsCPU_.U = {SHAPE_SPRITE, FLAG_TEX, 0, 0};
+  paramsCPU_.B = {mn.x, mn.y, mx.x, mx.y}; // PS側で使う想定
+  paramsCPU_.UVRect = {uvMin.x, uvMin.y, uvMax.x, uvMax.y};
+  paramsCPU_.Color = color;
 }
 
 void Primitive2D::BeginFrame() { cbCursor_ = 0; }

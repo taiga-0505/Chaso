@@ -57,7 +57,8 @@ struct SpriteSlot {
 struct SphereSlot {
   std::unique_ptr<Sphere> ptr;
   bool inUse = false;
-  int defaultTexHandle = -1; // 生成時に渡されたテクスチャ（DrawSphere の省略時に使う）
+  int defaultTexHandle =
+      -1; // 生成時に渡されたテクスチャ（DrawSphere の省略時に使う）
 };
 
 struct LightSlot {
@@ -142,8 +143,9 @@ TextureManager gTexMan;
 Matrix4x4 gView;
 Matrix4x4 gProj;
 
-ID3D12GraphicsCommandList *gCL = nullptr; // Draw* が使う "今フレ" の CommandList
-SceneContext *gCtxRef = nullptr;          // PipelineManager にアクセスするために保持
+ID3D12GraphicsCommandList *gCL =
+    nullptr;                     // Draw* が使う "今フレ" の CommandList
+SceneContext *gCtxRef = nullptr; // PipelineManager にアクセスするために保持
 
 static ID3D12Resource *gCameraCB = nullptr;
 static CameraCB *gCameraCBMapped = nullptr;
@@ -186,8 +188,8 @@ int AllocSphereSlot_() {
 }
 
 bool IsValidSphere_(int h) {
-  return (h >= 0 && h < static_cast<int>(gSpheres.size()) && gSpheres[h].inUse &&
-          gSpheres[h].ptr);
+  return (h >= 0 && h < static_cast<int>(gSpheres.size()) &&
+          gSpheres[h].inUse && gSpheres[h].ptr);
 }
 
 int AllocLightSlot_() {
@@ -211,8 +213,8 @@ bool IsValidLight_(int h) {
 // 見つからない場合は normal にフォールバック。
 // - 例) prefix="sprite", mode=Add の PSO が無い時は sprite+Normal を使う
 // ============================================================================
-static GraphicsPipeline *GetPipeline_(SceneContext *ctx, std::string_view prefix,
-                                      BlendMode mode) {
+static GraphicsPipeline *GetPipeline_(SceneContext *ctx,
+                                      std::string_view prefix, BlendMode mode) {
   if (!ctx || !ctx->pipelineManager) {
     return nullptr;
   }
@@ -401,7 +403,8 @@ void DestroyLight(int lightHandle) {
 
   gLights[lightHandle].inUse = false;
 
-  // アクティブが消えたら無効化（必要なら外側で別ライトを SetActiveLight してね）
+  // アクティブが消えたら無効化（必要なら外側で別ライトを SetActiveLight
+  // してね）
   if (gActiveLightHandle == lightHandle) {
     gActiveLightHandle = -1;
   }
@@ -468,7 +471,8 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   gCtxRef = &ctx;
 
   // 3D のデフォルト
-  // - object3d は BlendModeNone を基準にしている（必要なら SetBlendMode で上書き）
+  // - object3d は BlendModeNone を基準にしている（必要なら SetBlendMode
+  // で上書き）
   gCurrentBlendMode = kBlendModeNone;
 
   // まず object3d の PSO をセットしておく
@@ -628,7 +632,8 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     m->ResetTextureToMtl();
   }
 
-  // instances はワールド変換の配列（Model 側が StructuredBuffer などで描く想定）
+  // instances はワールド変換の配列（Model 側が StructuredBuffer
+  // などで描く想定）
   m->DrawBatch(gCL, gView, gProj, instances);
 }
 
@@ -776,7 +781,8 @@ int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
                     static_cast<float>(ctx.app->height));
   s.ptr->SetTexture(gTexMan.GetSrv(texHandle));
 
-  // 初期値（必要なら外側で SetSpriteTransform / SetSpriteScreenSize 等で上書き）
+  // 初期値（必要なら外側で SetSpriteTransform / SetSpriteScreenSize
+  // 等で上書き）
   s.ptr->SetSize(100, 100);
   s.ptr->T().translation = {0, 0, 0};
   s.ptr->SetVisible(true);
@@ -915,16 +921,17 @@ void DrawSphere(int sphereHandle, int texHandle) {
   auto &s = gSpheres[sphereHandle].ptr;
 
   // テクスチャ差し替え（明示指定 > 生成時指定）
-  const int useTex = (texHandle >= 0) ? texHandle
-                                      : gSpheres[sphereHandle].defaultTexHandle;
+  const int useTex =
+      (texHandle >= 0) ? texHandle : gSpheres[sphereHandle].defaultTexHandle;
 
   if (useTex >= 0) {
     s->SetTexture(gTexMan.GetSrv(useTex));
   }
 
   // NOTE:
-  // useTex < 0 の場合、Sphere 側が SRV を参照する RootParam が無効になる可能性がある。
-  // "天球 = 必ず有効テクスチャ" 運用にしておくのが安全。
+  // useTex < 0 の場合、Sphere 側が SRV を参照する RootParam
+  // が無効になる可能性がある。 "天球 = 必ず有効テクスチャ"
+  // 運用にしておくのが安全。
 
   s->Update(gView, gProj);
   s->Draw(gCL);
@@ -992,8 +999,8 @@ void SetSphereLightingMode(int sphereHandle, LightingMode m) {
 // - もしくは RootConstants（SetGraphicsRoot32BitConstants）にして CB を消す
 // みたいに "draw ごとに値が固定される" 仕組みにすると安定する。
 
-void DrawLine(const Vector2 &p0, const Vector2 &p1, float thickness,
-              const Vector4 &color, float feather) {
+void DrawLine(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
+              float thickness, float feather ) {
   if (!gInitialized || !gCL) {
     return;
   }
@@ -1007,12 +1014,12 @@ void DrawLine(const Vector2 &p0, const Vector2 &p1, float thickness,
     return;
   }
 
-  prim->SetLine(p0, p1, thickness, color, feather);
+  prim->SetLine(pos1, pos2, thickness, color, feather);
   prim->Draw(gCL);
 }
 
-void DrawBox(const Vector2 &mn, const Vector2 &mx, bool stroke,
-             float thickness, const Vector4 &color, float feather) {
+void DrawBox(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
+             kFillMode fillMode, float feather) {
   if (!gInitialized || !gCL) {
     return;
   }
@@ -1026,12 +1033,14 @@ void DrawBox(const Vector2 &mn, const Vector2 &mx, bool stroke,
     return;
   }
 
-  prim->SetRect(mn, mx, stroke, thickness, color, feather);
+  float thickness = 1.0f;
+
+  prim->SetRect(pos1, pos2, fillMode, thickness, color, feather);
   prim->Draw(gCL);
 }
 
-void DrawCircle(const Vector2 &center, float radius, bool stroke,
-                float thickness, const Vector4 &color, float feather) {
+void DrawCircle(const Vector2 &center, float radius, const Vector4 &color,
+                kFillMode fillMode, float feather) {
   if (!gInitialized || !gCL) {
     return;
   }
@@ -1045,7 +1054,31 @@ void DrawCircle(const Vector2 &center, float radius, bool stroke,
     return;
   }
 
-  prim->SetCircle(center, radius, stroke, thickness, color, feather);
+  float thickness = 1.0f;
+
+  prim->SetCircle(center, radius, fillMode, thickness, color, feather);
+  prim->Draw(gCL);
+}
+
+void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
+                  const Vector4 &color, kFillMode fillMode,
+                  float feather) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+
+  if (!BindPipeline_("primitive2d")) {
+    return;
+  }
+
+  auto *prim = EnsurePrimitive2D_();
+  if (!prim) {
+    return;
+  }
+
+  float thickness = 1.0f;
+
+  prim->SetTriangle(pos1, pos2, pos3, fillMode, thickness, color, feather);
   prim->Draw(gCL);
 }
 

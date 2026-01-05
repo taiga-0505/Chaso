@@ -5,6 +5,10 @@
 #include "Math/Math.h"
 #include "function/function.h" // CreateBufferResource
 
+namespace RC {
+enum class kFillMode;
+}
+
 class Primitive2D {
 public:
   Primitive2D() = default;
@@ -18,11 +22,18 @@ public:
   void SetLine(const RC::Vector2 &p0, const RC::Vector2 &p1, float thickness,
                const RC::Vector4 &color, float feather = 1.0f);
 
-  void SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx, bool stroke,
-               float thickness, const RC::Vector4 &color, float feather = 1.0f);
+  void SetRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
+               RC::kFillMode fillMode, float thickness,
+               const RC::Vector4 &color, float feather = 1.0f);
 
-  void SetCircle(const RC::Vector2 &c, float r, bool stroke, float thickness,
-                 const RC::Vector4 &color, float feather = 1.0f);
+  void SetCircle(const RC::Vector2 &c, float r, RC::kFillMode fillMode,
+                 float thickness, const RC::Vector4 &color,
+                 float feather = 1.0f);
+
+  void SetTriangle(const RC::Vector2 &p0, const RC::Vector2 &p1,
+                   const RC::Vector2 &p2, RC::kFillMode fillMode,
+                   float thickness, const RC::Vector4 &color,
+                   float feather = 1.0f);
 
   // もしPS側を rect基準UVに直したらこれも使える
   void SetSpriteRect(const RC::Vector2 &mn, const RC::Vector2 &mx,
@@ -78,7 +89,8 @@ private:
     SHAPE_LINE = 0,
     SHAPE_RECT = 1,
     SHAPE_CIRCLE = 2,
-    SHAPE_SPRITE = 3
+    SHAPE_SPRITE = 3,
+    SHAPE_TRIANGLE = 4
   };
   enum : uint32_t { FLAG_STROKE = 1, FLAG_TEX = 2 };
 
