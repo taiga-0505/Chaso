@@ -8,6 +8,17 @@
 
 using namespace RC;
 
+void MapChipField::Update(float dt) {
+  for (const auto &[model, speed] : spinYSpeedByModel_) {
+    auto it = batches_.find(model);
+    if (it == batches_.end())
+      continue;
+    for (auto &t : it->second) {
+      t.rotation.y += speed * dt;
+    }
+  }
+}
+
 void MapChipField::SetFromArray(int width, int height, const TileId *grid) {
   width_ = width;
   height_ = height;
@@ -77,9 +88,9 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
   return true;
 }
 
-
 void MapChipField::BuildInstances() {
   batches_.clear();
+  spinYSpeedByModel_.clear();
   // すべてのタイルを走査し、モデルごとに Transform を詰める
   for (int y = 0; y < height_; ++y) {
     for (int x = 0; x < width_; ++x) {
@@ -96,6 +107,10 @@ void MapChipField::BuildInstances() {
       t.rotation = {0.f, 0.f, 0.f};
       t.translation = {(float)x * blockSize_, (float)y * blockSize_, 0.f};
       batches_[def->model].push_back(t);
+
+      if (def->flags & kSpinY) {
+        spinYSpeedByModel_[def->model] = def->spinSpeedY;
+      }
     }
   }
 }
