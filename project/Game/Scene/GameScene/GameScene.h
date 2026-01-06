@@ -37,7 +37,7 @@ private:
                                   0.0f}; // 注視点（プレイヤー中心より少し上）
 
   // 追従のなめらかさ
-  float camSharpness_ = 12.0f;
+  float camSharpness_ = 15.0f;
 
   // 先読み（横移動方向）
   float camLookAhead_ = 2.0f;
@@ -47,6 +47,12 @@ private:
   float camLookAheadSharpness_ =
       6.0f; // 小さいほど「戻り」がゆっくりでガクりにくい
   float camFocusSharpness_ = 10.0f; // 注視点の追従（回転のガクッ対策）
+
+    // ===== ジャンプ時の縦追従を抑える（酔い対策）=====
+  float camDeadZoneY_ = 1.2f;       // この範囲内はY追従しない（ワールド単位）
+  float camYSharpnessUp_ = 2.0f;    // 上方向はゆっくり
+  float camYSharpnessDown_ = 12.0f; // 落下方向は早め（見失い防止）
+  float camYMaxSpeed_ = 6.0f;       // 1秒あたりの最大Y移動量（0で無効）
 
   // ===== マップ境界クランプ用 =====
   struct Rect2 {
