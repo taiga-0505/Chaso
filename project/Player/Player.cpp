@@ -2,6 +2,9 @@
 #include "Input/Input.h"
 #include "MapChipField/MapChipField.h"
 #include "RenderCommon.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
 
 void Player::Init(int modelIndex, SceneContext &ctx) {
   ctx_ = &ctx;
@@ -13,6 +16,8 @@ void Player::Init(int modelIndex, SceneContext &ctx) {
 
   transform_->translation = {1.0f, 2.0f,
                              0.0f}; // 初期は少し上に置くと分かりやすい
+
+  transform_->rotation.y = std::numbers::pi_v<float> / -2.0f;
   velocity_ = {};
   onGround_ = false;
   prevSpace_ = false;
@@ -25,6 +30,7 @@ void Player::Update() {
 
   TickInput_();
   SimulateAndCollide_();
+  ModelRotate();
 }
 
 void Player::Draw() { RC::DrawModel(model_); }
@@ -33,15 +39,27 @@ void Player::Draw() { RC::DrawModel(model_); }
 // 入力 → 速度の決定
 // ============================
 void Player::TickInput_() {
-  // 横移動は “そのフレームの目標速度” として扱う（簡単）
   float vx = 0.0f;
-  if (ctx_->input->IsKeyPressed(DIK_A))
+
+  const bool left = ctx_->input->IsKeyPressed(DIK_A);
+  const bool right = ctx_->input->IsKeyPressed(DIK_D);
+
+  if (left)
     vx -= moveSpeed_;
-  if (ctx_->input->IsKeyPressed(DIK_D))
+  if (right)
     vx += moveSpeed_;
+
+  // 入力が片側だけある時に「向き変更」を開始
+  if (vx > 0.0f) {
+    BeginTurn_(LRDirection::kRight);
+  } else if (vx < 0.0f) {
+    BeginTurn_(LRDirection::kLeft);
+  }
+  // vx == 0 の時は向き維持
+
   velocity_.x = vx;
 
-  // ジャンプ（Triggerが無いなら自前で立ち上がり検出）
+  // ジャンプ（そのまま）
   bool space = ctx_->input->IsKeyPressed(DIK_SPACE);
   bool jumpPressed = space && !prevSpace_;
   prevSpace_ = space;
@@ -184,4 +202,62 @@ void Player::ResolveY_(RC::Vector3 &pos) {
       aabb = MakeAabb_(pos);
     }
   }
+}
+
+float Player::FacingAngleForDirection_(LRDirection dir) {
+  switch (dir) {
+  case LRDirection::kRight:
+    return -std::numbers::pi_v<float> / 2.0f;
+  case LRDirection::kLeft:
+    return std::numbers::pi_v<float> / 2.0f;
+  default:
+    return -std::numbers::pi_v<float> / 2.0f;
+  }
+}
+
+
+float Player::NormalizeTurnAngle_(float angle) {
+  constexpr float TwoPi = std::numbers::pi_v<float> * 2.0f;
+  a = std::fmod(a + std::numbers::pi_v<float>, TwoPi);
+  if (a < 0.0f)
+    a += TwoPi;
+  return a - std::numbers::pi_v<float>;
+}
+
+void Player::ModelRotate() {
+
+  if (turnTimer_ > 0.0f) { // 回転中の処理
+    turnTimer_ -= 1.0f / 60.0f;
+
+    float destinationRotationYTable[] = {
+        std::numbers::pi_v<float> / -2.0f,        // 右方向
+        std::numbers::pi_v<float> * 3.0f / -2.0f, // 左方向
+    };
+
+    float destinationRotationY =
+        destinationRotationYTable[static_cast<uint32_t>(lrDirection_)];
+    float t = 1.0f - std::clamp(turnTimer_ / kTimeTurn, 0.0f, 1.0f);
+    float easedT = easeInOutSine(t);
+    transform_->rotation.y =
+        lerp(turnFirstRotation_, destinationRotationY, easedT);
+  } else {
+    transform_->rotation.y = FacingAngleForDirection_(lrDirection_);
+  }
+}
+
+void Player::BeginTurn_(LRDirection newDir) {
+  if (lrDirection_ == newDir) {
+    return; // 同じ向きなら何もしない
+  }
+
+  lrDirection_ = newDir;
+
+  // 今の角度を「開始角」にして、ここからイージングで回す
+  if (transform_) {
+    turnFirstRotation_ = transform_->rotation.y;
+  } else {
+    turnFirstRotation_ = 0.0f;
+  }
+
+  turnTimer_ = kTimeTurn; // 回転開始
 }

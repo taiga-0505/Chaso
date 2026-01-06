@@ -11,20 +11,22 @@ class MapChipField {
 public:
   // ===== タイルIDと属性 =====
   using TileId = uint16_t; // 0=Air, 1=Blockのように拡張可能
-  enum : TileId { 
-      kAir = 0,
-      kBlock = 1,
+  enum : TileId {
+    kAir = 0,
+    kBlock = 1,
   };
 
   enum TileFlag : uint32_t {
     kNone = 0,
-    kSolid = 1u << 0,  // 当たりあり（床・壁）
+    kSolid = 1u << 0,
+    kSpinY = 1u << 1,
   };
 
   struct TileDef {
     int model = -1;
-    float scale = 1.0f; // ブロックサイズに掛け合わせるローカルスケール
+    float scale = 1.0f;
     uint32_t flags = kNone;
+    float spinSpeedY = 0.0f;
   };
 
   struct Index {
@@ -36,6 +38,8 @@ public:
   };
 
 public:
+  void Update(float deltaTime);
+
   // ===== 構築 =====
   void SetBlockSize(float s) { blockSize_ = s; }
 
@@ -111,6 +115,9 @@ private:
 
   // タイル定義
   std::unordered_map<TileId, TileDef> tileDefs_;
+
+  // 回転アニメ用：modelHandle -> 角速度[rad/sec]
+  std::unordered_map<int, float> spinYSpeedByModel_;
 
   // スポーン（CSV）
   std::optional<Index> playerSpawn_;
