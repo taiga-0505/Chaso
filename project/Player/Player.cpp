@@ -216,7 +216,7 @@ float Player::FacingAngleForDirection_(LRDirection dir) {
 }
 
 
-float Player::NormalizeTurnAngle_(float angle) {
+static float NormalizeAnglePi_(float a) {
   constexpr float TwoPi = std::numbers::pi_v<float> * 2.0f;
   a = std::fmod(a + std::numbers::pi_v<float>, TwoPi);
   if (a < 0.0f)
