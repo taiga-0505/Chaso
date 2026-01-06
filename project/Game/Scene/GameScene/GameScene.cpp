@@ -26,6 +26,29 @@ void GameScene::OnEnter(SceneContext &ctx) {
   player_->Init(playerModel, ctx);
   player_->SetMap(&map_);
 
+  // ===== Coin (MapChip:2) =====
+  {
+    // ※ coin のモデルパスはプロジェクトに合わせて変えてOK
+    const char *kCoinModelPath = "Resources/model/coin/coin.obj";
+
+    const auto &spawns = map_.CoinSpawns();
+    coins_.reserve(spawns.size());
+
+    for (const auto &idx : spawns) {
+      int coinModel = RC::LoadModel(kCoinModelPath);
+
+      auto coin = std::make_unique<Coin>();
+      coin->Init(coinModel, ctx);
+
+      RC::Vector3 pos = map_.IndexToCenter(idx);
+      // ちょい浮かせたいなら pos.y += 0.3f; みたいに調整
+      coin->SetWorldPos(pos);
+
+      coins_.push_back(std::move(coin));
+    }
+  }
+
+
   // ===== Skydome =====
   txSphere_ = RC::LoadTex("Resources/skydome.jpg");
   skydomeModel = RC::GenerateSphereEx(txSphere_, 60.0f);
@@ -59,6 +82,12 @@ void GameScene::OnExit(SceneContext &) {
   blockModel = -1;
   RC::UnloadSphere(skydomeModel);
   skydomeModel = -1;
+  for (auto &c : coins_) {
+    if (!c)
+      continue;
+    RC::UnloadModel(c->ModelHandle());
+  }
+  coins_.clear();
 }
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -75,6 +104,10 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   }
 
   player_->Update();
+  for (auto &c : coins_) {
+    if (c)
+      c->Update();
+  }
 
   const float dt = 1.0f / 60.0f;
   camera_.Update(dt);
@@ -91,6 +124,10 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawSphere(skydomeModel);
 
   player_->Draw();
+  for (auto &c : coins_) {
+    if (c)
+      c->Draw();
+  }
   map_.Draw();
 
   RC::PreDraw2D(ctx, cl);

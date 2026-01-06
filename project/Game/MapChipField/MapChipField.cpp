@@ -58,6 +58,7 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
   tiles_.assign(width_ * height_, kAir);
   playerSpawn_.reset();
   enemySpawns_.clear();
+  coinSpawns_.clear();
 
   for (int csvY = 0; csvY < height_; ++csvY) {
     const int y =
@@ -75,7 +76,7 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
           continue;
         }
         if (c == 'e') {
-          enemySpawns_.push_back(Index{x, y}); // ★ここも
+          enemySpawns_.push_back(Index{x, y}); 
           tiles_[Idx(x, y)] = kAir;
           continue;
         }
@@ -83,6 +84,14 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
 
       TileId id = (TileId)std::atoi(w.c_str());
       tiles_[Idx(x, y)] = id; // 反転後のyへ格納
+
+      // 2 は「コイン配置」扱い：タイルとしては置かず、スポーン座標だけ保存
+      if (id == kCoin) {
+        coinSpawns_.push_back(Index{x, y});
+        tiles_[Idx(x, y)] = kAir;
+      } else {
+        tiles_[Idx(x, y)] = id;
+      }
     }
   }
   return true;
