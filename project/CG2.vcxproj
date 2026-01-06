@@ -261,6 +261,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\App.h" />
     <ClInclude Include="App\AppConfig.h" />
     <ClInclude Include="engine\Camera\CameraController.h" />
+    <ClInclude Include="engine\Camera\CameraMath.h" />
     <ClInclude Include="engine\Common\Math\MathTypes.h" />
     <ClInclude Include="engine\Common\Math\MathUtils.h" />
     <ClInclude Include="engine\Common\RenderCommon.h" />

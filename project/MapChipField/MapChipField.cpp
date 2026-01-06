@@ -127,10 +127,15 @@ MapChipField::CollectTilesOverlapping(const Rect &aabb,
                                       uint32_t requiredFlags) const {
   if (width_ == 0 || height_ == 0)
     return {};
-  const int x0 = (int)std::floor((aabb.left) / blockSize_);
-  const int x1 = (int)std::floor((aabb.right) / blockSize_);
-  const int y0 = (int)std::floor((aabb.bottom) / blockSize_);
-  const int y1 = (int)std::floor((aabb.top) / blockSize_);
+  const float inv = 1.0f / blockSize_;
+  auto ToCenterIndex = [&](float p) -> int {
+    return (int)std::floor(p * inv + 0.5f);
+  };
+
+  const int x0 = ToCenterIndex(aabb.left);
+  const int x1 = ToCenterIndex(aabb.right);
+  const int y0 = ToCenterIndex(aabb.bottom);
+  const int y1 = ToCenterIndex(aabb.top);
 
   std::vector<Index> out;
   for (int y = y0; y <= y1; ++y) {

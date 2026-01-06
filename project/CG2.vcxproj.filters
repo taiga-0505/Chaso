@@ -330,6 +330,7 @@
     <ClInclude Include="engine\Graphics\Model3D\ModelObject.h" />
     <ClInclude Include="engine\Dx12\SRVManager\SRVManager.h" />
     <ClInclude Include="engine\Graphics\Primitive2D\Primitive2D.h" />
+    <ClInclude Include="engine\Camera\CameraMath.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
