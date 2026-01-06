@@ -12,6 +12,11 @@ public:
   void Draw();
 
   void SetMap(MapChipField *map) { map_ = map; }
+  void SetPosition(const RC::Vector3 &pos) {
+    if (transform_) {
+      transform_->translation = pos;
+    }
+  }
 
 private:
   void TickInput_();

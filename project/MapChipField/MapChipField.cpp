@@ -12,9 +12,11 @@ void MapChipField::SetFromArray(int width, int height, const TileId *grid) {
   width_ = width;
   height_ = height;
   tiles_.assign(width_ * height_, kAir);
-  for (int y = 0; y < height_; ++y) {
+
+  for (int srcY = 0; srcY < height_; ++srcY) {
+    const int y = (height_ - 1) - srcY; // ★
     for (int x = 0; x < width_; ++x) {
-      tiles_[Idx(x, y)] = grid[y * width_ + x];
+      tiles_[Idx(x, y)] = grid[srcY * width_ + x];
     }
   }
 }
@@ -41,34 +43,40 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
 
   height_ = (int)rows.size();
   width_ = (int)rows[0].size();
+
   tiles_.assign(width_ * height_, kAir);
   playerSpawn_.reset();
   enemySpawns_.clear();
 
-  for (int y = 0; y < height_; ++y) {
-    assert((int)rows[y].size() == width_);
+  for (int csvY = 0; csvY < height_; ++csvY) {
+    const int y =
+        (height_ - 1) - csvY; // CSVは上が0行目 → 内部は下が0になるよう反転
+    assert((int)rows[csvY].size() == width_);
+
     for (int x = 0; x < width_; ++x) {
-      std::string w = rows[y][x];
+      std::string w = rows[csvY][x];
+
       if (!w.empty()) {
         char c = (char)std::tolower((unsigned char)w[0]);
         if (c == 'p') {
-          playerSpawn_ = Index{x, y};
+          playerSpawn_ = Index{x, y}; // ここも反転後のyで保存
           tiles_[Idx(x, y)] = kAir;
           continue;
         }
         if (c == 'e') {
-          enemySpawns_.push_back(Index{x, y});
+          enemySpawns_.push_back(Index{x, y}); // ★ここも
           tiles_[Idx(x, y)] = kAir;
           continue;
         }
       }
-      // 数値IDとして扱う
+
       TileId id = (TileId)std::atoi(w.c_str());
-      tiles_[Idx(x, y)] = id;
+      tiles_[Idx(x, y)] = id; // 反転後のyへ格納
     }
   }
   return true;
 }
+
 
 void MapChipField::BuildInstances() {
   batches_.clear();
@@ -86,7 +94,7 @@ void MapChipField::BuildInstances() {
       float s = blockSize_ * (def->scale <= 0.f ? 1.f : def->scale);
       t.scale = {s, s, s};
       t.rotation = {0.f, 0.f, 0.f};
-      t.translation = {(float)x, (float)y, 0.f};
+      t.translation = {(float)x * blockSize_, (float)y * blockSize_, 0.f};
       batches_[def->model].push_back(t);
     }
   }

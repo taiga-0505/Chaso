@@ -104,18 +104,50 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
       camFocus_ = RC::Add(playerPos, camTargetOffset_);
       camFocus_ = RC::Add(camFocus_, RC::Vector3{camLookAheadX_, 0.0f, 0.0f});
     } else {
-      // ★先読みをなめらかに（右→左/停止のガクッ対策）
-      const float tLA = RC::ExpSmoothingFactor(camLookAheadSharpness_, dt);
-      camLookAheadX_ = RC::Lerp(camLookAheadX_, desiredLookAheadX, tLA);
+      // ===== 先読みの現在値をなめらかに =====
+      {
+        const float tLA = RC::ExpSmoothingFactor(camLookAheadSharpness_, dt);
+        camLookAheadX_ =
+            camLookAheadX_ + (desiredLookAheadX - camLookAheadX_) * tLA;
+      }
 
-      // ★注視点もなめらかに（回転のガクッ対策）
-      RC::Vector3 desiredFocus = RC::Add(playerPos, camTargetOffset_);
-      desiredFocus =
-          RC::Add(desiredFocus, RC::Vector3{camLookAheadX_, 0.0f, 0.0f});
+      // ===== 追従したい注視点（目標） =====
+      const RC::Vector3 desiredFocus =
+          RC::Add(RC::Add(playerPos, camTargetOffset_),
+                  RC::Vector3{camLookAheadX_, 0.0f, 0.0f});
 
+      // ===== X/Z は今まで通りなめらかに =====
       const float tF = RC::ExpSmoothingFactor(camFocusSharpness_, dt);
-      camFocus_ = RC::Lerp(camFocus_, desiredFocus, tF);
+      camFocus_.x = camFocus_.x + (desiredFocus.x - camFocus_.x) * tF;
+      camFocus_.z = camFocus_.z + (desiredFocus.z - camFocus_.z) * tF;
+
+      // ===== Y は「デッドゾーン + 上下で追従速度を変える」 =====
+      const float dy = desiredFocus.y - camFocus_.y;
+
+      float targetY = camFocus_.y;
+      if (std::fabs(dy) > camDeadZoneY_) {
+        // デッドゾーン外に出たら、ゾーン端までだけ追いかける
+        targetY = desiredFocus.y - (dy > 0.0f ? camDeadZoneY_ : -camDeadZoneY_);
+      }
+
+      const float sharpY =
+          (targetY > camFocus_.y) ? camYSharpnessUp_ : camYSharpnessDown_;
+      const float tY = RC::ExpSmoothingFactor(sharpY, dt);
+      float newY = camFocus_.y + (targetY - camFocus_.y) * tY;
+
+      // 最大速度制限（酔い＆ガクガク対策）
+      if (camYMaxSpeed_ > 0.0f) {
+        const float maxStep = camYMaxSpeed_ * dt;
+        const float step = newY - camFocus_.y;
+        if (step > maxStep)
+          newY = camFocus_.y + maxStep;
+        if (step < -maxStep)
+          newY = camFocus_.y - maxStep;
+      }
+
+      camFocus_.y = newY;
     }
+
 
     RC::Vector3 focus = camFocus_;
 
