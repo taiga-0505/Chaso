@@ -5,6 +5,8 @@
 #include "Scene.h"
 #include "memory.h"
 #include <dinput.h>
+#include "Coin/Coin.h"
+#include <vector>
 
 class GameScene final : public Scene {
 public:
@@ -31,6 +33,9 @@ private:
   // プレイヤー
   int playerModel = -1;
   std::unique_ptr<Player> player_;
+
+  // コイン
+  std::vector<std::unique_ptr<Coin>> coins_;
 
   // ===== 天球 =====
   int skydomeModel = -1;

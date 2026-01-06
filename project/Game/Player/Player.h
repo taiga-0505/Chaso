@@ -49,7 +49,6 @@ private:
 
   void ModelRotate();
 
-  static float NormalizeTurnAngle_(float angle);
   static float FacingAngleForDirection_(LRDirection dir);
 
 private:

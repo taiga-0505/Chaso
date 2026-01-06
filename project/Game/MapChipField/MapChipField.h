@@ -14,6 +14,7 @@ public:
   enum : TileId {
     kAir = 0,
     kBlock = 1,
+    kCoin = 2,
   };
 
   enum TileFlag : uint32_t {
@@ -98,6 +99,7 @@ public:
   // スポーン取得（CSV使用時）
   const std::optional<Index> &PlayerSpawn() const { return playerSpawn_; }
   const std::vector<Index> &EnemySpawns() const { return enemySpawns_; }
+  const std::vector<Index> &CoinSpawns() const { return coinSpawns_; }
 
   // バッチインスタンスへのアクセス（デバッグ用）
   const std::unordered_map<int, std::vector<Transform>> &Batches() const {
@@ -122,6 +124,7 @@ private:
   // スポーン（CSV）
   std::optional<Index> playerSpawn_;
   std::vector<Index> enemySpawns_;
+  std::vector<Index> coinSpawns_;
 
   // 1Dインデックス
   int Idx(int x, int y) const { return y * width_ + x; }
