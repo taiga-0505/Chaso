@@ -18,27 +18,44 @@ public:
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
+  // ==============
+  // カメラ関連
+  // ==============
+  // ======= ビュー/プロジェクション行列 =======
   RC::Matrix4x4 view_, proj_;
-
-  // カメラ
+  // ======= カメラコントローラ =======
   RC::CameraController camera_;
 
-  // ブロック
+  // ==============
+  // ブロック・マップ関連
+  // ==============
+  // ======= ブロックモデル =======
   int blockModel = -1;
-
-  // ===== MapChipField =====
+  // ======= マップフィールド =======
   MapChipField map_;
+  // ブロックサイズ
   float kBlockSize = 1.0f;
 
-  // プレイヤー
+  // ==============
+  // プレイヤー関連
+  // ==============
+  // ======= プレイヤーモデル =======
   int playerModel = -1;
+  // ======= プレイヤーインスタンス =======
   std::unique_ptr<Player> player_;
 
-  // コイン
+  // ==============
+  // コイン関連
+  // ==============
+  // ======= コインコンテナ =======
   std::vector<std::unique_ptr<Coin>> coins_;
 
-  // ===== 天球 =====
+  // ==============
+  // スカイドーム関連
+  // ==============
+  // ======= モデルとテクスチャ =======
   int skydomeModel = -1;
   int txSphere_ = -1;
+  // ======= トランスフォーム参照 =======
   Transform *sphereT_ = nullptr;
 };

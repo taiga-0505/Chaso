@@ -6,6 +6,10 @@
 #include <cmath>
 #include <cstdint>
 
+// ==============
+// Public API
+// ==============
+// ======= Lifecycle =======
 void Player::Init(int modelIndex, SceneContext &ctx) {
   ctx_ = &ctx;
 
@@ -35,19 +39,38 @@ void Player::Update() {
 
 void Player::Draw() { RC::DrawModel(model_); }
 
-// ============================
-// 入力 → 速度の決定
-// ============================
+// ======= Gameplay State =======
+RC::Vector3 Player::GetWorldPos() const {
+  return transform_ ? transform_->translation : RC::Vector3{};
+}
+
+void Player::GetCoin(int add) {
+  coinCount_ += add;
+#if RC_ENABLE_IMGUI
+  // 好きならここでログ出したりしてもOK
+#endif
+}
+
+// ==============
+// Simulation Flow
+// ==============
+// ======= Input Phase =======
 void Player::TickInput_() {
   float vx = 0.0f;
 
   const bool left = ctx_->input->IsKeyPressed(DIK_A);
   const bool right = ctx_->input->IsKeyPressed(DIK_D);
+  const bool dash = ctx_->input->IsKeyPressed(DIK_LSHIFT) ||
+                    ctx_->input->IsKeyPressed(DIK_RSHIFT);
+  const float currentMoveSpeed =
+      dash ? moveSpeed_ * dashMultiplier_ : moveSpeed_;
 
-  if (left)
-    vx -= moveSpeed_;
-  if (right)
-    vx += moveSpeed_;
+  if (left) {
+    vx -= currentMoveSpeed;
+  }
+  if (right) {
+    vx += currentMoveSpeed;
+  }
 
   // 入力が片側だけある時に「向き変更」を開始
   if (vx > 0.0f) {
@@ -64,18 +87,28 @@ void Player::TickInput_() {
   bool jumpPressed = space && !prevSpace_;
   prevSpace_ = space;
 
-  if (jumpPressed && onGround_) {
-    velocity_.y = jumpStrength_;
-    onGround_ = false;
+  if (jumpPressed) {
+    if (onGround_) {
+      velocity_.y = jumpStrength_;
+      onGround_ = false;
+    } else if (onWallLeft_ || onWallRight_) {
+      velocity_.y = jumpStrength_;
+      if (onWallLeft_) {
+        velocity_.x = wallJumpHorizontalSpeed_;
+        BeginTurn_(LRDirection::kRight);
+      } else {
+        velocity_.x = -wallJumpHorizontalSpeed_;
+        BeginTurn_(LRDirection::kLeft);
+      }
+    }
   }
 }
 
-// ============================
-// 物理 → 衝突解決
-// ============================
+// ======= Physics Phase =======
 void Player::SimulateAndCollide_() {
-  if (!transform_)
+  if (!transform_) {
     return;
+  }
 
   // map が無いなら、とりあえず今まで通り落とす…ではなく、衝突なしで自由落下
   // （map渡したらちゃんと床で止まる）
@@ -83,6 +116,9 @@ void Player::SimulateAndCollide_() {
   velocity_.y -= gravity_;
 
   RC::Vector3 pos = transform_->translation;
+
+  onWallLeft_ = false;
+  onWallRight_ = false;
 
   // X→解決
   pos.x += velocity_.x;
@@ -95,38 +131,45 @@ void Player::SimulateAndCollide_() {
   transform_->translation = pos;
 }
 
+// ==============
+// Collision Helpers
+// ==============
+// ======= Bounds =======
 Player::Rect Player::MakeAabb_(const RC::Vector3 &pos) const {
   return Rect{pos.x - halfW_, pos.x + halfW_, pos.y - halfH_, pos.y + halfH_};
 }
 
 bool Player::Overlap_(const Rect &a, const Rect &b) {
-  if (a.right <= b.left)
+  if (a.right <= b.left) {
     return false;
-  if (a.left >= b.right)
+  }
+  if (a.left >= b.right) {
     return false;
-  if (a.top <= b.bottom)
+  }
+  if (a.top <= b.bottom) {
     return false;
-  if (a.bottom >= b.top)
+  }
+  if (a.bottom >= b.top) {
     return false;
+  }
   return true;
 }
 
-// ----------------------------
-// X方向の押し戻し
-// ----------------------------
+// ======= Axis Resolution =======
 void Player::ResolveX_(RC::Vector3 &pos) {
-  if (!map_)
+  if (!map_) {
     return;
+  }
 
   Rect aabb = MakeAabb_(pos);
   auto tiles = map_->CollectTilesOverlapping(
       MapChipField::Rect{aabb.left, aabb.right, aabb.bottom, aabb.top},
       MapChipField::kSolid);
 
-  if (tiles.empty())
+  if (tiles.empty()) {
     return;
+  }
 
-  // 進行方向で詰める
   if (velocity_.x > 0.0f) {
     float bestX = pos.x;
     bool hit = false;
@@ -134,8 +177,9 @@ void Player::ResolveX_(RC::Vector3 &pos) {
     for (auto idx : tiles) {
       auto tr = map_->RectAt(idx);
       Rect tileR{tr.left, tr.right, tr.bottom, tr.top};
-      if (!Overlap_(aabb, tileR))
+      if (!Overlap_(aabb, tileR)) {
         continue;
+      }
 
       bestX = (std::min)(bestX, tileR.left - halfW_ - skin_);
       hit = true;
@@ -144,45 +188,54 @@ void Player::ResolveX_(RC::Vector3 &pos) {
     if (hit) {
       pos.x = bestX;
       velocity_.x = 0.0f;
+      onWallRight_ = true;
     }
   } else if (velocity_.x < 0.0f) {
-    // 左移動：タイルの right に合わせる
+    float bestX = pos.x;
+    bool hit = false;
+
     for (auto idx : tiles) {
       auto tr = map_->RectAt(idx);
       Rect tileR{tr.left, tr.right, tr.bottom, tr.top};
-      if (!Overlap_(aabb, tileR))
+      if (!Overlap_(aabb, tileR)) {
         continue;
+      }
 
-      pos.x = tileR.right + halfW_ + skin_;
+      bestX = (std::max)(bestX, tileR.right + halfW_ + skin_);
+      hit = true;
+    }
+
+    if (hit) {
+      pos.x = bestX;
       velocity_.x = 0.0f;
-      aabb = MakeAabb_(pos);
+      onWallLeft_ = true;
     }
   }
 }
 
-// ----------------------------
-// Y方向の押し戻し
-// ----------------------------
 void Player::ResolveY_(RC::Vector3 &pos) {
   onGround_ = false;
-  if (!map_)
+  if (!map_) {
     return;
+  }
 
   Rect aabb = MakeAabb_(pos);
   auto tiles = map_->CollectTilesOverlapping(
       MapChipField::Rect{aabb.left, aabb.right, aabb.bottom, aabb.top},
       MapChipField::kSolid);
 
-  if (tiles.empty())
+  if (tiles.empty()) {
     return;
+  }
 
   if (velocity_.y > 0.0f) {
     // 上昇：天井に当たったら tile.bottom へ
     for (auto idx : tiles) {
       auto tr = map_->RectAt(idx);
       Rect tileR{tr.left, tr.right, tr.bottom, tr.top};
-      if (!Overlap_(aabb, tileR))
+      if (!Overlap_(aabb, tileR)) {
         continue;
+      }
 
       pos.y = tileR.bottom - halfH_ - skin_;
       velocity_.y = 0.0f;
@@ -193,8 +246,9 @@ void Player::ResolveY_(RC::Vector3 &pos) {
     for (auto idx : tiles) {
       auto tr = map_->RectAt(idx);
       Rect tileR{tr.left, tr.right, tr.bottom, tr.top};
-      if (!Overlap_(aabb, tileR))
+      if (!Overlap_(aabb, tileR)) {
         continue;
+      }
 
       pos.y = tileR.top + halfH_ + skin_;
       velocity_.y = 0.0f;
@@ -204,6 +258,10 @@ void Player::ResolveY_(RC::Vector3 &pos) {
   }
 }
 
+// ==============
+// Orientation
+// ==============
+// ======= Rotation Helpers =======
 float Player::FacingAngleForDirection_(LRDirection dir) {
   switch (dir) {
   case LRDirection::kRight:
@@ -215,18 +273,8 @@ float Player::FacingAngleForDirection_(LRDirection dir) {
   }
 }
 
-
-static float NormalizeAnglePi_(float a) {
-  constexpr float TwoPi = std::numbers::pi_v<float> * 2.0f;
-  a = std::fmod(a + std::numbers::pi_v<float>, TwoPi);
-  if (a < 0.0f)
-    a += TwoPi;
-  return a - std::numbers::pi_v<float>;
-}
-
 void Player::ModelRotate() {
-
-  if (turnTimer_ > 0.0f) { // 回転中の処理
+  if (turnTimer_ > 0.0f) {
     turnTimer_ -= 1.0f / 60.0f;
 
     float destinationRotationYTable[] = {

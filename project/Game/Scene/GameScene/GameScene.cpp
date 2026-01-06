@@ -3,16 +3,22 @@
 #include "SceneManager.h"
 
 void GameScene::OnEnter(SceneContext &ctx) {
-  // ===== Camera =====
-  camera_.Initialize(ctx.input, RC::Vector3{5.0f, 5.0f, -30.0f},
-                     RC::Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
-                     float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
+  // ==============
+  // シーン初期化
+  // ==============
 
-  // ===== block =====
+  // ======= カメラ初期化 =======
+  // 視錐台パラメータ
+  const float kNearZ = 0.1f;
+  const float kFarZ = 100.0f;
+  camera_.Initialize(ctx.input, {5, 5, -30}, {0, 0, 0}, 0.45f,
+                     float(ctx.app->width) / ctx.app->height, kNearZ, kFarZ);
+
+  // ======= ブロックモデル =======
   blockModel = RC::LoadModel("Resources/model/block");
   RC::SetModelLightingMode(blockModel, None);
 
-  // ===== MapChipField =====
+  // ======= マップ構築 =======
   map_.SetBlockSize(kBlockSize);
   map_.RegisterTileDef(1, MapChipField::TileDef{.model = blockModel,
                                                 .scale = kBlockSize,
@@ -20,17 +26,17 @@ void GameScene::OnEnter(SceneContext &ctx) {
   map_.LoadFromCSV("Resources/Stage/Stage1/stage1.csv");
   map_.BuildInstances();
 
-  // ===== Player =====
+  // ======= プレイヤー生成 =======
   playerModel = RC::LoadModel("Resources/model/player/player.obj");
   player_ = std::make_unique<Player>();
   player_->Init(playerModel, ctx);
   player_->SetMap(&map_);
 
-  // ===== Coin (MapChip:2) =====
+  // ======= コイン生成 =======
   {
-    // ※ coin のモデルパスはプロジェクトに合わせて変えてOK
+    // コインモデルパス
     const char *kCoinModelPath = "Resources/model/coin/coin.obj";
-
+    // 出現セル一覧
     const auto &spawns = map_.CoinSpawns();
     coins_.reserve(spawns.size());
 
@@ -40,31 +46,35 @@ void GameScene::OnEnter(SceneContext &ctx) {
       auto coin = std::make_unique<Coin>();
       coin->Init(coinModel, ctx);
 
+      // コイン中心座標
       RC::Vector3 pos = map_.IndexToCenter(idx);
-      // ちょい浮かせたいなら pos.y += 0.3f; みたいに調整
+      // 浮かせたい場合は pos.y += 0.3f のように調整
       coin->SetWorldPos(pos);
 
       coins_.push_back(std::move(coin));
     }
   }
 
-
-  // ===== Skydome =====
+  // ======= スカイドーム生成 =======
   txSphere_ = RC::LoadTex("Resources/skydome.jpg");
-  skydomeModel = RC::GenerateSphereEx(txSphere_, 60.0f);
+  const float kSkyRadius = kFarZ * 0.95f;
+  skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
   sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
   RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
 
-  // ===== 追従カメラ：ターゲットを渡したら追従ON =====
+  // ======= 追従カメラ設定 =======
   if (Transform *pt = RC::GetModelTransformPtr(playerModel)) {
+    // プレイヤーモデルをターゲットに設定
     camera_.SetTarget(pt);
   }
 
-  // ===== Map bounds（カメラが外を映さない用）=====
+  // ======= マップ境界設定 =======
   {
+    // ブロック寸法
     const float s = map_.BlockSize();
     const float half = s * 0.5f;
 
+    // 視界制限境界
     const float left = -half;
     const float right = (map_.Width() - 1) * s + half;
     const float bottom = -half;
@@ -98,29 +108,78 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   RC::DrawImGui3D(blockModel, "block");
 #endif
 
-  // === 天球回転 ===
+  // ======= スカイドーム更新 =======
   if (sphereT_) {
+    // カメラ座標に追従
+    sphereT_->translation = camera_.GetWorldPos();
+    // 高さオフセット
+    sphereT_->translation.y -= 5.0f;
+    // 自転処理
     sphereT_->rotation.y += 0.0005f;
   }
 
+  // ======= エンティティ更新 =======
+  // プレイヤー更新
   player_->Update();
+  // コイン更新
   for (auto &c : coins_) {
     if (c)
       c->Update();
   }
 
+  // ======= コイン取得判定 =======
+  {
+    // プレイヤー座標
+    const RC::Vector3 p = player_->GetWorldPos();
+
+    for (auto &c : coins_) {
+      if (!c)
+        continue;
+      if (!c->IsAlive() || c->IsCollected())
+        continue;
+
+      // コイン座標
+      const RC::Vector3 cp = c->GetWorldPos();
+      // 2D距離
+      const float dx = std::abs(p.x - cp.x);
+      const float dy = std::abs(p.y - cp.y);
+
+      // 当たり判定
+      if (dx < 0.6f && dy < 0.6f) {
+        player_->GetCoin(1);
+        c->GetCoin();
+      }
+    }
+
+    // 消失コイン整理
+    for (auto it = coins_.begin(); it != coins_.end();) {
+      if (*it && !(*it)->IsAlive()) {
+        RC::UnloadModel((*it)->ModelHandle());
+        it = coins_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+  // ======= カメラ更新 =======
+  // 固定デルタタイム
   const float dt = 1.0f / 60.0f;
   camera_.Update(dt);
 
-  // 3) 描画用行列を更新
+  // ======= ビュー・プロジェクション更新 =======
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 }
 
 void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
-  RC::PreDraw3D(ctx, cl);
+  // ==============
+  // 描画処理
+  // ==============
 
+  // ======= 3D描画 =======
+  RC::PreDraw3D(ctx, cl);
   RC::DrawSphere(skydomeModel);
 
   player_->Draw();
@@ -130,5 +189,6 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
   map_.Draw();
 
+  // ======= 2D描画準備 =======
   RC::PreDraw2D(ctx, cl);
 }
