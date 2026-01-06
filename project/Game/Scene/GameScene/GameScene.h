@@ -32,7 +32,7 @@ private:
 
   // プレイヤー基準
   RC::Vector3 camOffset_ = {
-      0.0f, 0.0f, -30.0f}; // カメラ位置 = focus + (camOffset - camTargetOffset)
+      0.0f, 2.0f, -30.0f}; // カメラ位置 = focus + (camOffset - camTargetOffset)
   RC::Vector3 camTargetOffset_ = {0.0f, 2.0f,
                                   0.0f}; // 注視点（プレイヤー中心より少し上）
 
