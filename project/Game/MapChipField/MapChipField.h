@@ -15,6 +15,7 @@ public:
     kAir = 0,
     kBlock = 1,
     kCoin = 2,
+    kGoal = 3,
   };
 
   enum TileFlag : uint32_t {
@@ -100,6 +101,7 @@ public:
   const std::optional<Index> &PlayerSpawn() const { return playerSpawn_; }
   const std::vector<Index> &EnemySpawns() const { return enemySpawns_; }
   const std::vector<Index> &CoinSpawns() const { return coinSpawns_; }
+  const std::vector<Index> &GoalSpawns() const { return goalSpawns_; }
 
   // バッチインスタンスへのアクセス（デバッグ用）
   const std::unordered_map<int, std::vector<Transform>> &Batches() const {
@@ -125,6 +127,7 @@ private:
   std::optional<Index> playerSpawn_;
   std::vector<Index> enemySpawns_;
   std::vector<Index> coinSpawns_;
+  std::vector<Index> goalSpawns_; 
 
   // 1Dインデックス
   int Idx(int x, int y) const { return y * width_ + x; }

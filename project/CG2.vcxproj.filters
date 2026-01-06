@@ -158,6 +158,7 @@
     <ClCompile Include="engine\Dx12\SRVManager\SRVManager.cpp" />
     <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp" />
     <ClCompile Include="Game\Coin\Coin.cpp" />
+    <ClCompile Include="Game\Goal\Goal.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -333,6 +334,7 @@
     <ClInclude Include="engine\Graphics\Primitive2D\Primitive2D.h" />
     <ClInclude Include="engine\Camera\CameraMath.h" />
     <ClInclude Include="Game\Coin\Coin.h" />
+    <ClInclude Include="Game\Goal\Goal.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

@@ -251,6 +251,10 @@ void PipelineManager::RegisterDefaultPipelines() {
   regSet("object3d", objVs, objPs, InputLayoutType::Object3D,
          RootSignatureType::Object3D, true, true, D3D12_CULL_MODE_BACK);
 
+  // object3d_nocull：深度ON、書き込みON、カリング無し
+  regSet("object3d_nocull", objVs, objPs, InputLayoutType::Object3D,
+         RootSignatureType::Object3D, true, true, D3D12_CULL_MODE_NONE);
+
   // sprite：深度OFF、基本BACK（必要なら NONE に）
   regSet("sprite", sprVs, sprPs, InputLayoutType::Sprite,
          RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_BACK);

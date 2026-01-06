@@ -5,6 +5,10 @@
 #include "RenderCommon.h"
 
 void ResultScene::Update(SceneManager &sm, SceneContext &ctx) {
+
+	if (ctx.input->IsKeyTrigger(DIK_SPACE)) {
+    sm.RequestChange("Title");
+  }
 }
 
 void ResultScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {

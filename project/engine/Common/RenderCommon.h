@@ -119,6 +119,13 @@ void DrawModel(int modelHandle, int texHandle);
 void DrawModel(int modelHandle);
 
 /// <summary>
+/// モデルを描画する（カリング無効版）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="texHandle">テクスチャハンドル（-1 なら mtl のテクスチャ）</param>
+void DrawModelNoCull(int modelHandle, int texHandle = -1);
+
+/// <summary>
 /// モデルをインスタンシング（複数Transform）で描画する
 /// </summary>
 /// <param name="modelHandle">モデルハンドル</param>
@@ -202,6 +209,36 @@ int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb = true);
 /// </summary>
 /// <param name="spriteHandle">スプライトハンドル</param>
 void DrawSprite(int spriteHandle);
+
+/// <summary>
+/// スプライトを「テクスチャ内の矩形」を指定して描画する（スプライトシート用）
+/// </summary>
+/// <param name="spriteHandle">スプライトハンドル</param>
+/// <param name="srcX">切り出し矩形 左上X（ピクセル, 0=左）</param>
+/// <param name="srcY">切り出し矩形 左上Y（ピクセル, 0=上）</param>
+/// <param name="srcW">切り出し幅（ピクセル）</param>
+/// <param name="srcH">切り出し高さ（ピクセル）</param>
+/// <param name="texW">テクスチャ全体の幅（ピクセル）</param>
+/// <param name="texH">テクスチャ全体の高さ（ピクセル）</param>
+/// <param name="insetPx">
+/// にじみ対策の内側オフセット（ピクセル）。
+/// 例: 線形サンプラーで隣のセルが混ざる時は 0.5f を試す。
+/// </param>
+/// <remarks>
+/// - 位置/回転/サイズは SetSpriteTransform で設定した値を使います。
+/// - この関数は「この呼び出しだけ」UV
+/// を差し替えて描画し、描画後に元に戻します。
+/// </remarks>
+void DrawSpriteRect(int spriteHandle, float srcX, float srcY, float srcW,
+                    float srcH, float texW, float texH, float insetPx = 0.0f);
+
+/// <summary>
+/// スプライトを UV(0..1) の矩形を指定して描画する
+/// </summary>
+/// <remarks>
+/// DrawSpriteRect の「UV版」。テクスチャのピクセルサイズが分からない時に便利。
+/// </remarks>
+void DrawSpriteRectUV(int spriteHandle, float u0, float v0, float u1, float v1);
 
 /// <summary>
 /// スプライトの Transform を設定する
