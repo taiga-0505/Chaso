@@ -8,6 +8,7 @@
 
 // カメラ制御関連の共通ヘッダ
 #include "Camera/CameraController.h"
+#include "CameraMath.h"
 
 // 数学関連の共通ヘッダ(Vector , Matrix等)
 #include "Math/MathTypes.h"
