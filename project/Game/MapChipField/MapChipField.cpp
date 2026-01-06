@@ -89,6 +89,9 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
       if (id == kCoin) {
         coinSpawns_.push_back(Index{x, y});
         tiles_[Idx(x, y)] = kAir;
+      } else if (id == kGoal) {            
+        goalSpawns_.push_back(Index{x, y});
+        tiles_[Idx(x, y)] = kAir;          
       } else {
         tiles_[Idx(x, y)] = id;
       }

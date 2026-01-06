@@ -7,6 +7,7 @@
 #include <dinput.h>
 #include "Coin/Coin.h"
 #include <vector>
+#include "Goal/Goal.h"
 
 class GameScene final : public Scene {
 public:
@@ -49,6 +50,13 @@ private:
   // ==============
   // ======= コインコンテナ =======
   std::vector<std::unique_ptr<Coin>> coins_;
+
+  // ==============
+  // ゴール関連
+  // ==============
+  // ======= ゴールモデル =======
+  std::vector<std::unique_ptr<Goal>> goals_;
+  bool reachedGoal_ = false;
 
   // ==============
   // スカイドーム関連

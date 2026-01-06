@@ -176,6 +176,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Game\Coin\Coin.cpp" />
     <ClCompile Include="Game\Game.cpp" />
+    <ClCompile Include="Game\Goal\Goal.cpp" />
     <ClCompile Include="Game\Scene\ParticleScene\ParticleScene.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="engine\Common\Math\Math.cpp" />
@@ -315,6 +316,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Window\Window.h" />
     <ClInclude Include="Game\Coin\Coin.h" />
     <ClInclude Include="Game\Game.h" />
+    <ClInclude Include="Game\Goal\Goal.h" />
     <ClInclude Include="Game\Scene\ParticleScene\ParticleScene.h" />
     <ClInclude Include="Game\MapChipField\MapChipField.h" />
     <ClInclude Include="Game\Player\Player.h" />

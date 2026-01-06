@@ -606,6 +606,30 @@ void DrawModel(int modelHandle, int texHandle) {
 
 void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
 
+void DrawModelNoCull(int modelHandle, int texHandle) {
+  if (!gInitialized || !gCL)
+    return;
+  if (!IsValidModel_(modelHandle))
+    return;
+
+  if (!BindPipeline_("object3d_nocull")) {
+    return;
+  }
+
+  BindCameraCB_();
+
+  auto &m = gModels[modelHandle].ptr;
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  m->Update(gView, gProj);
+  m->Draw(gCL);
+}
+
 void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
                     int texHandle) {
   if (!gInitialized || !gCL) {
@@ -813,6 +837,89 @@ void DrawSprite(int spriteHandle) {
 
   s.ptr->Update();
   s.ptr->Draw(gCL);
+}
+
+void DrawSpriteRect(int spriteHandle, float srcX, float srcY, float srcW,
+                    float srcH, float texW, float texH, float insetPx) {
+  if (!gInitialized || !gCL)
+    return;
+
+  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size()))
+    return;
+
+  auto &s = gSprites[spriteHandle];
+  if (!s.inUse || !s.ptr)
+    return;
+
+  // 入力が壊れている場合は安全に無視
+  if (texW <= 0.0f || texH <= 0.0f || srcW <= 0.0f || srcH <= 0.0f)
+    return;
+
+  if (!BindPipeline_("sprite"))
+    return;
+
+  // にじみ対策（必要なら 0.5px 程度を指定）
+  if (insetPx != 0.0f) {
+    srcX += insetPx;
+    srcY += insetPx;
+    srcW -= insetPx * 2.0f;
+    srcH -= insetPx * 2.0f;
+    if (srcW <= 0.0f || srcH <= 0.0f)
+      return;
+  }
+
+  // ピクセル -> UV(0..1)
+  const float u0 = srcX / texW;
+  const float v0 = srcY / texH;
+  const float su = srcW / texW;
+  const float sv = srcH / texH;
+
+  // この呼び出しだけ UVTransform を差し替えて描画し、戻す。
+  const Matrix4x4 oldUV = s.ptr->UVTransform();
+
+  // uv' = uv * Scale + Translate（row-vector 前提）
+  Matrix4x4 uvM = MakeIdentity4x4();
+  uvM = Multiply(MakeScaleMatrix(Vector3{su, sv, 1.0f}), uvM);
+  uvM = Multiply(uvM, MakeTranslateMatrix(Vector3{u0, v0, 0.0f}));
+  s.ptr->UVTransform() = uvM;
+
+  s.ptr->Update();
+  s.ptr->Draw(gCL);
+
+  s.ptr->UVTransform() = oldUV;
+}
+
+void DrawSpriteRectUV(int spriteHandle, float u0, float v0, float u1,
+                      float v1) {
+  if (!gInitialized || !gCL)
+    return;
+
+  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size()))
+    return;
+
+  auto &s = gSprites[spriteHandle];
+  if (!s.inUse || !s.ptr)
+    return;
+
+  if (!BindPipeline_("sprite"))
+    return;
+
+  const float su = (u1 - u0);
+  const float sv = (v1 - v0);
+  if (su <= 0.0f || sv <= 0.0f)
+    return;
+
+  const Matrix4x4 oldUV = s.ptr->UVTransform();
+
+  Matrix4x4 uvM = MakeIdentity4x4();
+  uvM = Multiply(MakeScaleMatrix(Vector3{su, sv, 1.0f}), uvM);
+  uvM = Multiply(uvM, MakeTranslateMatrix(Vector3{u0, v0, 0.0f}));
+  s.ptr->UVTransform() = uvM;
+
+  s.ptr->Update();
+  s.ptr->Draw(gCL);
+
+  s.ptr->UVTransform() = oldUV;
 }
 
 void SetSpriteTransform(int spriteHandle, const Transform &t) {

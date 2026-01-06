@@ -53,6 +53,29 @@ void GameScene::OnEnter(SceneContext &ctx) {
 
       coins_.push_back(std::move(coin));
     }
+
+    reachedGoal_ = false;
+
+    // ゴール生成
+    {
+      const char *kGoalModelPath = "Resources/model/Goal/Goal.obj";
+
+      const auto &spawns = map_.GoalSpawns();
+      goals_.reserve(spawns.size());
+
+      for (const auto &idx : spawns) {
+        int goalModel = RC::LoadModel(kGoalModelPath);
+
+        auto goal = std::make_unique<Goal>();
+        goal->Init(goalModel);
+
+        RC::Vector3 pos = map_.IndexToCenter(idx);
+        goal->SetWorldPos(pos);
+
+        goals_.push_back(std::move(goal));
+      }
+    }
+
   }
 
   // ======= スカイドーム生成 =======
@@ -98,6 +121,13 @@ void GameScene::OnExit(SceneContext &) {
     RC::UnloadModel(c->ModelHandle());
   }
   coins_.clear();
+
+  for (auto &g : goals_) {
+    if (!g)
+      continue;
+    RC::UnloadModel(g->ModelHandle());
+  }
+  goals_.clear();
 }
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -113,7 +143,7 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
     // カメラ座標に追従
     sphereT_->translation = camera_.GetWorldPos();
     // 高さオフセット
-    sphereT_->translation.y -= 5.0f;
+    sphereT_->translation.y -= 10.0f;
     // 自転処理
     sphereT_->rotation.y += 0.0005f;
   }
@@ -125,6 +155,11 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   for (auto &c : coins_) {
     if (c)
       c->Update();
+  }
+  // ゴール更新
+  for (auto &g : goals_) {
+    if (g)
+      g->Update();
   }
 
   // ======= コイン取得判定 =======
@@ -162,6 +197,29 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
     }
   }
 
+  // ゴール到達判定
+  if (!reachedGoal_) {
+    const RC::Vector3 p = player_->GetWorldPos();
+
+    for (auto &g : goals_) {
+      if (!g)
+        continue;
+      if (g->IsReached())
+        continue;
+
+      const RC::Vector3 gp = g->GetWorldPos();
+      const float dx = std::abs(p.x - gp.x);
+      const float dy = std::abs(p.y - gp.y);
+
+      if (dx < 0.6f && dy < 0.6f) {
+        reachedGoal_ = true;
+        g->Reach();
+        sm.RequestChange("Result"); // ★Resultシーン名が違うならここを合わせてね
+        break;
+      }
+    }
+  }
+
   // ======= カメラ更新 =======
   // 固定デルタタイム
   const float dt = 1.0f / 60.0f;
@@ -187,6 +245,12 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     if (c)
       c->Draw();
   }
+
+  for (auto &g : goals_) {
+    if (g)
+      g->Draw();
+  }
+
   map_.Draw();
 
   // ======= 2D描画準備 =======
