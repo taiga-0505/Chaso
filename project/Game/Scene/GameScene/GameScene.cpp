@@ -214,7 +214,7 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
       if (dx < 0.6f && dy < 0.6f) {
         reachedGoal_ = true;
         g->Reach();
-        sm.RequestChange("Result"); // ★Resultシーン名が違うならここを合わせてね
+        sm.RequestChange("Title");
         break;
       }
     }
