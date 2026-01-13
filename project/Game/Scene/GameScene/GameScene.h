@@ -27,43 +27,4 @@ private:
   // ======= カメラコントローラ =======
   RC::CameraController camera_;
 
-  // ==============
-  // ブロック・マップ関連
-  // ==============
-  // ======= ブロックモデル =======
-  int blockModel = -1;
-  // ======= マップフィールド =======
-  MapChipField map_;
-  // ブロックサイズ
-  float kBlockSize = 1.0f;
-
-  // ==============
-  // プレイヤー関連
-  // ==============
-  // ======= プレイヤーモデル =======
-  int playerModel = -1;
-  // ======= プレイヤーインスタンス =======
-  std::unique_ptr<Player> player_;
-
-  // ==============
-  // コイン関連
-  // ==============
-  // ======= コインコンテナ =======
-  std::vector<std::unique_ptr<Coin>> coins_;
-
-  // ==============
-  // ゴール関連
-  // ==============
-  // ======= ゴールモデル =======
-  std::vector<std::unique_ptr<Goal>> goals_;
-  bool reachedGoal_ = false;
-
-  // ==============
-  // スカイドーム関連
-  // ==============
-  // ======= モデルとテクスチャ =======
-  int skydomeModel = -1;
-  int txSphere_ = -1;
-  // ======= トランスフォーム参照 =======
-  Transform *sphereT_ = nullptr;
 };
