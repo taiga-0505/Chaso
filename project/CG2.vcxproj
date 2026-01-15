@@ -205,7 +205,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Game\Scene\SampleScene\SampleScene.cpp" />
     <ClCompile Include="Game\Scene\SelectScene\SelectScene.cpp" />
     <ClCompile Include="Game\Scene\TitleScene\TitleScene.cpp" />
-    <ClCompile Include="Resources\Shader\ShaderCompiler\ShaderCompiler.cpp" />
+    <ClCompile Include="engine\Dx12\ShaderCompiler\ShaderCompiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\Shader\Object3d\Object3d.PS.hlsl">
@@ -329,7 +329,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Game\Scene\SceneManager.h" />
     <ClInclude Include="Game\Scene\SelectScene\SelectScene.h" />
     <ClInclude Include="Game\Scene\TitleScene\TitleScene.h" />
-    <ClInclude Include="Resources\Shader\ShaderCompiler\ShaderCompiler.h" />
+    <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />
