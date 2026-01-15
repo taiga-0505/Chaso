@@ -49,16 +49,4 @@ private:
   // ===============
 
   int sprite = -1;
-
-  // ===============
-  // マップ関連
-  // ===============
-
-  static const int mapWidth = 5;
-  static const int mapHeight = 5;
-
-  int map[mapHeight][mapWidth] = {
-      {1, 1, 1, 1, 1}, {1, 0, 0, 0, 1}, {1, 0, 1, 0, 1},
-      {1, 0, 0, 0, 1}, {1, 1, 1, 1, 1},
-  };
 };
