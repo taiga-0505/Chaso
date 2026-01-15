@@ -110,7 +110,7 @@
     <ClCompile Include="Game\Scene\SelectScene\SelectScene.cpp">
       <Filter>Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Resources\Shader\ShaderCompiler\ShaderCompiler.cpp">
+    <ClCompile Include="engine\Dx12\ShaderCompiler\ShaderCompiler.cpp">
       <Filter>Shader</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Sound\Sound.cpp">
@@ -278,7 +278,7 @@
     <ClInclude Include="Game\Scene\SelectScene\SelectScene.h">
       <Filter>Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Resources\Shader\ShaderCompiler\ShaderCompiler.h">
+    <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h">
       <Filter>Shader</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Sound\SeManager.h">
