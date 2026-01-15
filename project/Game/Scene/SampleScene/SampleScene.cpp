@@ -129,33 +129,6 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(model, tx_model);
 
-  //// ===== マップ描画 =====
-  //// === マップ上の1だけをインスタンス化してDrawBatch ===
-  //std::vector<Transform> instances;
-  //instances.reserve(mapWidth * mapHeight);
-
-  //// 1マスの幅（キューブが -0.5〜+0.5 のサイズなら 1.0f でちょうど）
-  //const float cell = 1.0f;
-
-  //// マップを画面中央に寄せたい場合のオフセット
-  //const float offsetX = -(mapWidth - 1) * 0.5f * cell;
-  //const float offsetZ = -(mapHeight - 1) * 0.5f * cell;
-
-  //for (int z = 0; z < mapHeight; ++z) {
-  //  for (int x = 0; x < mapWidth; ++x) {
-  //    if (map[z][x] != 1)
-  //      continue;
-
-  //    Transform t{};
-  //    t.scale = {1.0f, 1.0f, 1.0f};
-  //    t.rotation = {0.0f, 0.0f, 0.0f};
-  //    t.translation = {offsetX + x * cell, -1.0f, offsetZ + z * cell};
-  //    instances.push_back(t);
-  //  }
-  //}
-
-  //RC::DrawModelBatch(blockModel, instances);
-
   // ===========================================
   // 2D描画
   // ===========================================
