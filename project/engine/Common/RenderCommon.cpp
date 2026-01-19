@@ -206,6 +206,20 @@ bool IsValidLight_(int h) {
   return (h >= 0 && h < static_cast<int>(gLights.size()) && gLights[h].inUse);
 }
 
+// Sprite 共通クアッド（全スプライトで共有）
+static std::shared_ptr<SpriteMesh2D> gSpriteQuad;
+
+static std::shared_ptr<SpriteMesh2D> EnsureSpriteQuad_() {
+  if (!gInitialized || !gDevice)
+    return nullptr;
+
+  if (!gSpriteQuad) {
+    gSpriteQuad = std::make_shared<SpriteMesh2D>();
+    gSpriteQuad->Initialize(gDevice);
+  }
+  return gSpriteQuad;
+}
+
 // ============================================================================
 // Pipeline 選択
 // ----------------------------------------------------------------------------
@@ -331,6 +345,7 @@ void Term() {
   gModels.clear();
   gMeshCache.clear();
   gSprites.clear();
+  gSpriteQuad.reset();
   gSpheres.clear();
   gLights.clear();
 
@@ -801,7 +816,11 @@ int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
   s.ptr = std::make_unique<Sprite2D>();
 
   // 初期化
-  s.ptr->Initialize(gDevice, static_cast<float>(ctx.app->width),
+  const auto quad = EnsureSpriteQuad_();
+  if (!quad)
+    return -1;
+
+  s.ptr->Initialize(gDevice, quad, static_cast<float>(ctx.app->width),
                     static_cast<float>(ctx.app->height));
   s.ptr->SetTexture(gTexMan.GetSrv(texHandle));
 
@@ -1107,7 +1126,7 @@ void SetSphereLightingMode(int sphereHandle, LightingMode m) {
 // みたいに "draw ごとに値が固定される" 仕組みにすると安定する。
 
 void DrawLine(const Vector2 &pos1, const Vector2 &pos2, const Vector4 &color,
-              float thickness, float feather ) {
+              float thickness, float feather) {
   if (!gInitialized || !gCL) {
     return;
   }
@@ -1168,8 +1187,7 @@ void DrawCircle(const Vector2 &center, float radius, const Vector4 &color,
 }
 
 void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
-                  const Vector4 &color, kFillMode fillMode,
-                  float feather) {
+                  const Vector4 &color, kFillMode fillMode, float feather) {
   if (!gInitialized || !gCL) {
     return;
   }

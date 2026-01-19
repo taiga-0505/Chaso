@@ -164,6 +164,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp" />
     <ClCompile Include="engine\Graphics\Sphere\Sphere.cpp" />
     <ClCompile Include="engine\Graphics\Sprite2D\Sprite2D.cpp" />
+    <ClCompile Include="engine\Graphics\Sprite2D\SpriteMesh2D.cpp" />
     <ClCompile Include="engine\Particle\Circle\CircleParticle.cpp" />
     <ClCompile Include="engine\Particle\Explosion\ExplosionParticle.cpp" />
     <ClCompile Include="engine\Particle\Fire\FireParticle.cpp" />
@@ -282,6 +283,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Graphics\Sound\SeManager.h" />
     <ClInclude Include="engine\Graphics\Sphere\Sphere.h" />
     <ClInclude Include="engine\Graphics\Sprite2D\Sprite2D.h" />
+    <ClInclude Include="engine\Graphics\Sprite2D\SpriteMesh2D.h" />
     <ClInclude Include="engine\Particle\Circle\CircleParticle.h" />
     <ClInclude Include="engine\Particle\Explosion\ExplosionParticle.h" />
     <ClInclude Include="engine\Particle\Fire\FireParticle.h" />

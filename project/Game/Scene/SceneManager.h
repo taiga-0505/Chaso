@@ -23,15 +23,12 @@ public:
 public:
   // フェードを使用するために初期化
   void Init(SceneContext &ctx) {
-    ID3D12Device *device = ctx.core->GetDevice();
-    auto &srvHeap = ctx.core->SRV();
-
     float width = float(ctx.app->width);
     float height = float(ctx.app->height);
 
     // Fadeコンポーネントを初期化
     fade_ = std::make_unique<Fade>();
-    fade_->Init(device, &srvHeap, width, height);
+    fade_->Init(ctx, width, height);
   }
 
   void Register(std::unique_ptr<Scene> scene) {
