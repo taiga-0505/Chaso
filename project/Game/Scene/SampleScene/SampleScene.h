@@ -37,11 +37,11 @@ private:
 
   // ===== 天球 =====
   int sphere = -1;
-  int txSphere_ = -1;
+  int tx_Sphere_ = -1;
   Transform *sphereT_ = nullptr;
 
   int ball = -1;
-  int txball = -1;
+  int tx_ball = -1;
   Transform *ballT_ = nullptr;
 
   // ===============

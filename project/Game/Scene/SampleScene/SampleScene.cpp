@@ -42,13 +42,13 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   tx_model = RC::LoadTex("Resources/uvChecker.png");
 
   // 天球
-  txSphere_ = RC::LoadTex("Resources/sky_sphere.png");
-  sphere = RC::GenerateSphereEx(txSphere_, 40.0f);
+  tx_Sphere_ = RC::LoadTex("Resources/sky_sphere.png");
+  sphere = RC::GenerateSphereEx(tx_Sphere_, 40.0f);
   sphereT_ = RC::GetSphereTransformPtr(sphere);
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
 
-  txball = RC::LoadTex("Resources/monsterBall.png");
-  ball = RC::GenerateSphereEx(txball, 1.0f, 16, 16, false);
+  tx_ball = RC::LoadTex("Resources/monsterBall.png");
+  ball = RC::GenerateSphereEx(tx_ball, 1.0f, 16, 16, false);
   ballT_ = RC::GetSphereTransformPtr(ball);
   RC::SetSphereColor(ball, {1.0f, 1.0f, 1.0f, 1.0f});
   ballT_->rotation.y = -1.6f;
