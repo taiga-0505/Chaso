@@ -54,7 +54,7 @@ private:
 private:
   ID3D12Device *device_ = nullptr;
 
-  // ★共通メッシュ（VB/IB）はここで共有
+  // 共通メッシュ（VB/IB）はここで共有
   std::shared_ptr<SpriteMesh2D> mesh_;
 
   float screenW_ = 0.0f;
