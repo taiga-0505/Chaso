@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CG2", "CG2.vcxproj", "{03451C46-F104-4216-8AF2-77F6D71551CF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA} = {CD815B9C-90B1-4125-ABA7-7246E7561FEA}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{2022CB0F-8BAF-F49E-0C48-8EF4C96EC109}"
 	ProjectSection(SolutionItems) = preProject
@@ -11,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DirectXTex", "externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj", "{371B9FA9-4C90-4AC6-A123-ACED756D6C77}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Imgui", "externals\Imgui\Imgui.vcxproj", "{CD815B9C-90B1-4125-ABA7-7246E7561FEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +36,12 @@ Global
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Development|x64.Build.0 = Development|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.ActiveCfg = Release|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.Build.0 = Release|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Debug|x64.ActiveCfg = Debug|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Debug|x64.Build.0 = Debug|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Development|x64.ActiveCfg = Development|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Development|x64.Build.0 = Development|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Release|x64.ActiveCfg = Release|x64
+		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

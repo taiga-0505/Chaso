@@ -78,15 +78,16 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib;imgui.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll" "$(TargetDir)dxcompiler.dll"
@@ -105,7 +106,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -113,7 +114,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib;imgui.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll" "$(TargetDir)dxcompiler.dll"
@@ -132,7 +134,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -140,7 +142,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);mfplat.lib;mfreadwrite.lib;mfuuid.lib;imgui.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll" "$(TargetDir)dxcompiler.dll"
