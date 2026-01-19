@@ -3,6 +3,7 @@
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "imgui/imgui.h"
+#include "Dx12/Dx12Core.h"
 
 void ParticleScene::OnEnter(SceneContext &ctx) {
   // =============================

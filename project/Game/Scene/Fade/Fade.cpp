@@ -4,37 +4,56 @@
 
 using namespace RC;
 
-void Fade::Init(ID3D12Device *device, DescriptorHeap *srvHeap, float width,
-                float height) {
+void Fade::Init(SceneContext &ctx, float width, float height) {
+  width_ = width;
+  height_ = height;
 
-  // fade
-  fadeSprite_ = std::make_unique<Sprite2D>();
-  fadeSprite_->Initialize(device, width, height);
+  // 既に作ってたら一旦破棄
+  Term();
 
-  tx_fade_ = RC::LoadTex("Resources/white1x1.png", true);
-  fadeSprite_->SetTexture(RC::GetSrv(tx_fade_));
+  // RenderCommon 管理の Sprite を使う（白1x1を黒に乗算してフェード）
+  fadeSpriteHandle_ = RC::LoadSprite("Resources/white1x1.png", ctx, true);
+  if (fadeSpriteHandle_ < 0) {
+    status_ = Status::None;
+    return;
+  }
 
-  fadeSprite_->SetSize(width, height);
-  fadeSprite_->T().translation = {0, 0, 0};
-  fadeSprite_->SetColor(Vector4(1, 1, 1, 1));
+  Transform t{};
+  t.scale = {width_, height_, 1.0f};
+  t.rotation = {0.0f, 0.0f, 0.0f};
+  t.translation = {0.0f, 0.0f, 0.0f};
+
+  RC::SetSpriteTransform(fadeSpriteHandle_, t);
+  RC::SetSpriteColor(fadeSpriteHandle_, Vector4(0, 0, 0, 0));
+}
+
+void Fade::Term() {
+  if (fadeSpriteHandle_ >= 0) {
+    RC::UnloadSprite(fadeSpriteHandle_);
+    fadeSpriteHandle_ = -1;
+  }
 }
 
 void Fade::Start(Status status, float duration, float alpha) {
   status_ = status;
   duration_ = duration;
   counter_ = 0.0f;
-  overlayAlpha_ = alpha; // アルファ値を保存
+  overlayAlpha_ = alpha;
+
+  if (fadeSpriteHandle_ < 0)
+    return;
 
   switch (status_) {
   case Status::FadeIn:
-    fadeSprite_->SetColor(Vector4(0, 0, 0, 1));
+    RC::SetSpriteColor(fadeSpriteHandle_, Vector4(0, 0, 0, 1));
     break;
   case Status::FadeOut:
-    fadeSprite_->SetColor(Vector4(0, 0, 0, 0));
+    RC::SetSpriteColor(fadeSpriteHandle_, Vector4(0, 0, 0, 0));
     break;
   case Status::kOverlay:
-    fadeSprite_->SetColor(
-        Vector4(0, 0, 0, overlayAlpha_)); // 保存したアルファ値を使用
+    RC::SetSpriteColor(fadeSpriteHandle_, Vector4(0, 0, 0, overlayAlpha_));
+    break;
+  default:
     break;
   }
 }
@@ -42,59 +61,60 @@ void Fade::Start(Status status, float duration, float alpha) {
 void Fade::Stop() { status_ = Status::None; }
 
 void Fade::Update() {
+  if (fadeSpriteHandle_ < 0)
+    return;
+
+  // duration_ == 0 対策（ゼロ割り防止）
+  const float dur = (duration_ > 0.0f) ? duration_ : 0.0001f;
+
   switch (status_) {
   case Status::None:
-    // 何もしない
     break;
+
   case Status::FadeIn:
-    // １フレーム分の秒数をカウントアップ
     counter_ += 1.0f / 60.0f;
-    // フェード継続時間に達したら打ち止め
-    if (counter_ >= duration_) {
-      counter_ = duration_;
-    }
-    // 0.0fから1.0fの間で、経過時間がフェード継続時間に近くほどアルファ値を大きくする
-    fadeSprite_->SetColor(
-        Vector4(0, 0, 0, std::clamp(1.0f - counter_ / duration_, 0.0f, 1.0f)));
+    if (counter_ >= dur)
+      counter_ = dur;
+
+    // 1 -> 0 に落ちていく（黒が薄くなる）
+    RC::SetSpriteColor(
+        fadeSpriteHandle_,
+        Vector4(0, 0, 0, std::clamp(1.0f - counter_ / dur, 0.0f, 1.0f)));
     break;
+
   case Status::FadeOut:
-    // １フレーム分の秒数をカウントアップ
     counter_ += 1.0f / 60.0f;
-    // フェード継続時間に達したら打ち止め
-    if (counter_ >= duration_) {
-      counter_ = duration_;
-    }
-    // 0.0fから1.0fの間で、経過時間がフェード継続時間に近くほどアルファ値を大きくする
-    fadeSprite_->SetColor(
-        Vector4(0, 0, 0, std::clamp(counter_ / duration_, 0.0f, 1.0f)));
+    if (counter_ >= dur)
+      counter_ = dur;
+
+    // 0 -> 1 に上がる（黒が濃くなる）
+    RC::SetSpriteColor(
+        fadeSpriteHandle_,
+        Vector4(0, 0, 0, std::clamp(counter_ / dur, 0.0f, 1.0f)));
     break;
+
   case Status::kOverlay:
-    // アルファ値を薄暗い状態に固定
-    fadeSprite_->SetColor(Vector4(0, 0, 0, overlayAlpha_));
+    RC::SetSpriteColor(fadeSpriteHandle_, Vector4(0, 0, 0, overlayAlpha_));
     break;
-  }
-  if (fadeSprite_) {
-    fadeSprite_->Update();
   }
 }
 
 void Fade::Draw(ID3D12GraphicsCommandList *cl) {
-  if (fadeSprite_) {
-    fadeSprite_->Draw(cl);
-  }
+  (void)cl; // 互換のため残してるだけ
+
+  if (fadeSpriteHandle_ < 0)
+    return;
+
+  // ※ PreDraw2D が呼ばれて gCL がセットされてる前提
+  RC::DrawSprite(fadeSpriteHandle_);
 }
 
 bool Fade::IsFinished() const {
-  // フェード状態による分岐
   switch (status_) {
   case Status::FadeIn:
   case Status::FadeOut:
-    if (counter_ >= duration_) {
-      return true;
-    } else {
-      return false;
-    }
+    return counter_ >= duration_;
+  default:
+    return true;
   }
-
-  return true;
 }

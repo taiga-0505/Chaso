@@ -159,6 +159,7 @@
     <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp" />
     <ClCompile Include="Game\Coin\Coin.cpp" />
     <ClCompile Include="Game\Goal\Goal.cpp" />
+    <ClCompile Include="engine\Graphics\Sprite2D\SpriteMesh2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -335,6 +336,7 @@
     <ClInclude Include="engine\Camera\CameraMath.h" />
     <ClInclude Include="Game\Coin\Coin.h" />
     <ClInclude Include="Game\Goal\Goal.h" />
+    <ClInclude Include="engine\Graphics\Sprite2D\SpriteMesh2D.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
