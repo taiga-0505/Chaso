@@ -8,14 +8,13 @@
 #include "function/function.h"
 #include "imgui/imgui.h"
 
-#include "SpriteMesh2D.h" // ★追加（SpriteVertex もここに移動）
+#include "SpriteMesh2D.h" 
 
 class Sprite2D {
 public:
   Sprite2D() = default;
   ~Sprite2D();
 
-  // ★mesh を受け取るように変更
   void Initialize(ID3D12Device *device,
                   const std::shared_ptr<SpriteMesh2D> &mesh, float screenWidth,
                   float screenHeight);
