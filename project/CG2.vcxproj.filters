@@ -98,7 +98,7 @@
     <ClCompile Include="engine\Dx12\PipelineManager.cpp">
       <Filter>engine\Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Common\RenderCommon.cpp">
+    <ClCompile Include="engine\Render\RenderCommon.cpp">
       <Filter>engine\Common</Filter>
     </ClCompile>
     <ClCompile Include="Game\Scene\ResultScene\ResultScene.cpp">
@@ -261,7 +261,7 @@
     <ClInclude Include="engine\RC.h">
       <Filter>engine\Common</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Common\RenderCommon.h">
+    <ClInclude Include="engine\Render\RenderCommon.h">
       <Filter>engine\Common</Filter>
     </ClInclude>
     <ClInclude Include="Game\Scene\ResultScene\ResultScene.h">
