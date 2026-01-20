@@ -25,7 +25,9 @@
     <FxCompile Include="Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Shader\Sprite</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Post\FogOverlay.hlsl" />
+    <FxCompile Include="Resources\Shader\Post\FogOverlay.hlsl">
+      <Filter>Shader\Post</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -596,6 +598,9 @@
     </Filter>
     <Filter Include="Shader\Sprite">
       <UniqueIdentifier>{3b16dbe2-dc17-4c8e-b06b-b86e2bf7a60b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader\Post">
+      <UniqueIdentifier>{ad87d34f-2f94-47a4-8e02-e9855ee3641d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
