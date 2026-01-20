@@ -237,6 +237,16 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     paramCount = 3;
     break;
 
+
+  case RootSignatureType::FogOverlay:
+    // 0: CBV b0 (PS) Fog parameters
+    params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[0].Descriptor.ShaderRegister = 0;
+
+    paramCount = 1;
+    break;
+
   case RootSignatureType::Particle:
     // 0: CBV b0 (PS) Material
     params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;

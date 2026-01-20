@@ -49,4 +49,6 @@ private:
   // ===============
 
   int sprite = -1;
+
+  float t = 0.0f;
 };

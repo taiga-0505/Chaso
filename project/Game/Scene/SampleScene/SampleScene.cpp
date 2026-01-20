@@ -99,6 +99,8 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   // 更新処理
   // ===========================================
 
+  t += 1.0f / 60.0f;
+
   camera_.Update();
 
   planeTransform_->rotation.y += 0.01f;
@@ -140,6 +142,15 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawCircle({400, 200}, 75.0f, {1, 1, 0, 1});
   RC::DrawLine({300, 300}, {500, 400}, {1, 0, 0, 1});
   RC::DrawTriangle({600, 100}, {700, 300}, {500, 300}, {0, 0, 1, 1});
+
+  RC::DrawFogOverlay(t,
+                     0.15f,                    // intensity
+                     4.0f,                     // scale
+                     3.5f,                     // speed
+                     RC::Vector2{0.08f, 0.0f}, // wind
+                     0.18f,                    // feather
+                     0.35f                     // bottomBias
+  );
 }
 
 void SampleScene::DrawImGui() {

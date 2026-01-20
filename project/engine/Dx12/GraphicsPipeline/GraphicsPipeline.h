@@ -22,6 +22,7 @@ enum class RootSignatureType {
   Object3D,
   Sprite,
   Particle,
+  FogOverlay,
 };
 
 struct GPipelineOptions {

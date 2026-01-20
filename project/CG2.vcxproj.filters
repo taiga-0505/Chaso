@@ -25,6 +25,7 @@
     <FxCompile Include="Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Shader\Sprite</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\Shader\Post\FogOverlay.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

@@ -24,7 +24,6 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
                                           const PipelineDesc &desc) {
   assert(!desc.vsPath.empty());
   assert(!desc.psPath.empty());
-  assert(!desc.inputLayout.empty());
 
   ShaderDesc vs{};
   vs.path = desc.vsPath.c_str();
@@ -107,7 +106,8 @@ bool PipelineManager::Rebuild(const std::string &key) {
   D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
                              PS.Blob()->GetBufferSize()};
 
-  it->second.pipeline->BuildEx(d.inputLayout.data(),
+  const D3D12_INPUT_ELEMENT_DESC* il = d.inputLayout.empty() ? nullptr : d.inputLayout.data();
+  it->second.pipeline->BuildEx(il,
                                static_cast<UINT>(d.inputLayout.size()), vsBC,
                                psBC, rtvFmt_, dsvFmt_, d.opt);
 
@@ -132,7 +132,8 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
   D3D12_SHADER_BYTECODE vsBC{vs->GetBufferPointer(), vs->GetBufferSize()};
   D3D12_SHADER_BYTECODE psBC{ps->GetBufferPointer(), ps->GetBufferSize()};
 
-  e.pipeline->BuildEx(e.desc.inputLayout.data(),
+  const D3D12_INPUT_ELEMENT_DESC* il = e.desc.inputLayout.empty() ? nullptr : e.desc.inputLayout.data();
+  e.pipeline->BuildEx(il,
                       static_cast<UINT>(e.desc.inputLayout.size()), vsBC, psBC,
                       rtvFmt_, dsvFmt_, e.desc.opt);
 
@@ -178,6 +179,9 @@ PipelineManager::MakeInputLayout(InputLayoutType type) {
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
+
+  case InputLayoutType::None:
+    return {};
   }
   return {};
 }
@@ -228,6 +232,10 @@ void PipelineManager::RegisterDefaultPipelines() {
   const std::wstring primPs =
       L"Resources/Shader/Primitive2D/Primitive2D.PS.hlsl";
 
+  // fullscreen fog overlay (cold mist)
+  const std::wstring fogFx = L"Resources/Shader/Post/FogOverlay.hlsl";
+
+
   auto regSet = [&](std::string_view prefix, const std::wstring &vs,
                     const std::wstring &ps, InputLayoutType layout,
                     RootSignatureType root, bool depth, bool depthWrite,
@@ -266,4 +274,34 @@ void PipelineManager::RegisterDefaultPipelines() {
   // 汎用2D：基本は画面オーバーレイ想定
   regSet("primitive2d", primVs, primPs, InputLayoutType::Sprite,
          RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_NONE);
+
+  // fog overlay：深度OFF、αブレンドON、InputLayout無し、Rootは FogOverlay
+  {
+    PipelineDesc d{};
+    d.vsPath = fogFx;
+    d.psPath = fogFx;
+    d.vsEntry = L"VS";
+    d.psEntry = L"PS";
+    d.inputLayout = MakeInputLayout(InputLayoutType::None);
+
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::FogOverlay;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModeNormal;
+    opt.cull = D3D12_CULL_MODE_NONE;
+    opt.fill = D3D12_FILL_MODE_SOLID;
+    d.opt = opt;
+
+#ifdef _DEBUG
+    d.optimize = false;
+    d.debugInfo = true;
+#else
+    d.optimize = true;
+    d.debugInfo = false;
+#endif
+
+    Create(MakeKey("fog", kBlendModeNormal), d);
+  }
 }

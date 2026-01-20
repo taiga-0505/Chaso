@@ -394,6 +394,27 @@ void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
                   float feather = 1.0f);
 
 // ===============================
+// 画面オーバーレイ（ポスト風）
+// ===============================
+
+/// <summary>
+/// 画面全体に白い霧（寒い雰囲気）をオーバーレイする
+/// </summary>
+/// <param name="timeSec">時間（秒）。ノイズを流すのに使用</param>
+/// <param name="intensity">濃さ（0..1）</param>
+/// <param name="scale">模様の大きさ（大きいほど細かい）</param>
+/// <param name="speed">流れる速度（秒あたり）</param>
+/// <param name="wind">流れる方向（UV空間）</param>
+/// <param name="feather">もやの柔らかさ（0..0.5 くらい）</param>
+/// <param name="bottomBias">下側を濃くする係数（0..1 くらい）</param>
+/// <remarks>
+/// - 3D/2D を描いた後、最後に呼ぶと "画面全体" にかかります。
+/// - UI（ImGui等）まで霧を被せたくない場合は、UI描画の前に呼んでください。
+/// </remarks>
+void DrawFogOverlay(float timeSec, float intensity, float scale, float speed,
+                    const Vector2 &wind, float feather, float bottomBias);
+
+// ===============================
 // 共通関数
 // ===============================
 
