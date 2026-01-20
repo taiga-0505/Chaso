@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;engine/Render;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -106,7 +106,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;engine/Render;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -134,7 +134,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>engine/;engine/Common;engine/Camera;engine/Dx12;engine/Graphics;externals/;Resources/Shader/;App/;Scene/;$(ProjectDir);Game/;Game/Scene/;engine/Particle;$(SolutionDir)Imgui;engine/Render;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
