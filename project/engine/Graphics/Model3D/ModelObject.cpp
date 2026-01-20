@@ -93,20 +93,29 @@ void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 }
 
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
-  if (!mesh_ || !mesh_->Ready() || !visible_)
+  // Backward compatible: draw with this object's own light CB.
+  if (!cbLight_.resource) {
     return;
+  }
+  Draw(cmdList, cbLight_.resource->GetGPUVirtualAddress());
+}
+
+void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
+                       D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
+  if (!mesh_ || !mesh_->Ready() || !visible_) {
+    return;
+  }
 
   const auto &vbv = mesh_->VBV();
   cmdList->IASetVertexBuffers(0, 1, &vbv);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  cmdList->SetGraphicsRootConstantBufferView(
-      0, cbMat_.resource->GetGPUVirtualAddress());
-  cmdList->SetGraphicsRootConstantBufferView(
-      1, cbWvp_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(0,
+                                             cbMat_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(1,
+                                             cbWvp_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  cmdList->SetGraphicsRootConstantBufferView(
-      3, cbLight_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
 
   cmdList->DrawInstanced(mesh_->VertexCount(), 1, 0, 0);
 }
@@ -132,21 +141,34 @@ void ModelObject::EnsureWvpBatchCapacity_(uint32_t count) {
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
-  if (!mesh_ || !mesh_->Ready() || instances.empty())
+  // Backward compatible: draw with this object's own light CB.
+  if (!cbLight_.resource) {
     return;
+  }
+  DrawBatch(cmdList, view, proj, instances, cbLight_.resource->GetGPUVirtualAddress());
+}
+
+void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
+                            const Matrix4x4 &view, const Matrix4x4 &proj,
+                            const std::vector<Transform> &instances,
+                            D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
+  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
+    return;
+  }
 
   const auto &vbv = mesh_->VBV();
   cmdList->IASetVertexBuffers(0, 1, &vbv);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  cmdList->SetGraphicsRootConstantBufferView(
-      0, cbMat_.resource->GetGPUVirtualAddress());
+
+  cmdList->SetGraphicsRootConstantBufferView(0,
+                                             cbMat_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  cmdList->SetGraphicsRootConstantBufferView(
-      3, cbLight_.resource->GetGPUVirtualAddress());
+
+  // Light CB is constant for the whole batch.
+  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
 
   const uint32_t oneSize = Align256(sizeof(TransformationMatrix));
-  EnsureWvpBatchCapacity_(cbWvpBatchHead_ +
-                          static_cast<uint32_t>(instances.size()));
+  EnsureWvpBatchCapacity_(cbWvpBatchHead_ + static_cast<uint32_t>(instances.size()));
   const uint32_t base = cbWvpBatchHead_;
 
   for (uint32_t i = 0; i < instances.size(); ++i) {
@@ -255,7 +277,7 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
     }
     ImGui::Dummy(ImVec2(0, 6));
 
-    if (cbMat_.mapped->lightingMode == 3) {
+    if (cbMat_.mapped->lightingMode == 3 || cbMat_.mapped->lightingMode == 4) {
       ImGui::DragFloat((std::string("Shininess##") + label).c_str(),
                        &cbMat_.mapped->shininess, 1.0f, 1.0f, 256.0f, "%.0f");
     }

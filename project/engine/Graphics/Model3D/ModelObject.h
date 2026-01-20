@@ -24,7 +24,7 @@ public:
     constexpr LightingConfig() = default;
     constexpr LightingConfig(LightingMode m) : mode(m) {}
     constexpr LightingConfig(int m)
-        : mode(static_cast<LightingMode>(m < 0 ? 0 : (m > 3 ? 3 : m))) {}
+        : mode(static_cast<LightingMode>(m < 0 ? 0 : (m > 4 ? 4 : m))) {}
 
   };
 
@@ -83,9 +83,16 @@ public:
 
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
+  void Draw(ID3D12GraphicsCommandList *cmdList, D3D12_GPU_VIRTUAL_ADDRESS lightCB);
+
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances);
+
+  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
+                 const RC::Matrix4x4 &proj,
+                 const std::vector<Transform> &instances,
+                 D3D12_GPU_VIRTUAL_ADDRESS lightCB);
 
   void DrawImGui(const char *name, bool showLightingUi);
 

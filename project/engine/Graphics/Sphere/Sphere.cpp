@@ -70,8 +70,23 @@ void Sphere::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 }
 
 void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
-  if (!vb_.resource || !ib_.resource || !visible_)
+  // Backward compatible: draw with this sphere's own light CB.
+  if (!cbLight_.resource) {
     return;
+  }
+  Draw(cmdList, cbLight_.resource->GetGPUVirtualAddress());
+}
+
+void Sphere::Draw(ID3D12GraphicsCommandList *cmdList,
+                  D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
+  if (!vb_.resource || !ib_.resource || !visible_) {
+    return;
+  }
+
+  // Safety: if caller passes 0, fall back to this sphere's CB.
+  if (lightCB == 0 && cbLight_.resource) {
+    lightCB = cbLight_.resource->GetGPUVirtualAddress();
+  }
 
   cmdList->IASetVertexBuffers(0, 1, &vb_.view);
   cmdList->IASetIndexBuffer(&ib_.view);
@@ -83,11 +98,11 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
   cmdList->SetGraphicsRootConstantBufferView(
       1, cbWvp_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  cmdList->SetGraphicsRootConstantBufferView(
-      3, cbLight_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
 
   cmdList->DrawIndexedInstanced(ib_.indexCount, 1, 0, 0, 0);
 }
+
 
 void Sphere::DrawImGui(const char *name) {
   std::string label = name ? std::string(name) : std::string("Sphere");

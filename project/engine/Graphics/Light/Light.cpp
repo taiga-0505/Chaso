@@ -74,7 +74,7 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::Dummy(ImVec2(0, 6));
 
-  if (lightingMode_ == Phong) { 
+  if (lightingMode_ == Phong || lightingMode_ == BlinPhong) { 
     ImGui::DragFloat((std::string("光沢度(shininess)##") + label).c_str(),
                      &shininess_, 0.5f, 1.0f, 256.0f, "%.1f");
   }

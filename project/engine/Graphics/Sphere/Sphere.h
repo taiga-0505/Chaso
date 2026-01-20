@@ -21,6 +21,10 @@ public:
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
+  // 描画（ライトCBを外から指定：A案のため）
+  void Draw(ID3D12GraphicsCommandList *cmdList,
+            D3D12_GPU_VIRTUAL_ADDRESS lightCB);
+
   void DrawImGui(const char *name = nullptr);
 
   // 外からテクスチャSRV(GPUハンドル)をセット

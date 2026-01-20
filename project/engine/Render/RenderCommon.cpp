@@ -63,6 +63,11 @@ struct SphereSlot {
 
 struct LightSlot {
   RC::Light light;
+
+  // Upload CB for this light (b1).
+  ID3D12Resource *cb = nullptr;
+  DirectionalLight *mapped = nullptr;
+
   bool inUse = false;
 };
 
@@ -226,6 +231,45 @@ bool IsValidLight_(int h) {
   return (h >= 0 && h < static_cast<int>(gLights.size()) && gLights[h].inUse);
 }
 
+// ---------------------------------------------------------------------------
+// LightSlot helpers (A-plan base)
+// ---------------------------------------------------------------------------
+static void ReleaseLightSlot_(LightSlot &s) {
+  if (s.cb) {
+    if (s.mapped) {
+      s.cb->Unmap(0, nullptr);
+      s.mapped = nullptr;
+    }
+    s.cb->Release();
+    s.cb = nullptr;
+  }
+}
+
+static void EnsureLightSlotCB_(LightSlot &s) {
+  if (s.cb || !gDevice) {
+    return;
+  }
+  s.cb = CreateBufferResource(gDevice, sizeof(DirectionalLight));
+  s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
+  if (s.mapped) {
+    *s.mapped = s.light.Data();
+  }
+}
+
+static void SyncLightSlotCB_(LightSlot &s) {
+  if (s.mapped) {
+    *s.mapped = s.light.Data();
+  }
+}
+
+static LightSlot *GetActiveLightSlot_() {
+  if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
+    return &gLights[gActiveLightHandle];
+  }
+  return nullptr;
+}
+
+
 // Sprite 共通クアッド（全スプライトで共有）
 static std::shared_ptr<SpriteMesh2D> gSpriteQuad;
 
@@ -375,6 +419,10 @@ void Term() {
   gSprites.clear();
   gSpriteQuad.reset();
   gSpheres.clear();
+
+  for (auto &l : gLights) {
+    ReleaseLightSlot_(l);
+  }
   gLights.clear();
 
   gActiveLightHandle = -1;
@@ -441,15 +489,23 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 // ----------------------------------------------------------------------------
 
 int CreateLight() {
-  if (!gInitialized) {
+  if (!gInitialized || !gDevice) {
     return -1;
   }
 
   const int h = AllocLightSlot_();
-  gLights[h].inUse = true;
-  gLights[h].light = Light{}; // 既定値で初期化
+  auto &slot = gLights[h];
 
-  // まだアクティブが無いなら、最初のライトを自動でアクティブにする
+  // Reused slot may still have old GPU resources if something went wrong.
+  ReleaseLightSlot_(slot);
+
+  slot.inUse = true;
+  slot.light = Light{}; // defaults
+
+  EnsureLightSlotCB_(slot);
+  SyncLightSlotCB_(slot);
+
+  // Auto-activate first light.
   if (gActiveLightHandle < 0) {
     gActiveLightHandle = h;
   }
@@ -462,16 +518,21 @@ void DestroyLight(int lightHandle) {
     return;
   }
 
-  gLights[lightHandle].inUse = false;
+  auto &slot = gLights[lightHandle];
+  ReleaseLightSlot_(slot);
+  slot.inUse = false;
 
-  // アクティブが消えたら無効化（必要なら外側で別ライトを SetActiveLight
-  // してね）
   if (gActiveLightHandle == lightHandle) {
     gActiveLightHandle = -1;
   }
 }
 
 void SetActiveLight(int lightHandle) {
+  // -1 disables active light.
+  if (lightHandle < 0) {
+    gActiveLightHandle = -1;
+    return;
+  }
   if (!IsValidLight_(lightHandle)) {
     return;
   }
@@ -491,7 +552,13 @@ void DrawImGuiLight(int lightHandle, const char *name) {
   if (!IsValidLight_(lightHandle)) {
     return;
   }
-  gLights[lightHandle].light.DrawImGui(name);
+
+  auto &slot = gLights[lightHandle];
+  slot.light.DrawImGui(name);
+
+  // Reflect UI edits to the GPU buffer.
+  EnsureLightSlotCB_(slot);
+  SyncLightSlotCB_(slot);
 }
 
 // ----------------------------------------------------------------------------
@@ -549,51 +616,9 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   cl->SetPipelineState(pso->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  // --------------------------------------------------------------------------
-  // アクティブライトの反映
-  // --------------------------------------------------------------------------
-  // RenderCommon 側で "今のライト" を決めて、各オブジェクトにコピーする。
-  // - モデル単体にライトを持たせたい場合は、ここをやめて各モデル側に任せる
-  // --------------------------------------------------------------------------
-  if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
-    const Light &srcLight = gLights[gActiveLightHandle].light;
-    const DirectionalLight &srcDir = srcLight.Data();
-    const int mode = srcLight.GetLightingMode();
-    const float shininess = srcLight.GetShininess();
-
-    // Model
-    for (auto &slot : gModels) {
-      if (!slot.inUse || !slot.ptr) {
-        continue;
-      }
-
-      if (auto *dst = slot.ptr->Light()) {
-        *dst = srcDir;
-      }
-      if (auto *mat = slot.ptr->Mat()) {
-        mat->lightingMode = mode;
-        mat->shininess = shininess;
-      }
-    }
-
-    // Sphere（外向きメッシュだけ）
-    for (auto &slot : gSpheres) {
-      if (!slot.inUse || !slot.ptr) {
-        continue;
-      }
-      if (slot.ptr->GetInward()) {
-        continue; // 天球（内向き）にはライトを当てない想定
-      }
-
-      if (auto *dst = slot.ptr->Light()) {
-        *dst = srcDir;
-      }
-      if (auto *mat = slot.ptr->Mat()) {
-        mat->lightingMode = mode;
-        mat->shininess = shininess;
-      }
-    }
-  }
+  // NOTE:
+  // Active light is applied at draw time (DrawModel/DrawSphere) so we can
+  // switch lights per draw without copying into every object each frame.
 
   // バッチ描画を使うモデルは "どこまで描いたか" のカーソルを毎フレームリセット
   for (auto &slot : gModels) {
@@ -642,9 +667,6 @@ void DrawModel(int modelHandle, int texHandle) {
     return;
   }
 
-  // 注意:
-  // - Draw のたびに PSO をセットしている。
-  //   (DrawSphere/DrawSprite/Primitive が途中で別PSOに変えても安全にするため)
   if (!BindPipeline_("object3d")) {
     return;
   }
@@ -653,14 +675,31 @@ void DrawModel(int modelHandle, int texHandle) {
 
   auto &m = gModels[modelHandle].ptr;
 
-  // 明示テクスチャが指定されていれば差し替え（-1 なら .mtl のまま）
+  // Texture override (-1 => keep .mtl)
   if (texHandle >= 0) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
   } else {
     m->ResetTextureToMtl();
   }
 
-  // カメラ反映 → 描画
+  // Apply active light at draw time (A-plan base)
+  if (auto *active = GetActiveLightSlot_()) {
+    EnsureLightSlotCB_(*active);
+    SyncLightSlotCB_(*active);
+
+    if (auto *mat = m->Mat()) {
+      mat->lightingMode = active->light.GetLightingMode();
+      mat->shininess = active->light.GetShininess();
+    }
+
+    m->Update(gView, gProj);
+    if (active->cb) {
+      m->Draw(gCL, active->cb->GetGPUVirtualAddress());
+      return;
+    }
+  }
+
+  // Fallback: use model's own light CB
   m->Update(gView, gProj);
   m->Draw(gCL);
 }
@@ -668,10 +707,12 @@ void DrawModel(int modelHandle, int texHandle) {
 void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
 
 void DrawModelNoCull(int modelHandle, int texHandle) {
-  if (!gInitialized || !gCL)
+  if (!gInitialized || !gCL) {
     return;
-  if (!IsValidModel_(modelHandle))
+  }
+  if (!IsValidModel_(modelHandle)) {
     return;
+  }
 
   if (!BindPipeline_("object3d_nocull")) {
     return;
@@ -685,6 +726,22 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
   } else {
     m->ResetTextureToMtl();
+  }
+
+  if (auto *active = GetActiveLightSlot_()) {
+    EnsureLightSlotCB_(*active);
+    SyncLightSlotCB_(*active);
+
+    if (auto *mat = m->Mat()) {
+      mat->lightingMode = active->light.GetLightingMode();
+      mat->shininess = active->light.GetShininess();
+    }
+
+    m->Update(gView, gProj);
+    if (active->cb) {
+      m->Draw(gCL, active->cb->GetGPUVirtualAddress());
+      return;
+    }
   }
 
   m->Update(gView, gProj);
@@ -717,8 +774,22 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     m->ResetTextureToMtl();
   }
 
-  // instances はワールド変換の配列（Model 側が StructuredBuffer
-  // などで描く想定）
+  if (auto *active = GetActiveLightSlot_()) {
+    EnsureLightSlotCB_(*active);
+    SyncLightSlotCB_(*active);
+
+    if (auto *mat = m->Mat()) {
+      mat->lightingMode = active->light.GetLightingMode();
+      mat->shininess = active->light.GetShininess();
+    }
+
+    if (active->cb) {
+      m->DrawBatch(gCL, gView, gProj, instances, active->cb->GetGPUVirtualAddress());
+      return;
+    }
+  }
+
+  // Fallback
   m->DrawBatch(gCL, gView, gProj, instances);
 }
 
@@ -1083,7 +1154,7 @@ void DrawSphere(int sphereHandle, int texHandle) {
     return;
   }
 
-  // Sphere は object3d パイプラインで描く
+  // Sphere is drawn with the object3d pipeline.
   if (!BindPipeline_("object3d")) {
     return;
   }
@@ -1092,21 +1163,39 @@ void DrawSphere(int sphereHandle, int texHandle) {
 
   auto &s = gSpheres[sphereHandle].ptr;
 
-  // テクスチャ差し替え（明示指定 > 生成時指定）
-  const int useTex =
-      (texHandle >= 0) ? texHandle : gSpheres[sphereHandle].defaultTexHandle;
-
+  // Texture override (explicit > default)
+  const int useTex = (texHandle >= 0) ? texHandle
+                                      : gSpheres[sphereHandle].defaultTexHandle;
   if (useTex >= 0) {
     s->SetTexture(gTexMan.GetSrv(useTex));
   }
 
-  // NOTE:
-  // useTex < 0 の場合、Sphere 側が SRV を参照する RootParam
-  // が無効になる可能性がある。 "天球 = 必ず有効テクスチャ"
-  // 運用にしておくのが安全。
+  // Apply active light at draw time (A-plan): bind the active light's CB per draw.
+  D3D12_GPU_VIRTUAL_ADDRESS lightAddr = 0;
+  if (auto *active = GetActiveLightSlot_()) {
+    EnsureLightSlotCB_(*active);
+    SyncLightSlotCB_(*active);
+
+    // Keep old behavior: inward spheres are usually unlit (sky dome).
+    if (!s->GetInward()) {
+      if (auto *mat = s->Mat()) {
+        mat->lightingMode = active->light.GetLightingMode();
+        mat->shininess = active->light.GetShininess();
+      }
+    }
+
+    if (active->cb) {
+      lightAddr = active->cb->GetGPUVirtualAddress();
+    }
+  }
 
   s->Update(gView, gProj);
-  s->Draw(gCL);
+  if (lightAddr != 0) {
+    s->Draw(gCL, lightAddr);
+  } else {
+    // Fallback: use sphere's own light CB
+    s->Draw(gCL);
+  }
 }
 
 void DrawSphereImGui(int sphereHandle, const char *name) {
