@@ -62,9 +62,16 @@ struct MaterialData {
   std::string textureFilePath; // テクスチャファイルのパス
 };
 
+struct Node {
+  RC::Matrix4x4 localMatrix;  // ローカル変換行列
+  std::string name;           // ノードの名前
+  std::vector<Node> children; // 子ノードの配列
+};
+
 struct ModelData {
   std::vector<VertexData> vertices; // 頂点データの配列
   MaterialData material;            // マテリアルデータ
+  Node rootNode;
 };
 
 struct Material {
@@ -106,7 +113,7 @@ enum LightingMode {
   None = 0,        // ライティング無し
   Lambert = 1,     // ランバート
   HalfLambert = 2, // ハーフランバート
-  Phong = 3,        // フォン
+  Phong = 3,       // フォン
   BlinPhong = 4    // ブリンフォン
 };
 
