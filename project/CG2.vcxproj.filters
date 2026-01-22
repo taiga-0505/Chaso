@@ -205,6 +205,15 @@
     <ClCompile Include="engine\Dx12\ShaderCompiler\ShaderCompiler.cpp">
       <Filter>engine\ShaderCompiler</Filter>
     </ClCompile>
+    <ClCompile Include="engine\Render\Light\LightManager.cpp">
+      <Filter>engine\Render\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Sprite2D\SpriteManager.cpp">
+      <Filter>engine\Render\Sprite</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Model3D\ModelManager.cpp">
+      <Filter>engine\Render\Model</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -420,6 +429,15 @@
     <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h">
       <Filter>engine\ShaderCompiler</Filter>
     </ClInclude>
+    <ClInclude Include="engine\Render\Light\LightManager.h">
+      <Filter>engine\Render\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Sprite2D\SpriteManager.h">
+      <Filter>engine\Render\Sprite</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Model3D\ModelManager.h">
+      <Filter>engine\Render\Model</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -601,6 +619,15 @@
     </Filter>
     <Filter Include="Shader\Post">
       <UniqueIdentifier>{ad87d34f-2f94-47a4-8e02-e9855ee3641d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Light">
+      <UniqueIdentifier>{df656ffd-f60b-4e79-a60b-409b3dc8d9fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Sprite">
+      <UniqueIdentifier>{d1956158-b982-4849-8fd1-d10d07687831}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Model">
+      <UniqueIdentifier>{4259614c-e470-4778-b3bc-7464c4859e93}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

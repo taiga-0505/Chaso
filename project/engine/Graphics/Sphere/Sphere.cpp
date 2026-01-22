@@ -70,23 +70,8 @@ void Sphere::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 }
 
 void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
-  // Backward compatible: draw with this sphere's own light CB.
-  if (!cbLight_.resource) {
+  if (!vb_.resource || !ib_.resource || !visible_)
     return;
-  }
-  Draw(cmdList, cbLight_.resource->GetGPUVirtualAddress());
-}
-
-void Sphere::Draw(ID3D12GraphicsCommandList *cmdList,
-                  D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
-  if (!vb_.resource || !ib_.resource || !visible_) {
-    return;
-  }
-
-  // Safety: if caller passes 0, fall back to this sphere's CB.
-  if (lightCB == 0 && cbLight_.resource) {
-    lightCB = cbLight_.resource->GetGPUVirtualAddress();
-  }
 
   cmdList->IASetVertexBuffers(0, 1, &vb_.view);
   cmdList->IASetIndexBuffer(&ib_.view);
@@ -98,11 +83,16 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList,
   cmdList->SetGraphicsRootConstantBufferView(
       1, cbWvp_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
+
+  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
+      (externalLightCBAddress_ != 0)
+          ? externalLightCBAddress_
+          : cbLight_.resource->GetGPUVirtualAddress();
+  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
 
   cmdList->DrawIndexedInstanced(ib_.indexCount, 1, 0, 0, 0);
 }
-
 
 void Sphere::DrawImGui(const char *name) {
   std::string label = name ? std::string(name) : std::string("Sphere");
@@ -159,36 +149,6 @@ void Sphere::DrawImGui(const char *name) {
     ImGui::TextDisabled("Material CB not ready.");
   }
   ImGui::Dummy(ImVec2(0, 6));
-  //// ---- Lighting ----
-  //ImGui::TextUnformatted("Lighting");
-  //if (cbMat_.mapped && cbLight_.mapped) {
-  //  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
-  //  int mode = cbMat_.mapped->lightingMode;
-  //  if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
-  //                   IM_ARRAYSIZE(kModes))) {
-  //    cbMat_.mapped->lightingMode = mode;
-  //  }
-  //  ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
-  //                    &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
-  //  bool dirChanged = ImGui::DragFloat3(
-  //      (std::string("光方向(x,y,z)##") + label).c_str(),
-  //      &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
-  //  if (dirChanged) {
-  //    Vector3 d = cbLight_.mapped->direction;
-  //    float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
-  //    if (len > 1e-6f) {
-  //      d.x /= len;
-  //      d.y /= len;
-  //      d.z /= len;
-  //      cbLight_.mapped->direction = d;
-  //    }
-  //  }
-  //  ImGui::DragFloat((std::string("強さ##") + label).c_str(),
-  //                   &cbLight_.mapped->intensity, 0.01f, 0.0f, 16.0f, "%.2f");
-
-  //} else {
-  //  ImGui::TextDisabled("Light / Material CB not ready.");
-  //}
 }
 
 void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
@@ -233,9 +193,8 @@ void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
     }
   }
 
-  // 内向き指定なら「法線反転」＋「全トライアングルの巻き順反転」
+  // 内向き指定なら「法線反転」
   if (inward) {
-    // 法線を内向きに
     for (auto &v : vertices_) {
       v.normal.x = -v.normal.x;
       v.normal.y = -v.normal.y;
@@ -246,7 +205,7 @@ void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
   // インデックス
   UINT ringVerts = sliceCount + 1;
 
-  // 上極ファン（i と i+1 を入れ替え）
+  // 上極ファン
   for (UINT i = 1; i <= sliceCount; ++i) {
     indices_.push_back(0);
     indices_.push_back(i + 1);

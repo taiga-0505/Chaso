@@ -51,4 +51,7 @@ private:
   int sprite = -1;
 
   float t = 0.0f;
+
+  RC::Vector4 fogColor_ = {0.85f, 0.92f, 1.00f, 1.0f};
+  bool isFogEnabled_ = true;
 };

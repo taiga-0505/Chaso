@@ -42,7 +42,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   tx_model = RC::LoadTex("Resources/uvChecker.png");
 
   // 天球
-  tx_Sphere_ = RC::LoadTex("Resources/sky_sphere.png");
+  tx_Sphere_ = RC::LoadTex("Resources/snow.png");
   sphere = RC::GenerateSphereEx(tx_Sphere_, 40.0f);
   sphereT_ = RC::GetSphereTransformPtr(sphere);
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
@@ -136,21 +136,24 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // ===========================================
   RC::PreDraw2D(ctx, cl);
 
-  RC::DrawSprite(sprite);
+  // RC::DrawSprite(sprite);
 
-  RC::DrawBox({50, 50}, {250, 180}, {0, 1, 0, 1}, kFill);
-  RC::DrawCircle({400, 200}, 75.0f, {1, 1, 0, 1});
-  RC::DrawLine({300, 300}, {500, 400}, {1, 0, 0, 1});
-  RC::DrawTriangle({600, 100}, {700, 300}, {500, 300}, {0, 0, 1, 1});
+  // RC::DrawBox({50, 50}, {250, 180}, {0, 1, 0, 1}, kFill);
+  // RC::DrawCircle({400, 200}, 75.0f, {1, 1, 0, 1});
+  // RC::DrawLine({300, 300}, {500, 400}, {1, 0, 0, 1});
+  // RC::DrawTriangle({600, 100}, {700, 300}, {500, 300}, {0, 0, 1, 1});
 
-  RC::DrawFogOverlay(t,
-                     0.15f,                    // intensity
-                     4.0f,                     // scale
-                     3.5f,                     // speed
-                     RC::Vector2{0.08f, 0.0f}, // wind
-                     0.18f,                    // feather
-                     0.35f                     // bottomBias
-  );
+  RC::SetFogOverlayColor(fogColor_); // ちょい青
+  if (isFogEnabled_) {
+    RC::DrawFogOverlay(t,
+                       0.15f,                    // intensity
+                       4.0f,                     // scale
+                       3.5f,                     // speed
+                       RC::Vector2{0.08f, 0.0f}, // wind
+                       0.18f,                    // feather
+                       0.35f                     // bottomBias
+    );
+  }
 }
 
 void SampleScene::DrawImGui() {
@@ -193,6 +196,21 @@ void SampleScene::DrawImGui() {
     if (ImGui::BeginTabItem("SoundTab")) {
       ImGui::EndTabItem();
     }
+
+    // -------------------
+    // POSTEffectTab
+    // -------------------
+    if (ImGui::BeginTabItem("Post")) {
+
+      // -------------------
+      // Fog
+      // -------------------
+      ImGui::Checkbox("isFogEnabled", &isFogEnabled_);
+      ImGui::ColorEdit4("fogColor", &fogColor_.x);
+
+      ImGui::EndTabItem();
+    }
+
     ImGui::EndTabBar();
   }
 

@@ -113,8 +113,6 @@ enum LightingMode {
   None = 0,        // ライティング無し
   Lambert = 1,     // ランバート
   HalfLambert = 2, // ハーフランバート
-  Phong = 3,       // フォン
-  BlinPhong = 4    // ブリンフォン
 };
 
 // 2Dプリミティブ用: 塗りつぶし/ワイヤー

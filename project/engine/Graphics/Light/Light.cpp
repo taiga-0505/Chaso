@@ -42,8 +42,14 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::TextUnformatted("Lighting");
 
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phong", "Blinn-phong"};
+  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
+
   int mode = lightingMode_;
+  if (mode < 0)
+    mode = 0;
+  if (mode > 2)
+    mode = 2;
+
   if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
                    IM_ARRAYSIZE(kModes))) {
     lightingMode_ = mode;
@@ -74,9 +80,11 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::Dummy(ImVec2(0, 6));
 
-  if (lightingMode_ == Phong || lightingMode_ == BlinPhong) { 
+  if (lightingMode_ != None) {
     ImGui::DragFloat((std::string("光沢度(shininess)##") + label).c_str(),
-                     &shininess_, 0.5f, 1.0f, 256.0f, "%.1f");
+                     &shininess_, 0.5f, 0.0f, 256.0f, "%.1f");
+    ImGui::SameLine();
+    ImGui::TextDisabled("(0で鏡面なし)");
   }
 }
 

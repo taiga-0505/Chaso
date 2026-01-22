@@ -61,7 +61,10 @@ void DestroyLight(int lightHandle);
 /// <summary>
 /// 3D描画で使用する「アクティブライト」を切り替える
 /// </summary>
-/// <param name="lightHandle">ライトハンドル</param>
+/// <param name="lightHandle">
+/// ライトハンドル。-1 の場合は「明示的なアクティブ無し」になり、
+/// 描画時は共通のデフォルトライト（default slot）を使用します。
+/// </param>
 void SetActiveLight(int lightHandle);
 
 /// <summary>
@@ -413,6 +416,12 @@ void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
 /// </remarks>
 void DrawFogOverlay(float timeSec, float intensity, float scale, float speed,
                     const Vector2 &wind, float feather, float bottomBias);
+
+/// <summary>
+/// FogOverlay の色（霧の色味）を設定する
+/// </summary>
+/// <param name="color">RGBA(0..1)。rgb=色、a=追加の濃さ倍率(基本は1)</param>
+void SetFogOverlayColor(const Vector4 &color);
 
 // ===============================
 // 共通関数

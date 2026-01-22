@@ -93,29 +93,25 @@ void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 }
 
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
-  // Backward compatible: draw with this object's own light CB.
-  if (!cbLight_.resource) {
+  if (!mesh_ || !mesh_->Ready() || !visible_)
     return;
-  }
-  Draw(cmdList, cbLight_.resource->GetGPUVirtualAddress());
-}
-
-void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
-                       D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
-  if (!mesh_ || !mesh_->Ready() || !visible_) {
-    return;
-  }
 
   const auto &vbv = mesh_->VBV();
   cmdList->IASetVertexBuffers(0, 1, &vbv);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-  cmdList->SetGraphicsRootConstantBufferView(0,
-                                             cbMat_.resource->GetGPUVirtualAddress());
-  cmdList->SetGraphicsRootConstantBufferView(1,
-                                             cbWvp_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(
+      0, cbMat_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(
+      1, cbWvp_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
+
+  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
+      (externalLightCBAddress_ != 0)
+          ? externalLightCBAddress_
+          : cbLight_.resource->GetGPUVirtualAddress();
+  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
 
   cmdList->DrawInstanced(mesh_->VertexCount(), 1, 0, 0);
 }
@@ -141,34 +137,26 @@ void ModelObject::EnsureWvpBatchCapacity_(uint32_t count) {
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
-  // Backward compatible: draw with this object's own light CB.
-  if (!cbLight_.resource) {
+  if (!mesh_ || !mesh_->Ready() || instances.empty())
     return;
-  }
-  DrawBatch(cmdList, view, proj, instances, cbLight_.resource->GetGPUVirtualAddress());
-}
-
-void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
-                            const Matrix4x4 &view, const Matrix4x4 &proj,
-                            const std::vector<Transform> &instances,
-                            D3D12_GPU_VIRTUAL_ADDRESS lightCB) {
-  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
-    return;
-  }
 
   const auto &vbv = mesh_->VBV();
   cmdList->IASetVertexBuffers(0, 1, &vbv);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-  cmdList->SetGraphicsRootConstantBufferView(0,
-                                             cbMat_.resource->GetGPUVirtualAddress());
+  cmdList->SetGraphicsRootConstantBufferView(
+      0, cbMat_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
 
-  // Light CB is constant for the whole batch.
-  cmdList->SetGraphicsRootConstantBufferView(3, lightCB);
+  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
+      (externalLightCBAddress_ != 0)
+          ? externalLightCBAddress_
+          : cbLight_.resource->GetGPUVirtualAddress();
+  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
 
   const uint32_t oneSize = Align256(sizeof(TransformationMatrix));
-  EnsureWvpBatchCapacity_(cbWvpBatchHead_ + static_cast<uint32_t>(instances.size()));
+  EnsureWvpBatchCapacity_(cbWvpBatchHead_ +
+                          static_cast<uint32_t>(instances.size()));
   const uint32_t base = cbWvpBatchHead_;
 
   for (uint32_t i = 0; i < instances.size(); ++i) {
@@ -238,7 +226,9 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
 
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert", "Phong", "Blinn-Phong"};
+  // PS 側は Lambert / HalfLambert + Blinn-Phong 固定運用。
+  // モードは 0..2 のみ使う。
+  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
   int mode = cbMat_.mapped->lightingMode;
   if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
                    IM_ARRAYSIZE(kModes))) {
@@ -277,9 +267,11 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
     }
     ImGui::Dummy(ImVec2(0, 6));
 
-    if (cbMat_.mapped->lightingMode == 3 || cbMat_.mapped->lightingMode == 4) {
+    if (cbMat_.mapped->lightingMode != None) {
       ImGui::DragFloat((std::string("Shininess##") + label).c_str(),
-                       &cbMat_.mapped->shininess, 1.0f, 1.0f, 256.0f, "%.0f");
+                       &cbMat_.mapped->shininess, 0.5f, 0.0f, 256.0f, "%.1f");
+      ImGui::SameLine();
+      ImGui::TextDisabled("(0で鏡面なし)");
     }
   }
 

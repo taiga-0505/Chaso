@@ -10,6 +10,8 @@ cbuffer FogCB : register(b0)
     float2 gWind; // 例: (0.05, 0.02)
     float gFeather; // 霧の柔らかさ 例: 0.2
     float gBottomBias; // 下側濃くする 例: 0.4
+    
+    float4 gColor;
 };
 
 struct VSOut
@@ -88,9 +90,8 @@ float4 PS(VSOut i) : SV_TARGET
     float bottom = smoothstep(0.0, 1.0, uv.y); // 上が1
     float bottomFactor = lerp(1.0 + gBottomBias, 1.0, bottom);
     alpha *= bottomFactor;
-
-    alpha = saturate(alpha * gIntensity);
-
-    // 白霧：出力は白＋alpha（ブレンドで合成する想定）
-    return float4(1.0, 1.0, 1.0, alpha);
+    
+    alpha = saturate(alpha * gIntensity * gColor.a);
+    
+    return float4(gColor.rgb, alpha);
 }

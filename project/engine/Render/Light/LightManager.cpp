@@ -1,0 +1,213 @@
+#include "Light/LightManager.h"
+
+#include "Dx12/Dx12Core.h" // CreateBufferResource
+#include "function/function.h"
+
+namespace RC {
+
+void LightManager::Init(ID3D12Device *device) {
+  // 二重Initにも耐える
+  Term();
+
+  device_ = device;
+  initialized_ = (device_ != nullptr);
+
+  slots_.clear();
+  slots_.shrink_to_fit();
+
+  if (!initialized_) {
+    return;
+  }
+
+  // slot[0] は「デフォルトライト」予約
+  slots_.emplace_back();
+  slots_[0].inUse = true;
+  slots_[0].light = Light{}; // defaults
+
+  EnsureCB_(slots_[0]);
+  SyncCB_(slots_[0]);
+
+  activeHandle_ = -1; // 明示的なアクティブ無し
+}
+
+void LightManager::Term() {
+  for (auto &s : slots_) {
+    ReleaseSlot_(s);
+    s.inUse = false;
+  }
+  slots_.clear();
+
+  device_ = nullptr;
+  activeHandle_ = -1;
+  initialized_ = false;
+}
+
+int LightManager::AllocSlot_() {
+  // 0 はデフォルトなので 1 から探す
+  for (int i = 1; i < static_cast<int>(slots_.size()); ++i) {
+    if (!slots_[i].inUse) {
+      return i;
+    }
+  }
+  slots_.emplace_back();
+  return static_cast<int>(slots_.size()) - 1;
+}
+
+bool LightManager::IsValid_(int handle) const {
+  return (initialized_ && handle >= 0 && handle < static_cast<int>(slots_.size()) &&
+          slots_[handle].inUse);
+}
+
+int LightManager::ResolveActiveHandle_() const {
+  if (!initialized_) {
+    return -1;
+  }
+  if (activeHandle_ >= 0 && IsValid_(activeHandle_)) {
+    return activeHandle_;
+  }
+  // 未設定はデフォルト(0)
+  return 0;
+}
+
+int LightManager::Create() {
+  if (!initialized_ || !device_) {
+    return -1;
+  }
+
+  const int h = AllocSlot_();
+  auto &slot = slots_[h];
+
+  // 再利用スロットに古いGPUリソースが残ってたら解放
+  ReleaseSlot_(slot);
+
+  slot.inUse = true;
+  slot.light = Light{}; // defaults
+
+  EnsureCB_(slot);
+  SyncCB_(slot);
+
+  // 最初のライトを作ったら自動で明示的アクティブにする（従来挙動）
+  if (activeHandle_ < 0) {
+    activeHandle_ = h;
+  }
+
+  return h;
+}
+
+void LightManager::Destroy(int handle) {
+  if (!IsValid_(handle)) {
+    return;
+  }
+
+  // 0 はデフォルトなので破棄不可
+  if (handle == 0) {
+    return;
+  }
+
+  auto &slot = slots_[handle];
+  ReleaseSlot_(slot);
+  slot.inUse = false;
+
+  if (activeHandle_ == handle) {
+    activeHandle_ = -1;
+  }
+}
+
+void LightManager::SetActive(int handle) {
+  // -1: 明示的なアクティブ無し（内部では default を使う）
+  if (handle < 0) {
+    activeHandle_ = -1;
+    return;
+  }
+
+  if (!IsValid_(handle)) {
+    return;
+  }
+
+  activeHandle_ = handle;
+}
+
+Light *LightManager::Get(int handle) {
+  if (!IsValid_(handle)) {
+    return nullptr;
+  }
+  return &slots_[handle].light;
+}
+
+const Light *LightManager::Get(int handle) const {
+  if (!IsValid_(handle)) {
+    return nullptr;
+  }
+  return &slots_[handle].light;
+}
+
+Light *LightManager::GetActive() {
+  const int h = ResolveActiveHandle_();
+  return Get(h);
+}
+
+const Light *LightManager::GetActive() const {
+  const int h = ResolveActiveHandle_();
+  return Get(h);
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS LightManager::GetCBAddress(int handle) {
+  if (!IsValid_(handle)) {
+    return 0;
+  }
+
+  auto &slot = slots_[handle];
+  EnsureCB_(slot);
+  SyncCB_(slot);
+
+  return slot.cb ? slot.cb->GetGPUVirtualAddress() : 0;
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS LightManager::GetActiveCBAddress() {
+  const int h = ResolveActiveHandle_();
+  return GetCBAddress(h);
+}
+
+void LightManager::DrawImGui(int handle, const char *name) {
+  if (!IsValid_(handle)) {
+    return;
+  }
+
+  auto &slot = slots_[handle];
+  slot.light.DrawImGui(name);
+
+  // Reflect UI edits to the GPU buffer.
+  EnsureCB_(slot);
+  SyncCB_(slot);
+}
+
+void LightManager::ReleaseSlot_(Slot &s) {
+  if (s.cb) {
+    if (s.mapped) {
+      s.cb->Unmap(0, nullptr);
+      s.mapped = nullptr;
+    }
+    s.cb->Release();
+    s.cb = nullptr;
+  }
+}
+
+void LightManager::EnsureCB_(Slot &s) {
+  if (s.cb || !device_) {
+    return;
+  }
+
+  s.cb = CreateBufferResource(device_, sizeof(DirectionalLight));
+  s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
+  if (s.mapped) {
+    *s.mapped = s.light.Data();
+  }
+}
+
+void LightManager::SyncCB_(Slot &s) {
+  if (s.mapped) {
+    *s.mapped = s.light.Data();
+  }
+}
+
+} // namespace RC

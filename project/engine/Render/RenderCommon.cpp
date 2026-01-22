@@ -1,10 +1,11 @@
 #include "RenderCommon.h"
 
 #include "Dx12/Dx12Core.h"
-#include "Light/Light.h"
+#include "Light/LightManager.h"
 #include "PipelineManager.h"
 #include "Primitive2D/Primitive2D.h"
 #include "Sprite2D/Sprite2D.h"
+#include "Sprite2D/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <memory>
 #include <string_view>
 #include <unordered_map>
+#include "struct.h"
 
 namespace RC {
 
@@ -48,11 +50,6 @@ struct ModelSlot {
   bool inUse = false;
 };
 
-struct SpriteSlot {
-  std::unique_ptr<Sprite2D> ptr;
-  bool inUse = false;
-  int texHandle = -1; // 便利用: どのテクスチャから作ったか
-};
 
 struct SphereSlot {
   std::unique_ptr<Sphere> ptr;
@@ -61,15 +58,7 @@ struct SphereSlot {
       -1; // 生成時に渡されたテクスチャ（DrawSphere の省略時に使う）
 };
 
-struct LightSlot {
-  RC::Light light;
 
-  // Upload CB for this light (b1).
-  ID3D12Resource *cb = nullptr;
-  DirectionalLight *mapped = nullptr;
-
-  bool inUse = false;
-};
 
 // ============================================================================
 // CameraCB
@@ -98,6 +87,8 @@ struct FogOverlayCB {
   RC::Vector2 wind = {0.08f, 0.03f};
   float feather = 0.18f;
   float bottomBias = 0.35f;
+
+  RC::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
 struct PrimitiveSlot {
@@ -155,8 +146,8 @@ static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
 // ============================================================================
 std::vector<ModelSlot> gModels;
 std::vector<SphereSlot> gSpheres;
-std::vector<SpriteSlot> gSprites;
-std::vector<LightSlot> gLights;
+RC::SpriteManager gSpriteMan;
+RC::LightManager gLightMan;
 
 ID3D12Device *gDevice = nullptr;
 DescriptorHeap *gSrvHeap = nullptr; // いまは直接使ってない（互換用に保持）
@@ -178,8 +169,7 @@ static FogOverlayCB *gFogCBMapped = nullptr;
 bool gInitialized = false;
 static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNone;
 
-// 現在アクティブなライトハンドル（-1 = 無し）
-int gActiveLightHandle = -1;
+// ライトは LightManager に委譲
 
 static PrimitiveSlot gPrim2D;
 
@@ -217,72 +207,7 @@ bool IsValidSphere_(int h) {
           gSpheres[h].inUse && gSpheres[h].ptr);
 }
 
-int AllocLightSlot_() {
-  for (int i = 0; i < static_cast<int>(gLights.size()); ++i) {
-    if (!gLights[i].inUse) {
-      return i;
-    }
-  }
-  gLights.emplace_back();
-  return static_cast<int>(gLights.size()) - 1;
-}
 
-bool IsValidLight_(int h) {
-  return (h >= 0 && h < static_cast<int>(gLights.size()) && gLights[h].inUse);
-}
-
-// ---------------------------------------------------------------------------
-// LightSlot helpers (A-plan base)
-// ---------------------------------------------------------------------------
-static void ReleaseLightSlot_(LightSlot &s) {
-  if (s.cb) {
-    if (s.mapped) {
-      s.cb->Unmap(0, nullptr);
-      s.mapped = nullptr;
-    }
-    s.cb->Release();
-    s.cb = nullptr;
-  }
-}
-
-static void EnsureLightSlotCB_(LightSlot &s) {
-  if (s.cb || !gDevice) {
-    return;
-  }
-  s.cb = CreateBufferResource(gDevice, sizeof(DirectionalLight));
-  s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
-  if (s.mapped) {
-    *s.mapped = s.light.Data();
-  }
-}
-
-static void SyncLightSlotCB_(LightSlot &s) {
-  if (s.mapped) {
-    *s.mapped = s.light.Data();
-  }
-}
-
-static LightSlot *GetActiveLightSlot_() {
-  if (gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle)) {
-    return &gLights[gActiveLightHandle];
-  }
-  return nullptr;
-}
-
-
-// Sprite 共通クアッド（全スプライトで共有）
-static std::shared_ptr<SpriteMesh2D> gSpriteQuad;
-
-static std::shared_ptr<SpriteMesh2D> EnsureSpriteQuad_() {
-  if (!gInitialized || !gDevice)
-    return nullptr;
-
-  if (!gSpriteQuad) {
-    gSpriteQuad = std::make_shared<SpriteMesh2D>();
-    gSpriteQuad->Initialize(gDevice);
-  }
-  return gSpriteQuad;
-}
 
 // ============================================================================
 // Pipeline 選択
@@ -381,6 +306,12 @@ void Init(SceneContext &ctx) {
   // TextureManager は SRVManager を使ってハンドル管理
   gTexMan.Init(&ctx.core->SRVMan());
 
+  // Sprite は SpriteManager に委譲
+  gSpriteMan.Init(gDevice, &gTexMan);
+
+  // Light は LightManager に委譲（default slot を作る）
+  gLightMan.Init(gDevice);
+
   // CameraCB: Upload に置いて Map しっぱなしで更新する
   gCameraCB = CreateBufferResource(gDevice, sizeof(CameraCB));
   gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
@@ -396,10 +327,6 @@ void Init(SceneContext &ctx) {
   // 初期化
   gModels.clear();
   gSpheres.clear();
-  gSprites.clear();
-  gLights.clear();
-
-  gActiveLightHandle = -1;
   gView = MakeIdentity4x4();
   gProj = MakeIdentity4x4();
 
@@ -416,16 +343,13 @@ void Term() {
 
   gModels.clear();
   gMeshCache.clear();
-  gSprites.clear();
-  gSpriteQuad.reset();
+
+  // Sprite は SpriteManager に委譲
+  gSpriteMan.Term();
+
+  // Light は LightManager に委譲
+  gLightMan.Term();
   gSpheres.clear();
-
-  for (auto &l : gLights) {
-    ReleaseLightSlot_(l);
-  }
-  gLights.clear();
-
-  gActiveLightHandle = -1;
 
   gPrim2D.ptr.reset();
   gPrim2D.inUse = false;
@@ -489,76 +413,26 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 // ----------------------------------------------------------------------------
 
 int CreateLight() {
-  if (!gInitialized || !gDevice) {
-    return -1;
-  }
-
-  const int h = AllocLightSlot_();
-  auto &slot = gLights[h];
-
-  // Reused slot may still have old GPU resources if something went wrong.
-  ReleaseLightSlot_(slot);
-
-  slot.inUse = true;
-  slot.light = Light{}; // defaults
-
-  EnsureLightSlotCB_(slot);
-  SyncLightSlotCB_(slot);
-
-  // Auto-activate first light.
-  if (gActiveLightHandle < 0) {
-    gActiveLightHandle = h;
-  }
-
-  return h;
+  return gLightMan.Create();
 }
 
 void DestroyLight(int lightHandle) {
-  if (!IsValidLight_(lightHandle)) {
-    return;
-  }
-
-  auto &slot = gLights[lightHandle];
-  ReleaseLightSlot_(slot);
-  slot.inUse = false;
-
-  if (gActiveLightHandle == lightHandle) {
-    gActiveLightHandle = -1;
-  }
+  gLightMan.Destroy(lightHandle);
 }
 
 void SetActiveLight(int lightHandle) {
-  // -1 disables active light.
-  if (lightHandle < 0) {
-    gActiveLightHandle = -1;
-    return;
-  }
-  if (!IsValidLight_(lightHandle)) {
-    return;
-  }
-  gActiveLightHandle = lightHandle;
+  // -1: 明示的なアクティブ無し（描画時は default slot を使用）
+  gLightMan.SetActive(lightHandle);
 }
 
-int GetActiveLightHandle() { return gActiveLightHandle; }
+int GetActiveLightHandle() { return gLightMan.GetActiveHandle(); }
 
 Light *GetLightPtr(int lightHandle) {
-  if (!IsValidLight_(lightHandle)) {
-    return nullptr;
-  }
-  return &gLights[lightHandle].light;
+  return gLightMan.Get(lightHandle);
 }
 
 void DrawImGuiLight(int lightHandle, const char *name) {
-  if (!IsValidLight_(lightHandle)) {
-    return;
-  }
-
-  auto &slot = gLights[lightHandle];
-  slot.light.DrawImGui(name);
-
-  // Reflect UI edits to the GPU buffer.
-  EnsureLightSlotCB_(slot);
-  SyncLightSlotCB_(slot);
+  gLightMan.DrawImGui(lightHandle, name);
 }
 
 // ----------------------------------------------------------------------------
@@ -682,27 +556,31 @@ void DrawModel(int modelHandle, int texHandle) {
     m->ResetTextureToMtl();
   }
 
-  // Apply active light at draw time (A-plan base)
-  if (auto *active = GetActiveLightSlot_()) {
-    EnsureLightSlotCB_(*active);
-    SyncLightSlotCB_(*active);
+  // Apply active (or default) light at draw time.
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
 
-    if (auto *mat = m->Mat()) {
-      mat->lightingMode = active->light.GetLightingMode();
-      mat->shininess = active->light.GetShininess();
+  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
     }
 
     m->Update(gView, gProj);
-    if (active->cb) {
-      m->Draw(gCL, active->cb->GetGPUVirtualAddress());
-      return;
-    }
+    m->Draw(gCL);
+    return;
   }
 
   // Fallback: use model's own light CB
+  m->SetExternalLightCBAddress(0);
   m->Update(gView, gProj);
   m->Draw(gCL);
 }
+
 
 void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
 
@@ -728,20 +606,22 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
     m->ResetTextureToMtl();
   }
 
-  if (auto *active = GetActiveLightSlot_()) {
-    EnsureLightSlotCB_(*active);
-    SyncLightSlotCB_(*active);
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
 
-    if (auto *mat = m->Mat()) {
-      mat->lightingMode = active->light.GetLightingMode();
-      mat->shininess = active->light.GetShininess();
+  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
     }
 
     m->Update(gView, gProj);
-    if (active->cb) {
-      m->Draw(gCL, active->cb->GetGPUVirtualAddress());
-      return;
-    }
+    m->Draw(gCL);
+    return;
   }
 
   m->Update(gView, gProj);
@@ -774,24 +654,28 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     m->ResetTextureToMtl();
   }
 
-  if (auto *active = GetActiveLightSlot_()) {
-    EnsureLightSlotCB_(*active);
-    SyncLightSlotCB_(*active);
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
 
-    if (auto *mat = m->Mat()) {
-      mat->lightingMode = active->light.GetLightingMode();
-      mat->shininess = active->light.GetShininess();
+  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
     }
 
-    if (active->cb) {
-      m->DrawBatch(gCL, gView, gProj, instances, active->cb->GetGPUVirtualAddress());
-      return;
-    }
+    m->DrawBatch(gCL, gView, gProj, instances);
+    return;
   }
 
   // Fallback
+  m->SetExternalLightCBAddress(0);
   m->DrawBatch(gCL, gView, gProj, instances);
 }
+
 
 void DrawImGui3D(int modelHandle, const char *name) {
   if (!IsValidModel_(modelHandle)) {
@@ -800,9 +684,9 @@ void DrawImGui3D(int modelHandle, const char *name) {
 
   auto &m = gModels[modelHandle].ptr;
 
-  // Light がアクティブならモデル側の Lighting UI は隠す
-  const bool showLightingUi =
-      !(gActiveLightHandle >= 0 && IsValidLight_(gActiveLightHandle));
+  // LightManager が有効なら「共通ライトCB」が常に刺さるので
+  // モデル側の Light UI（自前CB）は基本的に隠す。
+  const bool showLightingUi = (gLightMan.GetActiveCBAddress() == 0);
 
   m->DrawImGui(name, showLightingUi);
 }
@@ -919,38 +803,9 @@ int LoadSprite(const std::string &path, SceneContext &ctx, bool srgb) {
     return -1;
   }
 
-  // テクスチャロード
-  const int texHandle = gTexMan.LoadID(path, srgb);
-  if (texHandle < 0) {
-    return -1;
-  }
-
-  // スプライトは「現状」スロット再利用してない（必要なら Alloc 関数を作る）
-  const int handle = static_cast<int>(gSprites.size());
-  gSprites.emplace_back();
-
-  auto &s = gSprites[handle];
-  s.ptr = std::make_unique<Sprite2D>();
-
-  // 初期化
-  const auto quad = EnsureSpriteQuad_();
-  if (!quad)
-    return -1;
-
-  s.ptr->Initialize(gDevice, quad, static_cast<float>(ctx.app->width),
-                    static_cast<float>(ctx.app->height));
-  s.ptr->SetTexture(gTexMan.GetSrv(texHandle));
-
-  // 初期値（必要なら外側で SetSpriteTransform / SetSpriteScreenSize
-  // 等で上書き）
-  s.ptr->SetSize(100, 100);
-  s.ptr->T().translation = {0, 0, 0};
-  s.ptr->SetVisible(true);
-
-  s.texHandle = texHandle;
-  s.inUse = true;
-
-  return handle;
+  const float screenW = static_cast<float>(ctx.app->width);
+  const float screenH = static_cast<float>(ctx.app->height);
+  return gSpriteMan.Load(path, screenW, screenH, srgb);
 }
 
 void DrawSprite(int spriteHandle) {
@@ -958,12 +813,16 @@ void DrawSprite(int spriteHandle) {
     return;
   }
 
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
+  if (!BindPipeline_("sprite")) {
     return;
   }
 
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr) {
+  gSpriteMan.Draw(spriteHandle, gCL);
+}
+
+void DrawSpriteRect(int spriteHandle, float srcX, float srcY, float srcW,
+                    float srcH, float texW, float texH, float insetPx) {
+  if (!gInitialized || !gCL) {
     return;
   }
 
@@ -971,147 +830,41 @@ void DrawSprite(int spriteHandle) {
     return;
   }
 
-  s.ptr->Update();
-  s.ptr->Draw(gCL);
-}
-
-void DrawSpriteRect(int spriteHandle, float srcX, float srcY, float srcW,
-                    float srcH, float texW, float texH, float insetPx) {
-  if (!gInitialized || !gCL)
-    return;
-
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size()))
-    return;
-
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr)
-    return;
-
-  // 入力が壊れている場合は安全に無視
-  if (texW <= 0.0f || texH <= 0.0f || srcW <= 0.0f || srcH <= 0.0f)
-    return;
-
-  if (!BindPipeline_("sprite"))
-    return;
-
-  // にじみ対策（必要なら 0.5px 程度を指定）
-  if (insetPx != 0.0f) {
-    srcX += insetPx;
-    srcY += insetPx;
-    srcW -= insetPx * 2.0f;
-    srcH -= insetPx * 2.0f;
-    if (srcW <= 0.0f || srcH <= 0.0f)
-      return;
-  }
-
-  // ピクセル -> UV(0..1)
-  const float u0 = srcX / texW;
-  const float v0 = srcY / texH;
-  const float su = srcW / texW;
-  const float sv = srcH / texH;
-
-  // この呼び出しだけ UVTransform を差し替えて描画し、戻す。
-  const Matrix4x4 oldUV = s.ptr->UVTransform();
-
-  // uv' = uv * Scale + Translate（row-vector 前提）
-  Matrix4x4 uvM = MakeIdentity4x4();
-  uvM = Multiply(MakeScaleMatrix(Vector3{su, sv, 1.0f}), uvM);
-  uvM = Multiply(uvM, MakeTranslateMatrix(Vector3{u0, v0, 0.0f}));
-  s.ptr->UVTransform() = uvM;
-
-  s.ptr->Update();
-  s.ptr->Draw(gCL);
-
-  s.ptr->UVTransform() = oldUV;
+  gSpriteMan.DrawRect(spriteHandle, srcX, srcY, srcW, srcH, texW, texH, insetPx,
+                      gCL);
 }
 
 void DrawSpriteRectUV(int spriteHandle, float u0, float v0, float u1,
                       float v1) {
-  if (!gInitialized || !gCL)
+  if (!gInitialized || !gCL) {
     return;
+  }
 
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size()))
+  if (!BindPipeline_("sprite")) {
     return;
+  }
 
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr)
-    return;
-
-  if (!BindPipeline_("sprite"))
-    return;
-
-  const float su = (u1 - u0);
-  const float sv = (v1 - v0);
-  if (su <= 0.0f || sv <= 0.0f)
-    return;
-
-  const Matrix4x4 oldUV = s.ptr->UVTransform();
-
-  Matrix4x4 uvM = MakeIdentity4x4();
-  uvM = Multiply(MakeScaleMatrix(Vector3{su, sv, 1.0f}), uvM);
-  uvM = Multiply(uvM, MakeTranslateMatrix(Vector3{u0, v0, 0.0f}));
-  s.ptr->UVTransform() = uvM;
-
-  s.ptr->Update();
-  s.ptr->Draw(gCL);
-
-  s.ptr->UVTransform() = oldUV;
+  gSpriteMan.DrawRectUV(spriteHandle, u0, v0, u1, v1, gCL);
 }
 
 void SetSpriteTransform(int spriteHandle, const Transform &t) {
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
-    return;
-  }
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr) {
-    return;
-  }
-  s.ptr->T() = t;
+  gSpriteMan.SetTransform(spriteHandle, t);
 }
 
 void SetSpriteColor(int spriteHandle, const Vector4 &color) {
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
-    return;
-  }
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr) {
-    return;
-  }
-  s.ptr->SetColor(color);
+  gSpriteMan.SetColor(spriteHandle, color);
 }
 
 void UnloadSprite(int spriteHandle) {
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
-    return;
-  }
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse) {
-    return;
-  }
-  s.ptr.reset();
-  s.inUse = false;
+  gSpriteMan.Unload(spriteHandle);
 }
 
 void SetSpriteScreenSize(int spriteHandle, float w, float h) {
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
-    return;
-  }
-  auto &s = gSprites[spriteHandle];
-  if (!s.inUse || !s.ptr) {
-    return;
-  }
-  s.ptr->SetSize(w, h);
+  gSpriteMan.SetSize(spriteHandle, w, h);
 }
 
 void DrawImGui2D(int spriteHandle, const char *name) {
-  if (spriteHandle < 0 || spriteHandle >= static_cast<int>(gSprites.size())) {
-    return;
-  }
-  auto &m = gSprites[spriteHandle].ptr;
-  if (!m) {
-    return;
-  }
-  m->DrawImGui(name);
+  gSpriteMan.DrawImGui(spriteHandle, name);
 }
 
 // ----------------------------------------------------------------------------
@@ -1164,38 +917,32 @@ void DrawSphere(int sphereHandle, int texHandle) {
   auto &s = gSpheres[sphereHandle].ptr;
 
   // Texture override (explicit > default)
-  const int useTex = (texHandle >= 0) ? texHandle
-                                      : gSpheres[sphereHandle].defaultTexHandle;
+  const int useTex =
+      (texHandle >= 0) ? texHandle : gSpheres[sphereHandle].defaultTexHandle;
   if (useTex >= 0) {
     s->SetTexture(gTexMan.GetSrv(useTex));
   }
 
-  // Apply active light at draw time (A-plan): bind the active light's CB per draw.
-  D3D12_GPU_VIRTUAL_ADDRESS lightAddr = 0;
-  if (auto *active = GetActiveLightSlot_()) {
-    EnsureLightSlotCB_(*active);
-    SyncLightSlotCB_(*active);
+  // Apply active (or default) light at draw time: bind the LightManager's CB
+  // per draw.
+  D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
 
-    // Keep old behavior: inward spheres are usually unlit (sky dome).
-    if (!s->GetInward()) {
-      if (auto *mat = s->Mat()) {
-        mat->lightingMode = active->light.GetLightingMode();
-        mat->shininess = active->light.GetShininess();
+  // ★重要：Sphere 側が b1 を外部ライトに差し替えられるようにする
+  s->SetExternalLightCBAddress(lightAddr);
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      // Keep old behavior: inward spheres are usually unlit (sky dome).
+      if (!s->GetInward()) {
+        if (auto *mat = s->Mat()) {
+          mat->lightingMode = active->GetLightingMode();
+          mat->shininess = active->GetShininess();
+        }
       }
-    }
-
-    if (active->cb) {
-      lightAddr = active->cb->GetGPUVirtualAddress();
     }
   }
 
   s->Update(gView, gProj);
-  if (lightAddr != 0) {
-    s->Draw(gCL, lightAddr);
-  } else {
-    // Fallback: use sphere's own light CB
-    s->Draw(gCL);
-  }
+  s->Draw(gCL);
 }
 
 void DrawSphereImGui(int sphereHandle, const char *name) {
@@ -1400,6 +1147,15 @@ void DrawFogOverlay(float timeSec, float intensity, float scale, float speed,
 
   // フルスクリーントライアングル（VB/IB不要）
   gCL->DrawInstanced(3, 1, 0, 0);
+}
+
+void SetFogOverlayColor(const Vector4 &color) {
+  if (!gInitialized) {
+    return;
+  }
+  if (gFogCBMapped) {
+    gFogCBMapped->color = color;
+  }
 }
 
 // ----------------------------------------------------------------------------

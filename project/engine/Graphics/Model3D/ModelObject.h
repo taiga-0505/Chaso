@@ -24,8 +24,7 @@ public:
     constexpr LightingConfig() = default;
     constexpr LightingConfig(LightingMode m) : mode(m) {}
     constexpr LightingConfig(int m)
-        : mode(static_cast<LightingMode>(m < 0 ? 0 : (m > 4 ? 4 : m))) {}
-
+        : mode(static_cast<LightingMode>(m < 0 ? 0 : (m > 3 ? 3 : m))) {}
   };
 
   ModelObject() = default;
@@ -72,6 +71,15 @@ public:
   void SetColor(const RC::Vector4 &color);
   DirectionalLight *Light() { return cbLight_.mapped; }
 
+  // LightManager の共通ライトCB（b1）を使いたい場合の上書き。
+  // 0 を渡すと「自前の cbLight_」に戻る。
+  void SetExternalLightCBAddress(D3D12_GPU_VIRTUAL_ADDRESS addr) {
+    externalLightCBAddress_ = addr;
+  }
+  D3D12_GPU_VIRTUAL_ADDRESS GetExternalLightCBAddress() const {
+    return externalLightCBAddress_;
+  }
+
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
 
@@ -83,16 +91,9 @@ public:
 
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
-  void Draw(ID3D12GraphicsCommandList *cmdList, D3D12_GPU_VIRTUAL_ADDRESS lightCB);
-
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances);
-
-  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
-                 const RC::Matrix4x4 &proj,
-                 const std::vector<Transform> &instances,
-                 D3D12_GPU_VIRTUAL_ADDRESS lightCB);
 
   void DrawImGui(const char *name, bool showLightingUi);
 
@@ -130,6 +131,9 @@ private:
   uint32_t cbWvpBatchHead_ = 0;
 
   TextureManager *texman_ = nullptr;
+
+  // 0 なら自前の cbLight_ を使用。0以外なら外部ライトCB（LightManager）を使用。
+  D3D12_GPU_VIRTUAL_ADDRESS externalLightCBAddress_ = 0;
 
   static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
   void EnsureWvpBatchCapacity_(uint32_t count);
