@@ -82,7 +82,7 @@ std::shared_ptr<ModelMesh> ModelManager::GetOrLoadMesh_(
 
   // 未ロードならロード
   auto mesh = std::make_shared<ModelMesh>();
-  if (!mesh->LoadObj(device_, path)) {
+  if (!mesh->LoadObj(device_,path)) {
     return nullptr;
   }
 

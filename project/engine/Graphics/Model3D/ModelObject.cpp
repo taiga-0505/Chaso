@@ -87,6 +87,11 @@ void ModelObject::SetColor(const Vector4 &color) {
 void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   Matrix4x4 world = MakeAffineMatrix(transform_.scale, transform_.rotation,
                                      transform_.translation);
+
+  if (mesh_) {
+    world = Multiply(mesh_->RootNode().localMatrix, world);
+  }
+
   cbWvp_.mapped->World = world;
   cbWvp_.mapped->WVP = Multiply(world, Multiply(view, proj));
   cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
@@ -163,6 +168,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
     const Transform &tr = instances[i];
 
     Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+    world = Multiply(mesh_->RootNode().localMatrix, world);
 
     TransformationMatrix tm{};
     tm.World = world;

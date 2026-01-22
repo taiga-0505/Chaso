@@ -1576,4 +1576,39 @@ void DrawImGuiAreaLight(int areaLightHandle, const char *name) {
   gAreaLightMan.DrawImGui(areaLightHandle, name);
 }
 
+void SetAreaLightEnabled(int areaLightHandle, bool enabled) {
+  if (!gInitialized)
+    return;
+  if (auto *p = gAreaLightMan.Get(areaLightHandle)) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsAreaLightEnabled(int areaLightHandle) {
+  if (!gInitialized)
+    return false;
+  if (const auto *p = gAreaLightMan.Get(areaLightHandle)) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+void SetActiveAreaLightEnabled(bool enabled) {
+  if (!gInitialized)
+    return;
+  if (auto *p = gAreaLightMan.GetActive()) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsActiveAreaLightEnabled() {
+  if (!gInitialized)
+    return false;
+  if (const auto *p = gAreaLightMan.GetActive()) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+
 } // namespace RC

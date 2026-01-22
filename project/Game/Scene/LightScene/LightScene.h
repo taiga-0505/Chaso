@@ -25,6 +25,9 @@ private:
   int ball_ = -1;
   Transform *ballT_ = nullptr;
 
+  int plane_gltf_ = -1;
+  Transform *planeT_ = nullptr;
+
   int DirectionalLight_ = -1;
 
   int PointLight1_ = -1;
@@ -39,4 +42,9 @@ private:
   int SpotLight2_ = -1;
   RC::SpotLightSource *sl2_source_;
 
+  int AreaLight1_ = -1;
+  RC::AreaLightSource *al1_source_;
+
+  int areaLight2_ = -1;
+  RC::AreaLightSource *al2_source_;
 };

@@ -20,38 +20,43 @@ ModelMesh::~ModelMesh() {
   }
 }
 
+static bool IsSupportedModelExt_(std::string ext) {
+  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+  return (ext == ".obj" || ext == ".gltf" || ext == ".glb");
+}
+
 bool ModelMesh::LoadObj(ID3D12Device *device, const std::string &objPath) {
   device_ = device;
 
+  rootNode_ = {};
+  rootNode_.localMatrix = MakeIdentity4x4();
+  rootNode_.name = "Root";
+  rootNode_.children.clear();
+
   auto TryLoad = [&](const std::string &dir, const std::string &file) -> bool {
-    if (!LoadObjGeometryLikeFunction_(dir, file)) {
+    if (!LoadObjGeometryLikeFunction_(dir, file))
       return false;
-    }
-    // UVが全部(0,0)なら簡易球面UVを焼く
     EnsureSphericalUVIfMissing();
     return true;
   };
 
   fs::path p(objPath);
+
   if (fs::is_regular_file(p)) {
-    std::string ext = p.extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    if (ext == ".obj") {
-      return TryLoad(p.parent_path().string(), p.filename().string());
-    }
-    return false;
+    if (!IsSupportedModelExt_(p.extension().string()))
+      return false;
+    return TryLoad(p.parent_path().string(), p.filename().string());
   }
 
   if (fs::is_directory(p)) {
     for (auto &entry : fs::directory_iterator(p)) {
       if (!entry.is_regular_file())
         continue;
-      auto ext = entry.path().extension().string();
-      std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-      if (ext == ".obj") {
-        return TryLoad(entry.path().parent_path().string(),
-                       entry.path().filename().string());
-      }
+      if (!IsSupportedModelExt_(entry.path().extension().string()))
+        continue;
+
+      return TryLoad(entry.path().parent_path().string(),
+                     entry.path().filename().string());
     }
     return false;
   }
@@ -63,9 +68,21 @@ bool ModelMesh::LoadObjGeometryLikeFunction_(const std::string &directoryPath,
                                              const std::string &filename) {
   std::vector<VertexData> verts;
   MaterialData mtl;
-  if (!LoadObjToVertices_(directoryPath, filename, verts, mtl)) {
-    return false;
+
+  // まずassimp（.obj/.gltf/.glb 全部これで行ける）
+  if (!LoadObjToVertices_Assimp_(directoryPath, filename, verts, mtl)) {
+
+    // assimp失敗時、.objだけ旧OBJパーサで保険
+    std::string ext = fs::path(filename).extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+    if (ext != ".obj")
+      return false;
+
+    if (!LoadObjToVertices_(directoryPath, filename, verts, mtl))
+      return false;
   }
+
   materialFile_ = mtl;
   UploadVB_(verts);
   return true;
@@ -181,6 +198,147 @@ bool ModelMesh::LoadObjToVertices_(const std::string &directoryPath,
   }
   return true;
 }
+
+bool ModelMesh::LoadObjToVertices_Assimp_(const std::string &directoryPath,
+                                          const std::string &filename,
+                                          std::vector<VertexData> &outVertices,
+                                          MaterialData &outMtl) {
+  Assimp::Importer importer;
+
+  const fs::path objPath = fs::path(directoryPath) / filename;
+
+  std::string ext = objPath.extension().string();
+  std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+  unsigned int flags = aiProcess_Triangulate | aiProcess_FlipWindingOrder;
+
+  // OBJだけ v を 1-v にしたい
+  if (ext == ".obj") {
+    flags |= aiProcess_FlipUVs;
+  }
+
+  // gltf/glb は FlipUVs しない
+  const aiScene *scene = importer.ReadFile(objPath.string(), flags);
+
+  // ReadFile 成功後
+  if (scene->mRootNode) {
+    rootNode_ = ReadNode(scene->mRootNode);
+  } else {
+    rootNode_ = {};
+    rootNode_.localMatrix = MakeIdentity4x4();
+    rootNode_.name = "Root";
+    rootNode_.children.clear();
+  }
+
+  outVertices.clear();
+  outMtl.textureFilePath.clear();
+
+  // Mesh解析
+  for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
+    aiMesh *mesh = scene->mMeshes[meshIndex];
+    if (!mesh)
+      continue;
+
+    const bool hasNormals = mesh->HasNormals();
+    const bool hasUV0 = mesh->HasTextureCoords(0);
+
+    // Face解析（Triangulateしてるので基本3になる）
+    for (uint32_t faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex) {
+      const aiFace &face = mesh->mFaces[faceIndex];
+      if (face.mNumIndices != 3) {
+        // 念のため（Triangulateしてればここは基本通らない）
+        continue;
+      }
+
+      // Vertex解析
+      for (uint32_t e = 0; e < 3; ++e) {
+        const uint32_t vIdx = face.mIndices[e];
+
+        const aiVector3D &p = mesh->mVertices[vIdx];
+        VertexData v{};
+        v.position = {p.x, p.y, p.z, 1.0f};
+
+        if (hasNormals) {
+          const aiVector3D &n = mesh->mNormals[vIdx];
+          v.normal = {n.x, n.y, n.z};
+        } else {
+          v.normal = {0.0f, 1.0f, 0.0f};
+        }
+
+        if (hasUV0) {
+          const aiVector3D &uv = mesh->mTextureCoords[0][vIdx];
+          v.texcoord = {uv.x, uv.y}; // FlipUVs 済みなのでここで反転しない
+        } else {
+          v.texcoord = {0.0f, 0.0f};
+        }
+
+        // いま君のOBJ手動ローダと同じ「x反転」で左手系化
+        v.position.x *= -1.0f;
+        v.normal.x *= -1.0f;
+
+        outVertices.push_back(v);
+      }
+    }
+
+    // Material解析（このModelMeshは material
+    // 1個しか持てないので「最初に見つかったdiffuse」を採用）
+    if (outMtl.textureFilePath.empty() &&
+        mesh->mMaterialIndex < scene->mNumMaterials) {
+      aiMaterial *mat = scene->mMaterials[mesh->mMaterialIndex];
+      if (mat && mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+        aiString texPath;
+        if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath) == AI_SUCCESS) {
+          fs::path t(texPath.C_Str());
+          if (t.is_absolute()) {
+            outMtl.textureFilePath = t.string();
+          } else {
+            outMtl.textureFilePath =
+                (fs::path(directoryPath) / t).lexically_normal().string();
+          }
+        }
+      }
+    }
+  }
+
+  return !outVertices.empty();
+}
+
+static Matrix4x4 MakeFlipX_() {
+  Matrix4x4 s = MakeIdentity4x4();
+  s.m[0][0] = -1.0f;
+  return s;
+}
+
+// M' = S * M * S
+static Matrix4x4 ConjugateFlipX_(const Matrix4x4 &m) {
+  const Matrix4x4 s = MakeFlipX_();
+  return Multiply(Multiply(s, m), s);
+}
+
+Node ModelMesh::ReadNode(aiNode *node) {
+  Node result{};
+  result.localMatrix = MakeIdentity4x4();
+
+  aiMatrix4x4 aiLocal = node->mTransformation;
+
+  // ここは君の流儀に合わせて transpose / コピー
+  aiLocal.Transpose(); // ← 今まで通りでOKならそのまま
+
+  Matrix4x4 local = *(reinterpret_cast<Matrix4x4 *>(&aiLocal));
+
+  // 頂点でX反転してるなら、Node行列もX反転で共役する
+  local = ConjugateFlipX_(local);
+
+  result.localMatrix = local;
+  result.name = node->mName.C_Str();
+  result.children.resize(node->mNumChildren);
+
+  for (uint32_t i = 0; i < node->mNumChildren; ++i) {
+    result.children[i] = ReadNode(node->mChildren[i]);
+  }
+  return result;
+}
+
 
 void ModelMesh::UploadVB_(const std::vector<VertexData> &vertices) {
   vb_.vertexCount = static_cast<uint32_t>(vertices.size());

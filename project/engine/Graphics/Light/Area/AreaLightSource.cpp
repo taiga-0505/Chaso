@@ -46,43 +46,54 @@ void AreaLightSource::SetSize(float width, float height) {
   data_.halfHeight = height * 0.5f;
 }
 
+::AreaLight AreaLightSource::DataForGPU() const {
+  ::AreaLight out = data_;
+  if (!enabled_) {
+    out.intensity = 0.0f; // シェーダ側が intensity<=0 を continue する
+  }
+  return out;
+}
+
 void AreaLightSource::DrawImGui(const char *name) {
   std::string label = name ? std::string(name) : std::string("AreaLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
   }
 
-  ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(), &data_.color.x,
-                    ImGuiColorEditFlags_Float);
+  ImGui::Checkbox((std::string("有効##") + label).c_str(), &enabled_);
 
-  ImGui::DragFloat3((std::string("位置##") + label).c_str(), &data_.position.x,
-                    0.01f);
+  if (enabled_) {
+    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
+                      &data_.color.x, ImGuiColorEditFlags_Float);
 
-  ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
-                   0.01f, 0.0f, 64.0f, "%.2f");
+    ImGui::DragFloat3((std::string("位置##") + label).c_str(),
+                      &data_.position.x, 0.01f);
 
-  ImGui::DragFloat3((std::string("right(軸)##") + label).c_str(), &data_.right.x,
-                    0.01f);
-  ImGui::DragFloat3((std::string("up(軸)##") + label).c_str(), &data_.up.x,
-                    0.01f);
+    ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
+                     0.01f, 0.0f, 64.0f, "%.2f");
 
-  ImGui::DragFloat((std::string("半幅##") + label).c_str(), &data_.halfWidth,
-                   0.01f, 0.0f, 1000.0f, "%.2f");
-  ImGui::DragFloat((std::string("半高##") + label).c_str(), &data_.halfHeight,
-                   0.01f, 0.0f, 1000.0f, "%.2f");
+    ImGui::DragFloat3((std::string("right(軸)##") + label).c_str(),
+                      &data_.right.x, 0.01f);
+    ImGui::DragFloat3((std::string("up(軸)##") + label).c_str(), &data_.up.x,
+                      0.01f);
 
-  ImGui::DragFloat((std::string("影響距離(range)##") + label).c_str(),
-                   &data_.range, 0.05f, 0.0f, 500.0f, "%.2f");
-  ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(), &data_.decay,
-                   0.05f, 0.0f, 32.0f, "%.2f");
+    ImGui::DragFloat((std::string("半幅##") + label).c_str(), &data_.halfWidth,
+                     0.01f, 0.0f, 1000.0f, "%.2f");
+    ImGui::DragFloat((std::string("半高##") + label).c_str(), &data_.halfHeight,
+                     0.01f, 0.0f, 1000.0f, "%.2f");
 
-  bool two = (data_.twoSided != 0);
-  if (ImGui::Checkbox((std::string("両面発光(twoSided)##") + label).c_str(),
-                      &two)) {
-    data_.twoSided = two ? 1u : 0u;
+    ImGui::DragFloat((std::string("影響距離(range)##") + label).c_str(),
+                     &data_.range, 0.05f, 0.0f, 500.0f, "%.2f");
+    ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(),
+                     &data_.decay, 0.05f, 0.0f, 32.0f, "%.2f");
+
+    bool two = (data_.twoSided != 0);
+    if (ImGui::Checkbox((std::string("両面発光(twoSided)##") + label).c_str(),
+                        &two)) {
+      data_.twoSided = two ? 1u : 0u;
+    }
   }
-
-  ImGui::TextDisabled("※ まずは擬似AreaLight（四隅4サンプル）だよ");
 }
+
 
 } // namespace RC

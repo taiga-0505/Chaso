@@ -46,7 +46,16 @@ public:
 
   void DrawImGui(const char *name = nullptr);
 
+  // ON/OFF
+  void SetEnabled(bool enabled) { enabled_ = enabled; }
+  bool IsEnabled() const { return enabled_; }
+  void ToggleEnabled() { enabled_ = !enabled_; }
+
+  // GPUに送るデータ（enabled=false の時は実質OFFになるよう調整したコピー）
+  ::AreaLight DataForGPU() const;
+
 private:
+  bool enabled_ = true;
   ::AreaLight data_{};
 };
 

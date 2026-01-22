@@ -375,6 +375,12 @@ AreaLightSource *GetAreaLightPtr(int areaLightHandle);
 /// </summary>
 void DrawImGuiAreaLight(int areaLightHandle, const char *name = nullptr);
 
+void SetAreaLightEnabled(int areaLightHandle, bool enabled);
+bool IsAreaLightEnabled(int areaLightHandle);
+
+void SetActiveAreaLightEnabled(bool enabled);
+bool IsActiveAreaLightEnabled();
+
 // ==============================
 // モデル用
 // ==============================

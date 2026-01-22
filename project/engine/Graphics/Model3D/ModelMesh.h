@@ -7,6 +7,9 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 
 // 見た目（共有）：VB / OBJ+MTLの読み込み結果だけを持つ
 class ModelMesh {
@@ -26,6 +29,8 @@ public:
 
   const MaterialData &MaterialFile() const { return materialFile_; }
 
+  const Node &RootNode() const { return rootNode_; }
+
 private:
   struct VB {
     ID3D12Resource *resource = nullptr;
@@ -36,6 +41,7 @@ private:
   ID3D12Device *device_ = nullptr;
   VB vb_{};
   MaterialData materialFile_{};
+  Node rootNode_{};
 
   bool LoadObjGeometryLikeFunction_(const std::string &directoryPath,
                                     const std::string &filename);
@@ -44,6 +50,13 @@ private:
                           const std::string &filename,
                           std::vector<VertexData> &outVertices,
                           MaterialData &outMtl);
+
+  bool LoadObjToVertices_Assimp_(const std::string &directoryPath,
+                                 const std::string &filename,
+                                 std::vector<VertexData> &outVertices,
+                                 MaterialData &outMtl);
+
+  Node ReadNode(aiNode *node);
 
   void UploadVB_(const std::vector<VertexData> &vertices);
 

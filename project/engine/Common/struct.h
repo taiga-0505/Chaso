@@ -168,10 +168,14 @@ struct SpotLightsCB {
 };
 
 struct AreaLightsCB {
-  AreaLight lights[kMaxAreaLights];
-  uint32_t count;
-  RC::Vector3 padding; // 16byte合わせ
+  uint32_t count = 0;            // areaCount
+  float padding0[3] = {0, 0, 0}; // 16byte境界合わせ
+  AreaLight lights[kMaxAreaLights]{};
 };
+
+// 事故防止（おすすめ）
+static_assert(offsetof(AreaLightsCB, lights) == 16,
+              "AreaLightsCB layout mismatch");
 
 // -------------------------------
 // 非スコープ enum: 無修飾で使える
