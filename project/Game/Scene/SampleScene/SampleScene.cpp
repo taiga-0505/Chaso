@@ -12,22 +12,30 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // Camera
   // =============================
 
-  camera_.Initialize(ctx.input, RC::Vector3{0.0f, 0.0f, -10.0f},
-                     RC::Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
+  camera_.Initialize(ctx.input, RC::Vector3{0.0f, 0.35f, -15.0f},
+                     RC::Vector3{0.0f, -0.0f, 0.0f}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
   // =============================
   // Light初期化
   // =============================
 
-  light = RC::CreateLight();
-  RC::SetActiveLight(light);
+  directionalLight = RC::CreateDirectionalLight();
+  RC::SetActiveDirectionalLight(directionalLight);
 
-  if (auto *sun = RC::GetLightPtr(light)) {
+  if (RC::DirectionalLightSource *sun = RC::GetDirectionalLightPtr(directionalLight)) {
     sun->SetDirection({0.0f, -1.0f, 0.2f});   // ちょいナナメ上
     sun->SetColor({1.0f, 0.95f, 0.9f, 1.0f}); // ほんのり暖色
     sun->SetIntensity(1.5f);
   }
+
+  pointLight = RC::CreatePointLight();
+
+  pointLight2 = RC::CreatePointLight();
+
+  spotLight = RC::CreateSpotLight();
+
+  spotLight2 = RC::CreateSpotLight();
 
   // =============================
   // モデル初期化
@@ -40,6 +48,10 @@ void SampleScene::OnEnter(SceneContext &ctx) {
 
   model = RC::LoadModel("Resources/model/teapot");
   tx_model = RC::LoadTex("Resources/uvChecker.png");
+
+  terrain = RC::LoadModel("Resources/model/terrain");
+  terrainT_ = RC::GetModelTransformPtr(terrain);
+  terrainT_->translation.y = -1.0f;
 
   // 天球
   tx_Sphere_ = RC::LoadTex("Resources/snow.png");
@@ -69,6 +81,9 @@ void SampleScene::OnExit(SceneContext &) {
   RC::UnloadModel(blockModel);
   blockModel = -1;
 
+  RC::UnloadModel(terrain);
+  terrain = -1;
+
   RC::UnloadSphere(sphere);
   sphere = -1;
 
@@ -78,7 +93,16 @@ void SampleScene::OnExit(SceneContext &) {
   RC::UnloadModel(ball);
   ball = -1;
 
-  light = -1;
+  RC::DestroyDirectionalLight(directionalLight);
+  directionalLight = -1;
+  RC::DestroyPointLight(pointLight);
+  pointLight = -1;
+  RC::DestroyPointLight(pointLight2);
+  pointLight2 = -1;
+  RC::DestroySpotLight(spotLight);
+  spotLight = -1;
+  RC::DestroySpotLight(spotLight2);
+  spotLight2 = -1;
 }
 
 void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -131,6 +155,8 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(model, tx_model);
 
+  RC::DrawModel(terrain);
+
   // ===========================================
   // 2D描画
   // ===========================================
@@ -158,16 +184,14 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
 void SampleScene::DrawImGui() {
   ImGui::Begin("Debug");
-  // -------------------
-  // Light
-  // -------------------
-  RC::DrawImGuiLight(light, "light");
 
   if (ImGui::BeginTabBar("MainDebugTabBar")) {
     // -------------------
     // ModelTab
     // -------------------
     if (ImGui::BeginTabItem("ModelTab")) {
+
+      RC::DrawImGui3D(terrain, "terrain");
 
       RC::DrawImGui3D(plane, "plane");
 
@@ -200,7 +224,7 @@ void SampleScene::DrawImGui() {
     // -------------------
     // POSTEffectTab
     // -------------------
-    if (ImGui::BeginTabItem("Post")) {
+    if (ImGui::BeginTabItem("PostEffectTab")) {
 
       // -------------------
       // Fog
@@ -208,6 +232,18 @@ void SampleScene::DrawImGui() {
       ImGui::Checkbox("isFogEnabled", &isFogEnabled_);
       ImGui::ColorEdit4("fogColor", &fogColor_.x);
 
+      ImGui::EndTabItem();
+    }
+
+    // -------------------
+    // LightTab
+    // -------------------
+    if (ImGui::BeginTabItem("LightTab")) {
+      RC::DrawImGuiDirectionalLight(directionalLight, "DirectionalLight");
+      RC::DrawImGuiPointLight(pointLight, "PointLight");
+      RC::DrawImGuiPointLight(pointLight2, "PointLight2");
+      RC::DrawImGuiSpotLight(spotLight, "SpotLight");
+      RC::DrawImGuiSpotLight(spotLight2, "SpotLight2");
       ImGui::EndTabItem();
     }
 

@@ -1,11 +1,11 @@
-#include "Light/LightManager.h"
+#include "DirectionalLightManager.h"
 
 #include "Dx12/Dx12Core.h" // CreateBufferResource
 #include "function/function.h"
 
 namespace RC {
 
-void LightManager::Init(ID3D12Device *device) {
+void DirectionalLightManager::Init(ID3D12Device *device) {
   // 二重Initにも耐える
   Term();
 
@@ -22,7 +22,7 @@ void LightManager::Init(ID3D12Device *device) {
   // slot[0] は「デフォルトライト」予約
   slots_.emplace_back();
   slots_[0].inUse = true;
-  slots_[0].light = Light{}; // defaults
+  slots_[0].light = DirectionalLightSource{}; // defaults
 
   EnsureCB_(slots_[0]);
   SyncCB_(slots_[0]);
@@ -30,7 +30,7 @@ void LightManager::Init(ID3D12Device *device) {
   activeHandle_ = -1; // 明示的なアクティブ無し
 }
 
-void LightManager::Term() {
+void DirectionalLightManager::Term() {
   for (auto &s : slots_) {
     ReleaseSlot_(s);
     s.inUse = false;
@@ -42,7 +42,7 @@ void LightManager::Term() {
   initialized_ = false;
 }
 
-int LightManager::AllocSlot_() {
+int DirectionalLightManager::AllocSlot_() {
   // 0 はデフォルトなので 1 から探す
   for (int i = 1; i < static_cast<int>(slots_.size()); ++i) {
     if (!slots_[i].inUse) {
@@ -53,12 +53,12 @@ int LightManager::AllocSlot_() {
   return static_cast<int>(slots_.size()) - 1;
 }
 
-bool LightManager::IsValid_(int handle) const {
+bool DirectionalLightManager::IsValid_(int handle) const {
   return (initialized_ && handle >= 0 && handle < static_cast<int>(slots_.size()) &&
           slots_[handle].inUse);
 }
 
-int LightManager::ResolveActiveHandle_() const {
+int DirectionalLightManager::ResolveActiveHandle_() const {
   if (!initialized_) {
     return -1;
   }
@@ -69,7 +69,7 @@ int LightManager::ResolveActiveHandle_() const {
   return 0;
 }
 
-int LightManager::Create() {
+int DirectionalLightManager::Create() {
   if (!initialized_ || !device_) {
     return -1;
   }
@@ -81,7 +81,7 @@ int LightManager::Create() {
   ReleaseSlot_(slot);
 
   slot.inUse = true;
-  slot.light = Light{}; // defaults
+  slot.light = DirectionalLightSource{}; // defaults
 
   EnsureCB_(slot);
   SyncCB_(slot);
@@ -94,7 +94,7 @@ int LightManager::Create() {
   return h;
 }
 
-void LightManager::Destroy(int handle) {
+void DirectionalLightManager::Destroy(int handle) {
   if (!IsValid_(handle)) {
     return;
   }
@@ -113,7 +113,7 @@ void LightManager::Destroy(int handle) {
   }
 }
 
-void LightManager::SetActive(int handle) {
+void DirectionalLightManager::SetActive(int handle) {
   // -1: 明示的なアクティブ無し（内部では default を使う）
   if (handle < 0) {
     activeHandle_ = -1;
@@ -127,31 +127,31 @@ void LightManager::SetActive(int handle) {
   activeHandle_ = handle;
 }
 
-Light *LightManager::Get(int handle) {
+DirectionalLightSource *DirectionalLightManager::Get(int handle) {
   if (!IsValid_(handle)) {
     return nullptr;
   }
   return &slots_[handle].light;
 }
 
-const Light *LightManager::Get(int handle) const {
+const DirectionalLightSource *DirectionalLightManager::Get(int handle) const {
   if (!IsValid_(handle)) {
     return nullptr;
   }
   return &slots_[handle].light;
 }
 
-Light *LightManager::GetActive() {
+DirectionalLightSource *DirectionalLightManager::GetActive() {
   const int h = ResolveActiveHandle_();
   return Get(h);
 }
 
-const Light *LightManager::GetActive() const {
+const DirectionalLightSource *DirectionalLightManager::GetActive() const {
   const int h = ResolveActiveHandle_();
   return Get(h);
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS LightManager::GetCBAddress(int handle) {
+D3D12_GPU_VIRTUAL_ADDRESS DirectionalLightManager::GetCBAddress(int handle) {
   if (!IsValid_(handle)) {
     return 0;
   }
@@ -163,12 +163,12 @@ D3D12_GPU_VIRTUAL_ADDRESS LightManager::GetCBAddress(int handle) {
   return slot.cb ? slot.cb->GetGPUVirtualAddress() : 0;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS LightManager::GetActiveCBAddress() {
+D3D12_GPU_VIRTUAL_ADDRESS DirectionalLightManager::GetActiveCBAddress() {
   const int h = ResolveActiveHandle_();
   return GetCBAddress(h);
 }
 
-void LightManager::DrawImGui(int handle, const char *name) {
+void DirectionalLightManager::DrawImGui(int handle, const char *name) {
   if (!IsValid_(handle)) {
     return;
   }
@@ -181,7 +181,7 @@ void LightManager::DrawImGui(int handle, const char *name) {
   SyncCB_(slot);
 }
 
-void LightManager::ReleaseSlot_(Slot &s) {
+void DirectionalLightManager::ReleaseSlot_(Slot &s) {
   if (s.cb) {
     if (s.mapped) {
       s.cb->Unmap(0, nullptr);
@@ -192,7 +192,7 @@ void LightManager::ReleaseSlot_(Slot &s) {
   }
 }
 
-void LightManager::EnsureCB_(Slot &s) {
+void DirectionalLightManager::EnsureCB_(Slot &s) {
   if (s.cb || !device_) {
     return;
   }
@@ -204,7 +204,7 @@ void LightManager::EnsureCB_(Slot &s) {
   }
 }
 
-void LightManager::SyncCB_(Slot &s) {
+void DirectionalLightManager::SyncCB_(Slot &s) {
   if (s.mapped) {
     *s.mapped = s.light.Data();
   }

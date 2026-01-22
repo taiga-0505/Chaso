@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Light/Light.h" // RC::Light / DirectionalLight
+#include "Light/Directional/DirectionalLightSource.h" // RC::DirectionalLightSource / DirectionalLight
 
 #include <d3d12.h>
 #include <vector>
@@ -11,13 +11,13 @@ namespace RC {
 /// Light を「ハンドル制」で管理し、各ライト用の Upload CB（LightSlotCB）も保持する。
 /// RenderCommon からライトの寿命/CB管理を分離するためのクラス。
 /// </summary>
-class LightManager {
+class DirectionalLightManager {
 public:
-  LightManager() = default;
-  ~LightManager() { Term(); }
+  DirectionalLightManager() = default;
+  ~DirectionalLightManager() { Term(); }
 
-  LightManager(const LightManager &) = delete;
-  LightManager &operator=(const LightManager &) = delete;
+  DirectionalLightManager(const DirectionalLightManager &) = delete;
+  DirectionalLightManager &operator=(const DirectionalLightManager &) = delete;
 
   /// <summary>初期化（Device が有効になった後に一度だけ呼ぶ）</summary>
   void Init(ID3D12Device *device);
@@ -44,16 +44,16 @@ public:
   int GetActiveHandle() const { return activeHandle_; }
 
   /// <summary>ライトの実体ポインタを取得（無効なら nullptr）</summary>
-  Light *Get(int handle);
+  DirectionalLightSource *Get(int handle);
 
   /// <summary>ライトの実体ポインタを取得（無効なら nullptr）</summary>
-  const Light *Get(int handle) const;
+  const DirectionalLightSource *Get(int handle) const;
 
   /// <summary>描画時に使用される「実効アクティブ」を返す（未設定時は default(0)）</summary>
-  Light *GetActive();
+  DirectionalLightSource *GetActive();
 
   /// <summary>描画時に使用される「実効アクティブ」を返す（未設定時は default(0)）</summary>
-  const Light *GetActive() const;
+  const DirectionalLightSource *GetActive() const;
 
   /// <summary>実効アクティブの LightSlotCB の GPU アドレスを返す（準備できない時は 0）</summary>
   D3D12_GPU_VIRTUAL_ADDRESS GetActiveCBAddress();
@@ -72,7 +72,7 @@ public:
 
 private:
   struct Slot {
-    Light light;
+    DirectionalLightSource light;
 
     // Upload CB for this light (b1).
     ID3D12Resource *cb = nullptr;

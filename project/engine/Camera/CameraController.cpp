@@ -233,6 +233,13 @@ void CameraController::DrawImGui() {
       ImGui::Text("追従: OFF");
     }
   }
+
+  // 現在位置表示
+  ImGui::Dummy(ImVec2(0.0f, 5.0f));
+  ImGui::Text("位置: (%.2f, %.2f, %.2f)", worldPos_.x, worldPos_.y,
+              worldPos_.z);
+  ImGui::Dummy(ImVec2(0.0f, 5.0f));
+
   ImGui::End();
 
   // 操作ガイド

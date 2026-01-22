@@ -27,6 +27,74 @@ struct Camera
 
 ConstantBuffer<Camera> gCamera : register(b2);
 
+struct PointLight
+{
+    float4 color;      // 光の色
+    float3 position;   // 光の位置
+    float intensity;   // 強度
+    float radius;      // 届く距離（0以下なら無効）
+    float decay;       // 減衰（指数）
+    float2 padding;    // CBアラインメント調整
+};
+
+static const uint MAX_POINT_LIGHTS = 4;
+
+cbuffer PointLightsCB : register(b3)
+{
+    uint pointCount;
+    float3 _padPoint; // 16byte
+    PointLight pointLights[MAX_POINT_LIGHTS];
+};
+
+struct SpotLight
+{
+    float4 color;
+    float3 position;
+    float intensity;
+    float3 direction;
+    float distance;
+    float decay;
+    float cosAngle;
+    float2 padding;
+};
+
+static const uint MAX_SPOT_LIGHTS = 4;
+
+cbuffer SpotLightsCB : register(b4)
+{
+    uint spotCount;
+    float3 _padSpot; // 16byte
+    SpotLight spotLights[MAX_SPOT_LIGHTS];
+};
+
+
+struct AreaLight
+{
+    float4 color;
+    float3 position;
+    float intensity;
+
+    float3 right;     // 面の右方向（正規化推奨）
+    float halfWidth;
+
+    float3 up;        // 面の上方向（正規化推奨）
+    float halfHeight;
+
+    float range;      // 影響距離（0以下なら無効）
+    float decay;      // 減衰（指数）
+    uint twoSided;    // 1なら両面
+    uint pad;
+};
+
+static const uint MAX_AREA_LIGHTS = 4;
+
+cbuffer AreaLightsCB : register(b5)
+{
+    uint areaCount;
+    float3 _padArea; // 16byte
+    AreaLight areaLights[MAX_AREA_LIGHTS];
+};
+
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
@@ -87,21 +155,225 @@ PixelShaderOutput main(VertexShaderOutput input)
         diffuseTerm = saturate(NdotL);
     }
 
-    float3 lightCol = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
+    float3 dirLightCol = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
 
-    // Diffuse
-    float3 diffuse = base.rgb * lightCol * diffuseTerm;
+    // -----------------
+    // Directional light
+    // -----------------
+    float3 diffuseDir = base.rgb * dirLightCol * diffuseTerm;
 
-    // Specular（Blinn-Phong固定）
-    float3 specular = 0.0f;
+    float3 specularDir = 0.0f;
     if (gMaterial.shininess > 0.0f && NdotL > 0.0f) // 裏面にハイライト出さない
     {
         float3 H = normalize(L + V);
         float specPow = pow(saturate(dot(N, H)), gMaterial.shininess);
-        specular = lightCol * specPow; // 白ハイライト
+        specularDir = dirLightCol * specPow; // 白ハイライト
     }
 
-    output.color.rgb = diffuse + specular;
+// -----------------
+// Point lights (MAX 4)
+// -----------------
+float3 diffusePoint = 0.0f;
+float3 specularPoint = 0.0f;
+
+[unroll]
+for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
+{
+    if (i >= pointCount) { break; }
+
+    PointLight pl = pointLights[i];
+
+    if (pl.intensity <= 0.0f || pl.radius <= 0.0f) { continue; }
+
+    float3 toLight = pl.position - input.worldPosition;
+    float dist = length(toLight);
+
+    if (dist >= pl.radius || dist <= 1e-5f) { continue; }
+
+    float3 Lp = toLight / dist;
+
+    // 減衰: (1 - d/r)^decay
+    float t = saturate(1.0f - dist / pl.radius);
+    float attenuation = pow(t, max(pl.decay, 0.0001f));
+
+    float NdotLp = dot(N, Lp);
+
+    float diffuseTermP = 0.0f;
+    if (gMaterial.lightingMode == 2)
+    {
+        float h = saturate(NdotLp * 0.5f + 0.5f);
+        diffuseTermP = h * h;
+    }
+    else
+    {
+        diffuseTermP = saturate(NdotLp);
+    }
+
+    float3 pointLightCol = pl.color.rgb * pl.intensity * attenuation;
+
+    diffusePoint += base.rgb * pointLightCol * diffuseTermP;
+
+    if (gMaterial.shininess > 0.0f && NdotLp > 0.0f)
+    {
+        float3 H = normalize(Lp + V);
+        float specPow = pow(saturate(dot(N, H)), gMaterial.shininess);
+        specularPoint += pointLightCol * specPow;
+    }
+}
+
+// -----------------
+// Spot lights (MAX 4)
+// -----------------
+float3 diffuseSpot = 0.0f;
+float3 specularSpot = 0.0f;
+
+[unroll]
+for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
+{
+    if (i >= spotCount) { break; }
+
+    SpotLight sl = spotLights[i];
+
+    if (sl.intensity <= 0.0f || sl.distance <= 0.0f) { continue; }
+
+    float3 toLightS = sl.position - input.worldPosition;
+    float distS = length(toLightS);
+
+    if (distS >= sl.distance || distS <= 1e-5f) { continue; }
+
+    float3 Ls = toLightS / distS;
+
+    // 距離減衰: (1 - d/D)^decay
+    float tS = saturate(1.0f - distS / sl.distance);
+    float attenuationS = pow(tS, max(sl.decay, 0.0001f));
+
+    // スポット係数（中心ほど強く、cosAngle以下で0）
+    float3 dirN = normalize(sl.direction);
+    float cosLD = dot(-Ls, dirN); // 光の向き(ライト→前) と (ライト→ピクセル) を比較
+    float spot = saturate((cosLD - sl.cosAngle) / max(1e-5f, (1.0f - sl.cosAngle)));
+
+    float3 spotLightCol = sl.color.rgb * sl.intensity * attenuationS * spot;
+
+    float NdotLs = dot(N, Ls);
+
+    float diffuseTermS = 0.0f;
+    if (gMaterial.lightingMode == 2)
+    {
+        float h = saturate(NdotLs * 0.5f + 0.5f);
+        diffuseTermS = h * h;
+    }
+    else
+    {
+        diffuseTermS = saturate(NdotLs);
+    }
+
+    diffuseSpot += base.rgb * spotLightCol * diffuseTermS;
+
+    if (gMaterial.shininess > 0.0f && NdotLs > 0.0f)
+    {
+        float3 Hs = normalize(Ls + V);
+        float specPowS = pow(saturate(dot(N, Hs)), gMaterial.shininess);
+        specularSpot += spotLightCol * specPowS;
+    }
+}
+
+
+// 合算
+    
+    // -----------------
+    // Area light (Rect)  ※擬似: 四隅4サンプル
+    // -----------------
+    float3 diffuseArea = 0.0f;
+    float3 specularArea = 0.0f;
+
+    const uint aCount = min(areaCount, MAX_AREA_LIGHTS);
+    [loop]
+    for (uint ai = 0; ai < aCount; ++ai)
+    {
+        AreaLight al = areaLights[ai];
+        if (al.intensity <= 0.0f || al.range <= 0.0f)
+            continue;
+
+        float3 R = al.right;
+        float3 U = al.up;
+
+        // 念のため正規化（0ベクトル回避）
+        float rLen = length(R);
+        float uLen = length(U);
+        if (rLen < 1e-5f || uLen < 1e-5f)
+            continue;
+        R /= rLen;
+        U /= uLen;
+
+        float3 Ln = cross(R, U);
+        float nLen = length(Ln);
+        if (nLen < 1e-5f)
+            continue;
+        Ln /= nLen;
+
+        float3 c = al.position;
+        float hw = al.halfWidth;
+        float hh = al.halfHeight;
+
+        float3 corners[4] = {
+            c + R * hw + U * hh,
+            c + R * hw - U * hh,
+            c - R * hw + U * hh,
+            c - R * hw - U * hh
+        };
+
+        float3 areaLightColBase = al.color.rgb * al.intensity;
+
+        // 4サンプル平均
+        [unroll]
+        for (int si = 0; si < 4; ++si)
+        {
+            float3 toL = corners[si] - input.worldPosition;
+            float dist = length(toL);
+            if (dist <= 1e-5f || dist >= al.range)
+                continue;
+
+            float3 La = toL / dist;
+
+            // 片面発光チェック（twoSided==0 の時だけ）
+            if (al.twoSided == 0)
+            {
+                // 点がライトの裏側ならスキップ
+                if (dot(Ln, -La) <= 0.0f)
+                    continue;
+            }
+
+            float t = saturate(1.0f - dist / al.range);
+            float attenuation = pow(t, max(al.decay, 0.0001f));
+
+            float NdotLa = dot(N, La);
+
+            float diffuseTermA = 0.0f;
+            if (gMaterial.lightingMode == 2)
+            {
+                float h = saturate(NdotLa * 0.5f + 0.5f);
+                diffuseTermA = h * h;
+            }
+            else
+            {
+                diffuseTermA = saturate(NdotLa);
+            }
+
+            float3 areaLightCol = areaLightColBase * attenuation * 0.25f;
+
+            diffuseArea += base.rgb * areaLightCol * diffuseTermA;
+
+            if (gMaterial.shininess > 0.0f && NdotLa > 0.0f)
+            {
+                float3 H = normalize(La + V);
+                float specPow = pow(saturate(dot(N, H)), gMaterial.shininess);
+                specularArea += areaLightCol * specPow;
+            }
+        }
+    }
+
+// 合算
+    output.color.rgb = (diffuseDir + diffusePoint + diffuseSpot + diffuseArea) + (specularDir + specularPoint + specularSpot + specularArea);
     output.color.a = base.a;
 
     return output;

@@ -20,7 +20,13 @@ private:
   RC::CameraController camera_;
 
   // Light
-  int light = -1;
+  int directionalLight = -1;
+
+  int pointLight = -1;
+  int pointLight2 = -1;
+
+  int spotLight = -1;
+  int spotLight2 = -1;
 
   // ===============
   // 3Dモデル
@@ -34,6 +40,9 @@ private:
 
   int model = -1;
   int tx_model = -1;
+
+  int terrain = -1;
+  Transform *terrainT_ = nullptr;
 
   // ===== 天球 =====
   int sphere = -1;
@@ -53,5 +62,5 @@ private:
   float t = 0.0f;
 
   RC::Vector4 fogColor_ = {0.85f, 0.92f, 1.00f, 1.0f};
-  bool isFogEnabled_ = true;
+  bool isFogEnabled_ = false;
 };

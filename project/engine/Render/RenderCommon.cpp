@@ -1,7 +1,10 @@
 #include "RenderCommon.h"
 
 #include "Dx12/Dx12Core.h"
-#include "Light/LightManager.h"
+#include "Light/Directional/DirectionalLightManager.h"
+#include "Light/Point/PointLightManager.h"
+#include "Light/Spot/SpotLightManager.h"
+#include "Light/Area/AreaLightManager.h"
 #include "PipelineManager.h"
 #include "Primitive2D/Primitive2D.h"
 #include "Sprite2D/Sprite2D.h"
@@ -147,7 +150,10 @@ static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
 std::vector<ModelSlot> gModels;
 std::vector<SphereSlot> gSpheres;
 RC::SpriteManager gSpriteMan;
-RC::LightManager gLightMan;
+RC::DirectionalLightManager gLightMan;
+RC::PointLightManager gPointLightMan;
+RC::SpotLightManager gSpotLightMan;
+RC::AreaLightManager gAreaLightMan;
 
 ID3D12Device *gDevice = nullptr;
 DescriptorHeap *gSrvHeap = nullptr; // いまは直接使ってない（互換用に保持）
@@ -258,6 +264,43 @@ static void BindCameraCB_() {
   gCL->SetGraphicsRootConstantBufferView(4, gCameraCB->GetGPUVirtualAddress());
 }
 
+// PointLightCB は RootParam[5]（b3）にバインドされる想定
+static void BindPointLightCB_() {
+  if (!gCL) {
+    return;
+  }
+  const D3D12_GPU_VIRTUAL_ADDRESS addr = gPointLightMan.GetCBAddress();
+  if (addr != 0) {
+    gCL->SetGraphicsRootConstantBufferView(5, addr);
+  }
+}
+
+
+// SpotLightCB は RootParam[6]（b4）にバインドされる想定
+static void BindSpotLightCB_() {
+  if (!gCL) {
+    return;
+  }
+  const D3D12_GPU_VIRTUAL_ADDRESS addr = gSpotLightMan.GetCBAddress();
+  if (addr != 0) {
+    gCL->SetGraphicsRootConstantBufferView(6, addr);
+  }
+}
+
+
+// AreaLightCB は RootParam[7]（b5）にバインドされる想定
+static void BindAreaLightCB_() {
+  if (!gCL) {
+    return;
+  }
+  const D3D12_GPU_VIRTUAL_ADDRESS addr = gAreaLightMan.GetCBAddress();
+  if (addr != 0) {
+    gCL->SetGraphicsRootConstantBufferView(7, addr);
+  }
+}
+
+
+
 // ============================================================================
 // Primitive2D の遅延生成
 // ----------------------------------------------------------------------------
@@ -312,6 +355,11 @@ void Init(SceneContext &ctx) {
   // Light は LightManager に委譲（default slot を作る）
   gLightMan.Init(gDevice);
 
+  // PointLight は PointLightManager に委譲（default slot を作る）
+  gPointLightMan.Init(gDevice);
+gSpotLightMan.Init(gDevice);
+  gAreaLightMan.Init(gDevice);
+
   // CameraCB: Upload に置いて Map しっぱなしで更新する
   gCameraCB = CreateBufferResource(gDevice, sizeof(CameraCB));
   gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
@@ -349,6 +397,11 @@ void Term() {
 
   // Light は LightManager に委譲
   gLightMan.Term();
+
+  // PointLight は PointLightManager に委譲
+  gPointLightMan.Term();
+gSpotLightMan.Term();
+  gAreaLightMan.Term();
   gSpheres.clear();
 
   gPrim2D.ptr.reset();
@@ -409,31 +462,160 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 }
 
 // ----------------------------------------------------------------------------
-// Light
+// DirectionalLight
 // ----------------------------------------------------------------------------
 
-int CreateLight() {
-  return gLightMan.Create();
-}
+int CreateDirectionalLight() { return gLightMan.Create(); }
 
-void DestroyLight(int lightHandle) {
-  gLightMan.Destroy(lightHandle);
-}
+void DestroyDirectionalLight(int lightHandle) { gLightMan.Destroy(lightHandle); }
 
-void SetActiveLight(int lightHandle) {
+void SetActiveDirectionalLight(int lightHandle) {
   // -1: 明示的なアクティブ無し（描画時は default slot を使用）
   gLightMan.SetActive(lightHandle);
 }
 
-int GetActiveLightHandle() { return gLightMan.GetActiveHandle(); }
+int GetActiveDirectionalLightHandle() { return gLightMan.GetActiveHandle(); }
 
-Light *GetLightPtr(int lightHandle) {
+DirectionalLightSource *GetDirectionalLightPtr(int lightHandle) {
   return gLightMan.Get(lightHandle);
 }
 
-void DrawImGuiLight(int lightHandle, const char *name) {
+void DrawImGuiDirectionalLight(int lightHandle, const char *name) {
   gLightMan.DrawImGui(lightHandle, name);
 }
+
+// ==============================
+// PointLight
+// ==============================
+
+int CreatePointLight(LightActivateMode activateMode) {
+  const int h = gPointLightMan.Create();
+  if (h < 0) {
+    return h;
+  }
+
+  // 生成した時点で「アクティブに渡す」オプション
+  if (activateMode == LightActivateMode::Set) {
+    gPointLightMan.ClearActive();
+    (void)gPointLightMan.AddActive(h);
+  } else if (activateMode == LightActivateMode::Add) {
+    // 追加に失敗（満杯）しても生成自体は成功しているので h は返す
+    // ※必要ならここでログを出してもOK
+    (void)gPointLightMan.AddActive(h);
+  }
+
+  return h;
+}
+
+void DestroyPointLight(int pointLightHandle) {
+  gPointLightMan.Destroy(pointLightHandle);
+}
+
+void SetActivePointLight(int pointLightHandle) {
+  // 互換: 旧 SetActive は「それ1個だけを使う」扱いにする
+  gPointLightMan.ClearActive();
+  if (pointLightHandle >= 0) {
+    (void)gPointLightMan.AddActive(pointLightHandle);
+  }
+}
+
+int GetActivePointLightHandle() {
+  // 互換: 先頭のアクティブを返す（無ければ -1）
+  if (gPointLightMan.GetActiveCount() <= 0) {
+    return -1;
+  }
+  return gPointLightMan.GetActiveHandleAt(0);
+}
+
+
+void ClearActivePointLights() { gPointLightMan.ClearActive(); }
+
+bool AddActivePointLight(int pointLightHandle) {
+  return gPointLightMan.AddActive(pointLightHandle);
+}
+
+void RemoveActivePointLight(int pointLightHandle) {
+  gPointLightMan.RemoveActive(pointLightHandle);
+}
+
+int GetActivePointLightCount() { return gPointLightMan.GetActiveCount(); }
+
+int GetActivePointLightHandleAt(int index) {
+  return gPointLightMan.GetActiveHandleAt(index);
+}
+
+PointLightSource *GetPointLightPtr(int pointLightHandle) {
+  return gPointLightMan.Get(pointLightHandle);
+}
+
+void DrawImGuiPointLight(int pointLightHandle, const char *name) {
+  gPointLightMan.DrawImGui(pointLightHandle, name);
+}
+
+
+// ==============================
+// SpotLight
+// ==============================
+
+int CreateSpotLight(LightActivateMode activateMode) {
+  const int h = gSpotLightMan.Create();
+  if (h < 0) {
+    return h;
+  }
+
+  if (activateMode == LightActivateMode::Set) {
+    gSpotLightMan.ClearActive();
+    (void)gSpotLightMan.AddActive(h);
+  } else if (activateMode == LightActivateMode::Add) {
+    (void)gSpotLightMan.AddActive(h);
+  }
+
+  return h;
+}
+
+void DestroySpotLight(int spotLightHandle) {
+  gSpotLightMan.Destroy(spotLightHandle);
+}
+
+void SetActiveSpotLight(int spotLightHandle) {
+  gSpotLightMan.ClearActive();
+  if (spotLightHandle >= 0) {
+    (void)gSpotLightMan.AddActive(spotLightHandle);
+  }
+}
+
+int GetActiveSpotLightHandle() {
+  if (gSpotLightMan.GetActiveCount() <= 0) {
+    return -1;
+  }
+  return gSpotLightMan.GetActiveHandleAt(0);
+}
+
+
+void ClearActiveSpotLights() { gSpotLightMan.ClearActive(); }
+
+bool AddActiveSpotLight(int spotLightHandle) {
+  return gSpotLightMan.AddActive(spotLightHandle);
+}
+
+void RemoveActiveSpotLight(int spotLightHandle) {
+  gSpotLightMan.RemoveActive(spotLightHandle);
+}
+
+int GetActiveSpotLightCount() { return gSpotLightMan.GetActiveCount(); }
+
+int GetActiveSpotLightHandleAt(int index) {
+  return gSpotLightMan.GetActiveHandleAt(index);
+}
+
+SpotLightSource *GetSpotLightPtr(int spotLightHandle) {
+  return gSpotLightMan.Get(spotLightHandle);
+}
+
+void DrawImGuiSpotLight(int spotLightHandle, const char *name) {
+  gSpotLightMan.DrawImGui(spotLightHandle, name);
+}
+
 
 // ----------------------------------------------------------------------------
 // Texture
@@ -546,6 +728,9 @@ void DrawModel(int modelHandle, int texHandle) {
   }
 
   BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
 
   auto &m = gModels[modelHandle].ptr;
 
@@ -597,6 +782,9 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
   }
 
   BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
 
   auto &m = gModels[modelHandle].ptr;
 
@@ -645,6 +833,9 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
   }
 
   BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
 
   auto &m = gModels[modelHandle].ptr;
 
@@ -913,6 +1104,9 @@ void DrawSphere(int sphereHandle, int texHandle) {
   }
 
   BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
 
   auto &s = gSpheres[sphereHandle].ptr;
 
@@ -1169,5 +1363,99 @@ void SetBlendMode(BlendMode blendMode) {
 }
 
 BlendMode GetBlendMode() { return gCurrentBlendMode; }
+
+
+// ============================================================================
+// AreaLight（Rect） API
+// ============================================================================
+
+int CreateAreaLight(LightActivateMode activateMode) {
+  if (!gInitialized) {
+    return -1;
+  }
+  const int h = gAreaLightMan.Create();
+  if (h < 0) {
+    return -1;
+  }
+
+  if (activateMode == LightActivateMode::Set) {
+    gAreaLightMan.ClearActive();
+    gAreaLightMan.AddActive(h);
+  } else if (activateMode == LightActivateMode::Add) {
+    gAreaLightMan.AddActive(h);
+  }
+  // None の時は何もしない
+  return h;
+}
+
+void DestroyAreaLight(int areaLightHandle) {
+  if (!gInitialized) {
+    return;
+  }
+  gAreaLightMan.Destroy(areaLightHandle);
+}
+
+void SetActiveAreaLight(int areaLightHandle) {
+  if (!gInitialized) {
+    return;
+  }
+  gAreaLightMan.SetActive(areaLightHandle);
+}
+
+int GetActiveAreaLightHandle() {
+  if (!gInitialized) {
+    return -1;
+  }
+  return gAreaLightMan.GetActiveHandle();
+}
+
+void ClearActiveAreaLights() {
+  if (!gInitialized) {
+    return;
+  }
+  gAreaLightMan.ClearActive();
+}
+
+bool AddActiveAreaLight(int areaLightHandle) {
+  if (!gInitialized) {
+    return false;
+  }
+  return gAreaLightMan.AddActive(areaLightHandle);
+}
+
+void RemoveActiveAreaLight(int areaLightHandle) {
+  if (!gInitialized) {
+    return;
+  }
+  gAreaLightMan.RemoveActive(areaLightHandle);
+}
+
+int GetActiveAreaLightCount() {
+  if (!gInitialized) {
+    return 0;
+  }
+  return gAreaLightMan.GetActiveCount();
+}
+
+int GetActiveAreaLightHandleAt(int index) {
+  if (!gInitialized) {
+    return -1;
+  }
+  return gAreaLightMan.GetActiveHandleAt(index);
+}
+
+AreaLightSource *GetAreaLightPtr(int areaLightHandle) {
+  if (!gInitialized) {
+    return nullptr;
+  }
+  return gAreaLightMan.Get(areaLightHandle);
+}
+
+void DrawImGuiAreaLight(int areaLightHandle, const char *name) {
+  if (!gInitialized) {
+    return;
+  }
+  gAreaLightMan.DrawImGui(areaLightHandle, name);
+}
 
 } // namespace RC

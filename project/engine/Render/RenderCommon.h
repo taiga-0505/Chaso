@@ -14,6 +14,19 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 
 namespace RC {
 
+// ============================================================================
+// ライト生成時の「アクティブ登録」モード
+// - None : 生成するだけ（描画には使われない）
+// - Add  : 現在のアクティブ配列に追加（最大数を超えたら追加失敗）
+// - Set  : アクティブ配列をクリアしてから追加（= それだけを使う）
+// ============================================================================
+enum class LightActivateMode {
+  None = 0,
+  Add,
+  Set,
+};
+
+
 /// <summary>
 /// RenderCommon を初期化する（起動時に一度だけ呼ぶ）
 /// </summary>
@@ -44,48 +57,193 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 // ライト用
 // ==============================
 
-class Light;
+class DirectionalLightSource;
 
 /// <summary>
-/// ライトを生成してハンドルを返す
+/// ディレクショナルライトを生成してハンドルを返す
 /// </summary>
 /// <returns>ライトハンドル（失敗時は -1）</returns>
-int CreateLight();
+int CreateDirectionalLight();
 
 /// <summary>
-/// ライトを破棄する
+/// ディレクショナルライトを破棄する
 /// </summary>
 /// <param name="lightHandle">ライトハンドル</param>
-void DestroyLight(int lightHandle);
+void DestroyDirectionalLight(int lightHandle);
 
 /// <summary>
-/// 3D描画で使用する「アクティブライト」を切り替える
+/// 3D描画で使用する「アクティブなディレクショナルライト」を切り替える
 /// </summary>
 /// <param name="lightHandle">
 /// ライトハンドル。-1 の場合は「明示的なアクティブ無し」になり、
 /// 描画時は共通のデフォルトライト（default slot）を使用します。
 /// </param>
-void SetActiveLight(int lightHandle);
+void SetActiveDirectionalLight(int lightHandle);
 
 /// <summary>
-/// 現在のアクティブライトのハンドルを返す
+/// 現在のアクティブなディレクショナルライトのハンドルを返す
 /// </summary>
 /// <returns>ライトハンドル（未設定なら -1）</returns>
-int GetActiveLightHandle();
+int GetActiveDirectionalLightHandle();
 
 /// <summary>
-/// ライトの実体ポインタを取得する
+/// ディレクショナルライトの実体ポインタを取得する
 /// </summary>
 /// <param name="lightHandle">ライトハンドル</param>
-/// <returns>Light*（無効ハンドルなら nullptr）</returns>
-Light *GetLightPtr(int lightHandle);
+/// <returns>DirectionalLightSource*（無効ハンドルなら nullptr）</returns>
+DirectionalLightSource *GetDirectionalLightPtr(int lightHandle);
 
 /// <summary>
-/// ライトの ImGui 表示を行う
+/// ディレクショナルライトの ImGui 表示を行う
 /// </summary>
 /// <param name="lightHandle">ライトハンドル</param>
 /// <param name="name">表示名</param>
-void DrawImGuiLight(int lightHandle, const char *name);
+void DrawImGuiDirectionalLight(int lightHandle, const char *name);
+
+// ==============================
+// ポイントライト用
+
+// ==============================
+
+class PointLightSource;
+
+/// <summary>
+/// ポイントライトを生成してハンドルを返す
+/// </summary>
+/// <returns>ポイントライトハンドル（失敗時は -1）</returns>
+int CreatePointLight(LightActivateMode activateMode = LightActivateMode::Add);
+
+/// <summary>
+/// ポイントライトを破棄する
+/// </summary>
+/// <param name="pointLightHandle">ポイントライトハンドル</param>
+void DestroyPointLight(int pointLightHandle);
+
+/// <summary>
+/// 3D描画で使用する「アクティブポイントライト」を切り替える
+/// </summary>
+/// <param name="pointLightHandle">
+/// ポイントライトハンドル。-1 の場合は「明示的なアクティブ無し」になり、
+/// 描画時は共通のデフォルト（OFF）を使用します。
+/// </param>
+void SetActivePointLight(int pointLightHandle);
+
+/// <summary>
+/// 現在のアクティブポイントライトのハンドルを返す
+/// </summary>
+/// <returns>ポイントライトハンドル（未設定なら -1）</returns>
+int GetActivePointLightHandle();
+
+void ClearActivePointLights();
+bool AddActivePointLight(int pointLightHandle);
+void RemoveActivePointLight(int pointLightHandle);
+int GetActivePointLightCount();
+int GetActivePointLightHandleAt(int index);
+
+
+/// <summary>
+/// ポイントライトの実体ポインタを取得する
+/// </summary>
+/// <param name="pointLightHandle">ポイントライトハンドル</param>
+/// <returns>PointLightSource*（無効ハンドルなら nullptr）</returns>
+PointLightSource *GetPointLightPtr(int pointLightHandle);
+
+/// <summary>
+/// ポイントライトの ImGui 表示を行う
+/// </summary>
+/// <param name="pointLightHandle">ポイントライトハンドル</param>
+/// <param name="name">表示名</param>
+void DrawImGuiPointLight(int pointLightHandle, const char *name);
+
+
+// ==============================
+// スポットライト用
+// ==============================
+
+class SpotLightSource;
+class AreaLightSource;
+
+/// <summary>
+/// スポットライトを生成してハンドルを返す
+/// </summary>
+/// <returns>スポットライトハンドル（失敗時は -1）</returns>
+int CreateSpotLight(LightActivateMode activateMode = LightActivateMode::Add);
+
+/// <summary>
+/// スポットライトを破棄する
+/// </summary>
+/// <param name="spotLightHandle">スポットライトハンドル</param>
+void DestroySpotLight(int spotLightHandle);
+
+/// <summary>
+/// 3D描画で使用する「アクティブスポットライト」を切り替える
+/// </summary>
+/// <param name="spotLightHandle">
+/// スポットライトハンドル。-1 の場合は「明示的なアクティブ無し」になり、
+/// 描画時は共通のデフォルト（OFF）を使用します。
+/// </param>
+void SetActiveSpotLight(int spotLightHandle);
+
+/// <summary>
+/// 現在のアクティブスポットライトのハンドルを返す
+/// </summary>
+/// <returns>スポットライトハンドル（未設定なら -1）</returns>
+int GetActiveSpotLightHandle();
+
+void ClearActiveSpotLights();
+bool AddActiveSpotLight(int spotLightHandle);
+void RemoveActiveSpotLight(int spotLightHandle);
+int GetActiveSpotLightCount();
+int GetActiveSpotLightHandleAt(int index);
+
+
+/// <summary>
+/// スポットライトの実体ポインタを取得する
+/// </summary>
+/// <param name="spotLightHandle">スポットライトハンドル</param>
+/// <returns>SpotLightSource*（無効ハンドルなら nullptr）</returns>
+SpotLightSource *GetSpotLightPtr(int spotLightHandle);
+
+/// <summary>
+/// スポットライトの ImGui 表示を行う
+/// </summary>
+/// <param name="spotLightHandle">スポットライトハンドル</param>
+/// <param name="name">表示名</param>
+void DrawImGuiSpotLight(int spotLightHandle, const char *name);
+
+
+// ============================================================================
+// AreaLight（Rect）
+// ============================================================================
+
+/// <summary>
+/// エリアライト（矩形）を生成してハンドルを返す
+/// </summary>
+int CreateAreaLight(LightActivateMode activateMode = LightActivateMode::Add);
+
+/// <summary>
+/// エリアライト（矩形）を破棄する
+/// </summary>
+void DestroyAreaLight(int areaLightHandle);
+
+/// <summary>
+/// 互換：エリアライトを1個だけ有効化（Clear→Add）
+/// </summary>
+void SetActiveAreaLight(int areaLightHandle);
+
+int GetActiveAreaLightHandle();
+
+void ClearActiveAreaLights();
+bool AddActiveAreaLight(int areaLightHandle);
+void RemoveActiveAreaLight(int areaLightHandle);
+int GetActiveAreaLightCount();
+int GetActiveAreaLightHandleAt(int index);
+
+AreaLightSource *GetAreaLightPtr(int areaLightHandle);
+
+void DrawImGuiAreaLight(int areaLightHandle, const char *name = nullptr);
+
+
 
 // ==============================
 // モデル用

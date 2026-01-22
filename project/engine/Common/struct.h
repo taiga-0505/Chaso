@@ -106,6 +106,73 @@ struct DirectionalLight {
   float intensity;       // 光の強度
 };
 
+struct PointLight {
+  RC::Vector4 color;    // 光の色 (RGBA)
+  RC::Vector3 position; // 光の位置
+  float intensity;      // 光の強度
+  float radius;         // 光の届く距離
+  float decay;          // 減衰率
+  float padding[2];     // アラインメント調整
+};
+
+struct SpotLight {
+  RC::Vector4 color;     // 光の色 (RGBA)
+  RC::Vector3 position;  // 光の位置
+  float intensity;       // 光の強度
+  RC::Vector3 direction; // 光の方向
+  float distance;        // 光の届く距離
+  float decay;           // 減衰率
+  float cosAngle;        // スポットライトの余弦
+  float padding[2];      // アラインメント調整
+};
+
+struct AreaLight {
+  RC::Vector4 color;    // rgb + a
+  RC::Vector3 position; // 中心
+  float intensity;
+
+  RC::Vector3 right; // 面の右方向(正規化推奨)
+  float halfWidth; // 半幅
+
+  RC::Vector3 up;   // 面の上方向(正規化推奨)
+  float halfHeight; // 半高さ
+
+  float range;       // 影響距離（0以下なら無効扱いでもOK）
+  float decay;       // 減衰指数
+  uint32_t twoSided; // 1なら両面発光
+  uint32_t padding;      // 16byte合わせ
+};
+
+// =============================================
+// 複数ライト用CB（Object3D: Point/Spot を最大4個）
+// - HLSL側の cbuffer とレイアウトを合わせる
+// - RootSig: Point=b3, Spot=b4 のまま
+// =============================================
+
+static constexpr uint32_t kMaxPointLights = 4;
+static constexpr uint32_t kMaxSpotLights  = 4;
+static const int kMaxAreaLights = 4;
+
+// b3 用（PointLight配列）
+struct PointLightsCB {
+  uint32_t count = 0; // 有効なライト数（0〜4）
+  float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
+  PointLight lights[kMaxPointLights]{};
+};
+
+// b4 用（SpotLight配列）
+struct SpotLightsCB {
+  uint32_t count = 0; // 有効なライト数（0〜4）
+  float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
+  SpotLight lights[kMaxSpotLights]{};
+};
+
+struct AreaLightsCB {
+  AreaLight lights[kMaxAreaLights];
+  uint32_t count;
+  RC::Vector3 padding; // 16byte合わせ
+};
+
 // -------------------------------
 // 非スコープ enum: 無修飾で使える
 // -------------------------------

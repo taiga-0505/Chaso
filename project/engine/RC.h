@@ -15,7 +15,7 @@
 
 #include "Math/MathUtils.h"
 
-#include "Light/Light.h"
+#include "Light/Directional/DirectionalLightSource.h"
 
 #include "Particle.h"
 #include "Fire/FireParticle.h"

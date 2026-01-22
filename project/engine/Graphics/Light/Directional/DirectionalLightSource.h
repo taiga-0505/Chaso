@@ -5,9 +5,9 @@
 namespace RC {
 
 // シンプルな方向性ライトクラス
-class Light {
+class DirectionalLightSource {
 public:
-  Light();
+  DirectionalLightSource();
 
   // DirectionalLight 生データにアクセス
   DirectionalLight &Data() { return data_; }

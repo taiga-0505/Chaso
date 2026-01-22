@@ -1,18 +1,18 @@
-#include "Light.h"
+#include "DirectionalLightSource.h"
 #include "imgui/imgui.h"
 #include <cmath>
 #include <string>
 
 namespace RC {
 
-Light::Light() {
+DirectionalLightSource::DirectionalLightSource() {
   // デフォルトは上からの白いライト
   data_.color = {1.0f, 1.0f, 1.0f, 1.0f};
   data_.direction = {0.0f, -1.0f, 0.0f};
   data_.intensity = 1.0f;
 }
 
-void Light::SetDirection(const Vector3 &dir, bool normalize) {
+void DirectionalLightSource::SetDirection(const Vector3 &dir, bool normalize) {
   Vector3 d = dir;
   if (normalize) {
     float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
@@ -25,15 +25,15 @@ void Light::SetDirection(const Vector3 &dir, bool normalize) {
   data_.direction = d;
 }
 
-void Light::SetColor(const Vector3 &rgb, float alpha) {
+void DirectionalLightSource::SetColor(const Vector3 &rgb, float alpha) {
   data_.color = {rgb.x, rgb.y, rgb.z, alpha};
 }
 
-void Light::SetColor(const Vector4 &rgba) { data_.color = rgba; }
+void DirectionalLightSource::SetColor(const Vector4 &rgba) { data_.color = rgba; }
 
-void Light::SetIntensity(float intensity) { data_.intensity = intensity; }
+void DirectionalLightSource::SetIntensity(float intensity) { data_.intensity = intensity; }
 
-void Light::DrawImGui(const char *name) {
+void DirectionalLightSource::DrawImGui(const char *name) {
 
   std::string label = name ? std::string(name) : std::string("Light");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -80,7 +80,7 @@ void Light::DrawImGui(const char *name) {
 
   ImGui::Dummy(ImVec2(0, 6));
 
-  if (lightingMode_ != None) {
+  if (lightingMode_ != 0) {
     ImGui::DragFloat((std::string("光沢度(shininess)##") + label).c_str(),
                      &shininess_, 0.5f, 0.0f, 256.0f, "%.1f");
     ImGui::SameLine();

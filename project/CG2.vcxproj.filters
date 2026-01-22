@@ -121,9 +121,6 @@
     <ClCompile Include="engine\Render\RenderCommon.cpp">
       <Filter>engine\Render</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Graphics\Light\Light.cpp">
-      <Filter>engine\Graphics\Light</Filter>
-    </ClCompile>
     <ClCompile Include="engine\Graphics\Primitive2D\Primitive2D.cpp">
       <Filter>engine\Graphics\Primitive2D</Filter>
     </ClCompile>
@@ -205,15 +202,29 @@
     <ClCompile Include="engine\Dx12\ShaderCompiler\ShaderCompiler.cpp">
       <Filter>engine\ShaderCompiler</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Render\Light\LightManager.cpp">
-      <Filter>engine\Render\Light</Filter>
-    </ClCompile>
     <ClCompile Include="engine\Render\Sprite2D\SpriteManager.cpp">
       <Filter>engine\Render\Sprite</Filter>
     </ClCompile>
     <ClCompile Include="engine\Render\Model3D\ModelManager.cpp">
       <Filter>engine\Render\Model</Filter>
     </ClCompile>
+    <ClCompile Include="engine\Graphics\Light\Point\PointLightSource.cpp">
+      <Filter>engine\Graphics\Light\Point</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Light\Directional\DirectionalLightSource.cpp">
+      <Filter>engine\Graphics\Light\Directional</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Light\Directional\DirectionalLightManager.cpp">
+      <Filter>engine\Render\Light\Directional</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Light\Point\PointLightManager.cpp">
+      <Filter>engine\Render\Light\Point</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Light\Spot\SpotLightSource.cpp" />
+    <ClCompile Include="engine\Render\Light\Spot\SpotLightManager.cpp" />
+    <ClCompile Include="Game\Scene\LightScene\LightScene.cpp" />
+    <ClCompile Include="engine\Graphics\Light\Area\AreaLightSource.cpp" />
+    <ClCompile Include="engine\Render\Light\Area\AreaLightManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -342,9 +353,6 @@
     <ClInclude Include="engine\Render\RenderCommon.h">
       <Filter>engine\Render</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Graphics\Light\Light.h">
-      <Filter>engine\Graphics\Light</Filter>
-    </ClInclude>
     <ClInclude Include="engine\Graphics\Primitive2D\Primitive2D.h">
       <Filter>engine\Graphics\Primitive2D</Filter>
     </ClInclude>
@@ -429,15 +437,29 @@
     <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h">
       <Filter>engine\ShaderCompiler</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Render\Light\LightManager.h">
-      <Filter>engine\Render\Light</Filter>
-    </ClInclude>
     <ClInclude Include="engine\Render\Sprite2D\SpriteManager.h">
       <Filter>engine\Render\Sprite</Filter>
     </ClInclude>
     <ClInclude Include="engine\Render\Model3D\ModelManager.h">
       <Filter>engine\Render\Model</Filter>
     </ClInclude>
+    <ClInclude Include="engine\Graphics\Light\Point\PointLightSource.h">
+      <Filter>engine\Graphics\Light\Point</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Light\Directional\DirectionalLightSource.h">
+      <Filter>engine\Graphics\Light\Directional</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Light\Directional\DirectionalLightManager.h">
+      <Filter>engine\Render\Light\Directional</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Light\Point\PointLightManager.h">
+      <Filter>engine\Render\Light\Point</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Light\Spot\SpotLightSource.h" />
+    <ClInclude Include="engine\Render\Light\Spot\SpotLightManager.h" />
+    <ClInclude Include="Game\Scene\LightScene\LightScene.h" />
+    <ClInclude Include="engine\Graphics\Light\Area\AreaLightSource.h" />
+    <ClInclude Include="engine\Render\Light\Area\AreaLightManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -628,6 +650,18 @@
     </Filter>
     <Filter Include="engine\Render\Model">
       <UniqueIdentifier>{4259614c-e470-4778-b3bc-7464c4859e93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Light\Point">
+      <UniqueIdentifier>{87dd1ee8-c843-492c-a75a-315c9ab38fcd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Light\Directional">
+      <UniqueIdentifier>{2fd6a29c-9d71-4f8a-8e7e-9788f4af8be5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Light\Directional">
+      <UniqueIdentifier>{479347ef-29a2-421d-8cc5-41dab4b3b096}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Light\Point">
+      <UniqueIdentifier>{0fcd9213-0ed8-4a7a-9ba7-b3ac63909f28}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
