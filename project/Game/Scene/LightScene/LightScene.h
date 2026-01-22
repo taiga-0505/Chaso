@@ -25,9 +25,6 @@ private:
   int ball_ = -1;
   Transform *ballT_ = nullptr;
 
-  int plane_gltf_ = -1;
-  Transform *planeT_ = nullptr;
-
   int DirectionalLight_ = -1;
 
   int PointLight1_ = -1;

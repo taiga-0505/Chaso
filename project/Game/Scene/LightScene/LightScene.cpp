@@ -22,10 +22,6 @@ void LightScene::OnEnter(SceneContext &ctx) {
   ballT_ = RC::GetModelTransformPtr(ball_);
   ballT_->rotation.y = -1.6f;
 
-  plane_gltf_ = RC::LoadModel("Resources/model/plane_glTF/plane.gltf");
-  planeT_ = RC::GetModelTransformPtr(plane_gltf_);
-  planeT_->rotation.y = -3.2f;
-
   DirectionalLight_ = RC::CreateDirectionalLight();
 
   PointLight1_ = RC::CreatePointLight();
@@ -198,8 +194,6 @@ void LightScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   ctx.core->Clear(0.05f, 0.05f, 0.05f, 1.0f);
   RC::PreDraw3D(ctx, cl);
 
-  RC::DrawModel(plane_gltf_);
-
   RC::DrawModel(ball_);
 
   RC::DrawModel(terrain_);
@@ -217,8 +211,6 @@ void LightScene::DrawImGui() {
     // ModelTab
     // -------------------
     if (ImGui::BeginTabItem("ModelTab")) {
-
-      RC::DrawImGui3D(plane_gltf_, "Plane_glTF");
 
       RC::DrawImGui3D(ball_, "Ball");
 
