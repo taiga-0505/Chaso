@@ -16,10 +16,12 @@ void Game::Init(SceneContext &ctx) {
   registerScenes_();
 
   // ここで最初のシーンを決める（Gameの責務）
-#ifdef _DEBUG
-  const char *boot = "Light"; // デバッグ時は直接Gameへ
+#if defined(RC_DEVELOPMENT)
+  const char *boot = "Light";
+#elif defined(_DEBUG)
+  const char *boot = "Sample";
 #else
-  const char *boot = "Title"; // リリースはTitleから
+  const char *boot = "Title";
 #endif
   sceneMgr_.ChangeImmediately(boot, ctx);
 }

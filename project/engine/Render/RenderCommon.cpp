@@ -465,24 +465,90 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 // DirectionalLight
 // ----------------------------------------------------------------------------
 
-int CreateDirectionalLight() { return gLightMan.Create(); }
+int CreateDirectionalLight(LightActivateMode activateMode) {
+  const int h = gLightMan.Create();
+  if (h < 0) {
+    return h;
+  }
 
-void DestroyDirectionalLight(int lightHandle) { gLightMan.Destroy(lightHandle); }
+  if (activateMode == LightActivateMode::Set) {
+    gLightMan.SetActive(h);
+  } else if (activateMode == LightActivateMode::Add) {
+    // まだ明示アクティブが無い時だけ採用
+    if (!gLightMan.HasExplicitActive()) {
+      gLightMan.SetActive(h);
+    }
+  }
+  // None は何もしない
+
+  return h;
+}
+
+void DestroyDirectionalLight(int lightHandle) {
+  gLightMan.Destroy(lightHandle);
+}
 
 void SetActiveDirectionalLight(int lightHandle) {
   // -1: 明示的なアクティブ無し（描画時は default slot を使用）
   gLightMan.SetActive(lightHandle);
 }
 
-int GetActiveDirectionalLightHandle() { return gLightMan.GetActiveHandle(); }
+int GetActiveDirectionalLightHandle() {
+  if (!gInitialized) {
+    return -1;
+  }
+
+  const int explicitH = gLightMan.GetActiveHandle();
+  if (explicitH >= 0) {
+    return explicitH;
+  }
+
+  // 明示的なアクティブが無い場合は default(0) を返す
+  return gLightMan.DefaultHandle();
+}
 
 DirectionalLightSource *GetDirectionalLightPtr(int lightHandle) {
   return gLightMan.Get(lightHandle);
 }
 
 void DrawImGuiDirectionalLight(int lightHandle, const char *name) {
+  // -1 を渡されたら「実効アクティブ」で表示する（Set してなくても編集できる）
+  if (lightHandle < 0) {
+    lightHandle = GetActiveDirectionalLightHandle();
+  }
   gLightMan.DrawImGui(lightHandle, name);
 }
+
+void SetDirectionalLightEnabled(int lightHandle, bool enabled) {
+  if (auto *p = gLightMan.Get(lightHandle)) {
+    p->SetEnabled(enabled);
+    // 反映（DataForGPU を Sync する）
+    (void)gLightMan.GetCBAddress(lightHandle);
+  }
+}
+
+bool IsDirectionalLightEnabled(int lightHandle) {
+  if (const auto *p = gLightMan.Get(lightHandle)) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+void SetActiveDirectionalLightEnabled(bool enabled) {
+  if (auto *p = gLightMan.GetActive()) {
+    p->SetEnabled(enabled);
+    // 反映
+    (void)gLightMan.GetActiveCBAddress();
+  }
+}
+
+bool IsActiveDirectionalLightEnabled() {
+  if (const auto *p = gLightMan.GetActive()) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
 
 // ==============================
 // PointLight
@@ -552,6 +618,32 @@ void DrawImGuiPointLight(int pointLightHandle, const char *name) {
   gPointLightMan.DrawImGui(pointLightHandle, name);
 }
 
+void SetPointLightEnabled(int pointLightHandle, bool enabled) {
+  if (auto *p = gPointLightMan.Get(pointLightHandle)) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsPointLightEnabled(int pointLightHandle) {
+  if (const auto *p = gPointLightMan.Get(pointLightHandle)) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+void SetActivePointLightEnabled(bool enabled) {
+  if (auto *p = gPointLightMan.GetActive()) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsActivePointLightEnabled() {
+  if (const auto *p = gPointLightMan.GetActive()) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
 
 // ==============================
 // SpotLight
@@ -614,6 +706,32 @@ SpotLightSource *GetSpotLightPtr(int spotLightHandle) {
 
 void DrawImGuiSpotLight(int spotLightHandle, const char *name) {
   gSpotLightMan.DrawImGui(spotLightHandle, name);
+}
+
+void SetSpotLightEnabled(int spotLightHandle, bool enabled) {
+  if (auto *p = gSpotLightMan.Get(spotLightHandle)) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsSpotLightEnabled(int spotLightHandle) {
+  if (const auto *p = gSpotLightMan.Get(spotLightHandle)) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+void SetActiveSpotLightEnabled(bool enabled) {
+  if (auto *p = gSpotLightMan.GetActive()) {
+    p->SetEnabled(enabled);
+  }
+}
+
+bool IsActiveSpotLightEnabled() {
+  if (const auto *p = gSpotLightMan.GetActive()) {
+    return p->IsEnabled();
+  }
+  return false;
 }
 
 

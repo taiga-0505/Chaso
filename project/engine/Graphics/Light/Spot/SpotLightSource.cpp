@@ -34,40 +34,51 @@ void SpotLightSource::SetAngleRad(float rad) {
   data_.cosAngle = std::cos(rad);
 }
 
+::SpotLight SpotLightSource::DataForGPU() const {
+  ::SpotLight out = data_;
+  if (!enabled_) {
+    out.intensity = 0.0f;
+  }
+  return out;
+}
+
 void SpotLightSource::DrawImGui(const char *name) {
   std::string label = name ? std::string(name) : std::string("SpotLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
   }
 
-  ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(), &data_.color.x,
-                    ImGuiColorEditFlags_Float);
+  ImGui::Checkbox((std::string("有効##") + label).c_str(), &enabled_);
 
-  ImGui::DragFloat3((std::string("位置##") + label).c_str(), &data_.position.x,
-                    0.01f);
+  if (enabled_) {
 
-  ImGui::DragFloat3((std::string("方向##") + label).c_str(), &data_.direction.x,
-                    0.01f);
+    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
+                      &data_.color.x, ImGuiColorEditFlags_Float);
 
-  ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
-                   0.01f, 0.0f, 64.0f, "%.2f");
+    ImGui::DragFloat3((std::string("位置##") + label).c_str(),
+                      &data_.position.x, 0.01f);
 
-  ImGui::DragFloat((std::string("距離(distance)##") + label).c_str(),
-                   &data_.distance, 0.05f, 0.0f, 500.0f, "%.2f");
+    ImGui::DragFloat3((std::string("方向##") + label).c_str(),
+                      &data_.direction.x, 0.01f);
 
-  ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(), &data_.decay,
-                   0.05f, 0.0f, 32.0f, "%.2f");
+    ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
+                     0.01f, 0.0f, 64.0f, "%.2f");
 
-  // cosAngle から度数に戻して編集
-  float c = std::clamp(data_.cosAngle, -1.0f, 1.0f);
-  float angleDeg = RadToDeg_(std::acos(c));
+    ImGui::DragFloat((std::string("距離(distance)##") + label).c_str(),
+                     &data_.distance, 0.05f, 0.0f, 500.0f, "%.2f");
 
-  if (ImGui::DragFloat((std::string("角度(度)##") + label).c_str(), &angleDeg,
-                       0.1f, 0.0f, 89.9f, "%.1f")) {
-    SetAngleDeg(angleDeg);
+    ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(),
+                     &data_.decay, 0.05f, 0.0f, 32.0f, "%.2f");
+
+    // cosAngle から度数に戻して編集
+    float c = std::clamp(data_.cosAngle, -1.0f, 1.0f);
+    float angleDeg = RadToDeg_(std::acos(c));
+
+    if (ImGui::DragFloat((std::string("角度(度)##") + label).c_str(), &angleDeg,
+                         0.1f, 0.0f, 89.9f, "%.1f")) {
+      SetAngleDeg(angleDeg);
+    }
   }
-
-  ImGui::TextDisabled("※ intensity<=0 or distance<=0 なら実質OFFにできるよ");
 }
 
 } // namespace RC

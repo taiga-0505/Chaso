@@ -54,7 +54,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   terrainT_->translation.y = -1.0f;
 
   // 天球
-  tx_Sphere_ = RC::LoadTex("Resources/snow.png");
+  tx_Sphere_ = RC::LoadTex("Resources/sky_dome.png");
   sphere = RC::GenerateSphereEx(tx_Sphere_, 40.0f);
   sphereT_ = RC::GetSphereTransformPtr(sphere);
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
@@ -111,7 +111,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   // ImGui
   // ===========================================
 
-#ifdef _DEBUG
+#ifdef RC_ENABLE_IMGUI
 
   DrawImGui();
 
@@ -172,7 +172,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::SetFogOverlayColor(fogColor_); // ちょい青
   if (isFogEnabled_) {
     RC::DrawFogOverlay(t,
-                       0.15f,                    // intensity
+                       0.55f,                    // intensity
                        4.0f,                     // scale
                        3.5f,                     // speed
                        RC::Vector2{0.08f, 0.0f}, // wind

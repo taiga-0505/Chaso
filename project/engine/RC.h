@@ -16,6 +16,10 @@
 #include "Math/MathUtils.h"
 
 #include "Light/Directional/DirectionalLightSource.h"
+#include "Light/Spot/SpotLightSource.h"
+#include "Light/Point/PointLightSource.h"
+#include "Light/Area/AreaLightSource.h"
+
 
 #include "Particle.h"
 #include "Fire/FireParticle.h"

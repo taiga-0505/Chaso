@@ -187,14 +187,23 @@ void PointLightManager::SyncCB_() {
     return;
 
   ::PointLightsCB cb{};
-  cb.count = (uint32_t)(std::min)(activeCount_, kMaxActive);
+  uint32_t outCount = 0;
+  const uint32_t n = (uint32_t)(std::min)(activeCount_, kMaxActive);
 
-  for (uint32_t i = 0; i < cb.count; ++i) {
+  // enabled なライトだけを詰める
+  for (uint32_t i = 0; i < n; ++i) {
     const int h = active_[i];
     if (!IsValid_(h))
       continue;
-    cb.lights[i] = slots_[h].light.Data();
+
+    const auto &ls = slots_[h].light;
+    if (!ls.IsEnabled())
+      continue;
+
+    cb.lights[outCount] = ls.DataForGPU();
+    ++outCount;
   }
+  cb.count = outCount;
 
   *mapped_ = cb;
 }

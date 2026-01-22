@@ -28,11 +28,15 @@ private:
   int DirectionalLight_ = -1;
 
   int PointLight1_ = -1;
+  RC::PointLightSource *pl1_source_;
 
   int PointLight2_ = -1;
+  RC::PointLightSource *pl2_source_;
 
   int SpotLight1_ = -1;
+  RC::SpotLightSource *sl1_source_;
 
   int SpotLight2_ = -1;
+  RC::SpotLightSource *sl2_source_;
 
 };

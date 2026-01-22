@@ -333,7 +333,7 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
 void Particle::DrawImGui() {
 
-#ifdef _DEBUG
+#ifdef RC_ENABLE_IMGUI
   if (ImGui::TreeNode("Particle")) {
 
     // ==================

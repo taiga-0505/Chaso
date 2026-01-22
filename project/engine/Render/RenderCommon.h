@@ -62,8 +62,14 @@ class DirectionalLightSource;
 /// <summary>
 /// ディレクショナルライトを生成してハンドルを返す
 /// </summary>
+/// <param name="activateMode">
+/// - None: アクティブを変更しない
+/// - Add : まだ明示アクティブが無い時だけアクティブにする
+/// - Set : 必ずアクティブにする
+/// </param>
 /// <returns>ライトハンドル（失敗時は -1）</returns>
-int CreateDirectionalLight();
+int CreateDirectionalLight(
+    LightActivateMode activateMode = LightActivateMode::Set);
 
 /// <summary>
 /// ディレクショナルライトを破棄する
@@ -83,7 +89,7 @@ void SetActiveDirectionalLight(int lightHandle);
 /// <summary>
 /// 現在のアクティブなディレクショナルライトのハンドルを返す
 /// </summary>
-/// <returns>ライトハンドル（未設定なら -1）</returns>
+/// <returns>ライトハンドル（未設定なら default(0)）</returns>
 int GetActiveDirectionalLightHandle();
 
 /// <summary>
@@ -96,9 +102,29 @@ DirectionalLightSource *GetDirectionalLightPtr(int lightHandle);
 /// <summary>
 /// ディレクショナルライトの ImGui 表示を行う
 /// </summary>
-/// <param name="lightHandle">ライトハンドル</param>
-/// <param name="name">表示名</param>
+/// <param name="lightHandle">ライトハンドル（-1
+/// の場合は実効アクティブを使う）</param> <param name="name">表示名</param>
 void DrawImGuiDirectionalLight(int lightHandle, const char *name);
+
+/// <summary>
+/// ディレクショナルライトの ON/OFF を切り替える
+/// </summary>
+void SetDirectionalLightEnabled(int lightHandle, bool enabled);
+
+/// <summary>
+/// ディレクショナルライトが ON かどうか
+/// </summary>
+bool IsDirectionalLightEnabled(int lightHandle);
+
+/// <summary>
+/// 今の「実効アクティブ」ディレクショナルライトの ON/OFF を切り替える
+/// </summary>
+void SetActiveDirectionalLightEnabled(bool enabled);
+
+/// <summary>
+/// 今の「実効アクティブ」ディレクショナルライトが ON かどうか
+/// </summary>
+bool IsActiveDirectionalLightEnabled();
 
 // ==============================
 // ポイントライト用
@@ -134,10 +160,29 @@ void SetActivePointLight(int pointLightHandle);
 /// <returns>ポイントライトハンドル（未設定なら -1）</returns>
 int GetActivePointLightHandle();
 
+/// <summary>
+/// アクティブポイントライト配列をクリアする
+/// </summary>
 void ClearActivePointLights();
+
+/// <summary>
+/// アクティブポイントライト配列に追加する
+/// </summary>
 bool AddActivePointLight(int pointLightHandle);
+
+/// <summary>
+/// アクティブポイントライト配列から削除する
+/// </summary>
 void RemoveActivePointLight(int pointLightHandle);
+
+/// <summary>
+/// アクティブポイントライトの数を取得する
+/// </summary>
 int GetActivePointLightCount();
+
+/// <summary>
+/// アクティブポイントライトのハンドルをインデックスで取得する
+/// </summary>
 int GetActivePointLightHandleAt(int index);
 
 
@@ -155,13 +200,32 @@ PointLightSource *GetPointLightPtr(int pointLightHandle);
 /// <param name="name">表示名</param>
 void DrawImGuiPointLight(int pointLightHandle, const char *name);
 
+/// <summary>
+/// ポイントライトの ON/OFF を切り替える
+/// </summary>
+void SetPointLightEnabled(int pointLightHandle, bool enabled);
+
+/// <summary>
+/// ポイントライトが ON かどうか
+/// </summary>
+bool IsPointLightEnabled(int pointLightHandle);
+
+/// <summary>
+/// 今の「実効アクティブ」ポイントライトの ON/OFF を切り替える（先頭の active）
+/// </summary>
+void SetActivePointLightEnabled(bool enabled);
+
+/// <summary>
+/// 今の「実効アクティブ」ポイントライトが ON かどうか
+/// </summary>
+bool IsActivePointLightEnabled();
+
 
 // ==============================
 // スポットライト用
 // ==============================
 
 class SpotLightSource;
-class AreaLightSource;
 
 /// <summary>
 /// スポットライトを生成してハンドルを返す
@@ -190,12 +254,30 @@ void SetActiveSpotLight(int spotLightHandle);
 /// <returns>スポットライトハンドル（未設定なら -1）</returns>
 int GetActiveSpotLightHandle();
 
+/// </summary>
+/// アクティブスポットライト配列をクリアする
+/// </summary>
 void ClearActiveSpotLights();
-bool AddActiveSpotLight(int spotLightHandle);
-void RemoveActiveSpotLight(int spotLightHandle);
-int GetActiveSpotLightCount();
-int GetActiveSpotLightHandleAt(int index);
 
+/// <summary>
+/// アクティブスポットライト配列に追加する
+/// </summary>
+bool AddActiveSpotLight(int spotLightHandle);
+
+/// <summary>
+/// アクティブスポットライト配列から削除する
+/// </summary>
+void RemoveActiveSpotLight(int spotLightHandle);
+
+/// <summary>
+/// アクティブスポットライトの数を取得する
+/// </summary>
+int GetActiveSpotLightCount();
+
+/// <summary>
+/// アクティブスポットライトのハンドルをインデックスで取得する
+/// </summary>
+int GetActiveSpotLightHandleAt(int index);
 
 /// <summary>
 /// スポットライトの実体ポインタを取得する
@@ -211,10 +293,32 @@ SpotLightSource *GetSpotLightPtr(int spotLightHandle);
 /// <param name="name">表示名</param>
 void DrawImGuiSpotLight(int spotLightHandle, const char *name);
 
+/// <summary>
+/// スポットライトの ON/OFF を切り替える
+/// </summary>
+void SetSpotLightEnabled(int spotLightHandle, bool enabled);
+
+/// <summary>
+/// スポットライトが ON かどうか
+/// </summary>
+bool IsSpotLightEnabled(int spotLightHandle);
+
+/// <summary>
+/// 今の「実効アクティブ」スポットライトの ON/OFF を切り替える（先頭の active）
+/// </summary>
+void SetActiveSpotLightEnabled(bool enabled);
+
+/// <summary>
+/// 今の「実効アクティブ」スポットライトが ON かどうか
+/// </summary>
+bool IsActiveSpotLightEnabled();
+
 
 // ============================================================================
 // AreaLight（Rect）
 // ============================================================================
+
+class AreaLightSource;
 
 /// <summary>
 /// エリアライト（矩形）を生成してハンドルを返す
@@ -231,19 +335,45 @@ void DestroyAreaLight(int areaLightHandle);
 /// </summary>
 void SetActiveAreaLight(int areaLightHandle);
 
+/// <summary>
+/// 現在のアクティブエリアライトのハンドルを返す
+/// </summary>
 int GetActiveAreaLightHandle();
 
+/// <summary>
+/// アクティブエリアライト配列をクリアする
+/// </summary>
 void ClearActiveAreaLights();
+
+/// <summary>
+/// アクティブエリアライト配列に追加する
+/// </summary>
 bool AddActiveAreaLight(int areaLightHandle);
+
+/// <summary>
+/// アクティブエリアライト配列から削除する
+/// </summary>
 void RemoveActiveAreaLight(int areaLightHandle);
+
+/// <summary>
+/// アクティブエリアライトの数を取得する
+/// </summary>
 int GetActiveAreaLightCount();
+
+/// <summary>
+/// アクティブエリアライトのハンドルをインデックスで取得する
+/// </summary>
 int GetActiveAreaLightHandleAt(int index);
 
+/// <summary>
+/// エリアライトの実体ポインタを取得する
+/// </summary>
 AreaLightSource *GetAreaLightPtr(int areaLightHandle);
 
+/// <summary>
+/// エリアライトの ImGui 表示を行う
+/// </summary>
 void DrawImGuiAreaLight(int areaLightHandle, const char *name = nullptr);
-
-
 
 // ==============================
 // モデル用

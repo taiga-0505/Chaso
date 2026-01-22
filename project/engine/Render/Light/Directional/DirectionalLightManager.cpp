@@ -200,13 +200,13 @@ void DirectionalLightManager::EnsureCB_(Slot &s) {
   s.cb = CreateBufferResource(device_, sizeof(DirectionalLight));
   s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
   if (s.mapped) {
-    *s.mapped = s.light.Data();
+    *s.mapped = s.light.DataForGPU();
   }
 }
 
 void DirectionalLightManager::SyncCB_(Slot &s) {
   if (s.mapped) {
-    *s.mapped = s.light.Data();
+    *s.mapped = s.light.DataForGPU();
   }
 }
 

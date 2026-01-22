@@ -12,28 +12,38 @@ PointLightSource::PointLightSource() {
   data_.decay = 2.0f;
 }
 
+::PointLight PointLightSource::DataForGPU() const {
+  ::PointLight out = data_;
+  if (!enabled_) {
+    out.intensity = 0.0f;
+  }
+  return out;
+}
+
 void PointLightSource::DrawImGui(const char *name) {
   std::string label = name ? std::string(name) : std::string("PointLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
   }
 
-  ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(), &data_.color.x,
-                    ImGuiColorEditFlags_Float);
+  ImGui::Checkbox((std::string("有効##") + label).c_str(), &enabled_);
 
-  ImGui::DragFloat3((std::string("位置##") + label).c_str(), &data_.position.x,
-                    0.01f);
+  if (enabled_) {
+    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
+                      &data_.color.x, ImGuiColorEditFlags_Float);
 
-  ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
-                   0.01f, 0.0f, 64.0f, "%.2f");
+    ImGui::DragFloat3((std::string("位置##") + label).c_str(),
+                      &data_.position.x, 0.01f);
 
-  ImGui::DragFloat((std::string("半径(radius)##") + label).c_str(),
-                   &data_.radius, 0.05f, 0.0f, 500.0f, "%.2f");
+    ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
+                     0.01f, 0.0f, 64.0f, "%.2f");
 
-  ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(), &data_.decay,
-                   0.05f, 0.0f, 32.0f, "%.2f");
+    ImGui::DragFloat((std::string("半径(radius)##") + label).c_str(),
+                     &data_.radius, 0.05f, 0.0f, 500.0f, "%.2f");
 
-  ImGui::TextDisabled("※ intensity<=0 or radius<=0 なら実質OFFにできるよ");
+    ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(),
+                     &data_.decay, 0.05f, 0.0f, 32.0f, "%.2f");
+  }
 }
 
 } // namespace RC

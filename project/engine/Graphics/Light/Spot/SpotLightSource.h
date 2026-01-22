@@ -42,9 +42,18 @@ public:
   void SetAngleDeg(float deg);
   void SetAngleRad(float rad);
 
+  // ON/OFF
+  void SetEnabled(bool enabled) { enabled_ = enabled; }
+  bool IsEnabled() const { return enabled_; }
+  void ToggleEnabled() { enabled_ = !enabled_; }
+
+  // GPUに送るデータ（enabled=false の時は実質OFFになるよう調整したコピーを返す）
+  ::SpotLight DataForGPU() const;
+
   void DrawImGui(const char *name = nullptr);
 
 private:
+  bool enabled_ = true;
   ::SpotLight data_{};
 };
 

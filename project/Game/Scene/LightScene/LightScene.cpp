@@ -23,21 +23,52 @@ void LightScene::OnEnter(SceneContext &ctx) {
   ballT_->rotation.y = -1.6f;
 
   DirectionalLight_ = RC::CreateDirectionalLight();
-  RC::SetActiveDirectionalLight(DirectionalLight_);
-
-  SpotLight1_ = RC::CreateSpotLight();
-
-  SpotLight2_ = RC::CreateSpotLight();
-
+  
   PointLight1_ = RC::CreatePointLight();
+  pl1_source_ = RC::GetPointLightPtr(PointLight1_);
+  pl1_source_->SetPosition({-4.0f, 2.0f, -2.0f});
+  pl1_source_->SetIntensity(3.0f);
+  pl1_source_->SetDecay(2.0f);
 
   PointLight2_ = RC::CreatePointLight();
+  pl2_source_ = RC::GetPointLightPtr(PointLight2_);
+  pl2_source_->SetPosition({4.0f, 2.0f, -2.0f});
+  pl2_source_->SetIntensity(3.0f);
+  pl2_source_->SetDecay(2.0f);
+
+  SpotLight1_ = RC::CreateSpotLight();
+  sl1_source_ = RC::GetSpotLightPtr(SpotLight1_);
+  sl1_source_->SetPosition({-4.0f, 2.0f, -2.0f});
+  sl1_source_->SetIntensity(3.0f);
+  sl1_source_->SetDistance(20.0f);
+  sl1_source_->SetDecay(2.0f);
+  sl1_source_->SetAngleDeg(60.0f);
+
+  SpotLight2_ = RC::CreateSpotLight();
+  sl2_source_ = RC::GetSpotLightPtr(SpotLight2_);
+  sl2_source_->SetPosition({4.0f, 2.0f, -2.0f});
+  sl2_source_->SetIntensity(3.0f);
+  sl2_source_->SetDistance(20.0f);
+  sl2_source_->SetDecay(2.0f);
+  sl2_source_->SetAngleDeg(60.0f);
 }
 
 void LightScene::OnExit(SceneContext &ctx) {
 
-    RC::UnloadModel(ball_);
-
+  RC::UnloadModel(ball_);
+  ball_ = -1;
+  RC::UnloadModel(terrain_);
+  terrain_ = -1;
+  RC::DestroyDirectionalLight(DirectionalLight_);
+  DirectionalLight_ = -1;
+  RC::DestroyPointLight(PointLight1_);
+  PointLight1_ = -1;
+  RC::DestroyPointLight(PointLight2_);
+  PointLight2_ = -1;
+  RC::DestroySpotLight(SpotLight1_);
+  SpotLight1_ = -1;
+  RC::DestroySpotLight(SpotLight2_);
+  SpotLight2_ = -1;
 }
 
 void LightScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -57,31 +88,67 @@ void LightScene::Update(SceneManager &sm, SceneContext &ctx) {
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   // ==============================
-  // キー入力でパーティクル操作
+  // キー入力でライト操作
   // ==============================
   Input *input = ctx.input;
 
+  // Directional Light ON/OFF
   if (input->IsKeyTrigger(DIK_1)) {
+    if (RC::IsActiveDirectionalLightEnabled()) {
+      RC::SetActiveDirectionalLightEnabled(false);
+    } else {
+      RC::SetActiveDirectionalLightEnabled(true);
+    }
   }
 
+  // Point Light1 ON/OFF
   if (input->IsKeyTrigger(DIK_2)) {
+    if (RC::IsPointLightEnabled(PointLight1_)) {
+      RC::SetPointLightEnabled(PointLight1_, false);
+    } else {
+      RC::SetPointLightEnabled(PointLight1_, true);
+    }
   }
 
+  // Point Light2 ON/OFF
   if (input->IsKeyTrigger(DIK_3)) {
+    if (RC::IsPointLightEnabled(PointLight2_)) {
+      RC::SetPointLightEnabled(PointLight2_, false);
+    } else {
+      RC::SetPointLightEnabled(PointLight2_, true);
+    }
   }
+
+  // Spot Light1 ON/OFF
   if (input->IsKeyTrigger(DIK_4)) {
+    if (RC::IsSpotLightEnabled(SpotLight1_)) {
+      RC::SetSpotLightEnabled(SpotLight1_, false);
+    } else {
+      RC::SetSpotLightEnabled(SpotLight1_, true);
+    }
   }
 
+  // Spot Light2 ON/OFF
   if (input->IsKeyTrigger(DIK_5)) {
+    if (RC::IsSpotLightEnabled(SpotLight2_)) {
+      RC::SetSpotLightEnabled(SpotLight2_, false);
+    } else {
+      RC::SetSpotLightEnabled(SpotLight2_, true);
+    }
   }
 
-  if (input->IsKeyPressed(DIK_A)) {
-  }
-  if (input->IsKeyPressed(DIK_D)) {
-  }
+  // wasdでボールのscale変更
   if (input->IsKeyPressed(DIK_W)) {
+    ballT_->scale.y += 0.01f;
+  }
+  if (input->IsKeyPressed(DIK_A)) {
+    ballT_->scale.z -= 0.01f;
   }
   if (input->IsKeyPressed(DIK_S)) {
+    ballT_->scale.y -= 0.01f;
+  }
+  if (input->IsKeyPressed(DIK_D)) {
+    ballT_->scale.z += 0.01f;
   }
 }
 
