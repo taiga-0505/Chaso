@@ -22,10 +22,10 @@ class ModelMesh {
 public:
   // Node階層を反映して描画するための「描画単位」
   struct DrawItem {
-    uint32_t vertexStart = 0;   // VB上の開始頂点
-    uint32_t vertexCount = 0;   // 頂点数
-    uint32_t materialIndex = 0; // scene->mMaterials の index
-    uint32_t meshIndex = 0;     // scene->mMeshes の index（デバッグ用）
+    uint32_t vertexStart = 0;     // VB上の開始頂点
+    uint32_t vertexCount = 0;     // 頂点数
+    uint32_t materialIndex = 0;   // scene->mMaterials の index
+    uint32_t meshIndex = 0;       // scene->mMeshes の index（デバッグ用）
     RC::Matrix4x4 nodeWorld = {}; // Model空間での累積行列（Root→このNode）
     std::string nodeName;         // デバッグ用
   };
@@ -55,6 +55,13 @@ public:
   const std::vector<MaterialData> &Materials() const { return materials_; }
   const Node &RootNode() const { return rootNode_; }
   const std::vector<DrawItem> &DrawItems() const { return drawItems_; }
+
+  const std::string &SourceInputPath() const {
+    return sourceInputPath_;
+  } // LoadModelに渡された文字列
+  const std::string &SourceFilePath() const {
+    return sourceFilePath_;
+  } // 実際に読んだファイル
 
 private:
   struct VB {
@@ -102,7 +109,15 @@ private:
 
   void UploadVB_(const std::vector<VertexData> &vertices);
 
+  // Materialの index を「使っている分だけ」に詰める。
+  // - OBJ で mMaterials[0] が空のダミーになるケースなどを吸収
+  // - SubmeshRange / DrawItem の materialIndex も 0..N-1 に揃える
+  void CompactMaterials_();
+
   // 右手→左手のための座標系変換（X反転）
   static RC::Matrix4x4 MakeAxisFlipX_();
   static RC::Matrix4x4 ConvertNodeMatrixRHtoLH_(const RC::Matrix4x4 &m);
+
+  std::string sourceInputPath_;
+  std::string sourceFilePath_;
 };

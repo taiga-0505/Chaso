@@ -221,9 +221,9 @@ void LightScene::DrawImGui() {
 
       RC::DrawImGui3D(plane_gltf_, "Plane_glTF");
 
-      RC::DrawImGui3D(ball_, "Ball");
+      RC::DrawImGui3D(ball_, "Ball_obj");
 
-      RC::DrawImGui3D(terrain_, "Terrain");
+      RC::DrawImGui3D(terrain_, "Terrain_obj");
 
       ImGui::EndTabItem();
     }

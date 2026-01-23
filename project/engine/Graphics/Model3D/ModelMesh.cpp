@@ -27,10 +27,6 @@ ModelMesh::~ModelMesh() {
 bool ModelMesh::LoadModel(ID3D12Device *device, const std::string &modelPath) {
   device_ = device;
 
-  // ---------------------------------------------------------
-  // 指定が「ファイル」でも「フォルダ」でもOK。
-  // フォルダの場合は中から .gltf/.glb/.obj を探して最初に見つけたものを読む
-  // ---------------------------------------------------------
   auto IsSupported = [](std::string ext) {
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     return ext == ".obj" || ext == ".gltf" || ext == ".glb";
@@ -39,11 +35,16 @@ bool ModelMesh::LoadModel(ID3D12Device *device, const std::string &modelPath) {
   fs::path p(modelPath);
   fs::path file;
 
+  // 毎回クリア（前回の表示が残らないように）
+  sourceInputPath_.clear();
+  sourceFilePath_.clear();
+
   if (fs::is_regular_file(p)) {
     if (!IsSupported(p.extension().string())) {
       return false;
     }
     file = p;
+
   } else if (fs::is_directory(p)) {
     // 優先順：gltf -> glb -> obj
     const std::vector<std::string> exts = {".gltf", ".glb", ".obj"};
@@ -51,6 +52,7 @@ bool ModelMesh::LoadModel(ID3D12Device *device, const std::string &modelPath) {
       for (auto &entry : fs::directory_iterator(p)) {
         if (!entry.is_regular_file())
           continue;
+
         std::string ext = entry.path().extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
         if (ext == extWant) {
@@ -64,18 +66,24 @@ bool ModelMesh::LoadModel(ID3D12Device *device, const std::string &modelPath) {
     if (file.empty()) {
       return false;
     }
+
   } else {
     return false;
   }
 
-  if (!LoadAssimp_(file.string())) {
+  sourceInputPath_ = modelPath;
+  sourceFilePath_ = file.lexically_normal().string();
+
+  // LoadAssimp_ もこの相対パスで呼ぶ
+  if (!LoadAssimp_(sourceFilePath_)) {
+    sourceFilePath_.clear();
     return false;
   }
 
-  // UVが全部(0,0)なら簡易球面UVを焼く（OBJ等でUVが無いケース対策）
   EnsureSphericalUVIfMissing();
   return true;
 }
+
 
 bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   Assimp::Importer importer;
@@ -84,8 +92,8 @@ bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   // - 三角形化
   // - UV上下反転
   // - 面の向き反転（X反転で三角形の向きが反転するので、ここで補正）
-  const unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs |
-                             aiProcess_FlipWindingOrder;
+  const unsigned int flags =
+      aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder;
 
   const aiScene *scene = importer.ReadFile(filePath.c_str(), flags);
   if (!scene || !scene->HasMeshes()) {
@@ -184,15 +192,22 @@ bool ModelMesh::ExtractScene_(const aiScene *scene, const std::string &baseDir,
       }
     }
 
-    const uint32_t count =
-        static_cast<uint32_t>(outVertices.size()) - start;
+    const uint32_t count = static_cast<uint32_t>(outVertices.size()) - start;
 
     SubmeshRange r{};
     r.vertexStart = start;
     r.vertexCount = count;
     r.materialIndex = mesh->mMaterialIndex;
+    // 念のため範囲外は 0 に丸める（壊れたデータ対策）
+    if (!materials_.empty() && r.materialIndex >= materials_.size()) {
+      r.materialIndex = 0;
+    }
+
     submeshes_[meshIndex] = r;
   }
+
+  // 使っているMaterialだけに詰めて、indexを 0..N-1 に揃える
+  CompactMaterials_();
 
   return !outVertices.empty();
 }
@@ -372,9 +387,10 @@ std::string ModelMesh::ResolveTexturePath_(const aiScene *scene,
   return {};
 }
 
-std::string ModelMesh::ExtractEmbeddedTexture_(const aiScene *scene,
-                                               const aiString &assimpTexPath,
-                                               const std::string &baseDir) const {
+std::string
+ModelMesh::ExtractEmbeddedTexture_(const aiScene *scene,
+                                   const aiString &assimpTexPath,
+                                   const std::string &baseDir) const {
   if (!scene)
     return {};
   if (assimpTexPath.length < 2)
@@ -427,6 +443,72 @@ std::string ModelMesh::ExtractEmbeddedTexture_(const aiScene *scene,
   out.close();
 
   return outPath.string();
+}
+
+void ModelMesh::CompactMaterials_() {
+  if (materials_.empty() || submeshes_.empty()) {
+    return;
+  }
+
+  // submeshes_ が参照している materialIndex を、登場順でユニーク化
+  std::vector<uint32_t> usedOld;
+  usedOld.reserve(materials_.size());
+
+  std::vector<int> remap(materials_.size(), -1);
+
+  for (const auto &r : submeshes_) {
+    const uint32_t oldIdx = r.materialIndex;
+    if (oldIdx >= materials_.size())
+      continue;
+    if (remap[oldIdx] != -1)
+      continue;
+
+    remap[oldIdx] = (int)usedOld.size();
+    usedOld.push_back(oldIdx);
+  }
+
+  if (usedOld.empty())
+    return;
+
+  // すでに "0..N-1" で揃っていれば何もしない
+  if (usedOld.size() == materials_.size()) {
+    bool identity = true;
+    for (uint32_t i = 0; i < usedOld.size(); ++i) {
+      if (usedOld[i] != i) {
+        identity = false;
+        break;
+      }
+    }
+    if (identity)
+      return;
+  }
+
+  // Material を詰める
+  std::vector<MaterialData> newMats;
+  newMats.reserve(usedOld.size());
+  for (uint32_t oldIdx : usedOld) {
+    newMats.push_back(materials_[oldIdx]);
+  }
+  materials_.swap(newMats);
+
+  // 互換：MaterialFile は「詰めた後の先頭の有効テクスチャ」
+  materialFile_ = {};
+  for (const auto &md : materials_) {
+    if (!md.textureFilePath.empty()) {
+      materialFile_ = md;
+      break;
+    }
+  }
+
+  // submeshes_ の index を詰めた後の index に変換
+  for (auto &r : submeshes_) {
+    const uint32_t oldIdx = r.materialIndex;
+    if (oldIdx < remap.size() && remap[oldIdx] >= 0) {
+      r.materialIndex = (uint32_t)remap[oldIdx];
+    } else {
+      r.materialIndex = 0; // fallback
+    }
+  }
 }
 
 RC::Matrix4x4 ModelMesh::MakeAxisFlipX_() {

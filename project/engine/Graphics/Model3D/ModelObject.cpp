@@ -183,9 +183,8 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
   const Matrix4x4 proj = hasVP_ ? cachedProj_ : MakeIdentity4x4();
 
   // ObjectのWorld
-  const Matrix4x4 objectWorld =
-      MakeAffineMatrix(transform_.scale, transform_.rotation,
-                       transform_.translation);
+  const Matrix4x4 objectWorld = MakeAffineMatrix(
+      transform_.scale, transform_.rotation, transform_.translation);
 
   // ---------------------------------------------------------
   // ★重要：同じCBアドレスに何回も上書きすると、全部最後の値になる
@@ -207,8 +206,7 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
     auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_);
     *dst = tm;
 
-    const D3D12_GPU_VIRTUAL_ADDRESS addr =
-        cbWvpBatch_->GetGPUVirtualAddress();
+    const D3D12_GPU_VIRTUAL_ADDRESS addr = cbWvpBatch_->GetGPUVirtualAddress();
     cmdList->SetGraphicsRootConstantBufferView(1, addr);
 
     // texture
@@ -242,7 +240,8 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
 
     // テクスチャ（override優先）
     const D3D12_GPU_DESCRIPTOR_HANDLE srv =
-        (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(it.materialIndex);
+        (textureSrv_.ptr != 0) ? textureSrv_
+                               : GetSrvForMaterial_(it.materialIndex);
     cmdList->SetGraphicsRootDescriptorTable(2, srv);
 
     // mesh範囲だけ描画
@@ -291,8 +290,8 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
     tm.worldInverseTranspose = Transpose(Inverse(world));
 
     const uint32_t dstIndex = base + i;
-    auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_ +
-                                                         uint64_t(dstIndex) * oneSize);
+    auto *dst = reinterpret_cast<TransformationMatrix *>(
+        cbWvpBatchMapped_ + uint64_t(dstIndex) * oneSize);
     *dst = tm;
 
     D3D12_GPU_VIRTUAL_ADDRESS addr =
@@ -338,6 +337,40 @@ void ModelObject::ApplyLightingIfReady_() {
   }
 }
 
+// ツールチップ用のヘルパ
+static void HelpMarker(const char *desc) {
+  ImGui::SameLine();
+  ImGui::TextDisabled("(?)");
+  if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+    ImGui::TextUnformatted(desc);
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+  }
+}
+
+// 長い文字列：折り返し + ホバーで全文 + クリックでコピー
+static void ShowLongTextJP(const std::string &s) {
+  const char *text = s.empty() ? "(なし)" : s.c_str();
+
+  // 今いるセル幅で折り返す
+  const float wrap = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
+  ImGui::PushTextWrapPos(wrap);
+  ImGui::TextUnformatted(text);
+  ImGui::PopTextWrapPos();
+
+  // ホバーで全文だけ出す（コピーはしない）
+  if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
+    ImGui::TextUnformatted(text);
+    ImGui::PopTextWrapPos();
+    ImGui::EndTooltip();
+  }
+}
+
+
 void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   std::string label = name ? std::string(name) : std::string("ModelObject");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
@@ -346,15 +379,6 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   bool vis = Visible();
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
-
-  // PS 側は Lambert / HalfLambert + Blinn-Phong 固定運用。
-  // モードは 0..2 のみ使う。
-  static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
-  int mode = cbMat_.mapped->lightingMode;
-  if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
-                   IM_ARRAYSIZE(kModes))) {
-    cbMat_.mapped->lightingMode = mode;
-  }
 
   ImGui::TextUnformatted("Transform");
   ImGui::DragFloat3((std::string("位置(x,y,z)##") + label).c_str(),
@@ -396,27 +420,152 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
     }
   }
 
-  // テクスチャ情報
   if (texman_ && mesh_) {
     ImGui::TextUnformatted("テクスチャ情報");
-    if (textureSrv_.ptr != 0) {
-      ImGui::TextDisabled("override: (SetTexture)");
-    } else {
-      // material一覧
-      const auto &mats = mesh_->Materials();
-      if (!mats.empty()) {
-        ImGui::TextDisabled("materials: %d", (int)mats.size());
-        for (int i = 0; i < (int)mats.size() && i < 8; ++i) {
-          ImGui::TextDisabled("[%d] %s", i, mats[i].textureFilePath.c_str());
-        }
-        if ((int)mats.size() > 8) {
-          ImGui::TextDisabled("... (%d more)", (int)mats.size() - 8);
-        }
-      } else if (!mesh_->MaterialFile().textureFilePath.empty()) {
-        ImGui::TextDisabled("mtl: %s", mesh_->MaterialFile().textureFilePath.c_str());
-      } else {
-        ImGui::TextDisabled("(no texture)");
-      }
+
+    // overrideが無い時だけ material SRV を準備
+    if (textureSrv_.ptr == 0) {
+      EnsureMaterialSrvsLoaded_();
     }
+
+    const auto &mats = mesh_->Materials();
+
+    int count = 0;
+    if (!mats.empty()) {
+      count = (int)mats.size();
+    } else if (!mesh_->MaterialFile().textureFilePath.empty()) {
+      count = 1;
+    }
+    // Materialが無くても override があるなら 1 として表示
+    if (count == 0 && textureSrv_.ptr != 0) {
+      count = 1;
+    }
+
+    const ImGuiTableFlags flags =
+        ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
+        ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
+
+    if (ImGui::BeginTable("##TexInfo", 2, flags)) {
+      ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+      ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
+
+      // マテリアル数
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextDisabled("マテリアル数");
+      ImGui::TableSetColumnIndex(1);
+      ImGui::Text("%d", count);
+
+      // 各マテリアルが「今参照してる」テクスチャパス
+      const int kMaxShow = 32;
+      for (int i = 0; i < count && i < kMaxShow; ++i) {
+
+        // 「今実際に使うSRV」を決める（Drawと同じ優先順位）
+        D3D12_GPU_DESCRIPTOR_HANDLE usedSrv{};
+        if (textureSrv_.ptr != 0) {
+          usedSrv = textureSrv_; // SetTextureで上書き中
+        } else {
+          usedSrv = GetSrvForMaterial_((uint32_t)i); // マテリアル毎
+        }
+
+        // SRVから逆引き（= 今参照してるテクスチャのパス）
+        std::string path = texman_->GetPathBySrv(usedSrv);
+
+        // 逆引きできなかった時の保険（モデル側のパス）
+        if (path.empty()) {
+          if (!mats.empty()) {
+            path = mats[i].textureFilePath;
+          } else {
+            path = mesh_->MaterialFile().textureFilePath;
+          }
+        }
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        char label[64];
+        snprintf(label, sizeof(label), "[%d] 参照テクスチャ", i);
+        ImGui::TextDisabled("%s", label);
+
+        ImGui::TableSetColumnIndex(1);
+        ShowLongTextJP(path);
+      }
+
+      if (count > kMaxShow) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("...");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::TextDisabled("残り %d 件", count - kMaxShow);
+      }
+
+      ImGui::EndTable();
+    }
+
+    ImGui::Dummy(ImVec2(0, 6));
   }
+
+  // ----------------------------------------------------------
+  // モデル参照情報（日本語表示）
+  // ----------------------------------------------------------
+  if (mesh_) {
+    ImGui::TextUnformatted("モデル参照");
+
+    const auto &file = mesh_->SourceFilePath();
+    const auto &input = mesh_->SourceInputPath();
+
+    std::string rootName;
+    if (!file.empty()) {
+      rootName = fs::path(file).filename().string();
+    } else if (!input.empty()) {
+      rootName = fs::path(input).filename().string();
+    } else {
+      rootName = "(不明)";
+    }
+
+    const ImGuiTableFlags flags =
+        ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
+        ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
+
+    if (ImGui::BeginTable("##ModelRef", 2, flags)) {
+      ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+      ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
+
+      auto RowText = [&](const char *k, const std::string &v) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("%s", k);
+        ImGui::TableSetColumnIndex(1);
+        ShowLongTextJP(v);
+      };
+
+      RowText("読み込んだファイル", file);
+
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextDisabled("共有参照数");
+      
+      ImGui::TableSetColumnIndex(1);
+      ImGui::Text("%d", (int)mesh_.use_count());
+
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextDisabled("頂点数");
+      ImGui::TableSetColumnIndex(1);
+      ImGui::Text("%u", mesh_->VertexCount());
+
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextDisabled("描画パーツ数");
+      ImGui::TableSetColumnIndex(1);
+      ImGui::Text("%u", (uint32_t)mesh_->DrawItems().size());
+
+      RowText("モデル名", rootName);
+
+      ImGui::EndTable();
+    }
+
+    ImGui::Dummy(ImVec2(0, 6));
+  }
+
+  ImGui::Dummy(ImVec2(0, 6));
 }

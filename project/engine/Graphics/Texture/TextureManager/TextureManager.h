@@ -26,6 +26,9 @@ public:
   const DirectX::TexMetadata *GetMeta(TextureID id) const;
   Texture2D *GetTexture(TextureID id);
 
+  // SRV(GPUハンドル)からロード元パスを逆引き（見つからなければ空文字）
+  std::string GetPathBySrv(D3D12_GPU_DESCRIPTOR_HANDLE srv) const;
+
 private:
   SRVManager *srv_ = nullptr;
   std::unordered_map<std::string, Texture2D> cache_;

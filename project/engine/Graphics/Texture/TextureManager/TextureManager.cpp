@@ -82,3 +82,18 @@ Texture2D *TextureManager::GetTexture(TextureID id) {
     return nullptr;
   return Get(it->second);
 }
+
+std::string
+TextureManager::GetPathBySrv(D3D12_GPU_DESCRIPTOR_HANDLE srv) const {
+  if (srv.ptr == 0)
+    return {};
+
+  for (const auto &kv : cache_) {
+    const auto &path = kv.first;
+    const auto &tex = kv.second;
+    if (tex.IsLoaded() && tex.GpuSrv().ptr == srv.ptr) {
+      return path;
+    }
+  }
+  return {};
+}
