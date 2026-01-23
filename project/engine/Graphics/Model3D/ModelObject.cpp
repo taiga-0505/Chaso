@@ -27,7 +27,7 @@ ModelObject::~ModelObject() {
 void ModelObject::Initialize(ID3D12Device *device) {
   device_ = device;
 
-  // WVP CB
+  // WVP CB（単発用：互換のため残す）
   cbWvp_.resource = CreateBufferResource(device_, sizeof(TransformationMatrix));
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
@@ -61,21 +61,10 @@ void ModelObject::EnsureSphericalUVIfMissing() {
 }
 
 void ModelObject::ResetTextureToMtl() {
-  if (!texman_ || !mesh_) {
-    textureSrv_ = {};
-    return;
-  }
-
-  const auto &mtl = mesh_->MaterialFile();
-  if (mtl.textureFilePath.empty()) {
-    textureSrv_ = {};
-    return;
-  }
-
-  const D3D12_GPU_DESCRIPTOR_HANDLE srv =
-      texman_->Load(mtl.textureFilePath, /*srgb=*/true);
-
-  textureSrv_ = (srv.ptr == 0) ? D3D12_GPU_DESCRIPTOR_HANDLE{} : srv;
+  // overrideを解除して materialIndexごとのSRVを使う
+  textureSrv_ = {};
+  materialSrvs_.clear();
+  EnsureMaterialSrvsLoaded_();
 }
 
 void ModelObject::SetColor(const Vector4 &color) {
@@ -85,35 +74,16 @@ void ModelObject::SetColor(const Vector4 &color) {
 }
 
 void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
+  cachedView_ = view;
+  cachedProj_ = proj;
+  hasVP_ = true;
+
+  // 互換：一応 root（モデル全体）として更新しておく
   Matrix4x4 world = MakeAffineMatrix(transform_.scale, transform_.rotation,
                                      transform_.translation);
   cbWvp_.mapped->World = world;
   cbWvp_.mapped->WVP = Multiply(world, Multiply(view, proj));
   cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
-}
-
-void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
-  if (!mesh_ || !mesh_->Ready() || !visible_)
-    return;
-
-  const auto &vbv = mesh_->VBV();
-  cmdList->IASetVertexBuffers(0, 1, &vbv);
-  cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-  cmdList->SetGraphicsRootConstantBufferView(
-      0, cbMat_.resource->GetGPUVirtualAddress());
-  cmdList->SetGraphicsRootConstantBufferView(
-      1, cbWvp_.resource->GetGPUVirtualAddress());
-  cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-
-  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
-  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
-      (externalLightCBAddress_ != 0)
-          ? externalLightCBAddress_
-          : cbLight_.resource->GetGPUVirtualAddress();
-  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
-
-  cmdList->DrawInstanced(mesh_->VertexCount(), 1, 0, 0);
 }
 
 void ModelObject::EnsureWvpBatchCapacity_(uint32_t count) {
@@ -134,6 +104,152 @@ void ModelObject::EnsureWvpBatchCapacity_(uint32_t count) {
   cbWvpBatch_->Map(0, nullptr, reinterpret_cast<void **>(&cbWvpBatchMapped_));
 }
 
+void ModelObject::EnsureMaterialSrvsLoaded_() {
+  if (!texman_ || !mesh_) {
+    return;
+  }
+
+  const auto &mats = mesh_->Materials();
+  if (mats.empty()) {
+    // 互換：昔の1枚だけ
+    materialSrvs_.clear();
+    const auto &mtl = mesh_->MaterialFile();
+    if (!mtl.textureFilePath.empty()) {
+      materialSrvs_.resize(1);
+      materialSrvs_[0] = texman_->Load(mtl.textureFilePath, /*srgb=*/true);
+    }
+    return;
+  }
+
+  if (!materialSrvs_.empty() && materialSrvs_.size() == mats.size()) {
+    return; // 既にロード済み
+  }
+
+  materialSrvs_.assign(mats.size(), D3D12_GPU_DESCRIPTOR_HANDLE{});
+  for (uint32_t i = 0; i < mats.size(); ++i) {
+    if (mats[i].textureFilePath.empty())
+      continue;
+
+    const D3D12_GPU_DESCRIPTOR_HANDLE srv =
+        texman_->Load(mats[i].textureFilePath, /*srgb=*/true);
+    materialSrvs_[i] = (srv.ptr == 0) ? D3D12_GPU_DESCRIPTOR_HANDLE{} : srv;
+  }
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE
+ModelObject::GetSrvForMaterial_(uint32_t materialIndex) const {
+  if (!materialSrvs_.empty() && materialIndex < materialSrvs_.size() &&
+      materialSrvs_[materialIndex].ptr != 0) {
+    return materialSrvs_[materialIndex];
+  }
+
+  // fallback：先頭の有効SRV
+  for (const auto &h : materialSrvs_) {
+    if (h.ptr != 0)
+      return h;
+  }
+
+  return D3D12_GPU_DESCRIPTOR_HANDLE{};
+}
+
+void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
+  if (!mesh_ || !mesh_->Ready() || !visible_)
+    return;
+
+  // Node階層を使う場合は DrawItem を使う
+  const auto &items = mesh_->DrawItems();
+
+  // テクスチャ（overrideが無い場合だけ materialIndex対応を準備）
+  if (textureSrv_.ptr == 0) {
+    EnsureMaterialSrvsLoaded_();
+  }
+
+  const auto &vbv = mesh_->VBV();
+  cmdList->IASetVertexBuffers(0, 1, &vbv);
+  cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  cmdList->SetGraphicsRootConstantBufferView(
+      0, cbMat_.resource->GetGPUVirtualAddress());
+
+  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
+      (externalLightCBAddress_ != 0)
+          ? externalLightCBAddress_
+          : cbLight_.resource->GetGPUVirtualAddress();
+  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
+
+  // View/Proj が無いなら単位行列で描く（事故防止）
+  const Matrix4x4 view = hasVP_ ? cachedView_ : MakeIdentity4x4();
+  const Matrix4x4 proj = hasVP_ ? cachedProj_ : MakeIdentity4x4();
+
+  // ObjectのWorld
+  const Matrix4x4 objectWorld =
+      MakeAffineMatrix(transform_.scale, transform_.rotation,
+                       transform_.translation);
+
+  // ---------------------------------------------------------
+  // ★重要：同じCBアドレスに何回も上書きすると、全部最後の値になる
+  // ので、DrawItem分のCB領域を確保して「GPUアドレスをずらして」描く
+  // ---------------------------------------------------------
+  cbWvpBatchHead_ = 0;
+  const uint32_t oneSize = Align256(sizeof(TransformationMatrix));
+  const uint32_t drawCount =
+      items.empty() ? 1u : static_cast<uint32_t>(items.size());
+  EnsureWvpBatchCapacity_(drawCount);
+
+  if (items.empty()) {
+    // 互換：DrawItemが無い場合は全頂点を1発
+    TransformationMatrix tm{};
+    tm.World = objectWorld;
+    tm.WVP = Multiply(objectWorld, Multiply(view, proj));
+    tm.worldInverseTranspose = Transpose(Inverse(objectWorld));
+
+    auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_);
+    *dst = tm;
+
+    const D3D12_GPU_VIRTUAL_ADDRESS addr =
+        cbWvpBatch_->GetGPUVirtualAddress();
+    cmdList->SetGraphicsRootConstantBufferView(1, addr);
+
+    // texture
+    cmdList->SetGraphicsRootDescriptorTable(
+        2, (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(0));
+
+    cmdList->DrawInstanced(mesh_->VertexCount(), 1, 0, 0);
+    return;
+  }
+
+  for (uint32_t i = 0; i < items.size(); ++i) {
+    const auto &it = items[i];
+
+    // Node行列（モデル空間）→ ObjectWorld を掛ける
+    const Matrix4x4 world = Multiply(it.nodeWorld, objectWorld);
+
+    TransformationMatrix tm{};
+    tm.World = world;
+    tm.WVP = Multiply(world, Multiply(view, proj));
+    tm.worldInverseTranspose = Transpose(Inverse(world));
+
+    // CB書き込み
+    auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_ +
+                                                         uint64_t(i) * oneSize);
+    *dst = tm;
+
+    // CBアドレスをずらす
+    const D3D12_GPU_VIRTUAL_ADDRESS addr =
+        cbWvpBatch_->GetGPUVirtualAddress() + uint64_t(i) * oneSize;
+    cmdList->SetGraphicsRootConstantBufferView(1, addr);
+
+    // テクスチャ（override優先）
+    const D3D12_GPU_DESCRIPTOR_HANDLE srv =
+        (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(it.materialIndex);
+    cmdList->SetGraphicsRootDescriptorTable(2, srv);
+
+    // mesh範囲だけ描画
+    cmdList->DrawInstanced(it.vertexCount, 1, it.vertexStart, 0);
+  }
+}
+
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
@@ -145,7 +261,12 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   cmdList->SetGraphicsRootConstantBufferView(
       0, cbMat_.resource->GetGPUVirtualAddress());
-  cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
+  // Batchは1枚テクスチャ運用が多いけど、overrideが無い場合は material[0] を使う
+  if (textureSrv_.ptr == 0) {
+    EnsureMaterialSrvsLoaded_();
+  }
+  cmdList->SetGraphicsRootDescriptorTable(
+      2, (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(0));
 
   // Light CB（b1）: 外部ライトが指定されていればそちらを使う
   const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
@@ -171,7 +292,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
 
     const uint32_t dstIndex = base + i;
     auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_ +
-                                                         dstIndex * oneSize);
+                                                         uint64_t(dstIndex) * oneSize);
     *dst = tm;
 
     D3D12_GPU_VIRTUAL_ADDRESS addr =
@@ -275,10 +396,27 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
     }
   }
 
-  // .mtl側の map_Kd 情報
-  if (texman_ && mesh_ && !mesh_->MaterialFile().textureFilePath.empty()) {
+  // テクスチャ情報
+  if (texman_ && mesh_) {
     ImGui::TextUnformatted("テクスチャ情報");
-    ImGui::TextDisabled("tex: %s",
-                        mesh_->MaterialFile().textureFilePath.c_str());
+    if (textureSrv_.ptr != 0) {
+      ImGui::TextDisabled("override: (SetTexture)");
+    } else {
+      // material一覧
+      const auto &mats = mesh_->Materials();
+      if (!mats.empty()) {
+        ImGui::TextDisabled("materials: %d", (int)mats.size());
+        for (int i = 0; i < (int)mats.size() && i < 8; ++i) {
+          ImGui::TextDisabled("[%d] %s", i, mats[i].textureFilePath.c_str());
+        }
+        if ((int)mats.size() > 8) {
+          ImGui::TextDisabled("... (%d more)", (int)mats.size() - 8);
+        }
+      } else if (!mesh_->MaterialFile().textureFilePath.empty()) {
+        ImGui::TextDisabled("mtl: %s", mesh_->MaterialFile().textureFilePath.c_str());
+      } else {
+        ImGui::TextDisabled("(no texture)");
+      }
+    }
   }
 }

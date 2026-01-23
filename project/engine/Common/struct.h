@@ -63,9 +63,10 @@ struct MaterialData {
 };
 
 struct Node {
-  RC::Matrix4x4 localMatrix;  // ローカル変換行列
-  std::string name;           // ノードの名前
-  std::vector<Node> children; // 子ノードの配列
+  RC::Matrix4x4 localMatrix;         // ローカル変換行列
+  std::string name;                  // ノードの名前
+  std::vector<uint32_t> meshIndices; // このノードが参照するMeshのindex配列（assimp: node->mMeshes）
+  std::vector<Node> children;        // 子ノードの配列
 };
 
 struct ModelData {
