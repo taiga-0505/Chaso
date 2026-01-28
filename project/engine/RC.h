@@ -3,9 +3,6 @@
 // 描画関連の共通ヘッダ
 #include "RenderCommon.h"
 
-// Model/Sphere 関連（RenderCommon から分離）
-#include "Model3D/ModelRender.h"
-
 // サウンド関連の共通ヘッダ
 #include "Sound/Sound.h"
 

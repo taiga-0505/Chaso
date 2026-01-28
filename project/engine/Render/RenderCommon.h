@@ -4,7 +4,6 @@
 #include "Scene.h"
 #include <d3d12.h>
 #include <string>
-#include <vector>
 #include "struct.h"
 
 // D3D12 GPUハンドルを返すために必要
@@ -380,7 +379,7 @@ void SetActiveAreaLightEnabled(bool enabled);
 bool IsActiveAreaLightEnabled();
 
 // ==============================
-// 3D用
+// モデル用
 // ==============================
 
 /// <summary>
@@ -389,10 +388,92 @@ bool IsActiveAreaLightEnabled();
 /// <param name="ctx">SceneContext</param>
 /// <param name="cl">このフレームで使うコマンドリスト</param>
 /// <remarks>
-/// この関数を呼んだ後に 3D系の Draw を呼んでください。
+/// この関数を呼んだ後に DrawModel / DrawSphere を呼んでください。
 /// </remarks>
 void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+/// <summary>
+/// モデルをロードしてハンドルを返す（Mesh は内部キャッシュで共有）
+/// </summary>
+/// <param name="path">.obj へのパス</param>
+/// <returns>モデルハンドル（失敗時は -1）</returns>
+int LoadModel(const std::string &path);
+
+/// <summary>
+/// モデルを描画する（テクスチャ指定版）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="texHandle">テクスチャハンドル（RC::LoadTex で取得）</param>
+void DrawModel(int modelHandle, int texHandle);
+
+/// <summary>
+/// モデルを描画する（モデルが参照する mtl のテクスチャを使用）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+void DrawModel(int modelHandle);
+
+/// <summary>
+/// モデルを描画する（カリング無効版）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="texHandle">テクスチャハンドル（-1 なら mtl のテクスチャ）</param>
+void DrawModelNoCull(int modelHandle, int texHandle = -1);
+
+/// <summary>
+/// モデルをインスタンシング（複数Transform）で描画する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="instances">インスタンスTransform配列</param>
+/// <param name="texHandle">テクスチャハンドル（-1 なら mtl のテクスチャ）</param>
+void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
+                    int texHandle = -1);
+
+/// <summary>
+/// モデルの ImGui 表示を行う
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="name">表示名</param>
+void DrawImGui3D(int modelHandle, const char *name);
+
+/// <summary>
+/// モデルを解放する（ハンドルは無効化される）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+void UnloadModel(int modelHandle);
+
+/// <summary>
+/// モデルの Transform ポインタを取得する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <returns>Transform*（無効ハンドルなら nullptr）</returns>
+Transform *GetModelTransformPtr(int modelHandle);
+
+/// <summary>
+/// モデルの色（乗算カラー）を設定する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="color">色（RGBA）</param>
+void SetModelColor(int modelHandle, const Vector4 &color);
+
+/// <summary>
+/// モデルのライティングモードを設定する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="m">ライティングモード</param>
+void SetModelLightingMode(int modelHandle, LightingMode m);
+
+/// <summary>
+/// モデルが参照する Mesh を差し替える（同じ .obj は内部キャッシュで共有）
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="path">.obj へのパス</param>
+void SetModelMesh(int modelHandle, const std::string &path);
+
+/// <summary>
+/// DrawModelBatch の内部カーソルをリセットする
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+void ResetCursor(int modelHandle);
 
 // ===============================
 // 2D用
@@ -488,6 +569,73 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h);
 /// <param name="name">表示名</param>
 void DrawImGui2D(int spriteHandle, const char *name);
 
+// ===============================
+// 天球用
+// ===============================
+
+/// <summary>
+/// 天球を生成する（最小形：半径0.5, 16x16, 内向き）
+/// </summary>
+/// <param name="textureHandle">テクスチャハンドル（必須）</param>
+/// <returns>天球ハンドル（失敗時は -1）</returns>
+/// <remarks>
+/// キューブマップ等のスカイ用。必ず有効なテクスチャハンドルを渡してください。
+/// </remarks>
+int GenerateSphere(int textureHandle);
+
+/// <summary>
+/// 天球を生成する（パラメータ指定版）
+/// </summary>
+/// <param name="textureHandle">テクスチャハンドル（-1 なら未設定）</param>
+/// <param name="radius">半径</param>
+/// <param name="sliceCount">スライス数</param>
+/// <param name="stackCount">スタック数</param>
+/// <param name="inward">内向き（true）/ 外向き（false）</param>
+/// <returns>天球ハンドル（失敗時は -1）</returns>
+int GenerateSphereEx(int textureHandle = -1, float radius = 0.5f,
+                     unsigned int sliceCount = 16, unsigned int stackCount = 16,
+                     bool inward = true);
+
+/// <summary>
+/// 天球を描画する
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+/// <param name="texHandle">一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ）</param>
+void DrawSphere(int sphereHandle, int texHandle = -1);
+
+/// <summary>
+/// 天球の ImGui 表示を行う
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+/// <param name="name">表示名（nullptr ならデフォルト）</param>
+void DrawSphereImGui(int sphereHandle, const char *name = nullptr);
+
+/// <summary>
+/// 天球を解放する
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+void UnloadSphere(int sphereHandle);
+
+/// <summary>
+/// 天球の Transform ポインタを取得する
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+/// <returns>Transform*（無効ハンドルなら nullptr）</returns>
+Transform *GetSphereTransformPtr(int sphereHandle);
+
+/// <summary>
+/// 天球の色（乗算カラー）を設定する
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+/// <param name="color">色（RGBA）</param>
+void SetSphereColor(int sphereHandle, const Vector4 &color);
+
+/// <summary>
+/// 天球のライティングモードを設定する
+/// </summary>
+/// <param name="sphereHandle">天球ハンドル</param>
+/// <param name="m">ライティングモード</param>
+void SetSphereLightingMode(int sphereHandle, LightingMode m);
 
 // ===============================
 // Primitive2D（即時描画）

@@ -1,10 +1,10 @@
 #include "MapChipField.h"
+#include "RenderCommon.h"
 #include <cassert>
 #include <cctype>
 #include <cmath>
 #include <fstream>
 #include <sstream>
-#include "RC.h"
 
 using namespace RC;
 

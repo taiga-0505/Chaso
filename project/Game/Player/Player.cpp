@@ -1,10 +1,10 @@
 #include "Player.h"
 #include "Input/Input.h"
 #include "MapChipField/MapChipField.h"
+#include "RenderCommon.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include "RC.h"
 
 // ==============
 // Public API

@@ -1,13 +1,17 @@
 #include "RenderCommon.h"
-#include "RenderCommonInternal.h"
+
 #include "Dx12/Dx12Core.h"
 #include "Light/Area/AreaLightManager.h"
 #include "Light/Directional/DirectionalLightManager.h"
 #include "Light/Point/PointLightManager.h"
 #include "Light/Spot/SpotLightManager.h"
+#include "Model3D/ModelManager.h"
+#include "Model3d/ModelObject.h"
 #include "PipelineManager.h"
 #include "Primitive2D/Primitive2D.h"
 #include "Primitive3D/Primitive3D.h"
+#include "Sphere/Sphere.h"
+#include "Sphere/SphereManager.h"
 #include "Sprite2D/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
@@ -22,7 +26,7 @@ namespace RC {
 // このファイルの目的
 // ----------------------------------------------------------------------------
 // RenderCommon は「Scene から呼べる描画ファサード。」
-// - ハンドル制で Sprite / Light / Primitive 等を管理
+// - ハンドル制で Model / Sprite / Sphere / Light を管理
 // - そのフレームのカメラ(View/Proj + カメラ位置)を共有
 // - 今フレームの CommandList / SceneContext を保持して Draw* へ渡す
 // - PipelineManager から prefix + BlendMode で PSO を選んでセットする
@@ -86,7 +90,9 @@ struct PrimitiveSlot {
 // - gCtxRef / gCL は PreDraw3D/PreDraw2D で毎フレーム更新
 // - gView / gProj / gCameraCB は SetCamera で毎フレーム更新
 // ============================================================================
+RC::ModelManager gModelMan;
 RC::SpriteManager gSpriteMan;
+RC::SphereManager gSphereMan;
 RC::DirectionalLightManager gLightMan;
 RC::PointLightManager gPointLightMan;
 RC::SpotLightManager gSpotLightMan;
@@ -235,92 +241,7 @@ static Primitive3D *EnsurePrimitive3D_() {
   return gPrim3D.ptr.get();
 }
 
-
 } // namespace
-
-// ============================================================================
-// Internal accessors (for render modules)
-// ----------------------------------------------------------------------------
-// NOTE: RenderCommon の実装を分割するための「内部窓口」。
-//       外部から include しないこと。
-// ============================================================================
-namespace detail {
-
-bool IsInitialized() { return gInitialized; }
-
-ID3D12Device *GetDevice() { return gDevice; }
-
-ID3D12GraphicsCommandList *GetCL() { return gCL; }
-
-const Matrix4x4 &GetView() { return gView; }
-const Matrix4x4 &GetProj() { return gProj; }
-
-TextureManager &GetTexMan() { return gTexMan; }
-
-DirectionalLightManager &GetDirLightMan() { return gLightMan; }
-PointLightManager &GetPointLightMan() { return gPointLightMan; }
-SpotLightManager &GetSpotLightMan() { return gSpotLightMan; }
-AreaLightManager &GetAreaLightMan() { return gAreaLightMan; }
-
-GraphicsPipeline *BindPipeline(std::string_view prefix) {
-  return BindPipeline_(prefix);
-}
-
-void BindCameraCB() { BindCameraCB_(); }
-void BindPointLightCB() { BindPointLightCB_(); }
-void BindSpotLightCB() { BindSpotLightCB_(); }
-void BindAreaLightCB() { BindAreaLightCB_(); }
-
-// ---------------------------------------------------------------------------
-// Extension hooks (for separated modules)
-// ---------------------------------------------------------------------------
-
-static std::vector<InitHook> &InitHooks_() {
-  static std::vector<InitHook> hooks;
-  return hooks;
-}
-static std::vector<TermHook> &TermHooks_() {
-  static std::vector<TermHook> hooks;
-  return hooks;
-}
-static std::vector<PreDraw3DHook> &PreDraw3DHooks_() {
-  static std::vector<PreDraw3DHook> hooks;
-  return hooks;
-}
-
-void RegisterInitHook(InitHook hook) {
-  if (hook) {
-    InitHooks_().push_back(hook);
-  }
-}
-void RegisterTermHook(TermHook hook) {
-  if (hook) {
-    TermHooks_().push_back(hook);
-  }
-}
-void RegisterPreDraw3DHook(PreDraw3DHook hook) {
-  if (hook) {
-    PreDraw3DHooks_().push_back(hook);
-  }
-}
-
-void CallInitHooks(SceneContext &ctx) {
-  for (auto fn : InitHooks_()) {
-    fn(ctx);
-  }
-}
-void CallTermHooks() {
-  for (auto fn : TermHooks_()) {
-    fn();
-  }
-}
-void CallPreDraw3DHooks() {
-  for (auto fn : PreDraw3DHooks_()) {
-    fn();
-  }
-}
-
-} // namespace detail
 
 // ============================================================================
 // 公開 API
@@ -345,6 +266,12 @@ void Init(SceneContext &ctx) {
   // Sprite は SpriteManager に委譲
   gSpriteMan.Init(gDevice, &gTexMan);
 
+  // Model は ModelManager に委譲
+  gModelMan.Init(gDevice, &gTexMan);
+
+  // Sphere は SphereManager に委譲
+  gSphereMan.Init(gDevice, &gTexMan);
+
   // Light は LightManager に委譲（default slot を作る）
   gLightMan.Init(gDevice);
 
@@ -352,9 +279,6 @@ void Init(SceneContext &ctx) {
   gPointLightMan.Init(gDevice);
   gSpotLightMan.Init(gDevice);
   gAreaLightMan.Init(gDevice);
-
-  // 追加モジュールの初期化（3D拡張など）
-  detail::CallInitHooks(ctx);
 
   // CameraCB: Upload に置いて Map しっぱなしで更新する
   gCameraCB = CreateBufferResource(gDevice, sizeof(CameraCB));
@@ -383,8 +307,8 @@ void Term() {
     return;
   }
 
-  // 追加モジュールの終了（3D拡張など）
-  detail::CallTermHooks();
+  gModelMan.Term();
+  gSphereMan.Term();
 
   // Sprite は SpriteManager に委譲
   gSpriteMan.Term();
@@ -770,16 +694,198 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
   // NOTE:
-  // ライトは「描画タイミング」で適用する想定。
-  // （Draw ごとにライトを切り替えたい時に、各オブジェクトへ毎フレ転送しなくて済む）
+  // Active light is applied at draw time (DrawModel/DrawSphere) so we can
+  // switch lights per draw without copying into every object each frame.
 
-  // 拡張モジュール（3D拡張など）が必要なら、ここで毎フレーム処理を呼ぶ
-  detail::CallPreDraw3DHooks();
+  // バッチ描画を使うモデルは "どこまで描いたか" のカーソルを毎フレームリセット
+  gModelMan.ResetAllBatchCursors();
 
   if (auto *prim = EnsurePrimitive3D_()) {
     prim->BeginFrame(gView, gProj, gCurrentBlendMode);
   }
 }
+
+// ----------------------------------------------------------------------------
+// Model
+// ----------------------------------------------------------------------------
+
+int LoadModel(const std::string &path) {
+  if (!gInitialized) {
+    return -1;
+  }
+
+  return gModelMan.Load(path);
+}
+
+void DrawModel(int modelHandle, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  // Texture override (-1 => keep .mtl)
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  // Apply active (or default) light at draw time.
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+
+  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
+    }
+
+    m->Update(gView, gProj);
+    m->Draw(gCL);
+    return;
+  }
+
+  // Fallback: use model's own light CB
+  m->SetExternalLightCBAddress(0);
+  m->Update(gView, gProj);
+  m->Draw(gCL);
+}
+
+void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
+
+void DrawModelNoCull(int modelHandle, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  if (!BindPipeline_("object3d_nocull")) {
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+
+  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
+    }
+
+    m->Update(gView, gProj);
+    m->Draw(gCL);
+    return;
+  }
+
+  m->Update(gView, gProj);
+  m->Draw(gCL);
+}
+
+void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
+                    int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  if (!BindPipeline_("object3d_inst")) {
+    return;
+  }
+
+  // 通常 Draw と同じように各種 CB をバインド
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+
+  // 重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
+    }
+
+    m->DrawBatch(gCL, gView, gProj, instances);
+    return;
+  }
+
+  // Fallback
+  m->SetExternalLightCBAddress(0);
+  m->DrawBatch(gCL, gView, gProj, instances);
+}
+
+void DrawImGui3D(int modelHandle, const char *name) {
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  // LightManager が有効なら「共通ライトCB」が常に刺さるので
+  // モデル側の Light UI（自前CB）は基本的に隠す。
+  const bool showLightingUi = (gLightMan.GetActiveCBAddress() == 0);
+
+  m->DrawImGui(name, showLightingUi);
+}
+
+void UnloadModel(int modelHandle) { gModelMan.Unload(modelHandle); }
+
+Transform *GetModelTransformPtr(int modelHandle) {
+  return gModelMan.GetTransformPtr(modelHandle);
+}
+
+void SetModelColor(int modelHandle, const Vector4 &color) {
+  gModelMan.SetColor(modelHandle, color);
+}
+
+void SetModelLightingMode(int modelHandle, LightingMode m) {
+  gModelMan.SetLightingMode(modelHandle, m);
+}
+
+void SetModelMesh(int modelHandle, const std::string &path) {
+  gModelMan.SetMesh(modelHandle, path);
+}
+
+void ResetCursor(int modelHandle) { gModelMan.ResetCursor(modelHandle); }
 
 // ----------------------------------------------------------------------------
 // 2D Pass
@@ -920,6 +1026,89 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h) {
 
 void DrawImGui2D(int spriteHandle, const char *name) {
   gSpriteMan.DrawImGui(spriteHandle, name);
+}
+
+// ----------------------------------------------------------------------------
+// Sphere
+// ----------------------------------------------------------------------------
+
+int GenerateSphereEx(int textureHandle, float radius, unsigned int sliceCount,
+                     unsigned int stackCount, bool inward) {
+  if (!gInitialized || !gDevice) {
+    return -1;
+  }
+
+  return gSphereMan.Create(textureHandle, radius, sliceCount, stackCount,
+                           inward);
+}
+
+int GenerateSphere(int textureHandle) {
+  // 既定: radius=0.5, 16x16, inward=true
+  return GenerateSphereEx(textureHandle);
+}
+
+void DrawSphere(int sphereHandle, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+
+  auto *s = gSphereMan.Get(sphereHandle);
+  if (!s) {
+    return;
+  }
+
+  // Sphere is drawn with the object3d pipeline.
+  if (!BindPipeline_("object3d")) {
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  gSphereMan.ApplyTexture(sphereHandle, texHandle);
+
+  // Apply active (or default) light at draw time: bind the LightManager's CB
+  // per draw.
+  D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+
+  // ★重要：Sphere 側が b1 を外部ライトに差し替えられるようにする
+  s->SetExternalLightCBAddress(lightAddr);
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      // Keep old behavior: inward spheres are usually unlit (sky dome).
+      if (!s->GetInward()) {
+        if (auto *mat = s->Mat()) {
+          mat->lightingMode = active->GetLightingMode();
+          mat->shininess = active->GetShininess();
+        }
+      }
+    }
+  }
+
+  s->Update(gView, gProj);
+  s->Draw(gCL);
+}
+
+void DrawSphereImGui(int sphereHandle, const char *name) {
+  if (auto *s = gSphereMan.Get(sphereHandle)) {
+    s->DrawImGui(name);
+  }
+}
+
+void UnloadSphere(int sphereHandle) { gSphereMan.Unload(sphereHandle); }
+
+Transform *GetSphereTransformPtr(int sphereHandle) {
+  return gSphereMan.GetTransformPtr(sphereHandle);
+}
+
+void SetSphereColor(int sphereHandle, const Vector4 &color) {
+  gSphereMan.SetColor(sphereHandle, color);
+}
+
+void SetSphereLightingMode(int sphereHandle, LightingMode m) {
+  gSphereMan.SetLightingMode(sphereHandle, m);
 }
 
 // ----------------------------------------------------------------------------
