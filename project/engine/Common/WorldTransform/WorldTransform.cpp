@@ -48,12 +48,12 @@ void WorldTransform::Map() {
 
 void WorldTransform::UpdateMatrix() {
 
-  Matrix4x4 local = MakeAffineMatrix(scale, rotation, translation);
+  Matrix4x4 local = MakeAffineMatrix(scale_, rotation_, translation_);
 
   if (parent_) {
-    matWorld = Multiply(local, parent_->matWorld);
+    matWorld_ = Multiply(local, parent_->matWorld_);
   } else {
-    matWorld = local;
+    matWorld_ = local;
   }
 }
 
@@ -66,7 +66,7 @@ void WorldTransform::TransferMatrix() {
   if (!constMap) {
     return;
   }
-  constMap->matWorld = matWorld;
+  constMap->matWorld = matWorld_;
 }
 
 } // namespace RC

@@ -21,7 +21,6 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // =============================
 
   directionalLight = RC::CreateDirectionalLight();
-  RC::SetActiveDirectionalLight(directionalLight);
 
   if (RC::DirectionalLightSource *sun =
           RC::GetDirectionalLightPtr(directionalLight)) {
@@ -158,27 +157,12 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(terrain);
 
-  RC::DrawLine3D({0, 10, 0}, {5, 0, 5}, {1, 0, 0, 1}); // 赤線
-
-  RC::Vector3 mn = {-5, 0, -5};
-  RC::Vector3 mx = {5, 3, 5};
-
-  RC::DrawAABB3D(mn, mx, {0, 1, 0, 1});         // 緑箱
-  //RC::DrawGridXZ3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
-  //RC::DrawGridXY3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
-  //RC::DrawGridYZ3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
-
   // ===========================================
   // 2D描画
   // ===========================================
   RC::PreDraw2D(ctx, cl);
 
-  // RC::DrawSprite(sprite);
-
-  // RC::DrawBox({50, 50}, {250, 180}, {0, 1, 0, 1}, kFill);
-  // RC::DrawCircle({400, 200}, 75.0f, {1, 1, 0, 1});
-  // RC::DrawLine({300, 300}, {500, 400}, {1, 0, 0, 1});
-  // RC::DrawTriangle({600, 100}, {700, 300}, {500, 300}, {0, 0, 1, 1});
+  RC::DrawSprite(sprite);
 
   RC::SetFogOverlayColor(fogColor_); // ちょい青
   if (isFogEnabled_) {

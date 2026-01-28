@@ -246,6 +246,7 @@
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClCompile>
     <ClCompile Include="engine\Render\Sphere\SphereManager.cpp" />
+    <ClCompile Include="engine\Common\WorldTransform\WorldTransform.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -495,6 +496,7 @@
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClInclude>
     <ClInclude Include="engine\Render\Sphere\SphereManager.h" />
+    <ClInclude Include="engine\Common\WorldTransform\WorldTransform.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
