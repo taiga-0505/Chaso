@@ -10,9 +10,9 @@
 #include "PipelineManager.h"
 #include "Primitive2D/Primitive2D.h"
 #include "Primitive3D/Primitive3D.h"
-#include "Sprite2D/SpriteManager.h"
 #include "Sphere/Sphere.h"
 #include "Sphere/SphereManager.h"
+#include "Sprite2D/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
 #include "struct.h"
@@ -820,6 +820,12 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     return;
   }
 
+  // 通常 Draw と同じように各種 CB をバインド
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
   if (texHandle >= 0) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
   } else {
@@ -1091,9 +1097,7 @@ void DrawSphereImGui(int sphereHandle, const char *name) {
   }
 }
 
-void UnloadSphere(int sphereHandle) {
-  gSphereMan.Unload(sphereHandle);
-}
+void UnloadSphere(int sphereHandle) { gSphereMan.Unload(sphereHandle); }
 
 Transform *GetSphereTransformPtr(int sphereHandle) {
   return gSphereMan.GetTransformPtr(sphereHandle);
