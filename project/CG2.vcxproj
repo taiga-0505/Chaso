@@ -160,7 +160,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Render\Light\Directional\DirectionalLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Point\PointLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Spot\SpotLightManager.cpp" />
-    <ClCompile Include="engine\Render\Model3D\ModelManager.cpp" />
+    <ClCompile Include="engine\Graphics\Model3D\ModelManager.cpp" />
+    <ClCompile Include="engine\Render\Model3D\ModelRender.cpp" />
     <ClCompile Include="engine\Render\RenderCommon.cpp" />
     <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp" />
     <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
@@ -179,7 +180,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Particle\Particle.cpp" />
     <ClCompile Include="engine\Particle\Rain\RainParticle.cpp" />
     <ClCompile Include="engine\Particle\Snow\SnowParticle.cpp" />
-    <ClCompile Include="engine\Render\Sphere\SphereManager.cpp" />
+    <ClCompile Include="engine\Graphics\Sphere\SphereManager.cpp" />
     <ClCompile Include="engine\Render\Sprite2D\SpriteManager.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp" />
     <ClCompile Include="externals\imgui\imgui_demo.cpp" />
@@ -309,7 +310,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Render\Light\Directional\DirectionalLightManager.h" />
     <ClInclude Include="engine\Render\Light\Point\PointLightManager.h" />
     <ClInclude Include="engine\Render\Light\Spot\SpotLightManager.h" />
-    <ClInclude Include="engine\Render\Model3D\ModelManager.h" />
+    <ClInclude Include="engine\Graphics\Model3D\ModelManager.h" />
+    <ClInclude Include="engine\Render\Model3D\ModelRender.h" />
     <ClInclude Include="engine\Render\RenderCommon.h" />
     <ClInclude Include="engine\Dx12\FixFps\FixFps.h" />
     <ClInclude Include="engine\Dx12\PipelineManager.h" />
@@ -331,7 +333,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Particle\Rain\RainParticle.h" />
     <ClInclude Include="engine\Particle\Snow\SnowParticle.h" />
     <ClInclude Include="engine\RC.h" />
-    <ClInclude Include="engine\Render\Sphere\SphereManager.h" />
+    <ClInclude Include="engine\Graphics\Sphere\SphereManager.h" />
     <ClInclude Include="engine\Render\Sprite2D\SpriteManager.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />

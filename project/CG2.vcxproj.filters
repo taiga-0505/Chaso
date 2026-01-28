@@ -34,7 +34,9 @@
     <FxCompile Include="Resources\Shader\Primitive3D\Primitive3D.VS.hlsl">
       <Filter>Shader\Primitive3D</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Object3d\Object3D_Single.VS.hlsl" />
+    <FxCompile Include="Resources\Shader\Object3d\Object3D_Single.VS.hlsl">
+      <Filter>Shader\Object3d</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -207,13 +209,10 @@
       <Filter>Game\Scene\ParticleScene</Filter>
     </ClCompile>
     <ClCompile Include="engine\Dx12\ShaderCompiler\ShaderCompiler.cpp">
-      <Filter>engine\ShaderCompiler</Filter>
+      <Filter>engine\Dx12\ShaderCompiler</Filter>
     </ClCompile>
     <ClCompile Include="engine\Render\Sprite2D\SpriteManager.cpp">
       <Filter>engine\Render\Sprite</Filter>
-    </ClCompile>
-    <ClCompile Include="engine\Render\Model3D\ModelManager.cpp">
-      <Filter>engine\Render\Model</Filter>
     </ClCompile>
     <ClCompile Include="engine\Graphics\Light\Point\PointLightSource.cpp">
       <Filter>engine\Graphics\Light\Point</Filter>
@@ -245,7 +244,13 @@
     <ClCompile Include="engine\Graphics\Primitive3D\Primitive3D.cpp">
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Render\Sphere\SphereManager.cpp" />
+    <ClCompile Include="engine\Graphics\Sphere\SphereManager.cpp">
+      <Filter>engine\Render\Sphere</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Model3D\ModelManager.cpp">
+      <Filter>engine\Graphics\Model3D</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Model3D\ModelRender.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -456,13 +461,10 @@
       <Filter>Game\Scene\ParticleScene</Filter>
     </ClInclude>
     <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h">
-      <Filter>engine\ShaderCompiler</Filter>
+      <Filter>engine\Dx12\ShaderCompiler</Filter>
     </ClInclude>
     <ClInclude Include="engine\Render\Sprite2D\SpriteManager.h">
       <Filter>engine\Render\Sprite</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\Render\Model3D\ModelManager.h">
-      <Filter>engine\Render\Model</Filter>
     </ClInclude>
     <ClInclude Include="engine\Graphics\Light\Point\PointLightSource.h">
       <Filter>engine\Graphics\Light\Point</Filter>
@@ -494,7 +496,13 @@
     <ClInclude Include="engine\Graphics\Primitive3D\Primitive3D.h">
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Render\Sphere\SphereManager.h" />
+    <ClInclude Include="engine\Graphics\Sphere\SphereManager.h">
+      <Filter>engine\Render\Sphere</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Model3D\ModelManager.h">
+      <Filter>engine\Graphics\Model3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Model3D\ModelRender.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -668,9 +676,6 @@
     <Filter Include="Shader\Primitive2D">
       <UniqueIdentifier>{35172688-2eb9-4091-844e-fede98723823}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\ShaderCompiler">
-      <UniqueIdentifier>{7969f9f3-87b7-489a-a1b4-3911686256f4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shader\Sprite">
       <UniqueIdentifier>{3b16dbe2-dc17-4c8e-b06b-b86e2bf7a60b}</UniqueIdentifier>
     </Filter>
@@ -718,6 +723,12 @@
     </Filter>
     <Filter Include="engine\Graphics\Primitive3D">
       <UniqueIdentifier>{876c5f24-f6f4-4167-8b97-6fd1eb16e52c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Dx12\ShaderCompiler">
+      <UniqueIdentifier>{7969f9f3-87b7-489a-a1b4-3911686256f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Sphere">
+      <UniqueIdentifier>{ac8ff9fd-bdf2-4d40-972a-a3cf56b80105}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
