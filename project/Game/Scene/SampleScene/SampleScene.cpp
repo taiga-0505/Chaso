@@ -157,6 +157,9 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(terrain);
 
+  RC::DrawAABB3D({-50.0f, -1.0f, -50.0f}, {50.0f, -1.0f, 50.0f},
+                 {1.0f, 0.0f, 0.0f, 1.0f}, false);
+
   // ===========================================
   // 2D描画
   // ===========================================

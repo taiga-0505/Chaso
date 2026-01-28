@@ -1,5 +1,6 @@
 #include "Primitive3D.h"
 #include <cassert>
+#include <cmath>
 
 Primitive3D::~Primitive3D() { Term(); }
 

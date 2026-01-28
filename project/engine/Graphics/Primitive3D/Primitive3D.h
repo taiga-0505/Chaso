@@ -35,6 +35,7 @@ public:
   void AddGridYZ(int halfSize, float step, const RC::Vector4 &color,
                  bool depth = true);
 
+
   // RenderCommon 側で PSO/Root はセット済み前提
   void Draw(ID3D12GraphicsCommandList *cl, bool depth);
 
