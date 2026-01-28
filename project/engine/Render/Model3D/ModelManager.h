@@ -15,7 +15,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Model3d/ModelObject.h"
+#include "struct.h"
+
+class ModelObject;
+class ModelMesh;
 
 class TextureManager; // 前方宣言
 
@@ -27,6 +30,8 @@ public:
   /// 初期化（device/texman を注入）
   /// </summary>
   void Init(ID3D12Device *device, TextureManager *texman);
+
+  ~ModelManager();
 
   /// <summary>
   /// 終了（管理しているモデルと Mesh キャッシュを解放）
@@ -51,8 +56,8 @@ public:
   /// <summary>
   /// モデル実体を取得（無効なら nullptr）
   /// </summary>
-  Model3D *Get(int handle);
-  const Model3D *Get(int handle) const;
+  ::ModelObject *Get(int handle);
+  const ::ModelObject *Get(int handle) const;
 
   /// <summary>
   /// Transform ポインタ取得
@@ -86,20 +91,20 @@ public:
 
 private:
   struct Slot {
-    std::unique_ptr<Model3D> ptr;
+    std::unique_ptr<::ModelObject> ptr;
     bool inUse = false;
   };
 
   int AllocSlot_();
 
-  std::shared_ptr<ModelMesh> GetOrLoadMesh_(const std::string &path);
+  std::shared_ptr<::ModelMesh> GetOrLoadMesh_(const std::string &path);
 
 private:
   ID3D12Device *device_ = nullptr;
   TextureManager *texman_ = nullptr;
 
   std::vector<Slot> models_;
-  std::unordered_map<std::string, std::weak_ptr<ModelMesh>> meshCache_;
+  std::unordered_map<std::string, std::weak_ptr<::ModelMesh>> meshCache_;
 };
 
 } // namespace RC

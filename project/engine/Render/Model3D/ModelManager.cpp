@@ -1,5 +1,8 @@
 #include "ModelManager.h"
 
+#include "Model3d/ModelObject.h"
+#include "Model3d/ModelMesh.h"
+
 #include <filesystem>
 
 namespace RC {
@@ -19,6 +22,8 @@ static std::string NormalizeMeshKey_(const std::string &path) {
 }
 
 } // namespace
+
+ModelManager::~ModelManager() = default;
 
 void ModelManager::Init(ID3D12Device *device, TextureManager *texman) {
   device_ = device;
@@ -49,21 +54,21 @@ bool ModelManager::IsValid(int handle) const {
           models_[handle].inUse && models_[handle].ptr);
 }
 
-Model3D *ModelManager::Get(int handle) {
+::ModelObject *ModelManager::Get(int handle) {
   if (!IsValid(handle)) {
     return nullptr;
   }
   return models_[handle].ptr.get();
 }
 
-const Model3D *ModelManager::Get(int handle) const {
+const ::ModelObject *ModelManager::Get(int handle) const {
   if (!IsValid(handle)) {
     return nullptr;
   }
   return models_[handle].ptr.get();
 }
 
-std::shared_ptr<ModelMesh> ModelManager::GetOrLoadMesh_(
+std::shared_ptr<::ModelMesh> ModelManager::GetOrLoadMesh_(
     const std::string &path) {
   if (!device_) {
     return nullptr;
@@ -81,7 +86,7 @@ std::shared_ptr<ModelMesh> ModelManager::GetOrLoadMesh_(
   }
 
   // 未ロードならロード
-  auto mesh = std::make_shared<ModelMesh>();
+  auto mesh = std::make_shared<::ModelMesh>();
   if (!mesh->LoadObj(device_,path)) {
     return nullptr;
   }
@@ -97,7 +102,7 @@ int ModelManager::Load(const std::string &path) {
 
   const int handle = AllocSlot_();
 
-  auto obj = std::make_unique<ModelObject>();
+  auto obj = std::make_unique<::ModelObject>();
   obj->Initialize(device_);
   obj->SetTextureManager(texman_);
 

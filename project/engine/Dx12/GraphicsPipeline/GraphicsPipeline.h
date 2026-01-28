@@ -20,19 +20,23 @@ enum BlendMode {
 
 enum class RootSignatureType {
   Object3D,
+  Object3DInstancing,
   Sprite,
   Particle,
   FogOverlay,
+  Primitive3D,
 };
 
 struct GPipelineOptions {
   bool enableAlphaBlend = false; // ← スプライトは true
   bool enableDepth = true;       // ← スプライトは false
-  bool enableDepthWrite = true; // 深度を書き込むかどうか
+  bool enableDepthWrite = true;  // 深度を書き込むかどうか
   D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK;
   D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID;
   BlendMode blendMode = kBlendModeNormal;
   RootSignatureType rootType = RootSignatureType::Object3D;
+  D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType =
+      D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 };
 
 class GraphicsPipeline {

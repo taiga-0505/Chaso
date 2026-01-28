@@ -22,6 +22,11 @@ ModelObject::~ModelObject() {
     cbWvpBatch_ = nullptr;
     cbWvpBatchMapped_ = nullptr;
   }
+  if (instanceBatch_) {
+    instanceBatch_->Release();
+    instanceBatch_ = nullptr;
+    instanceBatchMapped_ = nullptr;
+  }
 }
 
 void ModelObject::Initialize(ID3D12Device *device) {
@@ -152,6 +157,27 @@ ModelObject::GetSrvForMaterial_(uint32_t materialIndex) const {
   return D3D12_GPU_DESCRIPTOR_HANDLE{};
 }
 
+void ModelObject::EnsureInstanceBatchCapacity_(uint32_t count) {
+  if (instanceBatchCapacity_ >= count) {
+    return;
+  }
+
+  if (instanceBatch_) {
+    instanceBatch_->Release();
+    instanceBatch_ = nullptr;
+    instanceBatchMapped_ = nullptr;
+  }
+
+  instanceBatchCapacity_ = (std::max)(count, instanceBatchCapacity_ * 2u + 16u);
+
+  const uint64_t totalSize =
+      uint64_t(sizeof(InstanceDataGPU)) * instanceBatchCapacity_;
+
+  instanceBatch_ = CreateBufferResource(device_, totalSize);
+  instanceBatch_->Map(0, nullptr,
+                      reinterpret_cast<void **>(&instanceBatchMapped_));
+}
+
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
   if (!mesh_ || !mesh_->Ready() || !visible_)
     return;
@@ -252,55 +278,64 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
-  if (!mesh_ || !mesh_->Ready() || instances.empty())
+  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
+  }
 
+  // VB
   const auto &vbv = mesh_->VBV();
   cmdList->IASetVertexBuffers(0, 1, &vbv);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  // Root[0] Material (PS b0)
   cmdList->SetGraphicsRootConstantBufferView(
       0, cbMat_.resource->GetGPUVirtualAddress());
-  // Batchは1枚テクスチャ運用が多いけど、overrideが無い場合は material[0] を使う
+
+  // Root[2] Texture (PS t0)
   if (textureSrv_.ptr == 0) {
     EnsureMaterialSrvsLoaded_();
   }
   cmdList->SetGraphicsRootDescriptorTable(
       2, (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(0));
 
-  // Light CB（b1）: 外部ライトが指定されていればそちらを使う
+  // Root[3] Light (PS b1)
   const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
       (externalLightCBAddress_ != 0)
           ? externalLightCBAddress_
           : cbLight_.resource->GetGPUVirtualAddress();
   cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
 
-  const uint32_t oneSize = Align256(sizeof(TransformationMatrix));
-  EnsureWvpBatchCapacity_(cbWvpBatchHead_ +
-                          static_cast<uint32_t>(instances.size()));
-  const uint32_t base = cbWvpBatchHead_;
+  // -------- InstanceData (VS t1) --------
+  const uint32_t count = static_cast<uint32_t>(instances.size());
+  EnsureInstanceBatchCapacity_(instanceBatchHead_ + count);
 
-  for (uint32_t i = 0; i < instances.size(); ++i) {
+  const uint32_t base = instanceBatchHead_;
+  auto *dst = reinterpret_cast<InstanceDataGPU *>(instanceBatchMapped_) + base;
+
+  for (uint32_t i = 0; i < count; ++i) {
     const Transform &tr = instances[i];
 
     Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
 
-    TransformationMatrix tm{};
-    tm.World = world;
-    tm.WVP = Multiply(world, Multiply(view, proj));
-    tm.worldInverseTranspose = Transpose(Inverse(world));
+    dst[i].World = world;
+    dst[i].WVP = Multiply(world, Multiply(view, proj));
+    dst[i].WorldInverseTranspose = Transpose(Inverse(world));
 
-    const uint32_t dstIndex = base + i;
-    auto *dst = reinterpret_cast<TransformationMatrix *>(
-        cbWvpBatchMapped_ + uint64_t(dstIndex) * oneSize);
-    *dst = tm;
-
-    D3D12_GPU_VIRTUAL_ADDRESS addr =
-        cbWvpBatch_->GetGPUVirtualAddress() + uint64_t(dstIndex) * oneSize;
-    cmdList->SetGraphicsRootConstantBufferView(1, addr);
-    cmdList->DrawInstanced(mesh_->VertexCount(), 1, 0, 0);
+    // 今は「インスタンス色 = 白」。PS側で material.color と掛け算される。
+    dst[i].color = {1, 1, 1, 1};
   }
 
-  cbWvpBatchHead_ += static_cast<uint32_t>(instances.size());
+  // Root[1] SRV (VS t1) ※root descriptor なので GPUVA を直接渡す
+  const D3D12_GPU_VIRTUAL_ADDRESS instAddr =
+      instanceBatch_->GetGPUVirtualAddress() +
+      uint64_t(base) * sizeof(InstanceDataGPU);
+
+  cmdList->SetGraphicsRootShaderResourceView(1, instAddr);
+
+  // 1発でN個
+  cmdList->DrawInstanced(mesh_->VertexCount(), count, 0, 0);
+
+  instanceBatchHead_ += count;
 }
 
 ModelObject &ModelObject::SetLightingConfig(LightingMode mode,
@@ -369,7 +404,6 @@ static void ShowLongTextJP(const std::string &s) {
     ImGui::EndTooltip();
   }
 }
-
 
 void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   std::string label = name ? std::string(name) : std::string("ModelObject");
@@ -543,7 +577,7 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
       ImGui::TextDisabled("共有参照数");
-      
+
       ImGui::TableSetColumnIndex(1);
       ImGui::Text("%d", (int)mesh_.use_count());
 

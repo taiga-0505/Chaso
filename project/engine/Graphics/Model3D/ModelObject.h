@@ -112,7 +112,10 @@ public:
 
   void DrawImGui(const char *name, bool showLightingUi);
 
-  void ResetBatchCursor() { cbWvpBatchHead_ = 0; }
+  void ResetBatchCursor() {
+    cbWvpBatchHead_ = 0;
+    instanceBatchHead_ = 0;
+  }
 
 private:
   struct CB_WVP {
@@ -133,10 +136,24 @@ private:
   static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
   void EnsureWvpBatchCapacity_(uint32_t count);
 
+  void EnsureInstanceBatchCapacity_(uint32_t count);
+
   void EnsureMaterialSrvsLoaded_();
   D3D12_GPU_DESCRIPTOR_HANDLE GetSrvForMaterial_(uint32_t materialIndex) const;
 
 private:
+  struct InstanceDataGPU {
+    RC::Matrix4x4 WVP;
+    RC::Matrix4x4 World;
+    RC::Matrix4x4 WorldInverseTranspose;
+    RC::Vector4 color;
+  };
+
+  ID3D12Resource *instanceBatch_ = nullptr;
+  uint32_t instanceBatchCapacity_ = 0;
+  uint8_t *instanceBatchMapped_ = nullptr;
+  uint32_t instanceBatchHead_ = 0;
+
   ID3D12Device *device_ = nullptr;
   std::shared_ptr<ModelMesh> mesh_;
 
@@ -171,6 +188,3 @@ private:
 
   LightingConfig initialLighting_{};
 };
-
-// 移行用（RenderCommon側の修正が終わったら消してOK）
-using Model3D = ModelObject;

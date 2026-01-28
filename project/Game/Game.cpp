@@ -4,12 +4,12 @@
 // === 各シーン ===
 #include "GameOverScene/GameOverScene.h"
 #include "GameScene/GameScene.h"
+#include "LightScene/LightScene.h"
+#include "ParticleScene/ParticleScene.h"
 #include "ResultScene/ResultScene.h"
 #include "SampleScene/SampleScene.h"
 #include "SelectScene/SelectScene.h"
 #include "TitleScene/TitleScene.h"
-#include "ParticleScene/ParticleScene.h"
-#include "LightScene/LightScene.h"
 
 void Game::Init(SceneContext &ctx) {
   sceneMgr_.Init(ctx);
@@ -52,9 +52,7 @@ void Game::registerAudioPaths_() {
   // se_.SetPath(SeId::Clear, "Resources/audio/se_clear.wav");
 }
 
-void Game::Update(SceneContext &ctx) {
-    sceneMgr_.Update(ctx); 
-}
+void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }
 
 void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   sceneMgr_.Render(ctx, cl);
@@ -77,7 +75,7 @@ const std::string &Game::CurrentSceneName() const {
 void Game::DrawDebugUI() {
 #ifdef _DEBUG
   ImGui::Begin("Scene");
-  const char *sceneNames[] = {"Title",  "Select",   "Game",      "Result",
+  const char *sceneNames[] = {"Title",    "Select", "Game",     "Result",
                               "GameOver", "Sample", "Particle", "Light"};
   const char *currentSceneName = CurrentSceneName().c_str();
 
@@ -111,5 +109,4 @@ void Game::DrawDebugUI() {
   ImGui::End();
 
 #endif
-  
 }

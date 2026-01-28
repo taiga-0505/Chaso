@@ -1,29 +1,31 @@
 #include "RenderCommon.h"
 
 #include "Dx12/Dx12Core.h"
+#include "Light/Area/AreaLightManager.h"
 #include "Light/Directional/DirectionalLightManager.h"
 #include "Light/Point/PointLightManager.h"
 #include "Light/Spot/SpotLightManager.h"
-#include "Light/Area/AreaLightManager.h"
+#include "Model3D/ModelManager.h"
+#include "Model3d/ModelObject.h"
 #include "PipelineManager.h"
 #include "Primitive2D/Primitive2D.h"
-#include "Sprite2D/Sprite2D.h"
+#include "Primitive3D/Primitive3D.h"
 #include "Sprite2D/SpriteManager.h"
+#include "Sphere/Sphere.h"
+#include "Sphere/SphereManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
+#include "struct.h"
 #include <algorithm>
-#include <filesystem>
 #include <memory>
 #include <string_view>
-#include <unordered_map>
-#include "struct.h"
 
 namespace RC {
 
 // ============================================================================
 // このファイルの目的
 // ----------------------------------------------------------------------------
-// RenderCommon は「Scene から呼べる描画ファサード」。
+// RenderCommon は「Scene から呼べる描画ファサード。」
 // - ハンドル制で Model / Sprite / Sphere / Light を管理
 // - そのフレームのカメラ(View/Proj + カメラ位置)を共有
 // - 今フレームの CommandList / SceneContext を保持して Draw* へ渡す
@@ -39,29 +41,6 @@ namespace RC {
 // ============================================================================
 
 namespace {
-
-// ============================================================================
-// 内部スロット（ハンドル管理）
-// ----------------------------------------------------------------------------
-// 「ハンドル = vector の index」
-// - inUse=false のスロットは再利用される
-// - ptr が nullptr のハンドルは無効
-// ============================================================================
-
-struct ModelSlot {
-  std::unique_ptr<Model3D> ptr;
-  bool inUse = false;
-};
-
-
-struct SphereSlot {
-  std::unique_ptr<Sphere> ptr;
-  bool inUse = false;
-  int defaultTexHandle =
-      -1; // 生成時に渡されたテクスチャ（DrawSphere の省略時に使う）
-};
-
-
 
 // ============================================================================
 // CameraCB
@@ -94,52 +73,16 @@ struct FogOverlayCB {
   RC::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f};
 };
 
+struct Primitive3DSlot {
+  std::unique_ptr<Primitive3D> ptr;
+  bool inUse = false;
+};
+static Primitive3DSlot gPrim3D;
+
 struct PrimitiveSlot {
   std::unique_ptr<Primitive2D> ptr;
   bool inUse = false;
 };
-
-// ============================================================================
-// Mesh cache
-// ----------------------------------------------------------------------------
-// 同じ .obj を何回 LoadModel しても、Mesh は共有したい。
-// - key はパスを正規化して作る
-// - weak_ptr なので、どこにも参照が無くなると自動で破棄される
-// ============================================================================
-static std::unordered_map<std::string, std::weak_ptr<ModelMesh>> gMeshCache;
-
-static std::string NormalizeMeshKey_(const std::string &path) {
-  namespace fs = std::filesystem;
-
-  std::error_code ec;
-  fs::path p(path);
-
-  // 絶対パス化できるなら絶対パス。失敗したら相対のまま lexically_normal。
-  fs::path abs = fs::absolute(p, ec);
-  fs::path key = ec ? p.lexically_normal() : abs.lexically_normal();
-  return key.string();
-}
-
-static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
-                                                 const std::string &path) {
-  const std::string key = NormalizeMeshKey_(path);
-
-  // すでにロード済みなら共有
-  if (auto it = gMeshCache.find(key); it != gMeshCache.end()) {
-    if (auto sp = it->second.lock()) {
-      return sp;
-    }
-  }
-
-  // 未ロードならロード
-  auto mesh = std::make_shared<ModelMesh>();
-  if (!mesh->LoadObj(device, path)) {
-    return nullptr;
-  }
-
-  gMeshCache[key] = mesh;
-  return mesh;
-}
 
 // ============================================================================
 // グローバル状態（RenderCommon の "中の人"）
@@ -147,16 +90,16 @@ static std::shared_ptr<ModelMesh> GetOrLoadMesh_(ID3D12Device *device,
 // - gCtxRef / gCL は PreDraw3D/PreDraw2D で毎フレーム更新
 // - gView / gProj / gCameraCB は SetCamera で毎フレーム更新
 // ============================================================================
-std::vector<ModelSlot> gModels;
-std::vector<SphereSlot> gSpheres;
+RC::ModelManager gModelMan;
 RC::SpriteManager gSpriteMan;
+RC::SphereManager gSphereMan;
 RC::DirectionalLightManager gLightMan;
 RC::PointLightManager gPointLightMan;
 RC::SpotLightManager gSpotLightMan;
 RC::AreaLightManager gAreaLightMan;
 
 ID3D12Device *gDevice = nullptr;
-DescriptorHeap *gSrvHeap = nullptr; // いまは直接使ってない（互換用に保持）
+DescriptorHeap *gSrvHeap = nullptr;
 TextureManager gTexMan;
 
 Matrix4x4 gView;
@@ -176,44 +119,7 @@ bool gInitialized = false;
 static BlendMode gCurrentBlendMode = BlendMode::kBlendModeNone;
 
 // ライトは LightManager に委譲
-
 static PrimitiveSlot gPrim2D;
-
-// ============================================================================
-// ハンドル/スロット関連ヘルパ
-// ============================================================================
-
-int AllocModelSlot_() {
-  for (int i = 0; i < static_cast<int>(gModels.size()); ++i) {
-    if (!gModels[i].inUse) {
-      return i;
-    }
-  }
-  gModels.emplace_back();
-  return static_cast<int>(gModels.size()) - 1;
-}
-
-bool IsValidModel_(int h) {
-  return (h >= 0 && h < static_cast<int>(gModels.size()) && gModels[h].inUse &&
-          gModels[h].ptr);
-}
-
-int AllocSphereSlot_() {
-  for (int i = 0; i < static_cast<int>(gSpheres.size()); ++i) {
-    if (!gSpheres[i].inUse) {
-      return i;
-    }
-  }
-  gSpheres.emplace_back();
-  return static_cast<int>(gSpheres.size()) - 1;
-}
-
-bool IsValidSphere_(int h) {
-  return (h >= 0 && h < static_cast<int>(gSpheres.size()) &&
-          gSpheres[h].inUse && gSpheres[h].ptr);
-}
-
-
 
 // ============================================================================
 // Pipeline 選択
@@ -275,7 +181,6 @@ static void BindPointLightCB_() {
   }
 }
 
-
 // SpotLightCB は RootParam[6]（b4）にバインドされる想定
 static void BindSpotLightCB_() {
   if (!gCL) {
@@ -287,7 +192,6 @@ static void BindSpotLightCB_() {
   }
 }
 
-
 // AreaLightCB は RootParam[7]（b5）にバインドされる想定
 static void BindAreaLightCB_() {
   if (!gCL) {
@@ -298,8 +202,6 @@ static void BindAreaLightCB_() {
     gCL->SetGraphicsRootConstantBufferView(7, addr);
   }
 }
-
-
 
 // ============================================================================
 // Primitive2D の遅延生成
@@ -327,6 +229,18 @@ static Primitive2D *EnsurePrimitive2D_() {
   return gPrim2D.ptr.get();
 }
 
+static Primitive3D *EnsurePrimitive3D_() {
+  if (!gInitialized || !gDevice || !gCtxRef)
+    return nullptr;
+
+  if (!gPrim3D.inUse || !gPrim3D.ptr) {
+    gPrim3D.ptr = std::make_unique<Primitive3D>();
+    gPrim3D.ptr->Initialize(gDevice);
+    gPrim3D.inUse = true;
+  }
+  return gPrim3D.ptr.get();
+}
+
 } // namespace
 
 // ============================================================================
@@ -352,12 +266,18 @@ void Init(SceneContext &ctx) {
   // Sprite は SpriteManager に委譲
   gSpriteMan.Init(gDevice, &gTexMan);
 
+  // Model は ModelManager に委譲
+  gModelMan.Init(gDevice, &gTexMan);
+
+  // Sphere は SphereManager に委譲
+  gSphereMan.Init(gDevice, &gTexMan);
+
   // Light は LightManager に委譲（default slot を作る）
   gLightMan.Init(gDevice);
 
   // PointLight は PointLightManager に委譲（default slot を作る）
   gPointLightMan.Init(gDevice);
-gSpotLightMan.Init(gDevice);
+  gSpotLightMan.Init(gDevice);
   gAreaLightMan.Init(gDevice);
 
   // CameraCB: Upload に置いて Map しっぱなしで更新する
@@ -373,8 +293,6 @@ gSpotLightMan.Init(gDevice);
   }
 
   // 初期化
-  gModels.clear();
-  gSpheres.clear();
   gView = MakeIdentity4x4();
   gProj = MakeIdentity4x4();
 
@@ -389,8 +307,8 @@ void Term() {
     return;
   }
 
-  gModels.clear();
-  gMeshCache.clear();
+  gModelMan.Term();
+  gSphereMan.Term();
 
   // Sprite は SpriteManager に委譲
   gSpriteMan.Term();
@@ -400,9 +318,8 @@ void Term() {
 
   // PointLight は PointLightManager に委譲
   gPointLightMan.Term();
-gSpotLightMan.Term();
+  gSpotLightMan.Term();
   gAreaLightMan.Term();
-  gSpheres.clear();
 
   gPrim2D.ptr.reset();
   gPrim2D.inUse = false;
@@ -414,15 +331,6 @@ gSpotLightMan.Term();
     }
     gCameraCB->Release();
     gCameraCB = nullptr;
-  }
-
-  if (gFogCB) {
-    if (gFogCBMapped) {
-      gFogCB->Unmap(0, nullptr);
-      gFogCBMapped = nullptr;
-    }
-    gFogCB->Release();
-    gFogCB = nullptr;
   }
 
   if (gFogCB) {
@@ -549,7 +457,6 @@ bool IsActiveDirectionalLightEnabled() {
   return false;
 }
 
-
 // ==============================
 // PointLight
 // ==============================
@@ -592,7 +499,6 @@ int GetActivePointLightHandle() {
   }
   return gPointLightMan.GetActiveHandleAt(0);
 }
-
 
 void ClearActivePointLights() { gPointLightMan.ClearActive(); }
 
@@ -644,7 +550,6 @@ bool IsActivePointLightEnabled() {
   return false;
 }
 
-
 // ==============================
 // SpotLight
 // ==============================
@@ -682,7 +587,6 @@ int GetActiveSpotLightHandle() {
   }
   return gSpotLightMan.GetActiveHandleAt(0);
 }
-
 
 void ClearActiveSpotLights() { gSpotLightMan.ClearActive(); }
 
@@ -733,7 +637,6 @@ bool IsActiveSpotLightEnabled() {
   }
   return false;
 }
-
 
 // ----------------------------------------------------------------------------
 // Texture
@@ -795,10 +698,10 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // switch lights per draw without copying into every object each frame.
 
   // バッチ描画を使うモデルは "どこまで描いたか" のカーソルを毎フレームリセット
-  for (auto &slot : gModels) {
-    if (slot.inUse && slot.ptr) {
-      slot.ptr->ResetBatchCursor();
-    }
+  gModelMan.ResetAllBatchCursors();
+
+  if (auto *prim = EnsurePrimitive3D_()) {
+    prim->BeginFrame(gView, gProj, gCurrentBlendMode);
   }
 }
 
@@ -811,46 +714,17 @@ int LoadModel(const std::string &path) {
     return -1;
   }
 
-  const int handle = AllocModelSlot_();
-
-  // ModelObject は Model3D の派生（想定）
-  auto obj = std::make_unique<ModelObject>();
-  obj->Initialize(gDevice);
-  obj->SetTextureManager(&gTexMan);
-
-  // Mesh はキャッシュを通す
-  auto mesh = GetOrLoadMesh_(gDevice, path);
-  if (!mesh) {
-    gModels[handle].inUse = false;
-    gModels[handle].ptr.reset();
-    return -1;
-  }
-
-  obj->SetMesh(mesh);
-
-  gModels[handle].ptr = std::move(obj);
-  gModels[handle].inUse = true;
-  return handle;
+  return gModelMan.Load(path);
 }
 
 void DrawModel(int modelHandle, int texHandle) {
   if (!gInitialized || !gCL) {
     return;
   }
-  if (!IsValidModel_(modelHandle)) {
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
     return;
   }
-
-  if (!BindPipeline_("object3d")) {
-    return;
-  }
-
-  BindCameraCB_();
-  BindPointLightCB_();
-  BindSpotLightCB_();
-  BindAreaLightCB_();
-
-  auto &m = gModels[modelHandle].ptr;
 
   // Texture override (-1 => keep .mtl)
   if (texHandle >= 0) {
@@ -884,14 +758,14 @@ void DrawModel(int modelHandle, int texHandle) {
   m->Draw(gCL);
 }
 
-
 void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
 
 void DrawModelNoCull(int modelHandle, int texHandle) {
   if (!gInitialized || !gCL) {
     return;
   }
-  if (!IsValidModel_(modelHandle)) {
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
     return;
   }
 
@@ -903,8 +777,6 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
   BindPointLightCB_();
   BindSpotLightCB_();
   BindAreaLightCB_();
-
-  auto &m = gModels[modelHandle].ptr;
 
   if (texHandle >= 0) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
@@ -939,23 +811,14 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
   if (!gInitialized || !gCL) {
     return;
   }
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-  if (instances.empty()) {
-    return;
-  }
-
-  if (!BindPipeline_("object3d")) {
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
     return;
   }
 
-  BindCameraCB_();
-  BindPointLightCB_();
-  BindSpotLightCB_();
-  BindAreaLightCB_();
-
-  auto &m = gModels[modelHandle].ptr;
+  if (!BindPipeline_("object3d_inst")) {
+    return;
+  }
 
   if (texHandle >= 0) {
     m->SetTexture(gTexMan.GetSrv(texHandle));
@@ -965,7 +828,7 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
 
   const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
 
-  // ★重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
+  // 重要：ModelObject 側が b1 を外部ライトに差し替えられるようにする
   m->SetExternalLightCBAddress(lightAddr);
 
   if (lightAddr != 0) {
@@ -985,13 +848,11 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
   m->DrawBatch(gCL, gView, gProj, instances);
 }
 
-
 void DrawImGui3D(int modelHandle, const char *name) {
-  if (!IsValidModel_(modelHandle)) {
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
     return;
   }
-
-  auto &m = gModels[modelHandle].ptr;
 
   // LightManager が有効なら「共通ライトCB」が常に刺さるので
   // モデル側の Light UI（自前CB）は基本的に隠す。
@@ -1000,57 +861,25 @@ void DrawImGui3D(int modelHandle, const char *name) {
   m->DrawImGui(name, showLightingUi);
 }
 
-void UnloadModel(int modelHandle) {
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-  gModels[modelHandle].ptr.reset();
-  gModels[modelHandle].inUse = false;
-}
+void UnloadModel(int modelHandle) { gModelMan.Unload(modelHandle); }
 
 Transform *GetModelTransformPtr(int modelHandle) {
-  if (!IsValidModel_(modelHandle)) {
-    return nullptr;
-  }
-  return &gModels[modelHandle].ptr->T();
+  return gModelMan.GetTransformPtr(modelHandle);
 }
 
 void SetModelColor(int modelHandle, const Vector4 &color) {
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-  gModels[modelHandle].ptr->SetColor(color);
+  gModelMan.SetColor(modelHandle, color);
 }
 
 void SetModelLightingMode(int modelHandle, LightingMode m) {
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-  gModels[modelHandle].ptr->SetLightingMode(m);
+  gModelMan.SetLightingMode(modelHandle, m);
 }
 
 void SetModelMesh(int modelHandle, const std::string &path) {
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-
-  auto mesh = GetOrLoadMesh_(gDevice, path);
-  if (!mesh) {
-    return;
-  }
-
-  gModels[modelHandle].ptr->SetMesh(mesh);
-
-  // Mesh を変えると mtl のテクスチャ参照も変わる可能性があるので戻す
-  gModels[modelHandle].ptr->ResetTextureToMtl();
+  gModelMan.SetMesh(modelHandle, path);
 }
 
-void ResetCursor(int modelHandle) {
-  if (!IsValidModel_(modelHandle)) {
-    return;
-  }
-  gModels[modelHandle].ptr->ResetBatchCursor();
-}
+void ResetCursor(int modelHandle) { gModelMan.ResetCursor(modelHandle); }
 
 // ----------------------------------------------------------------------------
 // 2D Pass
@@ -1064,6 +893,25 @@ void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // 2D のデフォルト
   // - sprite は普通のアルファブレンド前提なので Normal を基準にしている
   gCurrentBlendMode = kBlendModeNormal;
+
+  // 3DのViewport/Scissorを壊す前に Primitive3D を吐く
+  if (auto *prim = EnsurePrimitive3D_()) {
+    if (prim->HasAny()) {
+      const BlendMode saved = gCurrentBlendMode;
+      gCurrentBlendMode = prim->BlendAt3D();
+
+      if (BindPipeline_("primitive3d")) {
+        gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        prim->Draw(gCL, true);
+      }
+      if (BindPipeline_("primitive3d_nodepth")) {
+        gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        prim->Draw(gCL, false);
+      }
+
+      gCurrentBlendMode = saved;
+    }
+  }
 
   // 2D 描画は一時的に Viewport/Scissor を全画面にしておく
   // (Dx12Core 側の状態を壊したくないので「ローカル変数」を渡す)
@@ -1164,9 +1012,7 @@ void SetSpriteColor(int spriteHandle, const Vector4 &color) {
   gSpriteMan.SetColor(spriteHandle, color);
 }
 
-void UnloadSprite(int spriteHandle) {
-  gSpriteMan.Unload(spriteHandle);
-}
+void UnloadSprite(int spriteHandle) { gSpriteMan.Unload(spriteHandle); }
 
 void SetSpriteScreenSize(int spriteHandle, float w, float h) {
   gSpriteMan.SetSize(spriteHandle, w, h);
@@ -1186,21 +1032,8 @@ int GenerateSphereEx(int textureHandle, float radius, unsigned int sliceCount,
     return -1;
   }
 
-  const int handle = AllocSphereSlot_();
-
-  auto s = std::make_unique<Sphere>();
-  s->Initialize(gDevice, radius, sliceCount, stackCount, inward);
-
-  // テクスチャ指定があれば設定
-  if (textureHandle >= 0) {
-    s->SetTexture(gTexMan.GetSrv(textureHandle));
-  }
-
-  gSpheres[handle].ptr = std::move(s);
-  gSpheres[handle].inUse = true;
-  gSpheres[handle].defaultTexHandle = textureHandle;
-
-  return handle;
+  return gSphereMan.Create(textureHandle, radius, sliceCount, stackCount,
+                           inward);
 }
 
 int GenerateSphere(int textureHandle) {
@@ -1212,7 +1045,9 @@ void DrawSphere(int sphereHandle, int texHandle) {
   if (!gInitialized || !gCL) {
     return;
   }
-  if (!IsValidSphere_(sphereHandle)) {
+
+  auto *s = gSphereMan.Get(sphereHandle);
+  if (!s) {
     return;
   }
 
@@ -1226,14 +1061,7 @@ void DrawSphere(int sphereHandle, int texHandle) {
   BindSpotLightCB_();
   BindAreaLightCB_();
 
-  auto &s = gSpheres[sphereHandle].ptr;
-
-  // Texture override (explicit > default)
-  const int useTex =
-      (texHandle >= 0) ? texHandle : gSpheres[sphereHandle].defaultTexHandle;
-  if (useTex >= 0) {
-    s->SetTexture(gTexMan.GetSrv(useTex));
-  }
+  gSphereMan.ApplyTexture(sphereHandle, texHandle);
 
   // Apply active (or default) light at draw time: bind the LightManager's CB
   // per draw.
@@ -1258,49 +1086,25 @@ void DrawSphere(int sphereHandle, int texHandle) {
 }
 
 void DrawSphereImGui(int sphereHandle, const char *name) {
-  if (!IsValidSphere_(sphereHandle)) {
-    return;
+  if (auto *s = gSphereMan.Get(sphereHandle)) {
+    s->DrawImGui(name);
   }
-
-  auto &s = gSpheres[sphereHandle].ptr;
-  s->DrawImGui(name);
 }
 
 void UnloadSphere(int sphereHandle) {
-  if (!IsValidSphere_(sphereHandle)) {
-    return;
-  }
-
-  gSpheres[sphereHandle].ptr.reset();
-  gSpheres[sphereHandle].inUse = false;
-  gSpheres[sphereHandle].defaultTexHandle = -1;
+  gSphereMan.Unload(sphereHandle);
 }
 
 Transform *GetSphereTransformPtr(int sphereHandle) {
-  if (!IsValidSphere_(sphereHandle)) {
-    return nullptr;
-  }
-  return &gSpheres[sphereHandle].ptr->T();
+  return gSphereMan.GetTransformPtr(sphereHandle);
 }
 
 void SetSphereColor(int sphereHandle, const Vector4 &color) {
-  if (!IsValidSphere_(sphereHandle)) {
-    return;
-  }
-
-  if (auto *mat = gSpheres[sphereHandle].ptr->Mat()) {
-    mat->color = color;
-  }
+  gSphereMan.SetColor(sphereHandle, color);
 }
 
 void SetSphereLightingMode(int sphereHandle, LightingMode m) {
-  if (!IsValidSphere_(sphereHandle)) {
-    return;
-  }
-
-  if (auto *mat = gSpheres[sphereHandle].ptr->Mat()) {
-    mat->lightingMode = static_cast<int>(m); // Material のメンバは int
-  }
+  gSphereMan.SetLightingMode(sphereHandle, m);
 }
 
 // ----------------------------------------------------------------------------
@@ -1313,7 +1117,6 @@ void SetSphereLightingMode(int sphereHandle, LightingMode m) {
 // 「全部の Draw が最後に書いた値で描かれる」現象が起きやすい。
 // (CommandList は "GPU virtual address" を記録するだけで、その先のメモリ内容は
 //  実行時に読まれるので、同じアドレスを何回も書き換えると最後の値になりがち)
-//
 // もし "最後に描いたやつしか出ない" 症状が出たら、Primitive2D 側で
 // - CB をリングバッファ化して draw ごとにオフセットを変える
 // - もしくは RootConstants（SetGraphicsRoot32BitConstants）にして CB を消す
@@ -1401,6 +1204,64 @@ void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
   prim->Draw(gCL);
 }
 
+void DrawLine3D(const Vector3 &a, const Vector3 &b, const Vector4 &color,
+                bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+
+  prim->AddLine(a, b, color, depth);
+}
+
+void DrawAABB3D(const Vector3 &mn, const Vector3 &mx, const Vector4 &color,
+                bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddAABB(mn, mx, color, depth);
+}
+
+void DrawGridXZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddGridXZ(halfSize, step, color, depth);
+}
+
+void DrawGridXY3D(int halfSize, float step, const Vector4 &color, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddGridXY(halfSize, step, color, depth);
+}
+
+void DrawGridYZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddGridYZ(halfSize, step, color, depth);
+}
+
+// 2Dパスを呼ばないシーン用（任意）
+void FlushPrimitive3D() {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+}
+
 // ----------------------------------------------------------------------------
 // Fog overlay (cold mist)
 // ----------------------------------------------------------------------------
@@ -1481,7 +1342,6 @@ void SetBlendMode(BlendMode blendMode) {
 }
 
 BlendMode GetBlendMode() { return gCurrentBlendMode; }
-
 
 // ============================================================================
 // AreaLight（Rect） API
@@ -1609,6 +1469,5 @@ bool IsActiveAreaLightEnabled() {
   }
   return false;
 }
-
 
 } // namespace RC

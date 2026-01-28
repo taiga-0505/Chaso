@@ -13,6 +13,7 @@ enum class InputLayoutType {
   Object3D,
   Sprite,
   Particle,
+  Primitive3D,
   None, // InputLayout無し（SV_VertexID 等）
 };
 

@@ -4,7 +4,7 @@
     <FxCompile Include="Resources\Shader\Object3d\Object3d.PS.hlsl">
       <Filter>Shader\Object3d</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Object3d\Object3d.VS.hlsl">
+    <FxCompile Include="Resources\Shader\Object3d\Object3D_Inst.VS.hlsl">
       <Filter>Shader\Object3d</Filter>
     </FxCompile>
     <FxCompile Include="Resources\Shader\Particle\Particle.PS.hlsl">
@@ -28,6 +28,13 @@
     <FxCompile Include="Resources\Shader\Post\FogOverlay.hlsl">
       <Filter>Shader\Post</Filter>
     </FxCompile>
+    <FxCompile Include="Resources\Shader\Primitive3D\Primitive3D.PS.hlsl">
+      <Filter>Shader\Primitive3D</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\Shader\Primitive3D\Primitive3D.VS.hlsl">
+      <Filter>Shader\Primitive3D</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\Shader\Object3d\Object3D_Single.VS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -220,11 +227,25 @@
     <ClCompile Include="engine\Render\Light\Point\PointLightManager.cpp">
       <Filter>engine\Render\Light\Point</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Graphics\Light\Spot\SpotLightSource.cpp" />
-    <ClCompile Include="engine\Render\Light\Spot\SpotLightManager.cpp" />
-    <ClCompile Include="Game\Scene\LightScene\LightScene.cpp" />
-    <ClCompile Include="engine\Graphics\Light\Area\AreaLightSource.cpp" />
-    <ClCompile Include="engine\Render\Light\Area\AreaLightManager.cpp" />
+    <ClCompile Include="engine\Render\Light\Area\AreaLightManager.cpp">
+      <Filter>engine\Render\Light\Area</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Light\Area\AreaLightSource.cpp">
+      <Filter>engine\Graphics\Light\Area</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Scene\LightScene\LightScene.cpp">
+      <Filter>Game\Scene\LightScene</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Light\Spot\SpotLightSource.cpp">
+      <Filter>engine\Graphics\Light\Spot</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Light\Spot\SpotLightManager.cpp">
+      <Filter>engine\Render\Light\Spot</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Graphics\Primitive3D\Primitive3D.cpp">
+      <Filter>engine\Graphics\Primitive3D</Filter>
+    </ClCompile>
+    <ClCompile Include="engine\Render\Sphere\SphereManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -455,11 +476,25 @@
     <ClInclude Include="engine\Render\Light\Point\PointLightManager.h">
       <Filter>engine\Render\Light\Point</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Graphics\Light\Spot\SpotLightSource.h" />
-    <ClInclude Include="engine\Render\Light\Spot\SpotLightManager.h" />
-    <ClInclude Include="Game\Scene\LightScene\LightScene.h" />
-    <ClInclude Include="engine\Graphics\Light\Area\AreaLightSource.h" />
-    <ClInclude Include="engine\Render\Light\Area\AreaLightManager.h" />
+    <ClInclude Include="engine\Render\Light\Area\AreaLightManager.h">
+      <Filter>engine\Render\Light\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Light\Area\AreaLightSource.h">
+      <Filter>engine\Graphics\Light\Area</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Scene\LightScene\LightScene.h">
+      <Filter>Game\Scene\LightScene</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Light\Spot\SpotLightSource.h">
+      <Filter>engine\Graphics\Light\Spot</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Light\Spot\SpotLightManager.h">
+      <Filter>engine\Render\Light\Spot</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Graphics\Primitive3D\Primitive3D.h">
+      <Filter>engine\Graphics\Primitive3D</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\Render\Sphere\SphereManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -662,6 +697,27 @@
     </Filter>
     <Filter Include="engine\Render\Light\Point">
       <UniqueIdentifier>{0fcd9213-0ed8-4a7a-9ba7-b3ac63909f28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Light\Area">
+      <UniqueIdentifier>{c28964af-3759-41aa-9cbe-4b056ebd15b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Light\Area">
+      <UniqueIdentifier>{e3d1436a-10ac-4365-80bb-40d2d1384602}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\LightScene">
+      <UniqueIdentifier>{834da67c-939b-461a-8544-b3ef2baf19f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader\Primitive3D">
+      <UniqueIdentifier>{99be25aa-940e-4633-836f-26f7f9cf9103}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Light\Spot">
+      <UniqueIdentifier>{4b4b3002-4cd6-401e-8929-3290a8522ad2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Light\Spot">
+      <UniqueIdentifier>{f2810b72-25eb-4c9a-94bb-b48b7a3eb81c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Graphics\Primitive3D">
+      <UniqueIdentifier>{876c5f24-f6f4-4167-8b97-6fd1eb16e52c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

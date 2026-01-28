@@ -23,7 +23,8 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   directionalLight = RC::CreateDirectionalLight();
   RC::SetActiveDirectionalLight(directionalLight);
 
-  if (RC::DirectionalLightSource *sun = RC::GetDirectionalLightPtr(directionalLight)) {
+  if (RC::DirectionalLightSource *sun =
+          RC::GetDirectionalLightPtr(directionalLight)) {
     sun->SetDirection({0.0f, -1.0f, 0.2f});   // ちょいナナメ上
     sun->SetColor({1.0f, 0.95f, 0.9f, 1.0f}); // ほんのり暖色
     sun->SetIntensity(1.5f);
@@ -54,7 +55,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   terrainT_->translation.y = -1.0f;
 
   // 天球
-  tx_Sphere_ = RC::LoadTex("Resources/sky_dome.png");
+  tx_Sphere_ = RC::LoadTex("Resources/skydome.jpg");
   sphere = RC::GenerateSphereEx(tx_Sphere_, 40.0f);
   sphereT_ = RC::GetSphereTransformPtr(sphere);
   RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
@@ -156,6 +157,16 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawModel(model, tx_model);
 
   RC::DrawModel(terrain);
+
+  RC::DrawLine3D({0, 10, 0}, {5, 0, 5}, {1, 0, 0, 1}); // 赤線
+
+  RC::Vector3 mn = {-5, 0, -5};
+  RC::Vector3 mx = {5, 3, 5};
+
+  RC::DrawAABB3D(mn, mx, {0, 1, 0, 1});         // 緑箱
+  //RC::DrawGridXZ3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
+  //RC::DrawGridXY3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
+  //RC::DrawGridYZ3D(20, 1.0f, {1, 1, 1, 0.25f}); // グリッド
 
   // ===========================================
   // 2D描画

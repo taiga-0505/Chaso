@@ -120,6 +120,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // ベース色（材質×テクスチャ）
     float4 base = gMaterial.color * textureColor;
+    base *= input.instColor;
 
     // ライティングなし
     if (gMaterial.lightingMode == 0)

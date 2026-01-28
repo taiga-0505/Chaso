@@ -106,10 +106,10 @@ bool PipelineManager::Rebuild(const std::string &key) {
   D3D12_SHADER_BYTECODE psBC{PS.Blob()->GetBufferPointer(),
                              PS.Blob()->GetBufferSize()};
 
-  const D3D12_INPUT_ELEMENT_DESC* il = d.inputLayout.empty() ? nullptr : d.inputLayout.data();
-  it->second.pipeline->BuildEx(il,
-                               static_cast<UINT>(d.inputLayout.size()), vsBC,
-                               psBC, rtvFmt_, dsvFmt_, d.opt);
+  const D3D12_INPUT_ELEMENT_DESC *il =
+      d.inputLayout.empty() ? nullptr : d.inputLayout.data();
+  it->second.pipeline->BuildEx(il, static_cast<UINT>(d.inputLayout.size()),
+                               vsBC, psBC, rtvFmt_, dsvFmt_, d.opt);
 
   return true;
 }
@@ -132,10 +132,10 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
   D3D12_SHADER_BYTECODE vsBC{vs->GetBufferPointer(), vs->GetBufferSize()};
   D3D12_SHADER_BYTECODE psBC{ps->GetBufferPointer(), ps->GetBufferSize()};
 
-  const D3D12_INPUT_ELEMENT_DESC* il = e.desc.inputLayout.empty() ? nullptr : e.desc.inputLayout.data();
-  e.pipeline->BuildEx(il,
-                      static_cast<UINT>(e.desc.inputLayout.size()), vsBC, psBC,
-                      rtvFmt_, dsvFmt_, e.desc.opt);
+  const D3D12_INPUT_ELEMENT_DESC *il =
+      e.desc.inputLayout.empty() ? nullptr : e.desc.inputLayout.data();
+  e.pipeline->BuildEx(il, static_cast<UINT>(e.desc.inputLayout.size()), vsBC,
+                      psBC, rtvFmt_, dsvFmt_, e.desc.opt);
 
   auto &ref = pipelines_[key] = std::move(e);
   return ref.pipeline.get();
@@ -176,6 +176,16 @@ PipelineManager::MakeInputLayout(InputLayoutType type) {
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
+
+  case InputLayoutType::Primitive3D:
+    return {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
          D3D12_APPEND_ALIGNED_ELEMENT,
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
@@ -221,7 +231,10 @@ std::string PipelineManager::MakeKey(std::string_view prefix, BlendMode mode) {
 }
 
 void PipelineManager::RegisterDefaultPipelines() {
-  const std::wstring objVs = L"Resources/Shader/Object3d/Object3D.VS.hlsl";
+  const std::wstring objVs =
+      L"Resources/Shader/Object3d/Object3D_Single.VS.hlsl";
+  const std::wstring objVsInst =
+      L"Resources/Shader/Object3d/Object3D_Inst.VS.hlsl";
   const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
   const std::wstring sprVs = L"Resources/Shader/Sprite/Sprite.VS.hlsl";
   const std::wstring sprPs = L"Resources/Shader/Sprite/Sprite.PS.hlsl";
@@ -231,10 +244,13 @@ void PipelineManager::RegisterDefaultPipelines() {
       L"Resources/Shader/Primitive2D/Primitive2D.VS.hlsl";
   const std::wstring primPs =
       L"Resources/Shader/Primitive2D/Primitive2D.PS.hlsl";
+  const std::wstring prim3dVs =
+      L"Resources/Shader/Primitive3D/Primitive3D.VS.hlsl";
+  const std::wstring prim3dPs =
+      L"Resources/Shader/Primitive3D/Primitive3D.PS.hlsl";
 
   // fullscreen fog overlay (cold mist)
   const std::wstring fogFx = L"Resources/Shader/Post/FogOverlay.hlsl";
-
 
   auto regSet = [&](std::string_view prefix, const std::wstring &vs,
                     const std::wstring &ps, InputLayoutType layout,
@@ -255,6 +271,24 @@ void PipelineManager::RegisterDefaultPipelines() {
     }
   };
 
+  auto regPrim3D = [&](std::string_view prefix, bool depth) {
+    for (int m = (int)kBlendModeNone; m <= (int)kBlendModeScreen; ++m) {
+      const BlendMode mode = (BlendMode)m;
+
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::Primitive3D;
+      opt.enableDepth = depth;
+      opt.enableDepthWrite = false;
+      opt.enableAlphaBlend = (mode != kBlendModeNone);
+      opt.blendMode = mode;
+      opt.cull = D3D12_CULL_MODE_NONE;
+      opt.topologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+
+      CreateFromFiles(MakeKey(prefix, mode), prim3dVs, prim3dPs,
+                      InputLayoutType::Primitive3D, opt);
+    }
+  };
+
   // object3d：深度ON、書き込みON、基本BACKカリング
   regSet("object3d", objVs, objPs, InputLayoutType::Object3D,
          RootSignatureType::Object3D, true, true, D3D12_CULL_MODE_BACK);
@@ -262,6 +296,10 @@ void PipelineManager::RegisterDefaultPipelines() {
   // object3d_nocull：深度ON、書き込みON、カリング無し
   regSet("object3d_nocull", objVs, objPs, InputLayoutType::Object3D,
          RootSignatureType::Object3D, true, true, D3D12_CULL_MODE_NONE);
+
+  regSet("object3d_inst", objVsInst, objPs, InputLayoutType::Object3D,
+         RootSignatureType::Object3DInstancing, true, true,
+         D3D12_CULL_MODE_BACK);
 
   // sprite：深度OFF、基本BACK（必要なら NONE に）
   regSet("sprite", sprVs, sprPs, InputLayoutType::Sprite,
@@ -274,6 +312,12 @@ void PipelineManager::RegisterDefaultPipelines() {
   // 汎用2D：基本は画面オーバーレイ想定
   regSet("primitive2d", primVs, primPs, InputLayoutType::Sprite,
          RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_NONE);
+
+  // 汎用3Dライン：深度ON版
+  regPrim3D("primitive3d", true);
+
+  // 汎用3Dライン：深度OFF版
+  regPrim3D("primitive3d_nodepth", false);
 
   // fog overlay：深度OFF、αブレンドON、InputLayout無し、Rootは FogOverlay
   {

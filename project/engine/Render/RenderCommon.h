@@ -2,9 +2,6 @@
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Math/Math.h"
 #include "Scene.h"
-#include "Sphere/Sphere.h"
-#include <Model3D/ModelMesh.h>
-#include <Model3D/ModelObject.h>
 #include <d3d12.h>
 #include <string>
 #include "struct.h"
@@ -689,6 +686,67 @@ void DrawCircle(const Vector2 &center, float radius, const Vector4 &color,
 void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2, const Vector2 &pos3,
                   const Vector4 &color, kFillMode fillMode = kFill,
                   float feather = 1.0f);
+
+// ===============================
+// Primitive3D（デバッグ線）
+// ===============================
+
+/// <summary>
+/// 3D線描画
+/// </summary>
+/// <param name="a">始点（ワールド座標）</param>
+/// <param name="b">終点（ワールド座標）</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawLine3D(const Vector3 &a, const Vector3 &b, const Vector4 &color,
+                bool depth = true);
+
+/// <summary>
+/// 3DAABB描画
+/// </summary>
+/// <param name="mn">最小座標（ワールド座標）</param>
+/// <param name="mx">最大座標（ワールド座標）</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawAABB3D(const Vector3 &mn, const Vector3 &mx, const Vector4 &color,
+                bool depth = true);
+
+/// <summary>
+/// 3Dグリッド - XZ描画
+/// </summary>
+/// <param name="halfSize">グリッドの半分のサイズ（例: 10 なら
+/// -10..+10）</param>
+/// <param name="step">グリッドの間隔</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawGridXZ3D(int halfSize, float step, const Vector4 &color,
+                  bool depth = true);
+
+/// <summary>
+/// 3Dグリッド - XY描画
+/// </summary>
+/// <param name="halfSize">グリッドの半分のサイズ（例: 10 なら
+/// -10..+10）</param>
+/// <param name="step">グリッドの間隔</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawGridXY3D(int halfSize, float step, const Vector4 &color,
+                  bool depth = true);
+
+/// <summary>
+/// 3Dグリッド - YZ描画
+/// </summary>
+/// <param name="halfSize">グリッドの半分のサイズ（例: 10 なら
+/// -10..+10）</param>
+/// <param name="step">グリッドの間隔</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawGridYZ3D(int halfSize, float step, const Vector4 &color,
+                  bool depth = true);
+
+// 2Dパスを呼ばない時用（任意）
+void FlushPrimitive3D();
+
 
 // ===============================
 // 画面オーバーレイ（ポスト風）
