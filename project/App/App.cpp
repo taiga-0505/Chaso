@@ -36,9 +36,9 @@ bool App::Init() {
   coreDesc_.height = appConfig_.height;
   core_.Init(window_->GetHwnd(), coreDesc_);
 
-  cl = core_.CL();
-  device = core_.GetDevice();
-  assert(device);
+  cl_ = core_.CL();
+  device_ = core_.GetDevice();
+  assert(device_);
 
   // ===== Input =====
   input_ = std::make_unique<Input>(window_->GetHwnd());
@@ -47,7 +47,7 @@ bool App::Init() {
   imgui_.Init(window_->GetHwnd(), core_);
 
   // ===== PipelineManager =====
-  pm_.Init(device, coreDesc_.rtvFormat, coreDesc_.dsvFormat);
+  pm_.Init(device_, coreDesc_.rtvFormat, coreDesc_.dsvFormat);
 
   pm_.RegisterDefaultPipelines();
 
@@ -81,7 +81,7 @@ int App::Run() {
       core_.BeginFrame();
       Render();
 #if RC_ENABLE_IMGUI
-      imgui_.Render(cl);
+      imgui_.Render(cl_);
 #endif
       core_.EndFrame();
     }
@@ -100,7 +100,7 @@ void App::Update() {
   game_.Update(sceneCtx_);
 }
 
-void App::Render() { game_.Render(sceneCtx_, cl); }
+void App::Render() { game_.Render(sceneCtx_, cl_); }
 
 void App::Term() {
   core_.WaitForGPU();

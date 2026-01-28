@@ -35,7 +35,7 @@ private:
   RC::Matrix4x4 view_;                   // ビュー行列
   RC::Matrix4x4 proj_;                   // 射影行列
 
-  float deltaTIme_ = 1.0f / 60.0f;
+  float deltaTime_ = 1.0f / 60.0f;
 
   const float moveSpeed_ = 0.5f;
   const float rotateSpeed_ = 0.02f;

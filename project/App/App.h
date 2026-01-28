@@ -31,8 +31,8 @@ private:
   void Render();
 
 private:
-  ID3D12GraphicsCommandList *cl = nullptr;
-  ID3D12Device *device = nullptr;
+  ID3D12GraphicsCommandList *cl_ = nullptr;
+  ID3D12Device *device_ = nullptr;
 
   // 設定 & ログ
   AppConfig appConfig_;

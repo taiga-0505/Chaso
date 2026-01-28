@@ -143,9 +143,9 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
     // カメラ座標に追従
     sphereT_->translation = camera_.GetWorldPos();
     // 高さオフセット
-    sphereT_->translation.y -= 10.0f;
+    sphereT_->translation.y -= skydomeTranslateY_;
     // 自転処理
-    sphereT_->rotation.y += 0.0005f;
+    sphereT_->rotation.y += skydomeRotateSpeed_;
   }
 
   // ======= エンティティ更新 =======

@@ -7,8 +7,8 @@
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
   // COM 初期化
-  HRESULT hrCoInt = CoInitializeEx(0, COINIT_MULTITHREADED);
-  (void)hrCoInt;
+  HRESULT hrCom = CoInitializeEx(0, COINIT_MULTITHREADED);
+  (void)hrCom;
 
   App app;
   if (!app.Init()) {

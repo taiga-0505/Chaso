@@ -64,6 +64,9 @@ private:
   // ======= モデルとテクスチャ =======
   int skydomeModel = -1;
   int txSphere_ = -1;
+
+  float skydomeTranslateY_ = 10.0f;
+  float skydomeRotateSpeed_ = 0.0005f;
   // ======= トランスフォーム参照 =======
   Transform *sphereT_ = nullptr;
 };

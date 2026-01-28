@@ -27,24 +27,24 @@ void DebugCamera::Update() {
   // ── キー入力による相対移動 ──
   if (input_->IsKeyPressed(DIK_W)) {
     translation_ =
-        Add(translation_, Multiply(forward, moveSpeed_ * deltaTIme_));
+        Add(translation_, Multiply(forward, moveSpeed_ * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_S)) {
     translation_ =
-        Subtract(translation_, Multiply(forward, moveSpeed_ * deltaTIme_));
+        Subtract(translation_, Multiply(forward, moveSpeed_ * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_A)) {
     translation_ =
-        Subtract(translation_, Multiply(right, moveSpeed_ * deltaTIme_));
+        Subtract(translation_, Multiply(right, moveSpeed_ * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_D)) {
-    translation_ = Add(translation_, Multiply(right, moveSpeed_ * deltaTIme_));
+    translation_ = Add(translation_, Multiply(right, moveSpeed_ * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_Q)) {
-    translation_.y += moveSpeed_ * deltaTIme_;
+    translation_.y += moveSpeed_ * deltaTime_;
   }
   if (input_->IsKeyPressed(DIK_E)) {
-    translation_.y -= moveSpeed_ * deltaTIme_;
+    translation_.y -= moveSpeed_ * deltaTime_;
   }
 
   // ── マウスホイールによる前後移動 ──
@@ -56,14 +56,14 @@ void DebugCamera::Update() {
 
   // ── 左クリックドラッグによる回転 ──
   if (input_->IsMousePressed(0)) {
-    float mouseRotateSpeed = 0.1f * deltaTIme_; // マウス感度
+    float mouseRotateSpeed = 0.1f * deltaTime_; // マウス感度
     rotation_.y += input_->GetMouseX() * mouseRotateSpeed;
     rotation_.x += input_->GetMouseY() * mouseRotateSpeed;
   }
 
   // ── 中央ボタンドラッグによる平行移動 ──
   if (input_->IsMousePressed(2)) {            // 2: 中央ボタン
-    float mouseMoveSpeed = 0.3f * deltaTIme_; // 平行移動感度
+    float mouseMoveSpeed = 0.3f * deltaTime_; // 平行移動感度
     // Xはright方向、Yはup方向
     translation_ = Add(translation_,
                        Multiply(right, input_->GetMouseX() * mouseMoveSpeed * -1));
@@ -73,13 +73,13 @@ void DebugCamera::Update() {
 
   // ── キー入力による回転 ──
   if (input_->IsKeyPressed(DIK_UP))
-    rotation_.x -= rotateSpeed_ * deltaTIme_;
+    rotation_.x -= rotateSpeed_ * deltaTime_;
   if (input_->IsKeyPressed(DIK_DOWN))
-    rotation_.x += rotateSpeed_ * deltaTIme_;
+    rotation_.x += rotateSpeed_ * deltaTime_;
   if (input_->IsKeyPressed(DIK_LEFT))
-    rotation_.y -= rotateSpeed_ * deltaTIme_;
+    rotation_.y -= rotateSpeed_ * deltaTime_;
   if (input_->IsKeyPressed(DIK_RIGHT))
-    rotation_.y += rotateSpeed_ * deltaTIme_;
+    rotation_.y += rotateSpeed_ * deltaTime_;
 
   // ── ビュー行列の再計算 ──
   Matrix4x4 world = MakeAffineMatrix({1, 1, 1}, // スケール固定
