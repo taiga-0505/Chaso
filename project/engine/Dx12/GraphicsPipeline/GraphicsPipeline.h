@@ -16,6 +16,8 @@ enum BlendMode {
   kBlendModeMultiply,
   // スクリーン Src * (1 - Dest) + Dest * 1
   kBlendModeScreen,
+  //　アルファ乗算済みブレンド Src * 1 + Dest * (1 - SrcA)
+  kBlendModePremultiplied,
 };
 
 /// <summary>

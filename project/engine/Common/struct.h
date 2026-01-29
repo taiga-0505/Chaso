@@ -26,6 +26,13 @@ struct AABB {
   RC::Vector3 max = {1.0f, 1.0f, 1.0f};
 };
 
+struct Rect {
+  float left;
+  float right;
+  float bottom;
+  float top;
+};
+
 struct Emitter {
   Transform transform;
   uint32_t count;      // 一度に放出するパーティクル数
@@ -63,10 +70,11 @@ struct MaterialData {
 };
 
 struct Node {
-  RC::Matrix4x4 localMatrix;         // ローカル変換行列
-  std::string name;                  // ノードの名前
-  std::vector<uint32_t> meshIndices; // このノードが参照するMeshのindex配列（assimp: node->mMeshes）
-  std::vector<Node> children;        // 子ノードの配列
+  RC::Matrix4x4 localMatrix; // ローカル変換行列
+  std::string name;          // ノードの名前
+  std::vector<uint32_t> meshIndices; // このノードが参照するMeshのindex配列（assimp:
+                                     // node->mMeshes）
+  std::vector<Node> children; // 子ノードの配列
 };
 
 struct ModelData {
@@ -133,7 +141,7 @@ struct AreaLight {
   float intensity;
 
   RC::Vector3 right; // 面の右方向(正規化推奨)
-  float halfWidth; // 半幅
+  float halfWidth;   // 半幅
 
   RC::Vector3 up;   // 面の上方向(正規化推奨)
   float halfHeight; // 半高さ
@@ -141,7 +149,7 @@ struct AreaLight {
   float range;       // 影響距離（0以下なら無効扱いでもOK）
   float decay;       // 減衰指数
   uint32_t twoSided; // 1なら両面発光
-  uint32_t padding;      // 16byte合わせ
+  uint32_t padding;  // 16byte合わせ
 };
 
 // =============================================
@@ -151,19 +159,19 @@ struct AreaLight {
 // =============================================
 
 static constexpr uint32_t kMaxPointLights = 4;
-static constexpr uint32_t kMaxSpotLights  = 4;
+static constexpr uint32_t kMaxSpotLights = 4;
 static const int kMaxAreaLights = 4;
 
 // b3 用（PointLight配列）
 struct PointLightsCB {
-  uint32_t count = 0; // 有効なライト数（0〜4）
+  uint32_t count = 0;                     // 有効なライト数（0〜4）
   float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
   PointLight lights[kMaxPointLights]{};
 };
 
 // b4 用（SpotLight配列）
 struct SpotLightsCB {
-  uint32_t count = 0; // 有効なライト数（0〜4）
+  uint32_t count = 0;                     // 有効なライト数（0〜4）
   float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
   SpotLight lights[kMaxSpotLights]{};
 };

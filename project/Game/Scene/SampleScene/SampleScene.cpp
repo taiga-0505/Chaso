@@ -44,7 +44,8 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   plane = RC::LoadModel("Resources/model/plane");
   planeTransform_ = RC::GetModelTransformPtr(plane);
 
-  blockModel = RC::LoadModel("Resources/model/cube");
+  blockModel = RC::LoadModel("Resources/model/block");
+  RC::SetModelColor(blockModel, blockColor_); // ちょい青で透明
 
   model = RC::LoadModel("Resources/model/teapot");
   tx_model = RC::LoadTex("Resources/uvChecker.png");
@@ -90,7 +91,7 @@ void SampleScene::OnExit(SceneContext &) {
   RC::UnloadSprite(sprite);
   sprite = -1;
 
-  RC::UnloadModel(ball);
+  RC::UnloadSphere(ball);
   ball = -1;
 
   RC::DestroyDirectionalLight(directionalLight);
@@ -114,6 +115,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
 #ifdef RC_ENABLE_IMGUI
 
   DrawImGui();
+  RC::SetModelColor(blockModel, blockColor_);
 
   camera_.DrawImGui();
 
@@ -148,7 +150,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // === 天球 ===
   RC::DrawSphere(sphere);
 
-  RC::DrawSphere(ball);
+  // RC::DrawSphere(ball);
 
   // モデルの描画
   RC::DrawModel(plane);
@@ -157,22 +159,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(terrain);
 
-  RC::DrawAABB3D({-3.0f, 2.0f, -3.0f}, {3.0f, 1.0f, 3.0f},
-                 {1.0f, 0.0f, 0.0f, 1.0f}, false);
-
-  RC::DrawWireSphere3D({0, 1, 0}, 0.5f, {1, 0, 0, 1}, 24, 12, true);
-
-  RC::DrawCapsule3D({2, 0, 0}, {2, 2, 0}, 0.3f, {0, 1, 0, 1}, 16, true);
-
-  RC::DrawArc3D({0, 0, 0}, {0, 1, 0}, {1, 0, 0}, 2.0f, 0.0f, 3.14f / 2.0f,
-                {0, 0, 1, 1}, 32, true, true);
-
-  RC::DrawOBB3D({ -2.0f, 1.0f, 0.0f },
-                 { 1.0f, 0.0f, 0.0f },
-                 { 0.0f, 1.0f, 0.0f },
-                 { 0.0f, 0.0f, 1.0f },
-                 { 0.5f, 1.0f, 0.3f },
-                 { 1.0f, 1.0f, 0.0f, 1.0f }, true);
+  RC::DrawModelGlassTwoPass(blockModel);
 
   // ===========================================
   // 2D描画
@@ -212,6 +199,10 @@ void SampleScene::DrawImGui() {
       RC::DrawSphereImGui(sphere, "skyDome");
 
       RC::DrawSphereImGui(ball, "ball");
+
+      RC::DrawImGui3D(blockModel, "blockModel");
+      // 色変更用
+      ImGui::ColorEdit4("blockColor", &blockColor_.x);
 
       ImGui::EndTabItem();
     }

@@ -283,6 +283,9 @@ std::string PipelineManager::MakeKey(std::string_view prefix, BlendMode mode) {
   case kBlendModeScreen:
     suffix = "screen";
     break;
+  case kBlendModePremultiplied:
+    suffix = "premul";
+    break;
   default:
     suffix = "normal";
     break;
@@ -306,6 +309,8 @@ void PipelineManager::RegisterDefaultPipelines() {
   const std::wstring objVsInst =
       L"Resources/Shader/Object3d/Object3D_Inst.VS.hlsl";
   const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
+  const std::wstring glassPs =
+      L"Resources/Shader/Object3d/Object3D_Glass.PS.hlsl";
   const std::wstring sprVs = L"Resources/Shader/Sprite/Sprite.VS.hlsl";
   const std::wstring sprPs = L"Resources/Shader/Sprite/Sprite.PS.hlsl";
   const std::wstring ptlVs = L"Resources/Shader/Particle/Particle.VS.hlsl";
@@ -330,7 +335,7 @@ void PipelineManager::RegisterDefaultPipelines() {
                     const std::wstring &ps, InputLayoutType layout,
                     RootSignatureType root, bool depth, bool depthWrite,
                     D3D12_CULL_MODE cull) {
-    for (int m = (int)kBlendModeNone; m <= (int)kBlendModeScreen; ++m) {
+    for (int m = (int)kBlendModeNone; m <= (int)kBlendModePremultiplied; ++m) {
       const BlendMode mode = (BlendMode)m;
 
       GPipelineOptions opt{};
@@ -424,5 +429,62 @@ void PipelineManager::RegisterDefaultPipelines() {
 #endif
 
     Create(MakeKey("fog", kBlendModeNormal), d);
+  }
+
+  // 単体
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3D;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false; // ←重要
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModePremultiplied; // ←重要
+    opt.cull = D3D12_CULL_MODE_BACK;         // 窓板みたいな薄い板ならおすすめ
+
+    CreateFromFiles(MakeKey("object3d_glass", kBlendModePremultiplied), objVs,
+                    glassPs, InputLayoutType::Object3D, opt);
+  }
+
+  // 2パス用（背面描画 = FRONTカリング
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3D;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModePremultiplied;
+    opt.cull = D3D12_CULL_MODE_FRONT; // ←ここが追加ポイント
+
+    CreateFromFiles(MakeKey("object3d_glass_front", kBlendModePremultiplied),
+                    objVs, glassPs, InputLayoutType::Object3D, opt);
+  }
+
+  // instancing版も欲しければ
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3DInstancing;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModePremultiplied;
+    opt.cull = D3D12_CULL_MODE_BACK;
+
+    CreateFromFiles(MakeKey("object3d_glass_inst", kBlendModePremultiplied),
+                    objVsInst, glassPs, InputLayoutType::Object3D, opt);
+  }
+
+  // instancing背面用
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3DInstancing;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModePremultiplied;
+    opt.cull = D3D12_CULL_MODE_FRONT;
+
+    CreateFromFiles(
+        MakeKey("object3d_glass_inst_front", kBlendModePremultiplied),
+        objVsInst, glassPs, InputLayoutType::Object3D, opt);
   }
 }

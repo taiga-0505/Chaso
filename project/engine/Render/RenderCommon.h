@@ -429,6 +429,18 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
                     int texHandle = -1);
 
 /// <summary>
+/// モデルをインスタンシング（複数Transform + 色）で描画する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="instances">インスタンスTransform配列</param>
+/// <param name="colors">インスタンスカラー配列（不足分は白）</param>
+/// <param name="texHandle">テクスチャハンドル（-1 なら mtl のテクスチャ）</param>
+void DrawModelBatchColored(int modelHandle,
+                           const std::vector<Transform> &instances,
+                           const std::vector<Vector4> &colors,
+                           int texHandle = -1);
+
+/// <summary>
 /// モデルの ImGui 表示を行う
 /// </summary>
 /// <param name="modelHandle">モデルハンドル</param>
@@ -474,6 +486,22 @@ void SetModelMesh(int modelHandle, const std::string &path);
 /// </summary>
 /// <param name="modelHandle">モデルハンドル</param>
 void ResetCursor(int modelHandle);
+
+// ===============================
+// ガラスモデル
+// ===============================
+void DrawModelGlass(int modelHandle, int texHandle = -1);
+void DrawModelGlassBatch(int modelHandle,
+                         const std::vector<Transform> &instances,
+                         int texHandle = -1);
+
+// ガラス（2パス：背面→表面）
+// ※箱/ブロックみたいな「厚み」を出したい時に使う
+void DrawModelGlassTwoPass(int modelHandle, int texHandle = -1);
+void DrawModelGlassTwoPassBatch(int modelHandle,
+                                const std::vector<Transform> &instances,
+                                int texHandle = -1);
+
 
 // ===============================
 // 2D用

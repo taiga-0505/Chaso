@@ -5,10 +5,32 @@
 
 namespace RC {
 
+inline Aabb2D MakeAabb2D(const RC::Vector3 &pos, float halfW, float halfH) {
+  Aabb2D a;
+  a.left = pos.x - halfW;
+  a.right = pos.x + halfW;
+  a.bottom = pos.y - halfH;
+  a.top = pos.y + halfH;
+  return a;
+}
+
+inline bool OverlapAabb(const Aabb2D &a, const Aabb2D &b) {
+  if (a.right <= b.left)
+    return false;
+  if (a.left >= b.right)
+    return false;
+  if (a.top <= b.bottom)
+    return false;
+  if (a.bottom >= b.top)
+    return false;
+  return true;
+}
+
 // ----- scalar helpers -----
 inline float Clamp(float v, float mn, float mx) {
   return std::clamp(v, mn, mx);
 }
+inline float Clamp01(float v) { return std::clamp(v, 0.0f, 1.0f); }
 inline float Saturate(float v) { return std::clamp(v, 0.0f, 1.0f); }
 
 inline float Lerp(float a, float b, float t) { return a + (b - a) * t; }

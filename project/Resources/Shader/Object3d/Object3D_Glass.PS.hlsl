@@ -146,17 +146,19 @@ PixelShaderOutput main(VertexShaderOutput input)
     // ==========
     // Fresnel
     // ==========
-    float ior = (gMaterial.padding.x > 1.0f) ? gMaterial.padding.x : 1.5f; // default 1.5
+    float iorRaw = gMaterial.padding.x;
+    float ior = (iorRaw > 1.0f && iorRaw < 3.0f) ? iorRaw : 1.5f; // default 1.5
     float f = (1.0f - ior) / (1.0f + ior);
     float F0 = f * f; // ガラスだとだいたい 0.04 付近
     float fresnel = FresnelSchlick(NdotV, F0);
 
-    float rough = saturate(gMaterial.padding.y); // 0..1
+    float rough = saturate(gMaterial.padding.y);
 
-    // shininess未指定なら roughness から適当に決める
-    float shininess = (gMaterial.shininess > 0.0f)
-        ? gMaterial.shininess
-        : lerp(1024.0f, 64.0f, rough * rough);
+    // roughness→指数（rough=0で鋭い、rough=1で広い）
+    float autoSh = lerp(1024.0f, 64.0f, rough * rough);
+
+    // Material側が大きい値ならそれを優先、低いならautoを使う
+    float shininess = max(gMaterial.shininess, autoSh);
 
     // ==========
     // ライト合算（元のObject3Dと同じ考え方）

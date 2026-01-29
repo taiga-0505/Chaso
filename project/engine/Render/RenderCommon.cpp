@@ -731,6 +731,10 @@ void DrawModel(int modelHandle, int texHandle) {
     return;
   }
 
+  if (!BindPipeline_("object3d")) {
+    return;
+  }
+
   BindCameraCB_();
   BindPointLightCB_();
   BindSpotLightCB_();
@@ -864,6 +868,52 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
   m->DrawBatch(gCL, gView, gProj, instances);
 }
 
+void DrawModelBatchColored(int modelHandle,
+                           const std::vector<Transform> &instances,
+                           const std::vector<Vector4> &colors,
+                           int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  if (!BindPipeline_("object3d_inst")) {
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        mat->shininess = active->GetShininess();
+      }
+    }
+
+    m->DrawBatch(gCL, gView, gProj, instances, colors);
+    return;
+  }
+
+  m->SetExternalLightCBAddress(0);
+  m->DrawBatch(gCL, gView, gProj, instances, colors);
+}
+
 void DrawImGui3D(int modelHandle, const char *name) {
   auto *m = gModelMan.Get(modelHandle);
   if (!m) {
@@ -896,6 +946,209 @@ void SetModelMesh(int modelHandle, const std::string &path) {
 }
 
 void ResetCursor(int modelHandle) { gModelMan.ResetCursor(modelHandle); }
+
+// ===========================================
+// Glass Model
+// ===========================================
+
+void DrawModelGlass(int modelHandle, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+
+  if (!BindPipeline_("object3d_glass")) {
+    gCurrentBlendMode = saved;
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+
+  // ※ここは好み：ガラスだけは shininess をライトから上書きしない方が自然
+  // (shininess は本来 Material 側の値)
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+        // mat->shininess = active->GetShininess(); // ←ガラスでは外すのおすすめ
+      }
+    }
+  }
+
+  m->Update(gView, gProj);
+  m->Draw(gCL);
+
+  gCurrentBlendMode = saved;
+}
+
+void DrawModelGlassBatch(int modelHandle,
+                         const std::vector<Transform> &instances,
+                         int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+
+  if (!BindPipeline_("object3d_glass_inst")) {
+    gCurrentBlendMode = saved;
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+
+  m->DrawBatch(gCL, gView, gProj, instances);
+
+  gCurrentBlendMode = saved;
+}
+
+void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+
+  // テクスチャ
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  // Light
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+
+  // ライティングモードだけ同期（shininess上書きはしない方が自然、君の方針でOK）
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+      }
+    }
+  }
+
+  // Updateは1回でOK
+  m->Update(gView, gProj);
+
+  auto bindCommon = [&]() {
+    BindCameraCB_();
+    BindPointLightCB_();
+    BindSpotLightCB_();
+    BindAreaLightCB_();
+  };
+
+  // 1) 背面（内側）を先に
+  if (BindPipeline_("object3d_glass_front")) {
+    bindCommon();
+    m->Draw(gCL);
+  }
+
+  // 2) 表面（外側）を後に
+  if (BindPipeline_("object3d_glass")) {
+    bindCommon();
+    m->Draw(gCL);
+  }
+
+  gCurrentBlendMode = saved;
+}
+
+void DrawModelGlassTwoPassBatch(int modelHandle,
+                                const std::vector<Transform> &instances,
+                                int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+  // テクスチャ
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  // Light
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+      }
+    }
+  }
+
+  // Updateは1回でOK
+  m->Update(gView, gProj);
+  auto bindCommon = [&]() {
+    BindCameraCB_();
+    BindPointLightCB_();
+    BindSpotLightCB_();
+    BindAreaLightCB_();
+  };
+
+  // 1) 背面（内側）を先に
+  if (BindPipeline_("object3d_glass_front_inst")) {
+    bindCommon();
+    m->DrawBatch(gCL, gView, gProj, instances);
+  }
+
+  // 2) 表面（外側）を後に
+  if (BindPipeline_("object3d_glass_inst")) {
+    bindCommon();
+    m->DrawBatch(gCL, gView, gProj, instances);
+  }
+
+  gCurrentBlendMode = saved;
+}
 
 // ----------------------------------------------------------------------------
 // 2D Pass
@@ -1332,9 +1585,8 @@ void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
 }
 
 void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
-                   const Vector3 &up, float fovYRad, float aspect,
-                   float nearZ, float farZ, const Vector4 &color,
-                   bool depth) {
+                   const Vector3 &up, float fovYRad, float aspect, float nearZ,
+                   float farZ, const Vector4 &color, bool depth) {
   if (!gInitialized || !gCL)
     return;
   auto *prim = EnsurePrimitive3D_();

@@ -36,7 +36,7 @@ private:
   Transform *planeTransform_;
 
   int blockModel = -1;
-  int tx_block = -1;
+  RC::Vector4 blockColor_ = {0.8f, 0.9f, 1.0f, 0.12f};
 
   int model = -1;
   int tx_model = -1;

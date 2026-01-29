@@ -146,6 +146,11 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
       rt.DestBlend = D3D12_BLEND_ONE;
       rt.BlendOp = D3D12_BLEND_OP_ADD;
       break;
+    case kBlendModePremultiplied: // Src * 1 + Dest * (1 - SrcA)
+      rt.SrcBlend = D3D12_BLEND_ONE;
+      rt.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+      rt.BlendOp = D3D12_BLEND_OP_ADD;
+      break;
     default:
       break;
     }

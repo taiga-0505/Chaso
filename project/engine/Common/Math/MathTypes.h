@@ -32,4 +32,11 @@ struct Matrix4x4 {
 // 回転軸
 enum ShaftType { X, Y, Z };
 
+struct Aabb2D {
+  float left = 0;
+  float right = 0;
+  float bottom = 0;
+  float top = 0;
+};
+
 } // namespace RC

@@ -46,6 +46,10 @@ void ModelObject::Initialize(ID3D12Device *device) {
   cbMat_.mapped->lightingMode = 2; // 既定 HalfLambert
   cbMat_.mapped->uvTransform = MakeIdentity4x4();
 
+  // padding 初期化（ガラスで使う）
+  cbMat_.mapped->padding[0] = 0.0f; // IOR（0ならPS側で1.5扱いにする）
+  cbMat_.mapped->padding[1] = 0.0f; // roughness
+
   // Light CB（各Objectが自前で持つ）
   cbLight_.resource = CreateBufferResource(device_, sizeof(DirectionalLight));
   cbLight_.resource->Map(0, nullptr,
@@ -333,6 +337,66 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   cmdList->SetGraphicsRootShaderResourceView(1, instAddr);
 
   // 1発でN個
+  cmdList->DrawInstanced(mesh_->VertexCount(), count, 0, 0);
+
+  instanceBatchHead_ += count;
+}
+
+void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
+                            const Matrix4x4 &view, const Matrix4x4 &proj,
+                            const std::vector<Transform> &instances,
+                            const std::vector<RC::Vector4> &colors) {
+  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
+    return;
+  }
+
+  const auto &vbv = mesh_->VBV();
+  cmdList->IASetVertexBuffers(0, 1, &vbv);
+  cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  cmdList->SetGraphicsRootConstantBufferView(
+      0, cbMat_.resource->GetGPUVirtualAddress());
+
+  if (textureSrv_.ptr == 0) {
+    EnsureMaterialSrvsLoaded_();
+  }
+  cmdList->SetGraphicsRootDescriptorTable(
+      2, (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(0));
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
+      (externalLightCBAddress_ != 0)
+          ? externalLightCBAddress_
+          : cbLight_.resource->GetGPUVirtualAddress();
+  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
+
+  const uint32_t count = static_cast<uint32_t>(instances.size());
+  EnsureInstanceBatchCapacity_(instanceBatchHead_ + count);
+
+  const uint32_t base = instanceBatchHead_;
+  auto *dst = reinterpret_cast<InstanceDataGPU *>(instanceBatchMapped_) + base;
+
+  const uint32_t colorCount = static_cast<uint32_t>(colors.size());
+  for (uint32_t i = 0; i < count; ++i) {
+    const Transform &tr = instances[i];
+
+    Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+
+    dst[i].World = world;
+    dst[i].WVP = Multiply(world, Multiply(view, proj));
+    dst[i].WorldInverseTranspose = Transpose(Inverse(world));
+
+    if (i < colorCount) {
+      dst[i].color = colors[i];
+    } else {
+      dst[i].color = {1, 1, 1, 1};
+    }
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS instAddr =
+      instanceBatch_->GetGPUVirtualAddress() +
+      uint64_t(base) * sizeof(InstanceDataGPU);
+
+  cmdList->SetGraphicsRootShaderResourceView(1, instAddr);
   cmdList->DrawInstanced(mesh_->VertexCount(), count, 0, 0);
 
   instanceBatchHead_ += count;
