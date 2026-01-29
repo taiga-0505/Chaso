@@ -34,7 +34,10 @@
     <FxCompile Include="Resources\Shader\Primitive3D\Primitive3D.VS.hlsl">
       <Filter>Shader\Primitive3D</Filter>
     </FxCompile>
-    <FxCompile Include="Resources\Shader\Object3d\Object3D_Single.VS.hlsl" />
+    <FxCompile Include="Resources\Shader\Object3d\Object3D_Single.VS.hlsl">
+      <Filter>Shader\Object3d</Filter>
+    </FxCompile>
+    <FxCompile Include="Resources\Shader\Object3d\Object3D_Glass.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -245,7 +248,9 @@
     <ClCompile Include="engine\Graphics\Primitive3D\Primitive3D.cpp">
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClCompile>
-    <ClCompile Include="engine\Render\Sphere\SphereManager.cpp" />
+    <ClCompile Include="engine\Render\Sphere\SphereManager.cpp">
+      <Filter>engine\Render\Sphere</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -494,7 +499,9 @@
     <ClInclude Include="engine\Graphics\Primitive3D\Primitive3D.h">
       <Filter>engine\Graphics\Primitive3D</Filter>
     </ClInclude>
-    <ClInclude Include="engine\Render\Sphere\SphereManager.h" />
+    <ClInclude Include="engine\Render\Sphere\SphereManager.h">
+      <Filter>engine\Render\Sphere</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">
@@ -718,6 +725,9 @@
     </Filter>
     <Filter Include="engine\Graphics\Primitive3D">
       <UniqueIdentifier>{876c5f24-f6f4-4167-8b97-6fd1eb16e52c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\Render\Sphere">
+      <UniqueIdentifier>{d6b964e2-52f9-41b5-be65-9feb07535362}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

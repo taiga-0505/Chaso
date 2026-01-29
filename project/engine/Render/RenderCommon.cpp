@@ -693,6 +693,11 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   cl->SetPipelineState(pso->PSO());
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
   // NOTE:
   // Active light is applied at draw time (DrawModel/DrawSphere) so we can
   // switch lights per draw without copying into every object each frame.
@@ -725,6 +730,11 @@ void DrawModel(int modelHandle, int texHandle) {
   if (!m) {
     return;
   }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
 
   // Texture override (-1 => keep .mtl)
   if (texHandle >= 0) {
@@ -1257,6 +1267,83 @@ void DrawGridYZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
   prim->AddGridYZ(halfSize, step, color, depth);
 }
 
+void DrawWireSphere3D(const Vector3 &center, float radius, const Vector4 &color,
+                      int slices, int stacks, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddSphere(center, radius, color, slices, stacks, depth);
+}
+
+void DrawSphereRings3D(const Vector3 &center, float radius,
+                       const Vector4 &color, int segments, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddSphereRings(center, radius, color, segments, depth);
+}
+
+void DrawArc3D(const Vector3 &center, const Vector3 &normal,
+               const Vector3 &fromDir, float radius, float startRad,
+               float endRad, const Vector4 &color, int segments, bool depth,
+               bool drawToCenter) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddArc(center, normal, fromDir, radius, startRad, endRad, color,
+               segments, depth, drawToCenter);
+}
+
+void DrawCapsule3D(const Vector3 &p0, const Vector3 &p1, float radius,
+                   const Vector4 &color, int segments, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddCapsule(p0, p1, radius, color, segments, depth);
+}
+
+void DrawOBB3D(const Vector3 &center, const Vector3 &axisX,
+               const Vector3 &axisY, const Vector3 &axisZ,
+               const Vector3 &halfExtents, const Vector4 &color, bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddOBB(center, axisX, axisY, axisZ, halfExtents, color, depth);
+}
+
+void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
+                          bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddFrustum(corners, color, depth);
+}
+
+void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
+                   const Vector3 &up, float fovYRad, float aspect,
+                   float nearZ, float farZ, const Vector4 &color,
+                   bool depth) {
+  if (!gInitialized || !gCL)
+    return;
+  auto *prim = EnsurePrimitive3D_();
+  if (!prim)
+    return;
+  prim->AddFrustumCamera(camPos, forward, up, fovYRad, aspect, nearZ, farZ,
+                         color, depth);
+}
+
 // 2Dパスを呼ばないシーン用（任意）
 void FlushPrimitive3D() {
   if (!gInitialized || !gCL)
@@ -1264,6 +1351,24 @@ void FlushPrimitive3D() {
   auto *prim = EnsurePrimitive3D_();
   if (!prim)
     return;
+
+  if (!prim->HasAny()) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = prim->BlendAt3D();
+
+  if (BindPipeline_("primitive3d")) {
+    gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+    prim->Draw(gCL, true);
+  }
+  if (BindPipeline_("primitive3d_nodepth")) {
+    gCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+    prim->Draw(gCL, false);
+  }
+
+  gCurrentBlendMode = saved;
 }
 
 // ----------------------------------------------------------------------------

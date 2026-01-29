@@ -157,8 +157,22 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawModel(terrain);
 
-  RC::DrawAABB3D({-50.0f, -1.0f, -50.0f}, {50.0f, -1.0f, 50.0f},
+  RC::DrawAABB3D({-3.0f, 2.0f, -3.0f}, {3.0f, 1.0f, 3.0f},
                  {1.0f, 0.0f, 0.0f, 1.0f}, false);
+
+  RC::DrawWireSphere3D({0, 1, 0}, 0.5f, {1, 0, 0, 1}, 24, 12, true);
+
+  RC::DrawCapsule3D({2, 0, 0}, {2, 2, 0}, 0.3f, {0, 1, 0, 1}, 16, true);
+
+  RC::DrawArc3D({0, 0, 0}, {0, 1, 0}, {1, 0, 0}, 2.0f, 0.0f, 3.14f / 2.0f,
+                {0, 0, 1, 1}, 32, true, true);
+
+  RC::DrawOBB3D({ -2.0f, 1.0f, 0.0f },
+                 { 1.0f, 0.0f, 0.0f },
+                 { 0.0f, 1.0f, 0.0f },
+                 { 0.0f, 0.0f, 1.0f },
+                 { 0.5f, 1.0f, 0.3f },
+                 { 1.0f, 1.0f, 0.0f, 1.0f }, true);
 
   // ===========================================
   // 2D描画

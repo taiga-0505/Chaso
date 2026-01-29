@@ -9,6 +9,9 @@
 #endif
 #endif
 
+/// <summary>
+/// アプリケーションの起動設定を保持する
+/// </summary>
 struct AppConfig {
   int width = 1280;
   int height = 720;

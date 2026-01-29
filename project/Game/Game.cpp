@@ -65,6 +65,7 @@ const std::string &Game::CurrentSceneName() const {
 }
 
 void Game::DrawDebugUI() {
+
 #ifdef _DEBUG
   ImGui::Begin("Scene");
   const char *sceneNames[] = {"Title",    "Select", "Game",     "Result",

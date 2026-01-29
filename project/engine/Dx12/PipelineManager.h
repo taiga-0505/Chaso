@@ -17,6 +17,9 @@ enum class InputLayoutType {
   None, // InputLayout無し（SV_VertexID 等）
 };
 
+/// <summary>
+/// パイプライン作成に必要な情報をまとめる
+/// </summary>
 struct PipelineDesc {
   // Shader files
   std::wstring vsPath;
@@ -37,33 +40,58 @@ struct PipelineDesc {
   GPipelineOptions opt{};
 };
 
+/// <summary>
+/// GraphicsPipeline を登録・取得・再ビルドする
+/// </summary>
 class PipelineManager {
 public:
+  /// <summary>
+  /// PipelineManager を初期化する
+  /// </summary>
   void Init(ID3D12Device *device, DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt);
+
+  /// <summary>
+  /// PipelineManager を終了する
+  /// </summary>
   void Term();
 
-  // 登録（keyで管理）
+  /// <summary>
+  /// 指定キーでパイプラインを作成して登録する
+  /// </summary>
   GraphicsPipeline *Create(const std::string &key, const PipelineDesc &desc);
 
-  // 便利：layoutType から inputLayout を自動生成して登録
+  /// <summary>
+  /// ファイル指定でパイプラインを作成して登録する
+  /// </summary>
   GraphicsPipeline *CreateFromFiles(const std::string &key,
                                     const std::wstring &vsPath,
                                     const std::wstring &psPath,
                                     InputLayoutType layoutType,
                                     const GPipelineOptions &opt);
 
-  // 取得
+  /// <summary>
+  /// 指定キーのパイプラインを取得する
+  /// </summary>
   GraphicsPipeline *Get(const std::string &key);
 
-  // 再ビルド（登録時のdescを使ってコンパイルし直し）
+  /// <summary>
+  /// 指定キーのパイプラインを再ビルドする
+  /// </summary>
   bool Rebuild(const std::string &key);
-  void RebuildAll(); // まとめて
 
-  // よく使うやつ：3系統×ブレンドを一括登録（キー規約もここで統一）
+  /// <summary>
+  /// 登録済みのパイプラインをすべて再ビルドする
+  /// </summary>
+  void RebuildAll();
+
+  /// <summary>
+  /// 既定のパイプライン群を登録する
+  /// </summary>
   void RegisterDefaultPipelines();
 
-  // キー規約：prefix + "." + suffix
-  // 例: object3d.normal / sprite.add / particle.mul
+  /// <summary>
+  /// prefix + ブレンドモードからキーを作成する
+  /// </summary>
   static std::string MakeKey(std::string_view prefix, BlendMode mode);
 
 private:

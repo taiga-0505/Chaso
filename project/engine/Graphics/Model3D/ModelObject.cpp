@@ -414,191 +414,196 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
 
-  ImGui::TextUnformatted("Transform");
-  ImGui::DragFloat3((std::string("位置(x,y,z)##") + label).c_str(),
-                    &transform_.translation.x, 0.1f, -4096.0f, 4096.0f, "%.2f");
-  ImGui::SliderAngle((std::string("回転X##") + label).c_str(),
-                     &transform_.rotation.x);
-  ImGui::SliderAngle((std::string("回転Y##") + label).c_str(),
-                     &transform_.rotation.y);
-  ImGui::SliderAngle((std::string("回転Z##") + label).c_str(),
-                     &transform_.rotation.z);
-  ImGui::DragFloat3((std::string("スケール(x,y,z)##") + label).c_str(),
-                    &transform_.scale.x, 0.01f, 0.001f, 4096.0f, "%.3f");
+  if (vis) {
+    ImGui::TextUnformatted("Transform");
+    ImGui::DragFloat3((std::string("位置(x,y,z)##") + label).c_str(),
+                      &transform_.translation.x, 0.1f, -4096.0f, 4096.0f,
+                      "%.2f");
+    ImGui::SliderAngle((std::string("回転X##") + label).c_str(),
+                       &transform_.rotation.x);
+    ImGui::SliderAngle((std::string("回転Y##") + label).c_str(),
+                       &transform_.rotation.y);
+    ImGui::SliderAngle((std::string("回転Z##") + label).c_str(),
+                       &transform_.rotation.z);
+    ImGui::DragFloat3((std::string("スケール(x,y,z)##") + label).c_str(),
+                      &transform_.scale.x, 0.01f, 0.001f, 4096.0f, "%.3f");
 
-  ImGui::Dummy(ImVec2(0, 6));
-
-  if (showLightingUi) {
-    if (cbLight_.mapped && cbMat_.mapped) {
-      ImGui::TextUnformatted("Lighting / Material");
-      ImGui::ColorEdit3((std::string("ライト色##") + label).c_str(),
-                        &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
-      ImGui::DragFloat3((std::string("ライト方向##") + label).c_str(),
-                        &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f);
-      ImGui::DragFloat((std::string("強さ##") + label).c_str(),
-                       &cbLight_.mapped->intensity, 0.01f, 0.0f, 64.0f);
-
-      ImGui::Dummy(ImVec2(0, 4));
-      ImGui::ColorEdit4((std::string("カラー(乗算)##") + label).c_str(),
-                        &cbMat_.mapped->color.x, ImGuiColorEditFlags_Float);
-    } else {
-      ImGui::TextDisabled("Light / Material CB not ready.");
-    }
     ImGui::Dummy(ImVec2(0, 6));
 
-    if (cbMat_.mapped->lightingMode != None) {
-      ImGui::DragFloat((std::string("Shininess##") + label).c_str(),
-                       &cbMat_.mapped->shininess, 0.5f, 0.0f, 256.0f, "%.1f");
-      ImGui::SameLine();
-      ImGui::TextDisabled("(0で鏡面なし)");
-    }
-  }
+    if (showLightingUi) {
+      if (cbLight_.mapped && cbMat_.mapped) {
+        ImGui::TextUnformatted("Lighting / Material");
+        ImGui::ColorEdit3((std::string("ライト色##") + label).c_str(),
+                          &cbLight_.mapped->color.x, ImGuiColorEditFlags_Float);
+        ImGui::DragFloat3((std::string("ライト方向##") + label).c_str(),
+                          &cbLight_.mapped->direction.x, 0.01f, -1.0f, 1.0f);
+        ImGui::DragFloat((std::string("強さ##") + label).c_str(),
+                         &cbLight_.mapped->intensity, 0.01f, 0.0f, 64.0f);
 
-  if (texman_ && mesh_) {
-    ImGui::TextUnformatted("テクスチャ情報");
+        ImGui::Dummy(ImVec2(0, 4));
+        ImGui::ColorEdit4((std::string("カラー(乗算)##") + label).c_str(),
+                          &cbMat_.mapped->color.x, ImGuiColorEditFlags_Float);
+      } else {
+        ImGui::TextDisabled("Light / Material CB not ready.");
+      }
+      ImGui::Dummy(ImVec2(0, 6));
 
-    // overrideが無い時だけ material SRV を準備
-    if (textureSrv_.ptr == 0) {
-      EnsureMaterialSrvsLoaded_();
-    }
-
-    const auto &mats = mesh_->Materials();
-
-    int count = 0;
-    if (!mats.empty()) {
-      count = (int)mats.size();
-    } else if (!mesh_->MaterialFile().textureFilePath.empty()) {
-      count = 1;
-    }
-    // Materialが無くても override があるなら 1 として表示
-    if (count == 0 && textureSrv_.ptr != 0) {
-      count = 1;
+      if (cbMat_.mapped->lightingMode != None) {
+        ImGui::DragFloat((std::string("Shininess##") + label).c_str(),
+                         &cbMat_.mapped->shininess, 0.5f, 0.0f, 256.0f, "%.1f");
+        ImGui::SameLine();
+        ImGui::TextDisabled("(0で鏡面なし)");
+      }
     }
 
-    const ImGuiTableFlags flags =
-        ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
-        ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
+    if (texman_ && mesh_) {
+      ImGui::TextUnformatted("テクスチャ情報");
 
-    if (ImGui::BeginTable("##TexInfo", 2, flags)) {
-      ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed, 140.0f);
-      ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
+      // overrideが無い時だけ material SRV を準備
+      if (textureSrv_.ptr == 0) {
+        EnsureMaterialSrvsLoaded_();
+      }
 
-      // マテリアル数
-      ImGui::TableNextRow();
-      ImGui::TableSetColumnIndex(0);
-      ImGui::TextDisabled("マテリアル数");
-      ImGui::TableSetColumnIndex(1);
-      ImGui::Text("%d", count);
+      const auto &mats = mesh_->Materials();
 
-      // 各マテリアルが「今参照してる」テクスチャパス
-      const int kMaxShow = 32;
-      for (int i = 0; i < count && i < kMaxShow; ++i) {
+      int count = 0;
+      if (!mats.empty()) {
+        count = (int)mats.size();
+      } else if (!mesh_->MaterialFile().textureFilePath.empty()) {
+        count = 1;
+      }
+      // Materialが無くても override があるなら 1 として表示
+      if (count == 0 && textureSrv_.ptr != 0) {
+        count = 1;
+      }
 
-        // 「今実際に使うSRV」を決める（Drawと同じ優先順位）
-        D3D12_GPU_DESCRIPTOR_HANDLE usedSrv{};
-        if (textureSrv_.ptr != 0) {
-          usedSrv = textureSrv_; // SetTextureで上書き中
-        } else {
-          usedSrv = GetSrvForMaterial_((uint32_t)i); // マテリアル毎
-        }
+      const ImGuiTableFlags flags =
+          ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
+          ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
 
-        // SRVから逆引き（= 今参照してるテクスチャのパス）
-        std::string path = texman_->GetPathBySrv(usedSrv);
+      if (ImGui::BeginTable("##TexInfo", 2, flags)) {
+        ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed,
+                                140.0f);
+        ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
 
-        // 逆引きできなかった時の保険（モデル側のパス）
-        if (path.empty()) {
-          if (!mats.empty()) {
-            path = mats[i].textureFilePath;
+        // マテリアル数
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("マテリアル数");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%d", count);
+
+        // 各マテリアルが「今参照してる」テクスチャパス
+        const int kMaxShow = 32;
+        for (int i = 0; i < count && i < kMaxShow; ++i) {
+
+          // 「今実際に使うSRV」を決める（Drawと同じ優先順位）
+          D3D12_GPU_DESCRIPTOR_HANDLE usedSrv{};
+          if (textureSrv_.ptr != 0) {
+            usedSrv = textureSrv_; // SetTextureで上書き中
           } else {
-            path = mesh_->MaterialFile().textureFilePath;
+            usedSrv = GetSrvForMaterial_((uint32_t)i); // マテリアル毎
           }
+
+          // SRVから逆引き（= 今参照してるテクスチャのパス）
+          std::string path = texman_->GetPathBySrv(usedSrv);
+
+          // 逆引きできなかった時の保険（モデル側のパス）
+          if (path.empty()) {
+            if (!mats.empty()) {
+              path = mats[i].textureFilePath;
+            } else {
+              path = mesh_->MaterialFile().textureFilePath;
+            }
+          }
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          char label[64];
+          snprintf(label, sizeof(label), "[%d] 参照テクスチャ", i);
+          ImGui::TextDisabled("%s", label);
+
+          ImGui::TableSetColumnIndex(1);
+          ShowLongTextJP(path);
         }
 
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        char label[64];
-        snprintf(label, sizeof(label), "[%d] 参照テクスチャ", i);
-        ImGui::TextDisabled("%s", label);
+        if (count > kMaxShow) {
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::TextDisabled("...");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::TextDisabled("残り %d 件", count - kMaxShow);
+        }
 
-        ImGui::TableSetColumnIndex(1);
-        ShowLongTextJP(path);
+        ImGui::EndTable();
       }
 
-      if (count > kMaxShow) {
-        ImGui::TableNextRow();
-        ImGui::TableSetColumnIndex(0);
-        ImGui::TextDisabled("...");
-        ImGui::TableSetColumnIndex(1);
-        ImGui::TextDisabled("残り %d 件", count - kMaxShow);
+      ImGui::Dummy(ImVec2(0, 6));
+    }
+
+    // ----------------------------------------------------------
+    // モデル参照情報（日本語表示）
+    // ----------------------------------------------------------
+    if (mesh_) {
+      ImGui::TextUnformatted("モデル参照");
+
+      const auto &file = mesh_->SourceFilePath();
+      const auto &input = mesh_->SourceInputPath();
+
+      std::string rootName;
+      if (!file.empty()) {
+        rootName = fs::path(file).filename().string();
+      } else if (!input.empty()) {
+        rootName = fs::path(input).filename().string();
+      } else {
+        rootName = "(不明)";
       }
 
-      ImGui::EndTable();
-    }
+      const ImGuiTableFlags flags =
+          ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
+          ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
 
-    ImGui::Dummy(ImVec2(0, 6));
-  }
+      if (ImGui::BeginTable("##ModelRef", 2, flags)) {
+        ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed,
+                                140.0f);
+        ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
 
-  // ----------------------------------------------------------
-  // モデル参照情報（日本語表示）
-  // ----------------------------------------------------------
-  if (mesh_) {
-    ImGui::TextUnformatted("モデル参照");
+        auto RowText = [&](const char *k, const std::string &v) {
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::TextDisabled("%s", k);
+          ImGui::TableSetColumnIndex(1);
+          ShowLongTextJP(v);
+        };
 
-    const auto &file = mesh_->SourceFilePath();
-    const auto &input = mesh_->SourceInputPath();
+        RowText("読み込んだファイル", file);
 
-    std::string rootName;
-    if (!file.empty()) {
-      rootName = fs::path(file).filename().string();
-    } else if (!input.empty()) {
-      rootName = fs::path(input).filename().string();
-    } else {
-      rootName = "(不明)";
-    }
-
-    const ImGuiTableFlags flags =
-        ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp |
-        ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
-
-    if (ImGui::BeginTable("##ModelRef", 2, flags)) {
-      ImGui::TableSetupColumn("項目", ImGuiTableColumnFlags_WidthFixed, 140.0f);
-      ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch);
-
-      auto RowText = [&](const char *k, const std::string &v) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
-        ImGui::TextDisabled("%s", k);
+        ImGui::TextDisabled("共有参照数");
+
         ImGui::TableSetColumnIndex(1);
-        ShowLongTextJP(v);
-      };
+        ImGui::Text("%d", (int)mesh_.use_count());
 
-      RowText("読み込んだファイル", file);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("頂点数");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%u", mesh_->VertexCount());
 
-      ImGui::TableNextRow();
-      ImGui::TableSetColumnIndex(0);
-      ImGui::TextDisabled("共有参照数");
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextDisabled("描画パーツ数");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%u", (uint32_t)mesh_->DrawItems().size());
 
-      ImGui::TableSetColumnIndex(1);
-      ImGui::Text("%d", (int)mesh_.use_count());
+        RowText("モデル名", rootName);
 
-      ImGui::TableNextRow();
-      ImGui::TableSetColumnIndex(0);
-      ImGui::TextDisabled("頂点数");
-      ImGui::TableSetColumnIndex(1);
-      ImGui::Text("%u", mesh_->VertexCount());
+        ImGui::EndTable();
+      }
 
-      ImGui::TableNextRow();
-      ImGui::TableSetColumnIndex(0);
-      ImGui::TextDisabled("描画パーツ数");
-      ImGui::TableSetColumnIndex(1);
-      ImGui::Text("%u", (uint32_t)mesh_->DrawItems().size());
-
-      RowText("モデル名", rootName);
-
-      ImGui::EndTable();
+      ImGui::Dummy(ImVec2(0, 6));
     }
-
-    ImGui::Dummy(ImVec2(0, 6));
   }
 
   ImGui::Dummy(ImVec2(0, 6));

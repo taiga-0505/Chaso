@@ -2,14 +2,20 @@
 #include <dxcapi.h>
 
 void GraphicsPipeline::Term() {
+  // ====================
+  // Resource Release
+  // ====================
+  // PSO 解放
   if (pso_) {
     pso_->Release();
     pso_ = nullptr;
   }
+  // ルートシグネチャ解放
   if (root_) {
     root_->Release();
     root_ = nullptr;
   }
+  // デバイス参照をクリア
   device_ = nullptr;
 }
 
@@ -18,6 +24,10 @@ void GraphicsPipeline::Build(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                              D3D12_SHADER_BYTECODE ps, DXGI_FORMAT rtvFmt,
                              DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull,
                              D3D12_FILL_MODE fill) {
+  // ====================
+  // Build
+  // ====================
+  // ルートシグネチャと PSO を構築
   assert(device_);
   buildRootSignature_();
   buildPSO_(inputElems, elemCount, vs, ps, rtvFmt, dsvFmt, cull, fill);
@@ -28,6 +38,10 @@ void GraphicsPipeline::Build(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                              UINT elemCount, ID3DBlob *vsBlob, ID3DBlob *psBlob,
                              DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
                              D3D12_CULL_MODE cull, D3D12_FILL_MODE fill) {
+  // ====================
+  // Build
+  // ====================
+  // バイトコード生成
   D3D12_SHADER_BYTECODE vs{vsBlob->GetBufferPointer(), vsBlob->GetBufferSize()};
   D3D12_SHADER_BYTECODE ps{psBlob->GetBufferPointer(), psBlob->GetBufferSize()};
   Build(inputElems, elemCount, vs, ps, rtvFmt, dsvFmt, cull, fill);
@@ -37,6 +51,10 @@ void GraphicsPipeline::Build(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                              UINT elemCount, IDxcBlob *vsBlob, IDxcBlob *psBlob,
                              DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
                              D3D12_CULL_MODE cull, D3D12_FILL_MODE fill) {
+  // ====================
+  // Build
+  // ====================
+  // バイトコード生成
   D3D12_SHADER_BYTECODE vs{vsBlob->GetBufferPointer(), vsBlob->GetBufferSize()};
   D3D12_SHADER_BYTECODE ps{psBlob->GetBufferPointer(), psBlob->GetBufferSize()};
   Build(inputElems, elemCount, vs, ps, rtvFmt, dsvFmt, cull, fill);
@@ -47,10 +65,16 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                                D3D12_SHADER_BYTECODE ps, DXGI_FORMAT rtvFmt,
                                DXGI_FORMAT dsvFmt,
                                const GPipelineOptions &opt) {
-
+  // ====================
+  // Root Signature
+  // ====================
+  // ルートシグネチャ構築
   buildRootSignature_(opt.rootType);
 
-  // PSO
+  // ====================
+  // Pipeline State
+  // ====================
+  // PSO 作成
   D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
   d.pRootSignature = root_;
   d.VS = vs;
@@ -164,6 +188,10 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
 }
 
 void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
+  // ====================
+  // Root Signature
+  // ====================
+  // 既存ルートシグネチャ解放
   if (root_) {
     root_->Release();
     root_ = nullptr;
@@ -354,7 +382,10 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     break;
   }
 
-  // 共通サンプラ
+  // ====================
+  // Static Sampler
+  // ====================
+  // 共通サンプラ設定
   D3D12_STATIC_SAMPLER_DESC samp{};
   samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
   samp.AddressU = samp.AddressV = samp.AddressW =
@@ -364,6 +395,10 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   samp.ShaderRegister = 0;
   samp.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+  // ====================
+  // Serialize
+  // ====================
+  // ルートシグネチャ作成
   D3D12_ROOT_SIGNATURE_DESC desc{};
   desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
   desc.pParameters = params;
@@ -398,6 +433,10 @@ void GraphicsPipeline::buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                                  D3D12_SHADER_BYTECODE ps, DXGI_FORMAT rtvFmt,
                                  DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull,
                                  D3D12_FILL_MODE fill) {
+  // ====================
+  // Pipeline State
+  // ====================
+  // PSO 作成
   D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
   d.pRootSignature = root_;
   d.InputLayout = {inputElems, elemCount};

@@ -35,6 +35,60 @@ public:
   void AddGridYZ(int halfSize, float step, const RC::Vector4 &color,
                  bool depth = true);
 
+  // --------------------------------------------------------------------------
+  // 便利形状（デバッグ用）
+  // --------------------------------------------------------------------------
+
+  // ワイヤーフレーム球（緯線/経線）
+  // slices: 経度分割（周方向）
+  // stacks: 緯度分割（上下方向）
+  void AddSphere(const RC::Vector3 &center, float radius,
+                 const RC::Vector4 &color, int slices = 24, int stacks = 12,
+                 bool depth = true);
+
+  // 3本リングだけの軽量球（XY/XZ/YZ）
+  void AddSphereRings(const RC::Vector3 &center, float radius,
+                      const RC::Vector4 &color, int segments = 32,
+                      bool depth = true);
+
+  // 3Dアーク（円弧）
+  // - normal : 円弧の面の法線（ワールド）
+  // - fromDir: 円弧開始方向（normal と直交する成分が使われる）
+  // - start/end: ラジアン
+  // - drawToCenter: true なら扇形の "中心→両端" の線も引く
+  void AddArc(const RC::Vector3 &center, const RC::Vector3 &normal,
+              const RC::Vector3 &fromDir, float radius, float startRad,
+              float endRad, const RC::Vector4 &color, int segments = 32,
+              bool depth = true, bool drawToCenter = false);
+
+  // ワイヤーカプセル（p0/p1 が端の球の中心）
+  void AddCapsule(const RC::Vector3 &p0, const RC::Vector3 &p1, float radius,
+                  const RC::Vector4 &color, int segments = 16,
+                  bool depth = true);
+
+  // OBB（回転付き箱）
+  // - axisX/Y/Z: 箱のローカル軸（正規化済みが望ましい）
+  // - halfExtents: 各軸方向の半サイズ
+  void AddOBB(const RC::Vector3 &center, const RC::Vector3 &axisX,
+              const RC::Vector3 &axisY, const RC::Vector3 &axisZ,
+              const RC::Vector3 &halfExtents, const RC::Vector4 &color,
+              bool depth = true);
+
+  // 視錐台（コーナー8点）
+  // corners[0..3] = near plane, corners[4..7] = far plane
+  // 推奨順:
+  //  0: nearLB, 1: nearLT, 2: nearRT, 3: nearRB
+  //  4: farLB,  5: farLT,  6: farRT,  7: farRB
+  void AddFrustum(const RC::Vector3 corners[8], const RC::Vector4 &color,
+                  bool depth = true);
+
+  // 視錐台（カメラパラメータから生成）
+  // forward/up はカメラの向き（ワールド）
+  void AddFrustumCamera(const RC::Vector3 &camPos, const RC::Vector3 &forward,
+                        const RC::Vector3 &up, float fovYRad, float aspect,
+                        float nearZ, float farZ, const RC::Vector4 &color,
+                        bool depth = true);
+
 
   // RenderCommon 側で PSO/Root はセット済み前提
   void Draw(ID3D12GraphicsCommandList *cl, bool depth);

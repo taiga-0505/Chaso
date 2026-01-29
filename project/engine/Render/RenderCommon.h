@@ -744,6 +744,91 @@ void DrawGridXY3D(int halfSize, float step, const Vector4 &color,
 void DrawGridYZ3D(int halfSize, float step, const Vector4 &color,
                   bool depth = true);
 
+/// <summary>
+/// 3Dワイヤー球（緯線/経線）
+/// </summary>
+/// <param name="center">中心（ワールド座標）</param>
+/// <param name="radius">半径</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="slices">経度分割（周方向）</param>
+/// <param name="stacks">緯度分割（上下方向）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawWireSphere3D(const Vector3 &center, float radius, const Vector4 &color,
+                      int slices = 24, int stacks = 12, bool depth = true);
+
+/// <summary>
+/// 3Dリング球（XY/XZ/YZ の 3本リング）
+/// </summary>
+/// <param name="center">中心（ワールド座標）</param>
+/// <param name="radius">半径</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="segments">円の分割数</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawSphereRings3D(const Vector3 &center, float radius,
+                       const Vector4 &color, int segments = 32,
+                       bool depth = true);
+
+/// <summary>
+/// 3Dアーク（円弧 / 扇形）
+/// </summary>
+/// <param name="center">中心（ワールド座標）</param>
+/// <param name="normal">面の法線（ワールド）</param>
+/// <param name="fromDir">開始方向（normal と直交する成分が使われる）</param>
+/// <param name="radius">半径</param>
+/// <param name="startRad">開始角（ラジアン）</param>
+/// <param name="endRad">終了角（ラジアン）</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="segments">分割数</param>
+/// <param name="depth">深度テストを行うか</param>
+/// <param name="drawToCenter">true なら扇形の中心線も描く</param>
+void DrawArc3D(const Vector3 &center, const Vector3 &normal,
+               const Vector3 &fromDir, float radius, float startRad,
+               float endRad, const Vector4 &color, int segments = 32,
+               bool depth = true, bool drawToCenter = false);
+
+/// <summary>
+/// ワイヤーカプセル
+/// </summary>
+/// <param name="p0">端の球の中心（ワールド座標）</param>
+/// <param name="p1">端の球の中心（ワールド座標）</param>
+/// <param name="radius">半径</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="segments">円/半円の分割数</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawCapsule3D(const Vector3 &p0, const Vector3 &p1, float radius,
+                   const Vector4 &color, int segments = 16,
+                   bool depth = true);
+
+/// <summary>
+/// OBB（回転付き箱）
+/// </summary>
+/// <param name="center">中心（ワールド座標）</param>
+/// <param name="axisX">ローカルX軸（ワールド）</param>
+/// <param name="axisY">ローカルY軸（ワールド）</param>
+/// <param name="axisZ">ローカルZ軸（ワールド）</param>
+/// <param name="halfExtents">各軸方向の半サイズ</param>
+/// <param name="color">色（RGBA）</param>
+/// <param name="depth">深度テストを行うか</param>
+void DrawOBB3D(const Vector3 &center, const Vector3 &axisX,
+               const Vector3 &axisY, const Vector3 &axisZ,
+               const Vector3 &halfExtents, const Vector4 &color,
+               bool depth = true);
+
+/// <summary>
+/// 視錐台（コーナー8点）
+/// </summary>
+/// <param name="corners">corners[0..3]=near, corners[4..7]=far</param>
+void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
+                          bool depth = true);
+
+/// <summary>
+/// 視錐台（カメラパラメータから生成）
+/// </summary>
+void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
+                   const Vector3 &up, float fovYRad, float aspect,
+                   float nearZ, float farZ, const Vector4 &color,
+                   bool depth = true);
+
 // 2Dパスを呼ばない時用（任意）
 void FlushPrimitive3D();
 

@@ -102,53 +102,57 @@ void Sphere::DrawImGui(const char *name) {
   bool vis = Visible();
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
-  // ---- Transform ----
-  ImGui::TextUnformatted("Transform");
-  ImGui::DragFloat3((std::string("位置(x,y,z)##") + label).c_str(),
-                    &transform_.translation.x, 0.1f, -4096.0f, 4096.0f, "%.2f");
-  ImGui::SliderAngle((std::string("回転X##") + label).c_str(),
-                     &transform_.rotation.x);
-  ImGui::SliderAngle((std::string("回転Y##") + label).c_str(),
-                     &transform_.rotation.y);
-  ImGui::SliderAngle((std::string("回転Z##") + label).c_str(),
-                     &transform_.rotation.z);
-  ImGui::DragFloat3((std::string("スケール(x,y,z)##") + label).c_str(),
-                    &transform_.scale.x, 0.01f, 0.0001f, 1000.0f, "%.3f");
-  if (ImGui::Button((std::string("Transformリセット##") + label).c_str())) {
-    transform_.translation = {0, 0, 0};
-    transform_.rotation = {0, 0, 0};
-    transform_.scale = {1, 1, 1};
-  }
-  ImGui::Dummy(ImVec2(0, 6));
-  // ---- Material（乗算カラー・UV行列）----
-  ImGui::TextUnformatted("Material");
-  if (cbMat_.mapped) {
-    ImGui::ColorEdit4((std::string("カラー(乗算)##") + label).c_str(),
-                      &cbMat_.mapped->color.x, ImGuiColorEditFlags_Float);
-    // 簡易UVスケール＆平行移動（行列に焼く）
-    static Vector3 uvS{1, 1, 1};
-    static Vector3 uvT{0, 0, 0};
-    bool updUV = false;
-    updUV |= ImGui::DragFloat2((std::string("UV 平行移動##") + label).c_str(),
-                               &uvT.x, 0.005f);
-    updUV |= ImGui::DragFloat2((std::string("UV スケール##") + label).c_str(),
-                               &uvS.x, 0.005f, 0.001f, 16.0f);
-    if (updUV) {
-      Matrix4x4 m = MakeIdentity4x4();
-      m = Multiply(MakeScaleMatrix(uvS), m);
-      m = Multiply(m, MakeTranslateMatrix(uvT));
-      cbMat_.mapped->uvTransform = m;
-    }
-    if (ImGui::Button((std::string("UV行列リセット##") + label).c_str())) {
-      cbMat_.mapped->uvTransform = MakeIdentity4x4();
-      uvS = {1, 1, 1};
-      uvT = {0, 0, 0};
-    }
 
-  } else {
-    ImGui::TextDisabled("Material CB not ready.");
+  if (vis) {
+    // ---- Transform ----
+    ImGui::TextUnformatted("Transform");
+    ImGui::DragFloat3((std::string("位置(x,y,z)##") + label).c_str(),
+                      &transform_.translation.x, 0.1f, -4096.0f, 4096.0f,
+                      "%.2f");
+    ImGui::SliderAngle((std::string("回転X##") + label).c_str(),
+                       &transform_.rotation.x);
+    ImGui::SliderAngle((std::string("回転Y##") + label).c_str(),
+                       &transform_.rotation.y);
+    ImGui::SliderAngle((std::string("回転Z##") + label).c_str(),
+                       &transform_.rotation.z);
+    ImGui::DragFloat3((std::string("スケール(x,y,z)##") + label).c_str(),
+                      &transform_.scale.x, 0.01f, 0.0001f, 1000.0f, "%.3f");
+    if (ImGui::Button((std::string("Transformリセット##") + label).c_str())) {
+      transform_.translation = {0, 0, 0};
+      transform_.rotation = {0, 0, 0};
+      transform_.scale = {1, 1, 1};
+    }
+    ImGui::Dummy(ImVec2(0, 6));
+    // ---- Material（乗算カラー・UV行列）----
+    ImGui::TextUnformatted("Material");
+    if (cbMat_.mapped) {
+      ImGui::ColorEdit4((std::string("カラー(乗算)##") + label).c_str(),
+                        &cbMat_.mapped->color.x, ImGuiColorEditFlags_Float);
+      // 簡易UVスケール＆平行移動（行列に焼く）
+      static Vector3 uvS{1, 1, 1};
+      static Vector3 uvT{0, 0, 0};
+      bool updUV = false;
+      updUV |= ImGui::DragFloat2((std::string("UV 平行移動##") + label).c_str(),
+                                 &uvT.x, 0.005f);
+      updUV |= ImGui::DragFloat2((std::string("UV スケール##") + label).c_str(),
+                                 &uvS.x, 0.005f, 0.001f, 16.0f);
+      if (updUV) {
+        Matrix4x4 m = MakeIdentity4x4();
+        m = Multiply(MakeScaleMatrix(uvS), m);
+        m = Multiply(m, MakeTranslateMatrix(uvT));
+        cbMat_.mapped->uvTransform = m;
+      }
+      if (ImGui::Button((std::string("UV行列リセット##") + label).c_str())) {
+        cbMat_.mapped->uvTransform = MakeIdentity4x4();
+        uvS = {1, 1, 1};
+        uvT = {0, 0, 0};
+      }
+
+    } else {
+      ImGui::TextDisabled("Material CB not ready.");
+    }
+    ImGui::Dummy(ImVec2(0, 6));
   }
-  ImGui::Dummy(ImVec2(0, 6));
 }
 
 void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,

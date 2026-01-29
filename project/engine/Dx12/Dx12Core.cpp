@@ -25,27 +25,39 @@ static void ReportDXGILiveObjects() {
 void Dx12Core::Init(HWND hwnd, const Desc &d) {
   desc_ = d;
 
+  // ====================
   // Device
+  // ====================
+  // デバイス初期化
   device_.Init(d.debug, d.gpuValidation);
   device_.SetupInfoQueue(true, true);
   allowTearing_ = d.allowTearingIfSupported && device_.IsTearingSupported();
 
   ID3D12Device *dev = device_.GetDevice();
 
+  // ====================
   // Command
+  // ====================
+  // コマンド初期化
   cmd_.Init(dev, D3D12_COMMAND_LIST_TYPE_DIRECT, d.frameCount);
 
+  // ====================
   // Heaps
+  // ====================
+  // ディスクリプタヒープ初期化
   rtv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, d.frameCount, false);
   dsv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
   srv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, d.srvHeapCapacity,
             true);
 
+  // SRV / StructuredBuffer 管理初期化
   srvMgr_.Init(dev, &srv_);
-
   sbMgr_.Init(&srvMgr_);
 
+  // ====================
   // SwapChain
+  // ====================
+  // スワップチェーン初期化
   swap_.SetRtvHeap(rtv_.Heap(), rtv_.Increment());
   // スワップチェーンは UNORM で作成（RTVはSRGBビューで作る）
   DXGI_FORMAT scFormat = (desc_.rtvFormat == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
@@ -54,18 +66,28 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   swap_.Init(device_.Factory(), dev, cmd_.Queue(), hwnd, d.width, d.height,
              scFormat, d.frameCount, allowTearing_);
 
+  // ====================
   // Depth
+  // ====================
+  // 深度バッファ初期化
   depth_.Init(dev, d.width, d.height, dsv_, d.dsvFormat, d.dsvFormat);
 
+  // ビューポート/シザー設定
   ResetViewportScissorToBackbuffer(d.width, d.height);
 
+  // ====================
+  // FixFps
+  // ====================
   // FPS固定の初期化（VSyncは切らずに追加待ちを入れる運用）
   if (fixFpsEnabled_) {
     fixFps_ = std::make_unique<FixFps>();
     fixFps_->Initialize();
   }
 
-  // Pipeline（頂点レイアウトは最小例。必要なら外から差し替え可）
+  // ====================
+  // Pipeline
+  // ====================
+  // 頂点レイアウトの最小例（必要なら外部差し替え）
   D3D12_INPUT_ELEMENT_DESC inputElems[3] = {
       {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
        D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
@@ -79,31 +101,55 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
 }
 
 void Dx12Core::BeginFrame() {
+  // ====================
+  // Command
+  // ====================
+  // フレーム開始とバックバッファ取得
   backIndex_ = swap_.CurrentBackBufferIndex();
   cmd_.BeginFrame(backIndex_);
 
+  // ====================
+  // Resource Transition
+  // ====================
   // Present → RenderTarget
   cmd_.Transition(swap_.BackBuffer(backIndex_), D3D12_RESOURCE_STATE_PRESENT,
                   D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+  // ====================
+  // Render Target Bind
+  // ====================
   // OM バインド
   auto *cl = cmd_.List();
   auto rtv = swap_.RtvAt(backIndex_);
   auto dsv = depth_.Dsv();
   cl->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
+  // ====================
+  // Descriptor Heap
+  // ====================
   // SRV heap セット（ImGui 等を先頭に置いている前提）
   ID3D12DescriptorHeap *heaps[] = {srv_.Heap()};
   cl->SetDescriptorHeaps(1, heaps);
 
+  // ====================
+  // Viewport / Scissor
+  // ====================
   // ビューポート、シザー矩形セット
   cl->RSSetViewports(1, &viewport_);
   cl->RSSetScissorRects(1, &scissor_);
 
+  // ====================
+  // Clear
+  // ====================
+  // 画面クリア
   Clear();
 }
 
 void Dx12Core::Clear(float r, float g, float b, float a) {
+  // ====================
+  // Clear
+  // ====================
+  // RT/DSV クリア
   float clear[4] = {r, g, b, a};
   cmd_.List()->ClearRenderTargetView(CurrentRTV(), clear, 0, nullptr);
   cmd_.List()->ClearDepthStencilView(
@@ -112,48 +158,84 @@ void Dx12Core::Clear(float r, float g, float b, float a) {
 }
 
 void Dx12Core::EndFrame() {
+  // ====================
+  // Resource Transition
+  // ====================
   // RenderTarget → Present
   cmd_.Transition(swap_.BackBuffer(backIndex_),
                   D3D12_RESOURCE_STATE_RENDER_TARGET,
                   D3D12_RESOURCE_STATE_PRESENT);
 
+  // ====================
+  // Present
+  // ====================
+  // Close→Execute→Present
   cmd_.EndFrame();
   // vsync=1, tearingなら 0 でもOK（好みで）
   swap_.Present(1, 0);
   cmd_.WaitForFrame(backIndex_);
 
-  // ← VSync & フェンス待ち直後でFPS固定を実行
+  // ====================
+  // FixFps
+  // ====================
+  // VSync & フェンス待ち直後でFPS固定を実行
   if (fixFps_) {
     fixFps_->Update();
   }
 }
 
-void Dx12Core::WaitForGPU() { cmd_.FlushGPU(); }
+void Dx12Core::WaitForGPU() {
+  // ====================
+  // GPU Wait
+  // ====================
+  // GPU 完了待ち
+  cmd_.FlushGPU();
+}
 
 void Dx12Core::Term() {
-  // 1) GPU 完全停止
+  // ====================
+  // GPU Wait
+  // ====================
+  // GPU 完全停止
   cmd_.FlushGPU();
-  // 2) フレーム依存のリソースから順に解放
-  //    - BackBuffer を握るのは swap_ なので、先に Depth → SwapChain
-  //    の順で。
-  //    - RTV/DSV/SRV ヒープは BackBuffer/Depth が落ちた後に。
+
+  // ====================
+  // Resource Release
+  // ====================
+  // フレーム依存リソースから順に解放
   depth_.Term(); // DSV リソース
   swap_.Term();  // BackBuffer リソース + SwapChain
   sbMgr_.Term();
-  srvMgr_.Term(); 
+  srvMgr_.Term();
   rtv_.Term();
   dsv_.Term();
   srv_.Term();
-  // 3) コマンド系（Allocator/List/Queue/Fence 等）
+
+  // ====================
+  // Command Release
+  // ====================
+  // コマンド系解放（Allocator/List/Queue/Fence 等）
   cmd_.Term();
-  // 4) Live Objects レポート（デバイス・ファクトリが生きているうちに）
+
+  // ====================
+  // Live Objects Report
+  // ====================
+  // Live Objects レポート（デバイス・ファクトリが生きているうちに）
   ReportD3D12LiveObjects(device_.GetDevice());
   ReportDXGILiveObjects();
-  // 5) 最後にデバイス/ファクトリ
+
+  // ====================
+  // Device Release
+  // ====================
+  // デバイス/ファクトリ解放
   device_.Term();
 }
 
 void Dx12Core::EnableFixFps(bool enable) {
+  // ====================
+  // FixFps
+  // ====================
+  // FPS固定の有効/無効切り替え
   fixFpsEnabled_ = enable;
   if (enable) {
     if (!fixFps_) {

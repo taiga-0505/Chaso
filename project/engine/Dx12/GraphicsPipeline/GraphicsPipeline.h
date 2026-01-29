@@ -18,6 +18,9 @@ enum BlendMode {
   kBlendModeScreen,
 };
 
+/// <summary>
+/// ルートシグネチャの種類を表す
+/// </summary>
 enum class RootSignatureType {
   Object3D,
   Object3DInstancing,
@@ -27,6 +30,9 @@ enum class RootSignatureType {
   Primitive3D,
 };
 
+/// <summary>
+/// パイプライン構築時のオプションを保持する
+/// </summary>
 struct GPipelineOptions {
   bool enableAlphaBlend = false; // ← スプライトは true
   bool enableDepth = true;       // ← スプライトは false
@@ -39,38 +45,62 @@ struct GPipelineOptions {
       D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 };
 
+/// <summary>
+/// ルートシグネチャと PSO を構築する
+/// </summary>
 class GraphicsPipeline {
 public:
+  /// <summary>
+  /// GraphicsPipeline を初期化する
+  /// </summary>
   void Init(ID3D12Device *device) { device_ = device; }
+
+  /// <summary>
+  /// GraphicsPipeline を終了する
+  /// </summary>
   void Term();
 
-  // ルートシグネチャ＋PSOをまとめて構築
-  // rtvFmt: 例 DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-  // dsvFmt: 例 DXGI_FORMAT_D24_UNORM_S8_UINT
-  // 共通ビルド（バイトコードを直接受け取る）
+  /// <summary>
+  /// ルートシグネチャと PSO を構築する
+  /// </summary>
   void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
              D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
              DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
              D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
              D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
-  // 便利オーバーロード：ID3DBlob*
+
+  /// <summary>
+  /// ルートシグネチャと PSO を構築する（ID3DBlob 版）
+  /// </summary>
   void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
              ID3DBlob *vs, ID3DBlob *ps, DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
              D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
              D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
-  // 便利オーバーロード：IDxcBlob*
+
+  /// <summary>
+  /// ルートシグネチャと PSO を構築する（IDxcBlob 版）
+  /// </summary>
   void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
              struct IDxcBlob *vs, struct IDxcBlob *ps, DXGI_FORMAT rtvFmt,
              DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
              D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
 
+  /// <summary>
+  /// 拡張オプション付きで PSO を構築する
+  /// </summary>
   void BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
                D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
                DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
                const GPipelineOptions &opt);
 
-  // バインド用
+  /// <summary>
+  /// ルートシグネチャを取得する
+  /// </summary>
   ID3D12RootSignature *Root() const { return root_; }
+
+  /// <summary>
+  /// PSO を取得する
+  /// </summary>
   ID3D12PipelineState *PSO() const { return pso_; }
 
 private:

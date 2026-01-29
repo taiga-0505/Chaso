@@ -66,8 +66,8 @@ void LightScene::OnEnter(SceneContext &ctx) {
   al1_source_->SetRange(8.0f);
   al1_source_->SetDecay(0.0f);
 
-  areaLight2_ = RC::CreateAreaLight();
-  al2_source_ = RC::GetAreaLightPtr(areaLight2_);
+  AreaLight2_ = RC::CreateAreaLight();
+  al2_source_ = RC::GetAreaLightPtr(AreaLight2_);
   al2_source_->SetPosition({0.0f, 2.0f, -4.0f});
   al2_source_->SetIntensity(1.0f);
   al2_source_->SetBasis({-0.3f, 0.0f, 0.7f}, {-12.0f, 0.0f, 0.5f});
@@ -94,6 +94,8 @@ void LightScene::OnExit(SceneContext &ctx) {
   SpotLight2_ = -1;
   RC::DestroyAreaLight(AreaLight1_);
   AreaLight1_ = -1;
+  RC::DestroyAreaLight(AreaLight2_);
+  AreaLight2_ = -1;
 }
 
 void LightScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -173,10 +175,10 @@ void LightScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   // Area Light2 ON/OFF
   if (input->IsKeyTrigger(DIK_7)) {
-    if (RC::IsAreaLightEnabled(areaLight2_)) {
-      RC::SetAreaLightEnabled(areaLight2_, false);
+    if (RC::IsAreaLightEnabled(AreaLight2_)) {
+      RC::SetAreaLightEnabled(AreaLight2_, false);
     } else {
-      RC::SetAreaLightEnabled(areaLight2_, true);
+      RC::SetAreaLightEnabled(AreaLight2_, true);
     }
   }
 
@@ -239,7 +241,7 @@ void LightScene::DrawImGui() {
       RC::DrawImGuiSpotLight(SpotLight1_, "SpotLight1");
       RC::DrawImGuiSpotLight(SpotLight2_, "SpotLight2");
       RC::DrawImGuiAreaLight(AreaLight1_, "AreaLight1");
-      RC::DrawImGuiAreaLight(areaLight2_, "AreaLight2");
+      RC::DrawImGuiAreaLight(AreaLight2_, "AreaLight2");
 
       ImGui::EndTabItem();
     }

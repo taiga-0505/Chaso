@@ -26,48 +26,76 @@ App::App() {}
 App::~App() {}
 
 bool App::Init() {
-  // ===== Window =====
+  // ====================
+  // Window
+  // ====================
+  // ウィンドウ生成
   window_ = std::make_unique<Window>();
   window_->Initialize(appConfig_.title.c_str(), appConfig_.width,
                       appConfig_.height);
 
-  // ===== DX12 Core =====
+  // ====================
+  // DX12 Core
+  // ====================
+  // コア初期化
   coreDesc_.width = appConfig_.width;
   coreDesc_.height = appConfig_.height;
   core_.Init(window_->GetHwnd(), coreDesc_);
 
+  // デバイスとコマンドリスト取得
   cl_ = core_.CL();
   device_ = core_.GetDevice();
   assert(device_);
 
-  // ===== Input =====
+  // ====================
+  // Input
+  // ====================
+  // 入力初期化
   input_ = std::make_unique<Input>(window_->GetHwnd());
 
-  // ===== ImGui =====
+  // ====================
+  // ImGui
+  // ====================
+  // ImGui 初期化
   imgui_.Init(window_->GetHwnd(), core_);
 
-  // ===== PipelineManager =====
+  // ====================
+  // PipelineManager
+  // ====================
+  // パイプライン登録
   pm_.Init(device_, coreDesc_.rtvFormat, coreDesc_.dsvFormat);
 
   pm_.RegisterDefaultPipelines();
 
-  // ===== SceneContext の紐づけ =====
+  // ====================
+  // SceneContext
+  // ====================
+  // SceneContext を紐づけ
   sceneCtx_.core = &core_;
   sceneCtx_.input = input_.get();
   sceneCtx_.app = &appConfig_;
   sceneCtx_.imgui = (RC_ENABLE_IMGUI ? &imgui_ : nullptr);
   sceneCtx_.pipelineManager = &pm_;
 
-  // ===== RC初期化 =====
+  // ====================
+  // RenderCommon
+  // ====================
+  // RC 初期化
   RC::Init(sceneCtx_);
 
-  // ===== Game初期化 =====
+  // ====================
+  // Game
+  // ====================
+  // ゲーム初期化
   game_.Init(sceneCtx_);
 
   return true;
 }
 
 int App::Run() {
+  // ====================
+  // Main Loop
+  // ====================
   // メッセージループ
   while (msg_.message != WM_QUIT) {
     if (PeekMessage(&msg_, nullptr, 0, 0, PM_REMOVE)) {
@@ -75,12 +103,17 @@ int App::Run() {
       DispatchMessage(&msg_);
     } else {
 #if RC_ENABLE_IMGUI
+      // ImGui フレーム開始
       imgui_.NewFrame();
 #endif
+      // 更新
       Update();
+
+      // 描画
       core_.BeginFrame();
       Render();
 #if RC_ENABLE_IMGUI
+      // ImGui 描画
       imgui_.Render(cl_);
 #endif
       core_.EndFrame();
@@ -92,35 +125,74 @@ int App::Run() {
 void App::Update() {
 
 #if RC_ENABLE_IMGUI
+  // ====================
+  // Debug UI
+  // ====================
+  // デバッグUI描画
   game_.DrawDebugUI();
 #endif
 
+  // ====================
+  // Input
+  // ====================
+  // 入力更新
   input_->Update();
 
+  // ====================
+  // Game
+  // ====================
+  // ゲーム更新
   game_.Update(sceneCtx_);
 }
 
-void App::Render() { game_.Render(sceneCtx_, cl_); }
+void App::Render() {
+  // ====================
+  // Game Render
+  // ====================
+  // ゲーム描画
+  game_.Render(sceneCtx_, cl_);
+}
 
 void App::Term() {
+  // ====================
+  // GPU Wait
+  // ====================
+  // GPU 完了待ち
   core_.WaitForGPU();
 
+  // ====================
+  // Game
+  // ====================
+  // ゲーム終了
   game_.Term();
 
-  // 3) 描画層
+  // ====================
+  // Render Layer
+  // ====================
+  // RenderCommon 終了
   ReportDXGI("before RC::Term");
   RC::Term();
   ReportDXGI("after RC::Term");
 
+  // ====================
+  // Pipeline / ImGui
+  // ====================
+  // パイプラインと ImGui 終了
   pm_.Term();
   imgui_.Shutdown();
 
-  // 4) コア（SwapChain/デバイスなど最終）
+  // ====================
+  // Core
+  // ====================
+  // コア終了
   ReportDXGI("before core_.Term");
   core_.Term();
   ReportDXGI("after core_.Term");
 
-  // 5) 入力/ウィンドウ
+  // ====================
+  // Input / Window
+  // ====================
+  // 入力とウィンドウ破棄
   input_.reset();
   window_.reset();
 }

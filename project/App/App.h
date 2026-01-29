@@ -19,15 +19,40 @@ class SampleScene;
 
 class App {
 public:
+  /// <summary>
+  /// アプリケーション全体のライフサイクル管理と各サブシステムの初期化を担当する
+  /// </summary>
   App();
+
+  /// <summary>
+  /// App を破棄する
+  /// </summary>
   ~App();
 
+  /// <summary>
+  /// アプリケーションを初期化する
+  /// </summary>
   bool Init();
+
+  /// <summary>
+  /// メインループを実行する
+  /// </summary>
   int Run();
+
+  /// <summary>
+  /// アプリケーションを終了する
+  /// </summary>
   void Term();
 
 private:
+  /// <summary>
+  /// 1フレーム分の更新処理を行う
+  /// </summary>
   void Update();
+
+  /// <summary>
+  /// 1フレーム分の描画処理を行う
+  /// </summary>
   void Render();
 
 private:

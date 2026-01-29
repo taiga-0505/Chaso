@@ -3,15 +3,27 @@
 
 void PipelineManager::Init(ID3D12Device *device, DXGI_FORMAT rtvFmt,
                            DXGI_FORMAT dsvFmt) {
+  // ====================
+  // Device
+  // ====================
+  // デバイス設定
   device_ = device;
   rtvFmt_ = rtvFmt;
   dsvFmt_ = dsvFmt;
 
+  // ====================
+  // Compiler
+  // ====================
+  // シェーダーコンパイラ初期化
   const bool ok = compiler_.Init();
   assert(ok && "ShaderCompiler::Init failed");
 }
 
 void PipelineManager::Term() {
+  // ====================
+  // Pipeline Release
+  // ====================
+  // 登録済みパイプライン解放
   for (auto &kv : pipelines_) {
     if (kv.second.pipeline)
       kv.second.pipeline->Term();
@@ -22,9 +34,17 @@ void PipelineManager::Term() {
 
 GraphicsPipeline *PipelineManager::Create(const std::string &key,
                                           const PipelineDesc &desc) {
+  // ====================
+  // Validate
+  // ====================
+  // シェーダーパス確認
   assert(!desc.vsPath.empty());
   assert(!desc.psPath.empty());
 
+  // ====================
+  // Compile
+  // ====================
+  // シェーダー設定
   ShaderDesc vs{};
   vs.path = desc.vsPath.c_str();
   vs.entry = desc.vsEntry.c_str();
@@ -39,10 +59,15 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
   ps.optimize = desc.optimize;
   ps.debugInfo = desc.debugInfo;
 
+  // コンパイル
   CompiledShader VS = compiler_.Compile(vs);
   CompiledShader PS = compiler_.Compile(ps);
   assert(VS.HasBlob() && PS.HasBlob());
 
+  // ====================
+  // Create
+  // ====================
+  // パイプライン作成
   return createFromBlobs_(key, desc, VS.Blob(), PS.Blob());
 }
 
@@ -50,6 +75,10 @@ GraphicsPipeline *PipelineManager::CreateFromFiles(
     const std::string &key, const std::wstring &vsPath,
     const std::wstring &psPath, InputLayoutType layoutType,
     const GPipelineOptions &opt) {
+  // ====================
+  // Desc
+  // ====================
+  // パイプライン設定生成
   PipelineDesc d{};
   d.vsPath = vsPath;
   d.psPath = psPath;
@@ -64,21 +93,37 @@ GraphicsPipeline *PipelineManager::CreateFromFiles(
   d.debugInfo = false;
 #endif
 
+  // ====================
+  // Create
+  // ====================
+  // パイプライン作成
   return Create(key, d);
 }
 
 GraphicsPipeline *PipelineManager::Get(const std::string &key) {
+  // ====================
+  // Find
+  // ====================
+  // 登録済みパイプライン取得
   auto it = pipelines_.find(key);
   return (it == pipelines_.end()) ? nullptr : it->second.pipeline.get();
 }
 
 bool PipelineManager::Rebuild(const std::string &key) {
+  // ====================
+  // Find
+  // ====================
+  // 対象パイプライン取得
   auto it = pipelines_.find(key);
   if (it == pipelines_.end())
     return false;
 
   const PipelineDesc &d = it->second.desc;
 
+  // ====================
+  // Compile
+  // ====================
+  // シェーダー設定
   ShaderDesc vs{};
   vs.path = d.vsPath.c_str();
   vs.entry = d.vsEntry.c_str();
@@ -93,11 +138,16 @@ bool PipelineManager::Rebuild(const std::string &key) {
   ps.optimize = d.optimize;
   ps.debugInfo = d.debugInfo;
 
+  // コンパイル
   CompiledShader VS = compiler_.Compile(vs);
   CompiledShader PS = compiler_.Compile(ps);
   if (!VS.HasBlob() || !PS.HasBlob())
     return false;
 
+  // ====================
+  // Rebuild
+  // ====================
+  // パイプライン再構築
   it->second.pipeline->Term();
   it->second.pipeline->Init(device_);
 
@@ -115,6 +165,10 @@ bool PipelineManager::Rebuild(const std::string &key) {
 }
 
 void PipelineManager::RebuildAll() {
+  // ====================
+  // Rebuild
+  // ====================
+  // 全パイプライン再ビルド
   for (auto &kv : pipelines_) {
     (void)Rebuild(kv.first);
   }
@@ -124,6 +178,10 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
                                                     const PipelineDesc &desc,
                                                     IDxcBlob *vs,
                                                     IDxcBlob *ps) {
+  // ====================
+  // Create
+  // ====================
+  // パイプライン登録
   Entry e;
   e.desc = desc;
   e.pipeline = std::make_unique<GraphicsPipeline>();
@@ -143,6 +201,10 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
 
 std::vector<D3D12_INPUT_ELEMENT_DESC>
 PipelineManager::MakeInputLayout(InputLayoutType type) {
+  // ====================
+  // InputLayout
+  // ====================
+  // レイアウト生成
   switch (type) {
   case InputLayoutType::Object3D:
     return {
@@ -197,6 +259,10 @@ PipelineManager::MakeInputLayout(InputLayoutType type) {
 }
 
 std::string PipelineManager::MakeKey(std::string_view prefix, BlendMode mode) {
+  // ====================
+  // Key
+  // ====================
+  // ブレンドモード別キー生成
   const char *suffix = "normal";
   switch (mode) {
   case kBlendModeNone:
@@ -231,6 +297,10 @@ std::string PipelineManager::MakeKey(std::string_view prefix, BlendMode mode) {
 }
 
 void PipelineManager::RegisterDefaultPipelines() {
+  // ====================
+  // Shader Paths
+  // ====================
+  // 既定シェーダーパス
   const std::wstring objVs =
       L"Resources/Shader/Object3d/Object3D_Single.VS.hlsl";
   const std::wstring objVsInst =
@@ -252,6 +322,10 @@ void PipelineManager::RegisterDefaultPipelines() {
   // fullscreen fog overlay (cold mist)
   const std::wstring fogFx = L"Resources/Shader/Post/FogOverlay.hlsl";
 
+  // ====================
+  // Helpers
+  // ====================
+  // 登録ヘルパー
   auto regSet = [&](std::string_view prefix, const std::wstring &vs,
                     const std::wstring &ps, InputLayoutType layout,
                     RootSignatureType root, bool depth, bool depthWrite,
@@ -289,6 +363,9 @@ void PipelineManager::RegisterDefaultPipelines() {
     }
   };
 
+  // ====================
+  // Register
+  // ====================
   // object3d：深度ON、書き込みON、基本BACKカリング
   regSet("object3d", objVs, objPs, InputLayoutType::Object3D,
          RootSignatureType::Object3D, true, true, D3D12_CULL_MODE_BACK);

@@ -45,6 +45,6 @@ private:
   int AreaLight1_ = -1;
   RC::AreaLightSource *al1_source_;
 
-  int areaLight2_ = -1;
+  int AreaLight2_ = -1;
   RC::AreaLightSource *al2_source_;
 };
