@@ -28,12 +28,26 @@ private:
 
   RC::ExplosionParticle explosion_particle_;
 
+  RC::LaserParticle laser_particle_;
+  RC::Vector3 laserStart_ = {0.0f, -1.0f, 0.0f};
+  RC::Vector3 laserEnd_ = {0.0f, 2.0f, 0.0f};
+  float laserWidth_ = 0.2f;
+  float laserLife_ = 0.05f;
+  RC::Vector4 laserColor_ = {0.2f, 0.9f, 1.0f, 1.0f};
+  float segmentSpacing_ = 0.15f;
+  float scrollSpeed_ = 6.0f;
+  int maxSegments_ = 64;
+
+  RC::ImpactSparkParticle impact_particle_;
+  RC::ImpactEmitDesc impactDesc_;
+
   bool isParticle = true;
   bool isFire = false;
   bool isRain = false;
   bool isSnow = false;
   bool isCircle = false;
   bool isExplosion = false;
+  bool isLaser = false;
 
   int guide;
 };

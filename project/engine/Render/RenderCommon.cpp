@@ -870,7 +870,7 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
 
 void DrawModelBatchColored(int modelHandle,
                            const std::vector<Transform> &instances,
-                           const std::vector<Vector4> &colors,
+                           const Vector4 &color,
                            int texHandle) {
   if (!gInitialized || !gCL) {
     return;
@@ -906,12 +906,12 @@ void DrawModelBatchColored(int modelHandle,
       }
     }
 
-    m->DrawBatch(gCL, gView, gProj, instances, colors);
+    m->DrawBatch(gCL, gView, gProj, instances, color);
     return;
   }
 
   m->SetExternalLightCBAddress(0);
-  m->DrawBatch(gCL, gView, gProj, instances, colors);
+  m->DrawBatch(gCL, gView, gProj, instances, color);
 }
 
 void DrawImGui3D(int modelHandle, const char *name) {
@@ -1037,6 +1037,44 @@ void DrawModelGlassBatch(int modelHandle,
   gCurrentBlendMode = saved;
 }
 
+void DrawModelGlassBatchColored(int modelHandle,
+                                const std::vector<Transform> &instances,
+                                const Vector4 &color, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+
+  if (!BindPipeline_("object3d_glass_inst")) {
+    gCurrentBlendMode = saved;
+    return;
+  }
+
+  BindCameraCB_();
+  BindPointLightCB_();
+  BindSpotLightCB_();
+  BindAreaLightCB_();
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+
+  m->DrawBatch(gCL, gView, gProj, instances, color);
+
+  gCurrentBlendMode = saved;
+}
+
 void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
   if (!gInitialized || !gCL) {
     return;
@@ -1145,6 +1183,59 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
   if (BindPipeline_("object3d_glass_inst")) {
     bindCommon();
     m->DrawBatch(gCL, gView, gProj, instances);
+  }
+
+  gCurrentBlendMode = saved;
+}
+
+void DrawModelGlassTwoPassBatchColored(int modelHandle,
+                                       const std::vector<Transform> &instances,
+                                       const Vector4 &color, int texHandle) {
+  if (!gInitialized || !gCL) {
+    return;
+  }
+
+  auto *m = gModelMan.Get(modelHandle);
+  if (!m) {
+    return;
+  }
+
+  const BlendMode saved = gCurrentBlendMode;
+  gCurrentBlendMode = kBlendModePremultiplied;
+
+  if (texHandle >= 0) {
+    m->SetTexture(gTexMan.GetSrv(texHandle));
+  } else {
+    m->ResetTextureToMtl();
+  }
+
+  const D3D12_GPU_VIRTUAL_ADDRESS lightAddr = gLightMan.GetActiveCBAddress();
+  m->SetExternalLightCBAddress(lightAddr);
+  if (lightAddr != 0) {
+    if (const auto *active = gLightMan.GetActive()) {
+      if (Material *mat = m->Mat()) {
+        mat->lightingMode = active->GetLightingMode();
+      }
+    }
+  }
+
+  m->Update(gView, gProj);
+
+  auto bindCommon = [&]() {
+    BindCameraCB_();
+    BindPointLightCB_();
+    BindSpotLightCB_();
+    BindAreaLightCB_();
+  };
+
+  if (BindPipeline_("object3d_glass_front_inst")) {
+    bindCommon();
+    m->DrawBatch(gCL, gView, gProj, instances, color);
+  }
+
+  if (BindPipeline_("object3d_glass_inst")) {
+    bindCommon();
+    m->DrawBatch(gCL, gView, gProj, instances, color);
   }
 
   gCurrentBlendMode = saved;

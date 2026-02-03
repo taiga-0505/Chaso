@@ -27,3 +27,5 @@
 #include "Snow/SnowParticle.h"
 #include "Circle/CircleParticle.h"
 #include "Explosion/ExplosionParticle.h"
+#include "Laser/LaserParticle.h"
+#include "ImpactSpark/ImpactSparkParticle.h"

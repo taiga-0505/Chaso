@@ -1,6 +1,7 @@
 #include "GameScene.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+#include "StageSelection/StageSelection.h"
 
 void GameScene::OnEnter(SceneContext &ctx) {
   // ==============
@@ -17,13 +18,14 @@ void GameScene::OnEnter(SceneContext &ctx) {
   // ======= ブロックモデル =======
   blockModel = RC::LoadModel("Resources/model/block");
   RC::SetModelLightingMode(blockModel, None);
+  tx_block = RC::LoadTex("Resources/white1x1.png");
 
   // ======= マップ構築 =======
   map_.SetBlockSize(kBlockSize);
   map_.RegisterTileDef(1, MapChipField::TileDef{.model = blockModel,
                                                 .scale = kBlockSize,
                                                 .flags = MapChipField::kSolid});
-  map_.LoadFromCSV("Resources/Stage/Stage1/stage1.csv");
+  map_.LoadFromCSV(StageSelection::GetCsvPathOrDefault());
   map_.BuildInstances();
 
   // ======= プレイヤー生成 =======
@@ -31,6 +33,21 @@ void GameScene::OnEnter(SceneContext &ctx) {
   player_ = std::make_unique<Player>();
   player_->Init(playerModel, ctx);
   player_->SetMap(&map_);
+
+  
+  blockInstances_.clear();
+  if (const auto *def = map_.FindTileDef(MapChipField::kBlock)) {
+    const float s = map_.BlockSize() * (def->scale <= 0.0f ? 1.0f : def->scale);
+    const auto &spawns = map_.BlockSpawns();
+    blockInstances_.reserve(spawns.size());
+    for (const auto &idx : spawns) {
+      Transform t{};
+      t.scale = {s, s, s};
+      t.rotation = {0.0f, 0.0f, 0.0f};
+      t.translation = map_.IndexToCenter(idx);
+      blockInstances_.push_back(t);
+    }
+  }
 
   // ======= コイン生成 =======
   {
@@ -75,7 +92,6 @@ void GameScene::OnEnter(SceneContext &ctx) {
         goals_.push_back(std::move(goal));
       }
     }
-
   }
 
   // ======= スカイドーム生成 =======
@@ -84,6 +100,12 @@ void GameScene::OnEnter(SceneContext &ctx) {
   skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
   sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
   RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+  // カメラ座標に追従
+  sphereT_->translation = camera_.GetWorldPos();
+  // 高さオフセット
+  sphereT_->translation.y -= skydomeTranslateY_;
+  // 自転処理
+  sphereT_->rotation.y += skydomeRotateSpeed_;
 
   // ======= 追従カメラ設定 =======
   if (Transform *pt = RC::GetModelTransformPtr(playerModel)) {
@@ -251,7 +273,10 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
       g->Draw();
   }
 
-  map_.Draw();
+  if (!blockInstances_.empty()) {
+    RC::DrawModelGlassTwoPassBatchColored(blockModel, blockInstances_,
+                                          blockColor_, tx_block);
+  }
 
   // ======= 2D描画準備 =======
   RC::PreDraw2D(ctx, cl);

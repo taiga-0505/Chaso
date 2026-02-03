@@ -116,6 +116,12 @@ public:
                  const std::vector<Transform> &instances,
                  const std::vector<RC::Vector4> &colors);
 
+  // 「Transform配列 + 単色」インスタンス描画
+  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
+                 const RC::Matrix4x4 &proj,
+                 const std::vector<Transform> &instances,
+                 const RC::Vector4 &color);
+
   void DrawImGui(const char *name, bool showLightingUi);
 
   void ResetBatchCursor() {

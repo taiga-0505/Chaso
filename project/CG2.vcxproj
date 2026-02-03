@@ -156,12 +156,18 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Light\Area\AreaLightSource.cpp" />
     <ClCompile Include="engine\Graphics\Light\Spot\SpotLightSource.cpp" />
     <ClCompile Include="engine\Graphics\Primitive3D\Primitive3D.cpp" />
+    <ClCompile Include="engine\Particle\ImpactSpark\ImpactSparkParticle.cpp" />
+    <ClCompile Include="engine\Particle\Laser\LaserParticle.cpp" />
     <ClCompile Include="engine\Render\Light\Area\AreaLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Directional\DirectionalLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Point\PointLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Spot\SpotLightManager.cpp" />
     <ClCompile Include="engine\Render\Model3D\ModelManager.cpp" />
-    <ClCompile Include="engine\Render\RenderCommon.cpp" />
+    <ClCompile Include="engine\Render\RenderCommon.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="engine\Dx12\FixFps\FixFps.cpp" />
     <ClCompile Include="engine\Dx12\PipelineManager.cpp" />
     <ClCompile Include="engine\Dx12\SRVManager\SRVManager.cpp" />
@@ -193,6 +199,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Game\Goal\Goal.cpp" />
     <ClCompile Include="Game\Scene\LightScene\LightScene.cpp" />
     <ClCompile Include="Game\Scene\ParticleScene\ParticleScene.cpp" />
+    <ClCompile Include="Game\StageSelection\StageSelection.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="engine\Common\Math\Math.cpp" />
     <ClCompile Include="engine\Camera\DebugCamera\DebugCamera.cpp" />
@@ -310,6 +317,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Graphics\Light\Area\AreaLightSource.h" />
     <ClInclude Include="engine\Graphics\Light\Spot\SpotLightSource.h" />
     <ClInclude Include="engine\Graphics\Primitive3D\Primitive3D.h" />
+    <ClInclude Include="engine\Particle\ImpactSpark\ImpactSparkParticle.h" />
+    <ClInclude Include="engine\Particle\Laser\LaserParticle.h" />
     <ClInclude Include="engine\Render\Light\Area\AreaLightManager.h" />
     <ClInclude Include="engine\Render\Light\Directional\DirectionalLightManager.h" />
     <ClInclude Include="engine\Render\Light\Point\PointLightManager.h" />
@@ -384,6 +393,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Game\Scene\TitleScene\TitleScene.h" />
     <ClInclude Include="engine\Dx12\ShaderCompiler\ShaderCompiler.h" />
     <ClInclude Include="engine\Graphics\Light\Point\PointLightSource.h" />
+    <ClInclude Include="Game\StageSelection\StageSelection.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

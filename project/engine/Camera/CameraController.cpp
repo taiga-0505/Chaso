@@ -30,7 +30,7 @@ void CameraController::SetTarget(const ::Transform *target) {
 }
 
 void CameraController::SetFollowOffsets(const Vector3 &camOffset,
-                                       const Vector3 &targetOffset) {
+                                        const Vector3 &targetOffset) {
   followParams_.camOffset = camOffset;
   followParams_.targetOffset = targetOffset;
 }
@@ -51,7 +51,7 @@ void CameraController::SetFocusSharpness(float focusSharpness) {
 }
 
 void CameraController::SetFollowYSettings(float deadZoneY, float sharpnessUp,
-                                         float sharpnessDown, float maxSpeed) {
+                                          float sharpnessDown, float maxSpeed) {
   followParams_.deadZoneY = deadZoneY;
   followParams_.ySharpnessUp = sharpnessUp;
   followParams_.ySharpnessDown = sharpnessDown;
@@ -59,7 +59,7 @@ void CameraController::SetFollowYSettings(float deadZoneY, float sharpnessUp,
 }
 
 void CameraController::SetFollowBounds(float left, float right, float bottom,
-                                      float top, bool enable) {
+                                       float top, bool enable) {
   bounds_.left = left;
   bounds_.right = right;
   bounds_.bottom = bottom;
@@ -69,13 +69,16 @@ void CameraController::SetFollowBounds(float left, float right, float bottom,
 
 // TAB 切替と各カメラの更新
 void CameraController::Update(float dt) {
+#ifdef _DEBUG
   // 切替
   if (input_ && input_->IsKeyTrigger(DIK_TAB)) {
     useDebug_ = !useDebug_;
   }
+#endif
 
   if (useDebug_) {
-    if (!(ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard)) {
+    if (!(ImGui::GetIO().WantCaptureMouse ||
+          ImGui::GetIO().WantCaptureKeyboard)) {
       debug_.Update();
     }
   } else {
@@ -114,7 +117,8 @@ void CameraController::UpdateFollow_(float dt) {
   } else {
     // ===== 先読みの現在値をなめらかに =====
     {
-      const float tLA = RC::ExpSmoothingFactor(followParams_.lookAheadSharpness, dt);
+      const float tLA =
+          RC::ExpSmoothingFactor(followParams_.lookAheadSharpness, dt);
       follow_.lookAheadX =
           follow_.lookAheadX + (desiredLookAheadX - follow_.lookAheadX) * tLA;
     }
@@ -136,11 +140,12 @@ void CameraController::UpdateFollow_(float dt) {
     if (std::fabs(dy) > followParams_.deadZoneY) {
       // デッドゾーン外に出たら、ゾーン端までだけ追いかける
       targetY = desiredFocus.y - (dy > 0.0f ? followParams_.deadZoneY
-                                           : -followParams_.deadZoneY);
+                                            : -followParams_.deadZoneY);
     }
 
-    const float sharpY = (targetY > follow_.focus.y) ? followParams_.ySharpnessUp
-                                                    : followParams_.ySharpnessDown;
+    const float sharpY = (targetY > follow_.focus.y)
+                             ? followParams_.ySharpnessUp
+                             : followParams_.ySharpnessDown;
     const float tY = RC::ExpSmoothingFactor(sharpY, dt);
     float newY = follow_.focus.y + (targetY - follow_.focus.y) * tY;
 
@@ -161,7 +166,8 @@ void CameraController::UpdateFollow_(float dt) {
 
   // ===== focus をマップ境界でクランプ =====
   if (bounds_.enabled) {
-    const RC::Vector3 delta = RC::Sub(followParams_.camOffset, followParams_.targetOffset);
+    const RC::Vector3 delta =
+        RC::Sub(followParams_.camOffset, followParams_.targetOffset);
     const float dist =
         std::sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
 
@@ -190,7 +196,8 @@ void CameraController::UpdateFollow_(float dt) {
   follow_.focus = focus;
 
   // ===== カメラ位置を focus から決める（offset維持） =====
-  const RC::Vector3 delta = RC::Sub(followParams_.camOffset, followParams_.targetOffset);
+  const RC::Vector3 delta =
+      RC::Sub(followParams_.camOffset, followParams_.targetOffset);
   const RC::Vector3 desiredPos = RC::Add(focus, delta);
 
   if (!follow_.initialized) {
@@ -257,9 +264,13 @@ void CameraController::DrawImGui() {
 #endif
 }
 
-void CameraController::SetMainPosition(const Vector3 &pos) { main_.SetPosition(pos); }
+void CameraController::SetMainPosition(const Vector3 &pos) {
+  main_.SetPosition(pos);
+}
 
-void CameraController::SetMainRotation(const Vector3 &rot) { main_.SetRotation(rot); }
+void CameraController::SetMainRotation(const Vector3 &rot) {
+  main_.SetRotation(rot);
+}
 
 void CameraController::SetDebugPosition(const Vector3 &pos) {
   debug_.SetPosition(pos);
@@ -268,9 +279,12 @@ void CameraController::SetDebugPosition(const Vector3 &pos) {
   }
 }
 
-void CameraController::SetDebugRotation(const Vector3 &rot) { debug_.SetRotation(rot); }
+void CameraController::SetDebugRotation(const Vector3 &rot) {
+  debug_.SetRotation(rot);
+}
 
-void CameraController::SetDebugTransform(const Vector3 &pos, const Vector3 &rot) {
+void CameraController::SetDebugTransform(const Vector3 &pos,
+                                         const Vector3 &rot) {
   debug_.SetTransform(pos, rot);
   if (useDebug_) {
     worldPos_ = pos;

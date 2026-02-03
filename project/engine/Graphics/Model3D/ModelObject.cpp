@@ -345,7 +345,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances,
-                            const std::vector<RC::Vector4> &colors) {
+                            const RC::Vector4 &color) {
   if (!mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
   }
@@ -375,7 +375,6 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   const uint32_t base = instanceBatchHead_;
   auto *dst = reinterpret_cast<InstanceDataGPU *>(instanceBatchMapped_) + base;
 
-  const uint32_t colorCount = static_cast<uint32_t>(colors.size());
   for (uint32_t i = 0; i < count; ++i) {
     const Transform &tr = instances[i];
 
@@ -384,12 +383,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
     dst[i].World = world;
     dst[i].WVP = Multiply(world, Multiply(view, proj));
     dst[i].WorldInverseTranspose = Transpose(Inverse(world));
-
-    if (i < colorCount) {
-      dst[i].color = colors[i];
-    } else {
-      dst[i].color = {1, 1, 1, 1};
-    }
+    dst[i].color = color;
   }
 
   const D3D12_GPU_VIRTUAL_ADDRESS instAddr =

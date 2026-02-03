@@ -251,6 +251,9 @@
     <ClCompile Include="engine\Render\Sphere\SphereManager.cpp">
       <Filter>engine\Render\Sphere</Filter>
     </ClCompile>
+    <ClCompile Include="Game\StageSelection\StageSelection.cpp" />
+    <ClCompile Include="engine\Particle\Laser\LaserParticle.cpp" />
+    <ClCompile Include="engine\Particle\ImpactSpark\ImpactSparkParticle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -502,6 +505,9 @@
     <ClInclude Include="engine\Render\Sphere\SphereManager.h">
       <Filter>engine\Render\Sphere</Filter>
     </ClInclude>
+    <ClInclude Include="Game\StageSelection\StageSelection.h" />
+    <ClInclude Include="engine\Particle\Laser\LaserParticle.h" />
+    <ClInclude Include="engine\Particle\ImpactSpark\ImpactSparkParticle.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

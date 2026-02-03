@@ -1,9 +1,9 @@
 #include "ParticleScene.h"
+#include "Dx12/Dx12Core.h"
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "imgui/imgui.h"
-#include "Dx12/Dx12Core.h"
 
 void ParticleScene::OnEnter(SceneContext &ctx) {
   // =============================
@@ -27,6 +27,15 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
   explosion_particle_.Initialize(ctx);
   explosion_particle_.SetEmitterAutoSpawn(false);
 
+  laser_particle_.Initialize(ctx);
+
+  impact_particle_.Initialize(ctx);
+  impact_particle_.SetEmitterAutoSpawn(false);
+
+  impactDesc_.interval = 0.03f;
+  impactDesc_.countPerTick = 6;
+  impactDesc_.burstOnStart = 24;
+
   guide = RC::LoadSprite("Resources/guide.png", ctx, true);
   RC::SetSpriteScreenSize(guide, 330, 200);
 }
@@ -38,13 +47,15 @@ void ParticleScene::OnExit(SceneContext &ctx) {
   snow_particle_.Finalize();
   circle_particle_.Finalize();
   explosion_particle_.Finalize();
+  laser_particle_.Finalize();
+  impact_particle_.Finalize();
   RC::UnloadSprite(guide);
   guide = -1;
 }
 
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
-    particle_.DrawImGui();
+  particle_.DrawImGui();
 
   // ===========================================
   // 更新処理
@@ -70,6 +81,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = false;
     isCircle = false;
     isExplosion = false;
+    isLaser = false;
     particle_.RespawnAllMax();
   }
 
@@ -80,6 +92,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = false;
     isCircle = false;
     isExplosion = false;
+    isLaser = false;
     fire_particle_.RespawnAllMax();
   }
 
@@ -90,6 +103,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = false;
     isCircle = false;
     isExplosion = false;
+    isLaser = false;
     rain_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_4)) {
@@ -99,6 +113,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = true;
     isCircle = false;
     isExplosion = false;
+    isLaser = false;
     snow_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_6)) {
@@ -108,6 +123,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = false;
     isCircle = true;
     isExplosion = false;
+    isLaser = false;
     circle_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_5)) {
@@ -117,7 +133,17 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isSnow = false;
     isCircle = false;
     isExplosion = true;
+    isLaser = false;
     explosion_particle_.RespawnAllMax();
+  }
+  if (input->IsKeyTrigger(DIK_7)) {
+    isParticle = false;
+    isFire = false;
+    isRain = false;
+    isSnow = false;
+    isCircle = false;
+    isExplosion = false;
+    isLaser = true;
   }
 
   // IJKL + U/O でエミッタの位置を動かす
@@ -169,10 +195,9 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   }
 
   if (input->IsKeyTrigger(DIK_SPACE)) {
-    RC::Vector3 pos{ 0.0f, 0.0f, 0.0f};
+    RC::Vector3 pos{0.0f, 0.0f, 0.0f};
     explosion_particle_.Trigger(pos);
   }
-
 
   if (isParticle) {
     particle_.Update(view_, proj_);
@@ -191,6 +216,37 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   }
   if (isExplosion) {
     explosion_particle_.Update(view_, proj_);
+  }
+  if (isLaser) {
+    ImGui::Begin("Laser Control");
+    ImGui::DragFloat3("Start", &laserStart_.x, 0.1f);
+    ImGui::DragFloat3("End", &laserEnd_.x, 0.1f);
+    ImGui::DragFloat("Width", &laserWidth_, 0.01f, 0.01f, 10.0f);
+    ImGui::DragFloat("Life", &laserLife_, 0.01f, 0.01f, 10.0f);
+    ImGui::ColorEdit4("Color", &laserColor_.x);
+    ImGui::DragFloat("Segment Spacing", &segmentSpacing_, 0.01f, 0.01f, 1.0f);
+    ImGui::DragFloat("Scroll Speed", &scrollSpeed_, 0.1f, 0.0f, 20.0f);
+    ImGui::DragInt("Max Segments", &maxSegments_, 1, 1, 256);
+
+    ImGui::Separator();
+
+    ImGui::Text("impact particle settings");
+    ImGui::DragFloat("Impact Interval", &impactDesc_.interval, 0.01f, 0.0f,
+                     1.0f);
+    ImGui::DragInt("Count Per Tick", &impactDesc_.countPerTick, 1, 1, 100);
+    ImGui::DragInt("Burst On Start", &impactDesc_.burstOnStart, 1, 0, 100);
+
+    ImGui::End();
+
+    laser_particle_.SetBeam(laserStart_, laserEnd_, laserWidth_, laserLife_,
+                            laserColor_);
+    laser_particle_.SetFlowParams(segmentSpacing_, scrollSpeed_, maxSegments_);
+    laser_particle_.Update(view_, proj_);
+
+    impact_particle_.SetImpactFromBeam(laserStart_, laserEnd_, impactDesc_);
+    impact_particle_.Update(view_, proj_);
+  } else {
+    impact_particle_.StopImpact();
   }
 }
 
@@ -216,6 +272,11 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   if (isExplosion) {
     explosion_particle_.Render(ctx, cl);
   }
+  if (isLaser) {
+    laser_particle_.Render(ctx, cl);
+    impact_particle_.Render(ctx, cl);
+  }
+
   RC::PreDraw2D(ctx, cl);
 
   RC::DrawSprite(guide);

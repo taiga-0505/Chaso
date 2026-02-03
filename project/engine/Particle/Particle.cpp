@@ -233,27 +233,15 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
       const RC::Vector3 &r = p.transform.rotation;
       const RC::Vector3 &t = p.transform.translation;
 
-      Matrix4x4 world{};
-
-      if (useBillboard_) {
-        Matrix4x4 scaleMat = MakeScaleMatrix(s);
-        Matrix4x4 rotateZMat = MakeRotateMatrix(Z, r.z);
-        Matrix4x4 translateMat = MakeTranslateMatrix(t);
-
-        Matrix4x4 sr = Multiply(scaleMat, rotateZMat);
-        Matrix4x4 srb = Multiply(sr, billboardMatrix);
-        world = Multiply(srb, translateMat);
-      } else {
-        world = MakeAffineMatrix(s, r, t);
-      }
+      Matrix4x4 world = BuildWorldMatrix(p, billboardMatrix);
 
       ParticleForGPU wvp{};
       wvp.World = world;
       wvp.WVP = Multiply(world, Multiply(view, proj));
       wvp.color = p.color;
 
-      float alpha = 1.0f - (p.currentTime / p.lifeTime);
-      wvp.color.w = alpha;
+      float alpha = ComputeAlpha(p);
+      wvp.color.w = p.color.w * alpha;
 
       instancingData_[numInstance] = wvp;
       ++numInstance;
@@ -561,6 +549,32 @@ void Particle::InitParticleCore(ParticleData &particle,
   std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
   particle.lifeTime = distTime(randomEngine);
   particle.currentTime = 0.0f;
+}
+
+Matrix4x4 Particle::BuildWorldMatrix(const ParticleData &p,
+                                     const Matrix4x4 &billboardMatrix) const {
+  const Vector3 &s = p.transform.scale;
+  const Vector3 &r = p.transform.rotation;
+  const Vector3 &t = p.transform.translation;
+
+  if (useBillboard_) {
+    Matrix4x4 scaleMat = MakeScaleMatrix(s);
+    Matrix4x4 rotateZMat = MakeRotateMatrix(Z, r.z);
+    Matrix4x4 translateMat = MakeTranslateMatrix(t);
+
+    Matrix4x4 sr = Multiply(scaleMat, rotateZMat);
+    Matrix4x4 srb = Multiply(sr, billboardMatrix);
+    return Multiply(srb, translateMat);
+  }
+  return MakeAffineMatrix(s, r, t);
+}
+
+float Particle::ComputeAlpha(const ParticleData &p) const {
+  if (p.lifeTime <= 0.0f) {
+    return 0.0f;
+  }
+  float t = std::clamp(p.currentTime / p.lifeTime, 0.0f, 1.0f);
+  return 1.0f - t;
 }
 
 void Particle::UpdateOneParticle(ParticleData &p, float dt) {

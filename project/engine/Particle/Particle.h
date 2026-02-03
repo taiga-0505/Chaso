@@ -81,6 +81,16 @@ protected:
                                 std::mt19937 &randomEngine,
                                 const Vector3 &emitterTranslate);
 
+  // 1個分のワールド行列を作る
+  virtual Matrix4x4 BuildWorldMatrix(const ParticleData &p,
+                                     const Matrix4x4 &billboardMatrix) const;
+
+  // フェード用アルファ(0〜1)（デフォルトは 1 - current/life）
+  virtual float ComputeAlpha(const ParticleData &p) const;
+
+  // 派生クラスが「Particle基盤の固定Δt(1/60)」を使えるようにする
+  float GetDeltaTime() const { return deltaTime; }
+
   // 1個分のパーティクル更新
   //  位置や回転、色などを進める処理
   virtual void UpdateOneParticle(ParticleData &particle, float deltaTime);

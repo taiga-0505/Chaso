@@ -32,6 +32,9 @@ private:
   // ==============
   // ======= ブロックモデル =======
   int blockModel = -1;
+  int tx_block = -1;
+  std::vector<Transform> blockInstances_;
+  RC::Vector4 blockColor_ = {0.8f, 0.9f, 1.0f, 0.12f};
   // ======= マップフィールド =======
   MapChipField map_;
   // ブロックサイズ

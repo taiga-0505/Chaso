@@ -17,9 +17,9 @@ void Game::Init(SceneContext &ctx) {
 
   // ここで最初のシーンを決める（Gameの責務）
 #if defined(RC_DEVELOPMENT)
-  const char *boot = "Light";
+  const char *boot = "Select";
 #elif defined(_DEBUG)
-  const char *boot = "Sample";
+  const char *boot = "Particle";
 #else
   const char *boot = "Title";
 #endif
