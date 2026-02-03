@@ -21,7 +21,7 @@ void ResultScene::OnEnter(SceneContext &ctx) {
 
   clearSprite = RC::LoadSprite("Resources/UI/Clear.png", ctx);
 
-  RC::SetSpriteScreenSize(clearSprite, ctx.app->width, ctx.app->height);
+  RC::SetSpriteScreenSize(clearSprite, 1280, 720);
 }
 
 void ResultScene::OnExit(SceneContext &ctx) {}

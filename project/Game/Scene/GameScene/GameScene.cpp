@@ -132,10 +132,10 @@ void GameScene::OnEnter(SceneContext &ctx) {
   isPaused_ = false;
   pauseOverlay_.Init(ctx, (float)ctx.app->width, (float)ctx.app->height);
   pauseSprite = RC::LoadSprite("Resources/UI/Pause.png", ctx);
-  RC::SetSpriteScreenSize(pauseSprite, ctx.app->width, ctx.app->height);
+  RC::SetSpriteScreenSize(pauseSprite, 1280, 720);
 
   keyGuideSprite_ = RC::LoadSprite("Resources/UI/key.png", ctx);
-  RC::SetSpriteScreenSize(keyGuideSprite_, ctx.app->width, ctx.app->height);
+  RC::SetSpriteScreenSize(keyGuideSprite_, 1280, 720);
 }
 
 void GameScene::OnExit(SceneContext &) {
