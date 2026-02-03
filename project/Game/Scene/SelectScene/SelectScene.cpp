@@ -18,6 +18,8 @@ static constexpr float kStageRingRadius = 7.0f;
 static constexpr float kStageRingHeight = 5.0f;
 static constexpr float kStageRingRotateSpeed = 4.0f;
 static constexpr float kTwoPi = std::numbers::pi_v<float> * 2.0f;
+static constexpr float kGuideOffsetX = 2.0f;
+static constexpr float kRingStopEpsilon = 0.001f;
 
 static void UpdateStageRing(Transform *stageTransforms[], float ringAngle) {
   const float step = kTwoPi / static_cast<float>(SelectScene::kStageMax);
@@ -71,6 +73,14 @@ void SelectScene::OnEnter(SceneContext &ctx) {
   ringAngle_ = -static_cast<float>(selectStage) * step;
   ringTargetAngle_ = ringAngle_;
   UpdateStageRing(stageTransforms, ringAngle_);
+
+  AModel = RC::LoadModel("Resources/model/A");
+  ATransform = RC::GetModelTransformPtr(AModel);
+  ATransform->scale = {0.5f, 0.5f, 0.5f};
+
+  DModel = RC::LoadModel("Resources/model/D");
+  DTransform = RC::GetModelTransformPtr(DModel);
+  DTransform->scale = {0.5f, 0.5f, 0.5f};
 }
 
 void SelectScene::OnExit(SceneContext &ctx) {}
@@ -134,6 +144,16 @@ void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   UpdateStageRing(stageTransforms, ringAngle_);
 
+  isRingRotating_ =
+      std::abs(ringTargetAngle_ - ringAngle_) > kRingStopEpsilon;
+
+  Transform *centerStage = stageTransforms[selectStage];
+  if (centerStage && ATransform && DTransform) {
+    const auto base = centerStage->translation;
+    ATransform->translation = {base.x - kGuideOffsetX, base.y, base.z};
+    DTransform->translation = {base.x + kGuideOffsetX, base.y, base.z};
+  }
+
   if (ctx.input->IsKeyTrigger(DIK_SPACE)) {
     StageSelection::SetCsvPath(kStageCsvPaths[selectStage]);
     sm.RequestChange("Game");
@@ -147,6 +167,11 @@ void SelectScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   for (int i = 0; i < kStageMax; ++i) {
     RC::DrawModel(stageModels[i]);
+  }
+
+  if (!isRingRotating_) {
+    RC::DrawModel(AModel);
+    RC::DrawModel(DModel);
   }
 
   RC::PreDraw2D(ctx, cl);

@@ -42,4 +42,11 @@ private:
 
   float ringAngle_ = 0.0f;
   float ringTargetAngle_ = 0.0f;
+  bool isRingRotating_ = false;
+
+  int AModel = -1;
+  Transform *ATransform = nullptr;
+
+  int DModel = -1;
+  Transform *DTransform = nullptr;
 };

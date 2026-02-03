@@ -68,7 +68,7 @@ void TitleScene::Update(SceneManager &sm, SceneContext &ctx) {
   }
 
   if (ctx.input->IsKeyTrigger(DIK_SPACE)) {
-    sm.RequestChange("Game");
+    sm.RequestChange("Select");
   }
 }
 
