@@ -28,6 +28,8 @@ private:
   // ======= カメラコントローラ =======
   RC::CameraController camera_;
 
+  int keyGuideSprite_ = -1;
+
   // ==============
   // ブロック・マップ関連
   // ==============
@@ -80,4 +82,5 @@ private:
   bool isPaused_ = false;
   Fade pauseOverlay_;
   float pauseOverlayAlpha_ = 0.55f;
+  int pauseSprite = -1;
 };

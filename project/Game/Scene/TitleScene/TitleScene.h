@@ -33,4 +33,11 @@ private:
   int titleModel = -1;
   Transform *titleT_ = nullptr;
   int frameCount = 0;
+
+  // ==============
+  // UI
+  // ==============
+
+  int guideSprite = -1;
+
 };

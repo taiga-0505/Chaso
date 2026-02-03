@@ -18,6 +18,10 @@ void ResultScene::OnEnter(SceneContext &ctx) {
   skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
   sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
   RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+
+  clearSprite = RC::LoadSprite("Resources/UI/Clear.png", ctx);
+
+  RC::SetSpriteScreenSize(clearSprite, ctx.app->width, ctx.app->height);
 }
 
 void ResultScene::OnExit(SceneContext &ctx) {}
@@ -55,4 +59,7 @@ void ResultScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawSphere(skydomeModel);
 
   RC::PreDraw2D(ctx, cl);
+
+  RC::DrawSprite(clearSprite);
+
 }

@@ -87,7 +87,7 @@ void SelectScene::OnExit(SceneContext &ctx) {}
 
 void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
 
-#ifdef RC_ENABLE_IMGUI
+#if RC_ENABLE_IMGUI
 
   ImGui::Begin("Stage Select");
   ImGui::Text("Use A/D to select stage.");
@@ -96,7 +96,7 @@ void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
   ImGui::Text("Selected Stage: %d", selectStage + 1);
   ImGui::End();
 
-#endif //
+#endif
 
   // ======= カメラ更新 =======
   // 固定デルタタイム

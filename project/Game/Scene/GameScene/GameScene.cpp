@@ -34,7 +34,6 @@ void GameScene::OnEnter(SceneContext &ctx) {
   player_->Init(playerModel, ctx);
   player_->SetMap(&map_);
 
-  
   blockInstances_.clear();
   if (const auto *def = map_.FindTileDef(MapChipField::kBlock)) {
     const float s = map_.BlockSize() * (def->scale <= 0.0f ? 1.0f : def->scale);
@@ -132,6 +131,11 @@ void GameScene::OnEnter(SceneContext &ctx) {
   // ======= ポーズ用オーバーレイ初期化 =======
   isPaused_ = false;
   pauseOverlay_.Init(ctx, (float)ctx.app->width, (float)ctx.app->height);
+  pauseSprite = RC::LoadSprite("Resources/UI/Pause.png", ctx);
+  RC::SetSpriteScreenSize(pauseSprite, ctx.app->width, ctx.app->height);
+
+  keyGuideSprite_ = RC::LoadSprite("Resources/UI/key.png", ctx);
+  RC::SetSpriteScreenSize(keyGuideSprite_, ctx.app->width, ctx.app->height);
 }
 
 void GameScene::OnExit(SceneContext &) {
@@ -277,7 +281,7 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
       if (dx < 0.6f && dy < 0.6f) {
         reachedGoal_ = true;
         g->Reach();
-        sm.RequestChange("Title");
+        sm.RequestChange("Result");
         break;
       }
     }
@@ -322,8 +326,12 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // ======= 2D描画準備 =======
   RC::PreDraw2D(ctx, cl);
 
+  // ======= キーガイド表示 =======
+  RC::DrawSprite(keyGuideSprite_);
+
   // ポーズ中だけ黒い半透明を上に貼る
   if (isPaused_) {
     pauseOverlay_.Draw(cl);
+    RC::DrawSprite(pauseSprite);
   }
 }

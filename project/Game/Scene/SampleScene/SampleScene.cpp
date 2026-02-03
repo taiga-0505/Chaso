@@ -112,7 +112,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   // ImGui
   // ===========================================
 
-#ifdef RC_ENABLE_IMGUI
+#if RC_ENABLE_IMGUI
 
   DrawImGui();
   RC::SetModelColor(blockModel, blockColor_);

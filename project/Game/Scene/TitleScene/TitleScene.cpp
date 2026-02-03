@@ -29,6 +29,10 @@ void TitleScene::OnEnter(SceneContext &ctx) {
   skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
   sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
   RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+
+  guideSprite = RC::LoadSprite("Resources/UI/Guide.png",ctx);
+  RC::SetSpriteScreenSize(guideSprite, 1280, 720);
+  RC::SetSpriteColor(guideSprite, {1.0f, 1.0f, 1.0f, 0.9f});
 }
 
 void TitleScene::OnExit(SceneContext &ctx) {
@@ -67,6 +71,12 @@ void TitleScene::Update(SceneManager &sm, SceneContext &ctx) {
     sphereT_->rotation.y += 0.0005f;
   }
 
+  if (guideSprite >= 0) {
+    const float t = frameCount * 0.05f;
+    const float alpha = 0.35f + (std::sin(t) * 0.5f + 0.5f) * 0.55f;
+    RC::SetSpriteColor(guideSprite, {1.0f, 1.0f, 1.0f, alpha});
+  }
+
   if (ctx.input->IsKeyTrigger(DIK_SPACE)) {
     sm.RequestChange("Select");
   }
@@ -81,4 +91,6 @@ void TitleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawModel(titleModel);
 
   RC::PreDraw2D(ctx, cl);
+
+  RC::DrawSprite(guideSprite);
 }

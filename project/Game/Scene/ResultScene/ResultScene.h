@@ -28,4 +28,6 @@ private:
   int txSphere_ = -1;
   // ======= トランスフォーム参照 =======
   Transform *sphereT_ = nullptr;
+
+  int clearSprite = -1;
 };
