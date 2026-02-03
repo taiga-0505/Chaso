@@ -8,6 +8,7 @@
 #include "Coin/Coin.h"
 #include <vector>
 #include "Goal/Goal.h"
+#include "Fade/Fade.h"
 
 class GameScene final : public Scene {
 public:
@@ -72,4 +73,11 @@ private:
   float skydomeRotateSpeed_ = 0.0005f;
   // ======= トランスフォーム参照 =======
   Transform *sphereT_ = nullptr;
+
+  // ==============
+  // ポーズ関連
+  // ==============
+  bool isPaused_ = false;
+  Fade pauseOverlay_;
+  float pauseOverlayAlpha_ = 0.55f;
 };

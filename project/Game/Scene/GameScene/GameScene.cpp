@@ -128,6 +128,10 @@ void GameScene::OnEnter(SceneContext &ctx) {
     const bool enable = (map_.Width() > 0 && map_.Height() > 0);
     camera_.SetFollowBounds(left, right, bottom, top, enable);
   }
+
+  // ======= ポーズ用オーバーレイ初期化 =======
+  isPaused_ = false;
+  pauseOverlay_.Init(ctx, (float)ctx.app->width, (float)ctx.app->height);
 }
 
 void GameScene::OnExit(SceneContext &) {
@@ -150,6 +154,9 @@ void GameScene::OnExit(SceneContext &) {
     RC::UnloadModel(g->ModelHandle());
   }
   goals_.clear();
+
+  // ポーズ用スプライト破棄
+  pauseOverlay_.Term();
 }
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -159,6 +166,40 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   camera_.DrawImGui();
   RC::DrawImGui3D(blockModel, "block");
 #endif
+
+  // =========================================================
+  // ポーズ切り替え（ESC）
+  // =========================================================
+  if (ctx.input->IsKeyTrigger(DIK_ESCAPE)) {
+    isPaused_ = !isPaused_;
+
+    if (isPaused_) {
+      // 黒い半透明を貼る
+      pauseOverlay_.Start(Fade::Status::kOverlay, 0.0f, pauseOverlayAlpha_);
+    } else {
+      // 解除（描画しないので Stop は必須じゃないけど、気持ちよく）
+      pauseOverlay_.Stop();
+    }
+  }
+
+  // =========================================================
+  // ポーズ中：ゲーム更新を止める
+  // =========================================================
+  if (isPaused_) {
+    // overlayは固定表示だけど、呼んでもOK
+    pauseOverlay_.Update();
+
+    // カメラは止める（Updateしない）
+    // ただし描画用に SetCamera は毎フレーム流しておくと安心
+    view_ = camera_.GetView();
+    proj_ = camera_.GetProjection();
+    RC::SetCamera(view_, proj_, camera_.GetWorldPos());
+    return;
+  }
+
+  // ===========================================
+  // 更新処理
+  // ===========================================
 
   // ======= スカイドーム更新 =======
   if (sphereT_) {
@@ -280,4 +321,9 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   // ======= 2D描画準備 =======
   RC::PreDraw2D(ctx, cl);
+
+  // ポーズ中だけ黒い半透明を上に貼る
+  if (isPaused_) {
+    pauseOverlay_.Draw(cl);
+  }
 }
