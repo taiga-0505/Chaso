@@ -34,9 +34,11 @@ private:
   float laserWidth_ = 0.2f;
   float laserLife_ = 0.05f;
   RC::Vector4 laserColor_ = {0.2f, 0.9f, 1.0f, 1.0f};
-  float segmentSpacing_ = 0.15f;
-  float scrollSpeed_ = 6.0f;
-  int maxSegments_ = 64;
+  int streakCount_ = 120;
+  float streakMinLen_ = 0.15f;
+  float streakMaxLen_ = 0.8f;
+  float streakWidth_ = 0.03f;
+  float streakSpreadZRatio_ = 0.15f;
 
   RC::ImpactSparkParticle impact_particle_;
   RC::ImpactEmitDesc impactDesc_;

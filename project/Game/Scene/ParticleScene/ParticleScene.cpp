@@ -224,9 +224,15 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     ImGui::DragFloat("Width", &laserWidth_, 0.01f, 0.01f, 10.0f);
     ImGui::DragFloat("Life", &laserLife_, 0.01f, 0.01f, 10.0f);
     ImGui::ColorEdit4("Color", &laserColor_.x);
-    ImGui::DragFloat("Segment Spacing", &segmentSpacing_, 0.01f, 0.01f, 1.0f);
-    ImGui::DragFloat("Scroll Speed", &scrollSpeed_, 0.1f, 0.0f, 20.0f);
-    ImGui::DragInt("Max Segments", &maxSegments_, 1, 1, 256);
+    ImGui::Separator();
+
+    ImGui::Text("streak settings");
+    ImGui::DragInt("Streak Count", &streakCount_, 1, 1, 500);
+    ImGui::DragFloat("Streak Min Length", &streakMinLen_, 0.01f, 0.01f, 10.0f);
+    ImGui::DragFloat("Streak Max Length", &streakMaxLen_, 0.01f, 0.01f, 10.0f);
+    ImGui::DragFloat("Streak Width", &streakWidth_, 0.001f, 0.001f, 1.0f);
+    ImGui::DragFloat("Streak Spread Z Ratio", &streakSpreadZRatio_, 0.01f, 0.0f,
+                     1.0f);
 
     ImGui::Separator();
 
@@ -238,9 +244,17 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
     ImGui::End();
 
+    laser_particle_.SetStyle(RC::LaserParticle::Style::Streak);
+    laser_particle_.SetStreakParams(
+        streakCount_,       // streakCount
+        streakMinLen_,      // minLen
+        streakMaxLen_,      // maxLen
+        streakWidth_,       // streakWidth（細さ）
+        streakSpreadZRatio_ // spreadZRatio（奥行き散らし、縦筋なら小さめがオススメ）
+    );
+
     laser_particle_.SetBeam(laserStart_, laserEnd_, laserWidth_, laserLife_,
                             laserColor_);
-    laser_particle_.SetFlowParams(segmentSpacing_, scrollSpeed_, maxSegments_);
     laser_particle_.Update(view_, proj_);
 
     impact_particle_.SetImpactFromBeam(laserStart_, laserEnd_, impactDesc_);
