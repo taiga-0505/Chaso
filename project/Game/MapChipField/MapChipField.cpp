@@ -59,6 +59,8 @@ bool MapChipField::LoadFromCSV(const std::string &csvPath) {
   playerSpawn_.reset();
   enemySpawns_.clear();
   coinSpawns_.clear();
+  goalSpawns_.clear();
+  blockSpawns_.clear();
 
   for (int csvY = 0; csvY < height_; ++csvY) {
     const int y =

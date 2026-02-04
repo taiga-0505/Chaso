@@ -5,12 +5,29 @@
 
 class GameOverScene final : public Scene {
 public:
-	const char* Name() const override { return "GameOver"; }
-	void OnEnter(SceneContext& ctx) override;
-	void OnExit(SceneContext&) override;
-	void Update(SceneManager& sm, SceneContext& ctx) override;
-	void Render(SceneContext& ctx, ID3D12GraphicsCommandList* cl) override;
+  const char *Name() const override { return "GameOver"; }
+  void OnEnter(SceneContext &);
+  void OnExit(SceneContext &);
+  void Update(SceneManager &sm, SceneContext &ctx) override;
+  void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
 
 private:
-	int selected_ = 0; // 0=Retry, 1=Select
+  // ==============
+  // カメラ関連
+  // ==============
+  // ======= ビュー/プロジェクション行列 =======
+  RC::Matrix4x4 view_, proj_;
+  // ======= カメラコントローラ =======
+  RC::CameraController camera_;
+
+  // ==============
+  // スカイドーム関連
+  // ==============
+  // ======= モデルとテクスチャ =======
+  int skydomeModel = -1;
+  int txSphere_ = -1;
+  // ======= トランスフォーム参照 =======
+  Transform *sphereT_ = nullptr;
+
+  int gameOverSprite = -1;
 };

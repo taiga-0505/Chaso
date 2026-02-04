@@ -29,3 +29,4 @@
 #include "Explosion/ExplosionParticle.h"
 #include "Laser/LaserParticle.h"
 #include "ImpactSpark/ImpactSparkParticle.h"
+#include "wind/WindParticle.h"

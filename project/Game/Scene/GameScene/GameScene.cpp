@@ -164,8 +164,6 @@ void GameScene::OnExit(SceneContext &) {
 }
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
-  (void)sm;
-
 #if RC_ENABLE_IMGUI
   camera_.DrawImGui();
   RC::DrawImGui3D(blockModel, "block");
@@ -227,6 +225,20 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   for (auto &g : goals_) {
     if (g)
       g->Update();
+  }
+
+  // ======= 落下判定 =======
+  if (map_.Height() > 0) {
+    const float s = map_.BlockSize();
+    const float half = s * 0.5f;
+    const float bottom = -half;
+    const float fallOutMargin = s * 2.0f;
+    const float fallOutY = bottom - fallOutMargin;
+
+    if (player_->GetWorldPos().y < fallOutY) {
+      sm.RequestChange("GameOver");
+      return;
+    }
   }
 
   // ======= コイン取得判定 =======
