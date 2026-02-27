@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <d3d12.h>
+#include <wrl/client.h>
 #include <vector>
 
 enum BlendMode {
@@ -98,12 +99,12 @@ public:
   /// <summary>
   /// ルートシグネチャを取得する
   /// </summary>
-  ID3D12RootSignature *Root() const { return root_; }
+  ID3D12RootSignature *Root() const { return root_.Get(); }
 
   /// <summary>
   /// PSO を取得する
   /// </summary>
-  ID3D12PipelineState *PSO() const { return pso_; }
+  ID3D12PipelineState *PSO() const { return pso_.Get(); }
 
 private:
   void
@@ -114,7 +115,7 @@ private:
                  D3D12_FILL_MODE fill);
 
 private:
-  ID3D12Device *device_ = nullptr;      // 非所有
-  ID3D12RootSignature *root_ = nullptr; // 所有
-  ID3D12PipelineState *pso_ = nullptr;  // 所有
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;      // 非所有
+  Microsoft::WRL::ComPtr<ID3D12RootSignature> root_; // 所有
+  Microsoft::WRL::ComPtr<ID3D12PipelineState> pso_;  // 所有
 };

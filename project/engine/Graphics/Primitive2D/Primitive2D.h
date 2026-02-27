@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <d3d12.h>
+#include <wrl/client.h>
 
 #include "Math/Math.h"
 #include "function/function.h" // CreateBufferResource
@@ -53,12 +54,12 @@ public:
 
 private:
   struct VB {
-    ID3D12Resource *res = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> res;
     D3D12_VERTEX_BUFFER_VIEW view{};
   };
 
   template <class T> struct CB {
-    ID3D12Resource *res = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> res;
     T *map = nullptr;
   };
 
@@ -98,12 +99,12 @@ private:
   Params paramsCPU_{};
 
   // リング化したCB
-  ID3D12Resource *cbParamsRes_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbParamsRes_;
   uint8_t *cbParamsMap_ = nullptr;
   uint32_t cbStride_ = 0;
   uint32_t cbCursor_ = 0;
 
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   float screenW_ = 0.0f;
   float screenH_ = 0.0f;
 

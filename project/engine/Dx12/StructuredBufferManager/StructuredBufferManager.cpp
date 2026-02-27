@@ -16,7 +16,7 @@ void StructuredBufferManager::Term() {
     Destroy(i);
   }
   entries_.clear();
-  device_ = nullptr;
+  device_.Reset();
   srvMgr_ = nullptr;
 }
 
@@ -43,7 +43,7 @@ StructuredBufferManager::Create(UINT elementCount, UINT strideBytes) {
   resDesc.SampleDesc.Count = 1;
   resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-  ID3D12Resource *resource = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> resource;
   HRESULT hr = device_->CreateCommittedResource(
       &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
       D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource));
@@ -52,7 +52,7 @@ StructuredBufferManager::Create(UINT elementCount, UINT strideBytes) {
   // ---- 2) SRV 作成（SRVManager 経由）----
   // ここで index / CPU / GPU ハンドルまで全部揃う
   auto handle =
-      srvMgr_->CreateStructuredBuffer(resource, elementCount, strideBytes);
+      srvMgr_->CreateStructuredBuffer(resource.Get(), elementCount, strideBytes);
 
   // ---- 3) 登録 ----
   Entry entry{};
@@ -101,7 +101,7 @@ StructuredBufferManager::GetSrv(BufferID id) const {
 ID3D12Resource *StructuredBufferManager::GetResource(BufferID id) const {
   if (id < 0 || static_cast<size_t>(id) >= entries_.size())
     return nullptr;
-  return entries_[id].resource;
+  return entries_[id].resource.Get();
 }
 
 void StructuredBufferManager::Destroy(BufferID id) {
@@ -124,8 +124,7 @@ void StructuredBufferManager::Destroy(BufferID id) {
 
   // リソース破棄
   if (e.resource) {
-    e.resource->Release();
-    e.resource = nullptr;
+    e.resource.Reset();
   }
 
   e.stride = 0;

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <d3d12.h>
+#include <wrl/client.h>
 
 #include "Math/Math.h"
 #include "function/function.h"
@@ -29,10 +30,10 @@ private:
   void Release_();
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
-  ID3D12Resource *vb_ = nullptr;
-  ID3D12Resource *ib_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> vb_;
+  Microsoft::WRL::ComPtr<ID3D12Resource> ib_;
 
   D3D12_VERTEX_BUFFER_VIEW vbv_{};
   D3D12_INDEX_BUFFER_VIEW ibv_{};

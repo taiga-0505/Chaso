@@ -1,8 +1,10 @@
 #pragma once
 #include <cstdint>
 #include <d3d12.h>
+#include <d3d12.h>
 #include <memory>
 #include <string>
+#include <wrl/client.h>
 
 #include "Math/Math.h"
 #include "function/function.h"
@@ -41,18 +43,18 @@ public:
 
 private:
   struct CBW {
-    ID3D12Resource *res = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> res;
     TransformationMatrix *map = nullptr;
   };
   struct CBM {
-    ID3D12Resource *res = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> res;
     SpriteMaterial *map = nullptr;
   };
 
   void Release();
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
   // 共通メッシュ（VB/IB）はここで共有
   std::shared_ptr<SpriteMesh2D> mesh_;

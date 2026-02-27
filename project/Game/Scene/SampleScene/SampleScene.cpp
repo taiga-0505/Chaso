@@ -71,6 +71,9 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // =============================
 
   sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
+  RC::SetSpriteTransform(
+      sprite, {{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 0.0f}});
+  RC::SetSpriteScreenSize(sprite, 500.0f, 100.0f);
 }
 
 void SampleScene::OnExit(SceneContext &) {

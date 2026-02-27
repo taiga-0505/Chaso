@@ -6,6 +6,7 @@
 #include <dinput.h>
 #include <windows.h>
 #include <Xinput.h>
+#include <wrl/client.h>
 #pragma comment(lib, "xinput.lib")
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -16,7 +17,7 @@ public:
   Input(HWND hwnd);
   ~Input();
 
-  IDirectInput8 *directInput = nullptr;
+  Microsoft::WRL::ComPtr<IDirectInput8> directInput;
 
   void Update(); // 毎フレーム呼び出す関数
 
@@ -24,7 +25,7 @@ public:
   // キーボード入力
   // ============================
 
-  IDirectInputDevice8 *keyboard = nullptr;
+  Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard;
 
   BYTE key[256] = {};    // 256キーの状態を保持
   BYTE preKey[256] = {}; // 前フレームのキー状態を保持
@@ -38,7 +39,7 @@ public:
   // マウス入力
   // ============================
 
-  IDirectInputDevice8 *mouse = nullptr;
+  Microsoft::WRL::ComPtr<IDirectInputDevice8> mouse;
 
   DIMOUSESTATE mouseState = {};   // マウス状態
   DIMOUSESTATE preMouseState = {};// 前フレームのマウス状態

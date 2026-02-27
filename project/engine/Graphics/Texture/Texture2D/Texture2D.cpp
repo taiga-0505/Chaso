@@ -1,4 +1,4 @@
-#include "Texture2D.h"
+﻿#include "Texture2D.h"
 #include "DescriptorHeap/DescriptorHeap.h"
 #include "DescriptorHeap/DescriptorHelpers.h"
 #include "function/function.h"
@@ -80,7 +80,7 @@ void Texture2D::LoadFromFile(SRVManager &srv, const std::string &path,
   }
 
   // ---- SRV作成 ----
-  srv_ = srv.CreateTexture2D(resource_, metadata_.format,
+  srv_ = srv.CreateTexture2D(resource_.Get(), metadata_.format,
                              (UINT)metadata_.mipLevels);
   path_ = path;
 }
@@ -93,8 +93,7 @@ void Texture2D::Term(SRVManager *srv) {
   }
 #endif
   if (resource_) {
-    resource_->Release();
-    resource_ = nullptr;
+    resource_.Reset();
   }
   if (srv && srv_.IsValid()) {
     // ※GPUが参照し終わったタイミングで呼ぶのが前提（終了時ならOK）

@@ -19,7 +19,7 @@ void Game::Init(SceneContext &ctx) {
 #if defined(RC_DEVELOPMENT)
   const char *boot = "Select";
 #elif defined(_DEBUG)
-  const char *boot = "Game";
+  const char *boot = "Sample";
 #else
   const char *boot = "Title";
 #endif

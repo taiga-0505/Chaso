@@ -3,6 +3,7 @@
 #include <cassert>
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <wrl/client.h>
 
 class SwapChain {
 public:
@@ -25,12 +26,12 @@ public:
   UINT CurrentBackBufferIndex() const {
     return swap_->GetCurrentBackBufferIndex();
   }
-  ID3D12Resource *BackBuffer(UINT i) const { return backBuffers_[i]; }
+  ID3D12Resource *BackBuffer(UINT i) const { return backBuffers_[i].Get(); }
   D3D12_CPU_DESCRIPTOR_HANDLE RtvAt(UINT i) const { return rtv_[i]; }
   UINT FrameCount() const { return frameCount_; }
   DXGI_FORMAT Format() const { return format_; }
   IDXGISwapChain4 *Raw() const {
-    return swap_;
+    return swap_.Get();
   } // （ImGui Init 時などで必要なら）
 
 private:
@@ -39,15 +40,15 @@ private:
   void createBackBufferRTVs();
 
 private:
-  IDXGIFactory6 *factory_ = nullptr;    // 非所有
-  ID3D12Device *device_ = nullptr;      // 非所有
-  ID3D12CommandQueue *queue_ = nullptr; // 非所有
-  IDXGISwapChain4 *swap_ = nullptr;     // 所有
+  Microsoft::WRL::ComPtr<IDXGIFactory6> factory_;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
+  Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue_;
+  Microsoft::WRL::ComPtr<IDXGISwapChain4> swap_;
 
-  std::array<ID3D12Resource *, kMaxFrames> backBuffers_{};
+  std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, kMaxFrames> backBuffers_{};
   std::array<D3D12_CPU_DESCRIPTOR_HANDLE, kMaxFrames> rtv_{};
 
-  ID3D12DescriptorHeap *rtvHeap_ = nullptr; // 非所有
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap_;
   UINT rtvInc_ = 0;
 
   UINT width_ = 0, height_ = 0;

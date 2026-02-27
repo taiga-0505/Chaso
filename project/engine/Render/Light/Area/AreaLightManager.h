@@ -4,6 +4,7 @@
 #include <array>
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 namespace RC {
 
@@ -61,7 +62,7 @@ private:
   void SyncCB_(); // active list を詰めて mapped_ にコピー
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   bool initialized_ = false;
 
   std::vector<Slot> slots_;
@@ -71,7 +72,7 @@ private:
   int activeCount_ = 0;
 
   // GPU CB (single)
-  ID3D12Resource *cb_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> cb_;
   ::AreaLightsCB *mapped_ = nullptr;
 };
 

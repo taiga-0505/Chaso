@@ -1,4 +1,4 @@
-#include "SpriteMesh2D.h"
+﻿#include "SpriteMesh2D.h"
 
 static void WriteQuadVertices_(ID3D12Resource *vb) {
   SpriteVertex *v = nullptr;
@@ -38,12 +38,10 @@ SpriteMesh2D::~SpriteMesh2D() { Release_(); }
 
 void SpriteMesh2D::Release_() {
   if (vb_) {
-    vb_->Release();
-    vb_ = nullptr;
+    vb_.Reset();
   }
   if (ib_) {
-    ib_->Release();
-    ib_ = nullptr;
+    ib_.Reset();
   }
   device_ = nullptr;
   vbv_ = {};
@@ -55,15 +53,15 @@ bool SpriteMesh2D::Initialize(ID3D12Device *device) {
   device_ = device;
 
   // VB (4頂点)
-  vb_ = CreateBufferResource(device_, sizeof(SpriteVertex) * 4);
-  WriteQuadVertices_(vb_);
+  vb_ = CreateBufferResource(device_.Get(), sizeof(SpriteVertex) * 4);
+  WriteQuadVertices_(vb_.Get());
   vbv_.BufferLocation = vb_->GetGPUVirtualAddress();
   vbv_.SizeInBytes = sizeof(SpriteVertex) * 4;
   vbv_.StrideInBytes = sizeof(SpriteVertex);
 
   // IB (6 index)
-  ib_ = CreateBufferResource(device_, sizeof(uint32_t) * 6);
-  WriteQuadIndices_(ib_);
+  ib_ = CreateBufferResource(device_.Get(), sizeof(uint32_t) * 6);
+  WriteQuadIndices_(ib_.Get());
   ibv_.BufferLocation = ib_->GetGPUVirtualAddress();
   ibv_.SizeInBytes = sizeof(uint32_t) * 6;
   ibv_.Format = DXGI_FORMAT_R32_UINT;

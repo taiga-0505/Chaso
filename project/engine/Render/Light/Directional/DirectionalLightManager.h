@@ -4,6 +4,7 @@
 
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 namespace RC {
 
@@ -75,7 +76,7 @@ private:
     DirectionalLightSource light;
 
     // Upload CB for this light (b1).
-    ID3D12Resource *cb = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> cb;
     DirectionalLight *mapped = nullptr;
 
     bool inUse = false;
@@ -90,7 +91,7 @@ private:
   void SyncCB_(Slot &s);
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   std::vector<Slot> slots_;
 
   // -1 = 明示的なアクティブ無し（default slot を使う）

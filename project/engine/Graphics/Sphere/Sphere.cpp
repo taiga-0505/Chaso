@@ -1,4 +1,4 @@
-#include "Sphere.h"
+﻿#include "Sphere.h"
 #include "Math/Math.h"
 #include "imgui/imgui.h"
 #include <cassert>
@@ -11,16 +11,11 @@
 using namespace RC;
 
 Sphere::~Sphere() {
-  if (vb_.resource)
-    vb_.resource->Release();
-  if (ib_.resource)
-    ib_.resource->Release();
-  if (cbWvp_.resource)
-    cbWvp_.resource->Release();
-  if (cbMat_.resource)
-    cbMat_.resource->Release();
-  if (cbLight_.resource)
-    cbLight_.resource->Release();
+  vb_.resource.Reset();
+  ib_.resource.Reset();
+  cbWvp_.resource.Reset();
+  cbMat_.resource.Reset();
+  cbLight_.resource.Reset();
 }
 
 void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
@@ -34,21 +29,21 @@ void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
   UploadIB_();
 
   // CB: WVP
-  cbWvp_.resource = CreateBufferResource(device_, sizeof(TransformationMatrix));
+  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix));
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
   cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // CB: Material
-  cbMat_.resource = CreateBufferResource(device_, sizeof(Material));
+  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material));
   cbMat_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.mapped));
   cbMat_.mapped->color = {1, 1, 1, 1};
   cbMat_.mapped->uvTransform = MakeIdentity4x4();
   cbMat_.mapped->lightingMode = 2; // HalfLambert 既定
 
   // CB: Light（球ごとに持つ）
-  cbLight_.resource = CreateBufferResource(device_, sizeof(DirectionalLight));
+  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight));
   cbLight_.resource->Map(0, nullptr,
                          reinterpret_cast<void **>(&cbLight_.mapped));
   cbLight_.mapped->color = {1, 1, 1, 1};
@@ -254,7 +249,7 @@ void Sphere::UploadVB_() {
     return;
 
   const UINT sizeBytes = UINT(sizeof(VertexData) * vb_.vertexCount);
-  vb_.resource = CreateBufferResource(device_, sizeBytes);
+  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes);
 
   void *mapped = nullptr;
   vb_.resource->Map(0, nullptr, &mapped);

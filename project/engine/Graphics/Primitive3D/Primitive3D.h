@@ -3,6 +3,7 @@
 #include <cstring>
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 #include "GraphicsPipeline/GraphicsPipeline.h" // BlendMode
 #include "Math/Math.h"
@@ -115,7 +116,7 @@ private:
   void EnsureVB_(size_t vertexCount);
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
   // vertices
   std::vector<Vertex> vtxDepth_;
@@ -126,13 +127,13 @@ private:
   BlendMode blendAt3D_ = kBlendModeNone;
 
   // VB
-  ID3D12Resource *vb_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> vb_;
   Vertex *vbMap_ = nullptr;
   size_t vbCapacity_ = 0; // vertex count
   D3D12_VERTEX_BUFFER_VIEW vbView_{};
 
   // CB ring
-  ID3D12Resource *cbRes_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbRes_;
   uint8_t *cbMap_ = nullptr;
   uint32_t cbStride_ = 0;
   uint32_t cbCursor_ = 0;

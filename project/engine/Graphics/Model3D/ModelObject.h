@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <wrl/client.h>
 
 class TextureManager; // 前方宣言
 
@@ -131,15 +132,15 @@ public:
 
 private:
   struct CB_WVP {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     TransformationMatrix *mapped = nullptr;
   };
   struct CB_Material {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     Material *mapped = nullptr;
   };
   struct CB_Light {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     DirectionalLight *mapped = nullptr;
   };
 
@@ -161,12 +162,12 @@ private:
     RC::Vector4 color;
   };
 
-  ID3D12Resource *instanceBatch_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> instanceBatch_;
   uint32_t instanceBatchCapacity_ = 0;
   uint8_t *instanceBatchMapped_ = nullptr;
   uint32_t instanceBatchHead_ = 0;
 
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   std::shared_ptr<ModelMesh> mesh_;
 
   CB_WVP cbWvp_{};
@@ -183,7 +184,7 @@ private:
   bool visible_ = true;
 
   // DrawItem用：複数DrawでCBを上書きしないためのリング（upload）
-  ID3D12Resource *cbWvpBatch_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbWvpBatch_;
   uint32_t cbWvpBatchCapacity_ = 0;
   uint8_t *cbWvpBatchMapped_ = nullptr;
   uint32_t cbWvpBatchHead_ = 0;

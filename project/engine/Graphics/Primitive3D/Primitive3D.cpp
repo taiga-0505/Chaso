@@ -1,4 +1,4 @@
-#include "Primitive3D.h"
+﻿#include "Primitive3D.h"
 #include <cassert>
 #include <cmath>
 
@@ -86,19 +86,17 @@ void Primitive3D::Term() {
   if (vb_) {
     if (vbMap_)
       vb_->Unmap(0, nullptr);
-    vb_->Release();
-    vb_ = nullptr;
+    vb_.Reset();
     vbMap_ = nullptr;
     vbCapacity_ = 0;
   }
   if (cbRes_) {
     if (cbMap_)
       cbRes_->Unmap(0, nullptr);
-    cbRes_->Release();
-    cbRes_ = nullptr;
+    cbRes_.Reset();
     cbMap_ = nullptr;
   }
-  device_ = nullptr;
+  device_.Reset();
   Clear();
 }
 
@@ -107,7 +105,7 @@ void Primitive3D::Initialize(ID3D12Device *device) {
   device_ = device;
 
   cbStride_ = Align256((uint32_t)sizeof(PerFrameCB));
-  cbRes_ = CreateBufferResource(device_, cbStride_ * kMaxDrawPerFrame);
+  cbRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame);
   cbRes_->Map(0, nullptr, reinterpret_cast<void **>(&cbMap_));
 
   // 初期VB（とりあえず 4096 頂点）
@@ -137,15 +135,14 @@ void Primitive3D::EnsureVB_(size_t vertexCount) {
   if (vb_) {
     if (vbMap_)
       vb_->Unmap(0, nullptr);
-    vb_->Release();
-    vb_ = nullptr;
+    vb_.Reset();
     vbMap_ = nullptr;
     vbCapacity_ = 0;
   }
 
   // ちょい余裕持たせる（伸びた時の再確保回数を減らす）
   vbCapacity_ = (vertexCount < 4096) ? 4096 : vertexCount;
-  vb_ = CreateBufferResource(device_, sizeof(Vertex) * vbCapacity_);
+  vb_ = CreateBufferResource(device_.Get(), sizeof(Vertex) * vbCapacity_);
   vb_->Map(0, nullptr, reinterpret_cast<void **>(&vbMap_));
 
   vbView_.BufferLocation = vb_->GetGPUVirtualAddress();

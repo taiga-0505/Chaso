@@ -6,17 +6,11 @@ void GraphicsPipeline::Term() {
   // Resource Release
   // ====================
   // PSO 解放
-  if (pso_) {
-    pso_->Release();
-    pso_ = nullptr;
-  }
+  pso_.Reset();
   // ルートシグネチャ解放
-  if (root_) {
-    root_->Release();
-    root_ = nullptr;
-  }
+  root_.Reset();
   // デバイス参照をクリア
-  device_ = nullptr;
+  device_.Reset();
 }
 
 void GraphicsPipeline::Build(const D3D12_INPUT_ELEMENT_DESC *inputElems,
@@ -76,7 +70,7 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   // ====================
   // PSO 作成
   D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
-  d.pRootSignature = root_;
+  d.pRootSignature = root_.Get();
   d.VS = vs;
   d.PS = ps;
 
@@ -197,10 +191,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   // Root Signature
   // ====================
   // 既存ルートシグネチャ解放
-  if (root_) {
-    root_->Release();
-    root_ = nullptr;
-  }
+  root_.Reset();
 
   D3D12_ROOT_PARAMETER params[8] = {};
   D3D12_DESCRIPTOR_RANGE ranges[2] = {}; // ← ここを共通で使う
@@ -411,25 +402,20 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   desc.pStaticSamplers = &samp;
   desc.NumStaticSamplers = 1;
 
-  ID3DBlob *sig = nullptr;
-  ID3DBlob *err = nullptr;
+  Microsoft::WRL::ComPtr<ID3DBlob> sig;
+  Microsoft::WRL::ComPtr<ID3DBlob> err;
   HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
                                            &sig, &err);
 
   if (FAILED(hr)) {
     if (err) {
       OutputDebugStringA((char *)err->GetBufferPointer());
-      err->Release();
     }
-    if (sig)
-      sig->Release();
     return; // ここで抜ける（Release でもクラッシュしない）
   }
 
   hr = device_->CreateRootSignature(0, sig->GetBufferPointer(),
                                     sig->GetBufferSize(), IID_PPV_ARGS(&root_));
-  if (sig)
-    sig->Release();
   assert(SUCCEEDED(hr));
 }
 
@@ -443,7 +429,7 @@ void GraphicsPipeline::buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   // ====================
   // PSO 作成
   D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
-  d.pRootSignature = root_;
+  d.pRootSignature = root_.Get();
   d.InputLayout = {inputElems, elemCount};
   d.VS = vs;
   d.PS = ps;

@@ -98,7 +98,7 @@ RC::PointLightManager gPointLightMan;
 RC::SpotLightManager gSpotLightMan;
 RC::AreaLightManager gAreaLightMan;
 
-ID3D12Device *gDevice = nullptr;
+Microsoft::WRL::ComPtr<ID3D12Device> gDevice;
 DescriptorHeap *gSrvHeap = nullptr;
 TextureManager gTexMan;
 
@@ -109,10 +109,10 @@ ID3D12GraphicsCommandList *gCL =
     nullptr;                     // Draw* が使う "今フレ" の CommandList
 SceneContext *gCtxRef = nullptr; // PipelineManager にアクセスするために保持
 
-static ID3D12Resource *gCameraCB = nullptr;
+static Microsoft::WRL::ComPtr<ID3D12Resource> gCameraCB;
 static CameraCB *gCameraCBMapped = nullptr;
 
-static ID3D12Resource *gFogCB = nullptr;
+static Microsoft::WRL::ComPtr<ID3D12Resource> gFogCB;
 static FogOverlayCB *gFogCBMapped = nullptr;
 
 bool gInitialized = false;
@@ -219,7 +219,7 @@ static Primitive2D *EnsurePrimitive2D_() {
 
   if (!gPrim2D.inUse || !gPrim2D.ptr) {
     gPrim2D.ptr = std::make_unique<Primitive2D>();
-    gPrim2D.ptr->Initialize(gDevice, w, h);
+    gPrim2D.ptr->Initialize(gDevice.Get(), w, h);
     gPrim2D.inUse = true;
   } else {
     // リサイズ追従（毎フレーム呼んでも OK な想定）
@@ -235,7 +235,7 @@ static Primitive3D *EnsurePrimitive3D_() {
 
   if (!gPrim3D.inUse || !gPrim3D.ptr) {
     gPrim3D.ptr = std::make_unique<Primitive3D>();
-    gPrim3D.ptr->Initialize(gDevice);
+    gPrim3D.ptr->Initialize(gDevice.Get());
     gPrim3D.inUse = true;
   }
   return gPrim3D.ptr.get();
@@ -264,28 +264,28 @@ void Init(SceneContext &ctx) {
   gTexMan.Init(&ctx.core->SRVMan());
 
   // Sprite は SpriteManager に委譲
-  gSpriteMan.Init(gDevice, &gTexMan);
+  gSpriteMan.Init(gDevice.Get(), &gTexMan);
 
   // Model は ModelManager に委譲
-  gModelMan.Init(gDevice, &gTexMan);
+  gModelMan.Init(gDevice.Get(), &gTexMan);
 
   // Sphere は SphereManager に委譲
-  gSphereMan.Init(gDevice, &gTexMan);
+  gSphereMan.Init(gDevice.Get(), &gTexMan);
 
   // Light は LightManager に委譲（default slot を作る）
-  gLightMan.Init(gDevice);
+  gLightMan.Init(gDevice.Get());
 
   // PointLight は PointLightManager に委譲（default slot を作る）
-  gPointLightMan.Init(gDevice);
-  gSpotLightMan.Init(gDevice);
-  gAreaLightMan.Init(gDevice);
+  gPointLightMan.Init(gDevice.Get());
+  gSpotLightMan.Init(gDevice.Get());
+  gAreaLightMan.Init(gDevice.Get());
 
   // CameraCB: Upload に置いて Map しっぱなしで更新する
-  gCameraCB = CreateBufferResource(gDevice, sizeof(CameraCB));
+  gCameraCB = CreateBufferResource(gDevice.Get(), sizeof(CameraCB));
   gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
 
   // FogOverlayCB: 画面全体の白い霧（寒い表現）
-  gFogCB = CreateBufferResource(gDevice, sizeof(FogOverlayCB));
+  gFogCB = CreateBufferResource(gDevice.Get(), sizeof(FogOverlayCB));
   gFogCB->Map(0, nullptr, reinterpret_cast<void **>(&gFogCBMapped));
   if (gFogCBMapped) {
     // 既定値（後から DrawFogOverlay の引数で上書きされる）
@@ -329,8 +329,7 @@ void Term() {
       gCameraCB->Unmap(0, nullptr);
       gCameraCBMapped = nullptr;
     }
-    gCameraCB->Release();
-    gCameraCB = nullptr;
+    gCameraCB.Reset();
   }
 
   if (gFogCB) {
@@ -338,14 +337,13 @@ void Term() {
       gFogCB->Unmap(0, nullptr);
       gFogCBMapped = nullptr;
     }
-    gFogCB->Release();
-    gFogCB = nullptr;
+    gFogCB.Reset();
   }
 
   gTexMan.Term();
 
   gCtxRef = nullptr;
-  gDevice = nullptr;
+  gDevice.Reset();
   gSrvHeap = nullptr;
   gCL = nullptr;
 
@@ -665,7 +663,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle) {
 
 bool IsInitialized() { return gInitialized; }
 
-ID3D12Device *GetDevice() { return gDevice; }
+ID3D12Device *GetDevice() { return gDevice.Get(); }
 // ----------------------------------------------------------------------------
 // 3D Pass
 // ----------------------------------------------------------------------------

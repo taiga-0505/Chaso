@@ -21,7 +21,7 @@ void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
   }
 
   // List（1本を使い回す）
-  hr = device_->CreateCommandList(0, type_, alloc_[0], nullptr,
+  hr = device_->CreateCommandList(0, type_, alloc_[0].Get(), nullptr,
                                   IID_PPV_ARGS(&list_));
   assert(SUCCEEDED(hr));
   hr = list_->Close(); // 最初は閉じておく
@@ -36,29 +36,17 @@ void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
 }
 
 void CommandContext::Term() {
-  if (queue_) {
-    queue_->Release();
-    queue_ = nullptr;
-  }
-  if (list_) {
-    list_->Release();
-    list_ = nullptr;
-  }
+  queue_.Reset();
+  list_.Reset();
   for (uint32_t i = 0; i < frameCount_; ++i) {
-    if (alloc_[i]) {
-      alloc_[i]->Release();
-      alloc_[i] = nullptr;
-    }
+    alloc_[i].Reset();
   }
-  if (fence_) {
-    fence_->Release();
-    fence_ = nullptr;
-  }
+  fence_.Reset();
   if (fenceEvent_) {
     CloseHandle(fenceEvent_);
     fenceEvent_ = nullptr;
   }
-  device_ = nullptr;
+  device_.Reset();
 }
 
 // backBufferIndex を渡す
@@ -67,18 +55,18 @@ void CommandContext::BeginFrame(uint32_t frameIndex) {
   WaitForFrame(frameIndex); // 同じBBの前フレームが完了していることを保証
   HRESULT hr = alloc_[frameIndex]->Reset();
   assert(SUCCEEDED(hr));
-  hr = list_->Reset(alloc_[frameIndex], nullptr);
+  hr = list_->Reset(alloc_[frameIndex].Get(), nullptr);
   assert(SUCCEEDED(hr));
 }
 
 void CommandContext::EndFrame() {
   HRESULT hr = list_->Close();
   assert(SUCCEEDED(hr));
-  ID3D12CommandList *lists[] = {list_};
+  ID3D12CommandList *lists[] = {list_.Get()};
   queue_->ExecuteCommandLists(1, lists);
 
   const uint64_t signalValue = ++globalFenceValue_;
-  hr = queue_->Signal(fence_, signalValue);
+  hr = queue_->Signal(fence_.Get(), signalValue);
   assert(SUCCEEDED(hr));
   frameFenceValue_[currentFrameIndex_] = signalValue;
 }
@@ -99,7 +87,7 @@ void CommandContext::FlushGPU() {
     return;
   }
   const uint64_t v = ++globalFenceValue_;
-  HRESULT hr = queue_->Signal(fence_, v);
+  HRESULT hr = queue_->Signal(fence_.Get(), v);
   assert(SUCCEEDED(hr));
   if (fence_->GetCompletedValue() < v) {
     hr = fence_->SetEventOnCompletion(v, fenceEvent_);

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <d3d12.h>
 #include <string>
+#include <wrl/client.h>
 
 class SRVManager;
 
@@ -39,7 +40,7 @@ public:
     return *this;
   }
   // 取得系
-  ID3D12Resource *Resource() const { return resource_; }
+  ID3D12Resource *Resource() const { return resource_.Get(); }
   D3D12_GPU_DESCRIPTOR_HANDLE GpuSrv() const { return srv_.gpu; }
   D3D12_CPU_DESCRIPTOR_HANDLE CpuSrv() const { return srv_.cpu; }
   const DirectX::TexMetadata &Metadata() const { return metadata_; }
@@ -48,7 +49,7 @@ public:
 
 private:
   std::string path_;
-  ID3D12Resource *resource_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
   SRVManager::Handle srv_{};
   DirectX::ScratchImage mipImages_;
   DirectX::TexMetadata metadata_{};

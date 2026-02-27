@@ -158,6 +158,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="engine\Graphics\Primitive3D\Primitive3D.cpp" />
     <ClCompile Include="engine\Particle\ImpactSpark\ImpactSparkParticle.cpp" />
     <ClCompile Include="engine\Particle\Laser\LaserParticle.cpp" />
+    <ClCompile Include="engine\Particle\wind\WindParticle.cpp" />
     <ClCompile Include="engine\Render\Light\Area\AreaLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Directional\DirectionalLightManager.cpp" />
     <ClCompile Include="engine\Render\Light\Point\PointLightManager.cpp" />
@@ -319,6 +320,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="engine\Graphics\Primitive3D\Primitive3D.h" />
     <ClInclude Include="engine\Particle\ImpactSpark\ImpactSparkParticle.h" />
     <ClInclude Include="engine\Particle\Laser\LaserParticle.h" />
+    <ClInclude Include="engine\Particle\wind\WindParticle.h" />
     <ClInclude Include="engine\Render\Light\Area\AreaLightManager.h" />
     <ClInclude Include="engine\Render\Light\Directional\DirectionalLightManager.h" />
     <ClInclude Include="engine\Render\Light\Point\PointLightManager.h" />

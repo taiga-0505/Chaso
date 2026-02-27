@@ -4,6 +4,7 @@
 #include "struct.h"
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 class Sphere {
 public:
@@ -55,30 +56,30 @@ private:
   void UploadIB_();
 
   struct VB {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_VERTEX_BUFFER_VIEW view{};
     uint32_t vertexCount = 0;
   };
   struct IB {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_INDEX_BUFFER_VIEW view{};
     uint32_t indexCount = 0;
   };
   struct CB_WVP {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     TransformationMatrix *mapped = nullptr;
   };
   struct CB_Material {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     Material *mapped = nullptr;
   };
   struct CB_Light {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     DirectionalLight *mapped = nullptr;
   };
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
   // CPU側バッファ
   std::vector<VertexData> vertices_;

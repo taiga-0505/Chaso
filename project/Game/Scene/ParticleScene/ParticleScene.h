@@ -43,6 +43,12 @@ private:
   RC::ImpactSparkParticle impact_particle_;
   RC::ImpactEmitDesc impactDesc_;
 
+  RC::WindParticle wind_particle_;
+  RC::Vector3 windOrigin_ = {0.0f, 0.0f, 0.0f};
+  RC::Vector3 windForce_ = {1.0f, 0.0f, 0.0f};
+  float windRange_ = 6.0f;
+  float windRadius_ = 0.4f;
+
   bool isParticle = true;
   bool isFire = false;
   bool isRain = false;
@@ -50,6 +56,7 @@ private:
   bool isCircle = false;
   bool isExplosion = false;
   bool isLaser = false;
+  bool isWind = false;
 
   int guide;
 };

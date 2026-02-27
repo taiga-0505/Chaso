@@ -97,7 +97,7 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
 
   ID3D12Device *dev = nullptr;
   for (size_t i = 0; i < _countof(tryLevels); ++i) {
-    hr = D3D12CreateDevice(adapter_, tryLevels[i], IID_PPV_ARGS(&dev));
+    hr = D3D12CreateDevice(adapter_.Get(), tryLevels[i], IID_PPV_ARGS(&dev));
     if (SUCCEEDED(hr)) {
       featureLevel_ = tryLevels[i];
       device_ = dev; // 所有
@@ -156,16 +156,7 @@ bool Device::IsTearingSupported() const {
 }
 
 void Device::Term() {
-  if (device_) {
-    device_->Release();
-    device_ = nullptr;
-  }
-  if (adapter_) {
-    adapter_->Release();
-    adapter_ = nullptr;
-  }
-  if (factory_) {
-    factory_->Release();
-    factory_ = nullptr;
-  }
+  device_.Reset();
+  adapter_.Reset();
+  factory_.Reset();
 }

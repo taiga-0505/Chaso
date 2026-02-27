@@ -3,6 +3,7 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <string>
+#include <wrl/client.h>
 
 class Device {
 public:
@@ -12,9 +13,9 @@ public:
   void Term();
 
   // ハンドル取得（非所有）
-  IDXGIFactory6 *Factory() const { return factory_; }
-  IDXGIAdapter4 *Adapter() const { return adapter_; }
-  ID3D12Device *GetDevice() const { return device_; }
+  IDXGIFactory6 *Factory() const { return factory_.Get(); }
+  IDXGIAdapter4 *Adapter() const { return adapter_.Get(); }
+  ID3D12Device *GetDevice() const { return device_.Get(); }
   D3D_FEATURE_LEVEL FeatureLevel() const { return featureLevel_; }
   const char *FeatureLevelString() const;
 
@@ -29,8 +30,8 @@ private:
   IDXGIAdapter4 *getWarpAdapter_();      // WARP 取得（最終手段）
 
 private:
-  IDXGIFactory6 *factory_ = nullptr; // 所有
-  IDXGIAdapter4 *adapter_ = nullptr; // 所有
-  ID3D12Device *device_ = nullptr;   // 所有
+  Microsoft::WRL::ComPtr<IDXGIFactory6> factory_; // 所有
+  Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter_; // 所有
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;   // 所有
   D3D_FEATURE_LEVEL featureLevel_ = (D3D_FEATURE_LEVEL)0;
 };

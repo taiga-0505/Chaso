@@ -2,6 +2,8 @@
 #include <cassert>
 #include <cstdint>
 #include <d3d12.h>
+#include <wrl/client.h>
+
 
 class DescriptorHeap {
 public:
@@ -20,16 +22,16 @@ public:
 
   // 便利系
   UINT Increment() const { return inc_; }
-  ID3D12DescriptorHeap *Heap() const { return heap_; }
+  ID3D12DescriptorHeap *Heap() const { return heap_.Get(); }
   bool ShaderVisible() const { return shaderVisible_; }
   UINT Capacity() const { return capacity_; }
   UINT Used() const { return offset_; }
   void Reset() { offset_ = 0; } // （※後述の“フレームリング”戦略と併用推奨）
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   D3D12_DESCRIPTOR_HEAP_TYPE type_{};
-  ID3D12DescriptorHeap *heap_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_;
   UINT capacity_ = 0, inc_ = 0, offset_ = 0;
   bool shaderVisible_ = false;
   D3D12_CPU_DESCRIPTOR_HANDLE cpuStart_{};

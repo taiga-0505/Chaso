@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 #include "SRVManager/SRVManager.h"
 
 class SRVManager;
@@ -29,7 +30,7 @@ public:
 
 private:
   struct Entry {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     void *mapped = nullptr;
 
     // SRVManager が管理するスロット
@@ -40,6 +41,6 @@ private:
   };
 
   SRVManager *srvMgr_ = nullptr;   // 非所有
-  ID3D12Device *device_ = nullptr; // 非所有（srvMgr_->Device() のキャッシュ）
+  Microsoft::WRL::ComPtr<ID3D12Device> device_; // 非所有（srvMgr_->Device() のキャッシュ）
   std::vector<Entry> entries_;
 };

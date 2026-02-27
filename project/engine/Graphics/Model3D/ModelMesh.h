@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <wrl/client.h>
 
 // ============================================================
 // ModelMesh
@@ -65,7 +66,7 @@ public:
 
 private:
   struct VB {
-    ID3D12Resource *resource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_VERTEX_BUFFER_VIEW view{};
     uint32_t vertexCount = 0;
   };
@@ -76,7 +77,7 @@ private:
     uint32_t materialIndex = 0;
   };
 
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   VB vb_{};
 
   // 互換用：最初に見つかったテクスチャを入れる

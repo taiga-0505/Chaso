@@ -119,7 +119,7 @@ private:
   uint32_t vertexCount_ = 0; // 板ポリの頂点数（6固定）
 
   // 頂点バッファ
-  ID3D12Resource *vbResource_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> vbResource_;
   D3D12_VERTEX_BUFFER_VIEW vbView_{};
 
   // Instancing 用 StructuredBuffer
@@ -129,12 +129,12 @@ private:
   D3D12_GPU_DESCRIPTOR_HANDLE instanceSrv_{};  // VS から読む SRV (t0)
 
   // Material / Texture
-  ID3D12Resource *cbMat_ = nullptr;          // SpriteMaterial 用 CB
-  SpriteMaterial *cbMatMapped_ = nullptr;    // 一時的な Map 先
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbMat_; // SpriteMaterial 用 CB
+  SpriteMaterial *cbMatMapped_ = nullptr;        // 一時的な Map 先
   D3D12_GPU_DESCRIPTOR_HANDLE textureSrv_{}; // パーティクル用テクスチャ
 
   // デバイス
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
   // 今フレーム実際に描画するインスタンス数
   uint32_t numInstance = 0;

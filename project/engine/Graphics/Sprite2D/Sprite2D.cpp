@@ -1,4 +1,4 @@
-#include "Sprite2D.h"
+﻿#include "Sprite2D.h"
 #include "imgui/imgui.h"
 #include <cassert>
 #include <string>
@@ -11,13 +11,11 @@ void Sprite2D::Release() {
   mesh_.reset();
 
   if (cbWVP_.res) {
-    cbWVP_.res->Release();
-    cbWVP_.res = nullptr;
+    cbWVP_.res.Reset();
     cbWVP_.map = nullptr;
   }
   if (cbMat_.res) {
-    cbMat_.res->Release();
-    cbMat_.res = nullptr;
+    cbMat_.res.Reset();
     cbMat_.map = nullptr;
   }
 }
@@ -32,13 +30,13 @@ void Sprite2D::Initialize(ID3D12Device *device,
   screenH_ = screenHeight;
 
   // CB: WVP
-  cbWVP_.res = CreateBufferResource(device_, sizeof(TransformationMatrix));
+  cbWVP_.res = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix));
   cbWVP_.res->Map(0, nullptr, reinterpret_cast<void **>(&cbWVP_.map));
   cbWVP_.map->World = MakeIdentity4x4();
   cbWVP_.map->WVP = MakeIdentity4x4();
 
   // CB: Material
-  cbMat_.res = CreateBufferResource(device_, sizeof(SpriteMaterial));
+  cbMat_.res = CreateBufferResource(device_.Get(), sizeof(SpriteMaterial));
   cbMat_.res->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.map));
   cbMat_.map->color = {1, 1, 1, 1};
   cbMat_.map->uvTransform = MakeIdentity4x4();
@@ -107,20 +105,21 @@ void Sprite2D::DrawImGui(const char *name) {
     // Transform
     float pos[3] = {transform_.translation.x, transform_.translation.y,
                     transform_.translation.z};
-    if (ImGui::DragFloat3((std::string("位置##") + label).c_str(), pos, 1.0f)) {
+    if (ImGui::DragFloat3((std::string("位置##") + label).c_str(), pos, 1.0f,
+                          0.0f, 0.0f, "%04.1f")) {
       transform_.translation = {pos[0], pos[1], pos[2]};
     }
 
     float rot[3] = {transform_.rotation.x, transform_.rotation.y,
                     transform_.rotation.z};
     if (ImGui::DragFloat3((std::string("回転##") + label).c_str(), rot,
-                          0.01f)) {
+                          0.01f, 0.0f, 0.0f, "%04.1f")) {
       transform_.rotation = {rot[0], rot[1], rot[2]};
     }
 
     float size[2] = {transform_.scale.x, transform_.scale.y};
     if (ImGui::DragFloat2((std::string("サイズ##") + label).c_str(), size, 1.0f,
-                          0.0f, 100000.0f)) {
+                          0.0f, 100000.0f, "%04.1f")) {
       SetSize(size[0], size[1]);
     }
 

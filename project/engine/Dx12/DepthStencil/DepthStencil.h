@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 #include <d3d12.h>
+#include <wrl/client.h>
 
 class DescriptorHeap; // 前方宣言（ヘッダ循環防止）
 
@@ -24,7 +25,7 @@ public:
 
   // アクセサ
   D3D12_CPU_DESCRIPTOR_HANDLE Dsv() const { return dsv_; }
-  ID3D12Resource *Resource() const { return tex_; }
+  ID3D12Resource *Resource() const { return tex_.Get(); }
   DXGI_FORMAT Format() const { return texFormat_; }
   UINT Width() const { return width_; }
   UINT Height() const { return height_; }
@@ -34,8 +35,8 @@ private:
   void createView(DescriptorHeap &dsvHeap);
 
 private:
-  ID3D12Device *device_ = nullptr;    // 非所有
-  ID3D12Resource *tex_ = nullptr;     // 所有
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;    // 非所有
+  Microsoft::WRL::ComPtr<ID3D12Resource> tex_;     // 所有
   D3D12_CPU_DESCRIPTOR_HANDLE dsv_{}; // 外部ヒープ内のスロット
   UINT width_ = 0, height_ = 0;
   DXGI_FORMAT texFormat_ = DXGI_FORMAT_D24_UNORM_S8_UINT;

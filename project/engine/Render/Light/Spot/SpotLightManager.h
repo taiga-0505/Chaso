@@ -4,6 +4,7 @@
 #include <array>
 #include <d3d12.h>
 #include <vector>
+#include <wrl/client.h>
 
 namespace RC {
 
@@ -61,7 +62,7 @@ private:
   void SyncCB_();
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   bool initialized_ = false;
 
   std::vector<Slot> slots_;
@@ -69,7 +70,7 @@ private:
   std::array<int, kMaxActive> active_{};
   int activeCount_ = 0;
 
-  ID3D12Resource *cb_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> cb_;
   ::SpotLightsCB *mapped_ = nullptr;
 };
 

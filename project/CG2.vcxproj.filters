@@ -254,6 +254,7 @@
     <ClCompile Include="Game\StageSelection\StageSelection.cpp" />
     <ClCompile Include="engine\Particle\Laser\LaserParticle.cpp" />
     <ClCompile Include="engine\Particle\ImpactSpark\ImpactSparkParticle.cpp" />
+    <ClCompile Include="engine\Particle\wind\WindParticle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\AppConfig.h">
@@ -508,6 +509,7 @@
     <ClInclude Include="Game\StageSelection\StageSelection.h" />
     <ClInclude Include="engine\Particle\Laser\LaserParticle.h" />
     <ClInclude Include="engine\Particle\ImpactSpark\ImpactSparkParticle.h" />
+    <ClInclude Include="engine\Particle\wind\WindParticle.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="App">

@@ -32,6 +32,9 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
   impact_particle_.Initialize(ctx);
   impact_particle_.SetEmitterAutoSpawn(false);
 
+  wind_particle_.Initialize(ctx);
+  wind_particle_.SetActive(false);
+
   impactDesc_.interval = 0.03f;
   impactDesc_.countPerTick = 6;
   impactDesc_.burstOnStart = 24;
@@ -49,6 +52,7 @@ void ParticleScene::OnExit(SceneContext &ctx) {
   explosion_particle_.Finalize();
   laser_particle_.Finalize();
   impact_particle_.Finalize();
+  wind_particle_.Finalize();
   RC::UnloadSprite(guide);
   guide = -1;
 }
@@ -82,6 +86,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = false;
     isLaser = false;
+    isWind = false;
     particle_.RespawnAllMax();
   }
 
@@ -93,6 +98,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = false;
     isLaser = false;
+    isWind = false;
     fire_particle_.RespawnAllMax();
   }
 
@@ -104,6 +110,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = false;
     isLaser = false;
+    isWind = false;
     rain_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_4)) {
@@ -114,6 +121,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = false;
     isLaser = false;
+    isWind = false;
     snow_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_6)) {
@@ -124,6 +132,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = true;
     isExplosion = false;
     isLaser = false;
+    isWind = false;
     circle_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_5)) {
@@ -134,6 +143,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = true;
     isLaser = false;
+    isWind = false;
     explosion_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_7)) {
@@ -144,6 +154,19 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isCircle = false;
     isExplosion = false;
     isLaser = true;
+    isWind = false;
+  }
+  if (input->IsKeyTrigger(DIK_8)) {
+    isParticle = false;
+    isFire = false;
+    isRain = false;
+    isSnow = false;
+    isCircle = false;
+    isExplosion = false;
+    isLaser = false;
+    isWind = true;
+    wind_particle_.SetWind(windOrigin_, windForce_, windRange_, windRadius_,
+                           true);
   }
 
   // IJKL + U/O でエミッタの位置を動かす
@@ -192,6 +215,9 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     if (isExplosion) {
       explosion_particle_.MoveEmitter(emitterDelta);
     }
+    if (isWind) {
+      wind_particle_.MoveEmitter(emitterDelta);
+    }
   }
 
   if (input->IsKeyTrigger(DIK_SPACE)) {
@@ -216,6 +242,9 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   }
   if (isExplosion) {
     explosion_particle_.Update(view_, proj_);
+  }
+  if (isWind) {
+    wind_particle_.Update(view_, proj_);
   }
   if (isLaser) {
     ImGui::Begin("Laser Control");
@@ -285,6 +314,9 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
   if (isExplosion) {
     explosion_particle_.Render(ctx, cl);
+  }
+  if (isWind) {
+    wind_particle_.Render(ctx, cl);
   }
   if (isLaser) {
     laser_particle_.Render(ctx, cl);

@@ -1,4 +1,4 @@
-#include "ModelMesh.h"
+﻿#include "ModelMesh.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -19,8 +19,7 @@ static constexpr float kPi = std::numbers::pi_v<float>;
 
 ModelMesh::~ModelMesh() {
   if (vb_.resource) {
-    vb_.resource->Release();
-    vb_.resource = nullptr;
+    vb_.resource.Reset();
   }
 }
 
@@ -330,11 +329,10 @@ void ModelMesh::UploadVB_(const std::vector<VertexData> &vertices) {
   const size_t sizeBytes = sizeof(VertexData) * vb_.vertexCount;
 
   if (vb_.resource) {
-    vb_.resource->Release();
-    vb_.resource = nullptr;
+    vb_.resource.Reset();
   }
 
-  vb_.resource = CreateBufferResource(device_, sizeBytes);
+  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes);
 
   void *mapped = nullptr;
   vb_.resource->Map(0, nullptr, &mapped);

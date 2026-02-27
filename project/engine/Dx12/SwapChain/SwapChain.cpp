@@ -19,19 +19,13 @@ void SwapChain::Init(IDXGIFactory6 *factory, ID3D12Device *device,
 
 void SwapChain::Term() {
   for (UINT i = 0; i < frameCount_; ++i) {
-    if (backBuffers_[i]) {
-      backBuffers_[i]->Release();
-      backBuffers_[i] = nullptr;
-    }
+    backBuffers_[i].Reset();
   }
-  if (swap_) {
-    swap_->Release();
-    swap_ = nullptr;
-  }
-  rtvHeap_ = nullptr;
-  device_ = nullptr;
-  queue_ = nullptr;
-  factory_ = nullptr;
+  swap_.Reset();
+  rtvHeap_.Reset();
+  device_.Reset();
+  queue_.Reset();
+  factory_.Reset();
 }
 
 void SwapChain::SetRtvHeap(ID3D12DescriptorHeap *heap, UINT increment) {
@@ -46,10 +40,7 @@ void SwapChain::Resize(UINT width, UINT height) {
   height_ = height;
   // 旧バックバッファを解放
   for (UINT i = 0; i < frameCount_; ++i) {
-    if (backBuffers_[i]) {
-      backBuffers_[i]->Release();
-      backBuffers_[i] = nullptr;
-    }
+    backBuffers_[i].Reset();
   }
   UINT flags = allowTearing_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
   HRESULT hr =
@@ -83,13 +74,12 @@ void SwapChain::createSwapChain(HWND hwnd) {
   UINT flags = allowTearing_ ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
   desc.Flags = flags;
 
-  IDXGISwapChain1 *tmp = nullptr;
-  HRESULT hr = factory_->CreateSwapChainForHwnd(queue_, hwnd, &desc, nullptr,
+  Microsoft::WRL::ComPtr<IDXGISwapChain1> tmp;
+  HRESULT hr = factory_->CreateSwapChainForHwnd(queue_.Get(), hwnd, &desc, nullptr,
                                                 nullptr, &tmp);
   assert(SUCCEEDED(hr));
-  hr = tmp->QueryInterface(IID_PPV_ARGS(&swap_));
+  hr = tmp.As(&swap_);
   assert(SUCCEEDED(hr));
-  tmp->Release();
 }
 
 void SwapChain::createBackBufferRTVs() {
@@ -110,7 +100,7 @@ void SwapChain::createBackBufferRTVs() {
                            : format_;
       rtvDesc.Texture2D.MipSlice = 0;
       rtvDesc.Texture2D.PlaneSlice = 0;
-      device_->CreateRenderTargetView(backBuffers_[i], &rtvDesc, h);
+      device_->CreateRenderTargetView(backBuffers_[i].Get(), &rtvDesc, h);
       rtv_[i] = h;
     } else {
       rtv_[i] = {};

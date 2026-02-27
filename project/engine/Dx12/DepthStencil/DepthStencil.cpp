@@ -22,8 +22,7 @@ void DepthStencil::Resize(UINT width, UINT height, DescriptorHeap &dsvHeap) {
   height_ = height;
 
   if (tex_) {
-    tex_->Release();
-    tex_ = nullptr;
+    tex_.Reset();
   }
   // DSVスロットは再確保せず、同じ場所を上書きでもOK
   // （別スロットにしたい場合は dsvHeap.AllocateCPU() し直しても良い）
@@ -32,15 +31,14 @@ void DepthStencil::Resize(UINT width, UINT height, DescriptorHeap &dsvHeap) {
   D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
   desc.Format = dsvFormat_;
   desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-  device_->CreateDepthStencilView(tex_, &desc, dsv_);
+  device_->CreateDepthStencilView(tex_.Get(), &desc, dsv_);
 }
 
 void DepthStencil::Term() {
   if (tex_) {
-    tex_->Release();
-    tex_ = nullptr;
+    tex_.Reset();
   }
-  device_ = nullptr;
+  device_.Reset();
   dsv_ = {};
 }
 
@@ -82,5 +80,5 @@ void DepthStencil::createView(DescriptorHeap &dsvHeap) {
   desc.Format = dsvFormat_;
   desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 
-  device_->CreateDepthStencilView(tex_, &desc, dsv_);
+  device_->CreateDepthStencilView(tex_.Get(), &desc, dsv_);
 }

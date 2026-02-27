@@ -24,11 +24,8 @@ void DescriptorHeap::Init(ID3D12Device *device, D3D12_DESCRIPTOR_HEAP_TYPE type,
 }
 
 void DescriptorHeap::Term() {
-  if (heap_) {
-    heap_->Release();
-    heap_ = nullptr;
-  }
-  device_ = nullptr;
+  heap_.Reset();
+  device_.Reset();
   offset_ = 0;
 }
 

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <d3d12.h>
+#include <wrl/client.h>
 
 class CommandContext {
 public:
@@ -31,19 +32,19 @@ public:
                   D3D12_RESOURCE_STATES after);
 
   // アクセサ
-  ID3D12CommandQueue *Queue() const { return queue_; }
-  ID3D12GraphicsCommandList *List() const { return list_; }
+  ID3D12CommandQueue *Queue() const { return queue_.Get(); }
+  ID3D12GraphicsCommandList *List() const { return list_.Get(); }
   uint32_t FrameCount() const { return frameCount_; }
 
 private:
-  ID3D12Device *device_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_;
   D3D12_COMMAND_LIST_TYPE type_ = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-  ID3D12CommandQueue *queue_ = nullptr;
-  std::array<ID3D12CommandAllocator *, kMaxFrames> alloc_{};
-  ID3D12GraphicsCommandList *list_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue_;
+  std::array<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, kMaxFrames> alloc_{};
+  Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> list_;
 
-  ID3D12Fence *fence_ = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Fence> fence_;
   HANDLE fenceEvent_ = nullptr;
   uint64_t globalFenceValue_ = 0;
   std::array<uint64_t, kMaxFrames> frameFenceValue_{};

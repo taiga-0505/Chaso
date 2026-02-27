@@ -1,4 +1,4 @@
-#include "DirectionalLightManager.h"
+﻿#include "DirectionalLightManager.h"
 
 #include "Dx12/Dx12Core.h" // CreateBufferResource
 #include "function/function.h"
@@ -37,7 +37,7 @@ void DirectionalLightManager::Term() {
   }
   slots_.clear();
 
-  device_ = nullptr;
+  device_.Reset();
   activeHandle_ = -1;
   initialized_ = false;
 }
@@ -187,8 +187,7 @@ void DirectionalLightManager::ReleaseSlot_(Slot &s) {
       s.cb->Unmap(0, nullptr);
       s.mapped = nullptr;
     }
-    s.cb->Release();
-    s.cb = nullptr;
+    s.cb.Reset();
   }
 }
 
@@ -197,7 +196,7 @@ void DirectionalLightManager::EnsureCB_(Slot &s) {
     return;
   }
 
-  s.cb = CreateBufferResource(device_, sizeof(DirectionalLight));
+  s.cb = CreateBufferResource(device_.Get(), sizeof(DirectionalLight));
   s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
   if (s.mapped) {
     *s.mapped = s.light.DataForGPU();

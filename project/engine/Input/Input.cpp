@@ -7,11 +7,11 @@ Input::Input(HWND hwnd) {
 
   HRESULT hr =
       DirectInput8Create(GetModuleHandle(nullptr), DIRECTINPUT_HEADER_VERSION,
-                         IID_IDirectInput8, (void **)&directInput, nullptr);
+                         IID_IDirectInput8, (void **)directInput.GetAddressOf(), nullptr);
   assert(SUCCEEDED(hr));
 
   // キーボードデバイスの生成
-  hr = directInput->CreateDevice(GUID_SysKeyboard, &keyboard, NULL);
+  hr = directInput->CreateDevice(GUID_SysKeyboard, keyboard.GetAddressOf(), NULL);
   assert(SUCCEEDED(hr));
   hr = keyboard->SetDataFormat(&c_dfDIKeyboard);
   assert(SUCCEEDED(hr));
@@ -19,7 +19,7 @@ Input::Input(HWND hwnd) {
       hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
 
   // マウスデバイスの生成
-  hr = directInput->CreateDevice(GUID_SysMouse, &mouse, NULL);
+  hr = directInput->CreateDevice(GUID_SysMouse, mouse.GetAddressOf(), NULL);
   assert(SUCCEEDED(hr));
   hr = mouse->SetDataFormat(&c_dfDIMouse);
   assert(SUCCEEDED(hr));
@@ -29,17 +29,14 @@ Input::Input(HWND hwnd) {
 Input::~Input() {
   if (mouse) {
     mouse->Unacquire();
-    mouse->Release();
-    mouse = nullptr;
+    mouse.Reset();
   }
   if (keyboard) {
     keyboard->Unacquire();
-    keyboard->Release();
-    keyboard = nullptr;
+    keyboard.Reset();
   }
   if (directInput) {
-    directInput->Release();
-    directInput = nullptr;
+    directInput.Reset();
   }
   if (xinputState.Gamepad.wButtons != 0) {
     ZeroMemory(&xinputState, sizeof(XINPUT_STATE));
