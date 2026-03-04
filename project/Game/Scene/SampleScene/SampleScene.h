@@ -58,6 +58,9 @@ private:
   // ===============
 
   int sprite = -1;
+  Transform spriteTransform_ = {
+      {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 0.0f}};
+  RC::Vector2 spriteSize_ = {100.0f, 100.0f};
 
   float t = 0.0f;
 

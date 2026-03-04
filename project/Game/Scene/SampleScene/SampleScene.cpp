@@ -71,9 +71,8 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // =============================
 
   sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
-  RC::SetSpriteTransform(
-      sprite, {{1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 0.0f}});
-  RC::SetSpriteScreenSize(sprite, 500.0f, 100.0f);
+  RC::SetSpriteTransform(sprite, spriteTransform_);
+  RC::SetSpriteScreenSize(sprite, spriteSize_.x, spriteSize_.y);
 }
 
 void SampleScene::OnExit(SceneContext &) {
@@ -185,6 +184,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 }
 
 void SampleScene::DrawImGui() {
+
   ImGui::Begin("Debug");
 
   if (ImGui::BeginTabBar("MainDebugTabBar")) {
@@ -215,7 +215,7 @@ void SampleScene::DrawImGui() {
     // -------------------
     if (ImGui::BeginTabItem("SpriteTab")) {
 
-      RC::DrawImGui2D(sprite, "sprite");
+      // RC::DrawImGui2D(sprite, "sprite");
 
       ImGui::EndTabItem();
     }
@@ -255,6 +255,23 @@ void SampleScene::DrawImGui() {
 
     ImGui::EndTabBar();
   }
+
+  ImGui::End();
+
+  ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
+
+  ImGui::Begin("Sprite", nullptr,
+               ImGuiWindowFlags_NoResize);
+
+  ImGui::DragFloat3("Translation", &spriteTransform_.translation.x, 1.0f,
+                    -1000.0f, 1000.0f);
+  ImGui::DragFloat3("Rotation", &spriteTransform_.rotation.x, 0.01f, -3.14f,
+                    3.14f);
+  ImGui::SliderFloat("SizeX", &spriteSize_.x, 0.0f, 2000.0f, "%4.1f");
+  ImGui::SliderFloat("SizeY", &spriteSize_.y, 0.0f, 2000.0f, "%4.1f");
+
+  RC::SetSpriteTransform(sprite, spriteTransform_);
+  RC::SetSpriteScreenSize(sprite, spriteSize_.x, spriteSize_.y);
 
   ImGui::End();
 }
