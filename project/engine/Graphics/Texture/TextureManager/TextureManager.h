@@ -1,8 +1,11 @@
 #pragma once
 #include "Texture/Texture2D/Texture2D.h"
+#include "Dx12/CommandContext/CommandContext.h"
 #include <d3d12.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <wrl/client.h>
 
 class DescriptorHeap;
 
@@ -10,7 +13,13 @@ class TextureManager {
 public:
   using TextureID = int;
 
-  void Init(SRVManager *srv) { srv_ = srv; }
+  struct UploadTask {
+    Microsoft::WRL::ComPtr<ID3D12Resource> uploadRes;
+    uint64_t fenceValue;
+  };
+
+  void Init(SRVManager *srv);
+
   void Term();
 
   // 同じパスはキャッシュして再利用
@@ -31,7 +40,11 @@ public:
 
 private:
   SRVManager *srv_ = nullptr;
+  CommandContext loadCmd_;
+  std::vector<UploadTask> pendingUploads_;
   std::unordered_map<std::string, Texture2D> cache_;
+
+  void ReleasePendingUploads();
 
   int nextId_ = 1;
   std::unordered_map<std::string, TextureID> pathToId_;

@@ -215,7 +215,7 @@ void SampleScene::DrawImGui() {
     // -------------------
     if (ImGui::BeginTabItem("SpriteTab")) {
 
-      // RC::DrawImGui2D(sprite, "sprite");
+      RC::DrawImGui2D(sprite, "sprite");
 
       ImGui::EndTabItem();
     }
@@ -255,21 +255,6 @@ void SampleScene::DrawImGui() {
 
     ImGui::EndTabBar();
   }
-
-  ImGui::End();
-
-  ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
-
-  ImGui::Begin("デバックテキスト確認課題", nullptr,
-               ImGuiWindowFlags_NoResize);
-
-  ImGui::SliderFloat3("Translation", &spriteTransform_.translation.x, -1000.0f, 1000.0f, "%.1f");
-  ImGui::SliderFloat3("Rotation", &spriteTransform_.rotation.x, -3.14f, 3.14f, "%.1f");
-  ImGui::SliderFloat("SizeX", &spriteSize_.x, 0.0f, 2000.0f, "%.1f");
-  ImGui::SliderFloat("SizeY", &spriteSize_.y, 0.0f, 2000.0f, "%.1f");
-
-  RC::SetSpriteTransform(sprite, spriteTransform_);
-  RC::SetSpriteScreenSize(sprite, spriteSize_.x, spriteSize_.y);
 
   ImGui::End();
 }

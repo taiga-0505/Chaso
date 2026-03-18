@@ -7,14 +7,16 @@
 #include <wrl/client.h>
 
 class SRVManager;
+class CommandContext;
 
 class Texture2D {
 public:
   Texture2D() = default;
   ~Texture2D() { Term(); }
 
-  void LoadFromFile(SRVManager &srv, const std::string &path, bool srgb = true);
+  Microsoft::WRL::ComPtr<ID3D12Resource> LoadFromFile(SRVManager &srv, CommandContext &cmd, const std::string &path, bool srgb = true);
   void Term(SRVManager *srv = nullptr);
+
 
   Texture2D(const Texture2D &) = delete;
   Texture2D &operator=(const Texture2D &) = delete;

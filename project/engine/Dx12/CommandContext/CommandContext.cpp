@@ -96,6 +96,36 @@ void CommandContext::FlushGPU() {
   }
 }
 
+uint64_t CommandContext::GetCompletedFenceValue() const {
+  if (!fence_) return 0;
+  return fence_->GetCompletedValue();
+}
+
+uint64_t CommandContext::ExecuteAndReset() {
+  HRESULT hr = list_->Close();
+  assert(SUCCEEDED(hr));
+  ID3D12CommandList *lists[] = {list_.Get()};
+  queue_->ExecuteCommandLists(1, lists);
+  
+  const uint64_t signalValue = ++globalFenceValue_;
+  hr = queue_->Signal(fence_.Get(), signalValue);
+  assert(SUCCEEDED(hr));
+
+  // GPU実行完了を待機しないと、直後の allocator->Reset() でクラッシュする (D3D12の規約違反)
+  if (fence_->GetCompletedValue() < signalValue) {
+    hr = fence_->SetEventOnCompletion(signalValue, fenceEvent_);
+    assert(SUCCEEDED(hr));
+    WaitForSingleObject(fenceEvent_, INFINITE);
+  }
+
+  hr = alloc_[0]->Reset();
+  assert(SUCCEEDED(hr));
+  hr = list_->Reset(alloc_[0].Get(), nullptr);
+  assert(SUCCEEDED(hr));
+
+  return signalValue;
+}
+
 // 便利: 単発トランジション
 void CommandContext::Transition(ID3D12Resource *res,
                                 D3D12_RESOURCE_STATES before,

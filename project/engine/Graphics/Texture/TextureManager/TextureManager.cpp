@@ -2,24 +2,61 @@
 #include "DescriptorHeap/DescriptorHeap.h"
 #include "SRVManager/SRVManager.h"
 
+void TextureManager::Init(SRVManager *srv) {
+  srv_ = srv;
+  // テクスチャ転送用に独自のコマンドリスト（DirectQueue、バッファ数1）を作る
+  loadCmd_.Init(srv->Device(), D3D12_COMMAND_LIST_TYPE_DIRECT, 1);
+  
+  // Init() 終了直後は Close されているので、記録開始のために一度 Reset しておく
+  loadCmd_.List()->Reset(loadCmd_.GetAllocator(0), nullptr);
+}
+
 void TextureManager::Term() {
+
+  // 残っている転送を全て待機
+  if (srv_) {
+    loadCmd_.FlushGPU();
+  }
+  ReleasePendingUploads();
+
   for (auto &[_, tex] : cache_) {
     tex.Term(srv_); // ★必ず srv を渡す
   }
   cache_.clear();
   srv_ = nullptr;
+  loadCmd_.Term();
+}
+
+void TextureManager::ReleasePendingUploads() {
+  uint64_t completed = loadCmd_.GetCompletedFenceValue();
+  auto it = pendingUploads_.begin();
+  while (it != pendingUploads_.end()) {
+    if (it->fenceValue <= completed) {
+      it = pendingUploads_.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
                                                  bool srgb) {
   assert(srv_);
+  ReleasePendingUploads(); // 前の転送が終わっていれば解放
+
   auto it = cache_.find(path);
   if (it != cache_.end() && it->second.IsLoaded()) {
     return it->second.GpuSrv();
   }
   Texture2D &tex = cache_[path];
-  tex.LoadFromFile(*srv_, path, srgb);
+  auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
+  if (uploadRes) {
+    uint64_t fence = loadCmd_.ExecuteAndReset();
+    pendingUploads_.push_back({uploadRes, fence});
+  }
+
   return tex.GpuSrv();
+
 }
 
 Texture2D *TextureManager::Get(const std::string &path) {
@@ -33,12 +70,17 @@ Texture2D *TextureManager::Get(const std::string &path) {
 TextureManager::TextureID TextureManager::LoadID(const std::string &path,
                                                  bool srgb) {
   assert(srv_);
+  ReleasePendingUploads(); // 前の転送が終わっていれば解放
 
   // 既にIDがあるなら返す（未ロードならロード）
   if (auto itId = pathToId_.find(path); itId != pathToId_.end()) {
     auto &tex = cache_[path];
     if (!tex.IsLoaded()) {
-      tex.LoadFromFile(*srv_, path, srgb);
+      auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
+      if (uploadRes) {
+        uint64_t fence = loadCmd_.ExecuteAndReset();
+        pendingUploads_.push_back({uploadRes, fence});
+      }
     }
     return itId->second;
   }
@@ -46,10 +88,16 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
   // 新規
   auto &tex = cache_[path];
   if (!tex.IsLoaded()) {
-    tex.LoadFromFile(*srv_, path, srgb);
+    auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
+    if (uploadRes) {
+      uint64_t fence = loadCmd_.ExecuteAndReset();
+      pendingUploads_.push_back({uploadRes, fence});
+    }
   }
 
+
   TextureID id = nextId_++;
+
   pathToId_[path] = id;
   idToPath_[id] = path;
   return id;
