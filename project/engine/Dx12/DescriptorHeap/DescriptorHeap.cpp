@@ -16,6 +16,24 @@ void DescriptorHeap::Init(ID3D12Device *device, D3D12_DESCRIPTOR_HEAP_TYPE type,
   HRESULT hr = device_->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heap_));
   assert(SUCCEEDED(hr));
 
+  switch (type_) {
+  case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+    heap_->SetName(L"DescriptorHeap::CBV_SRV_UAV");
+    break;
+  case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+    heap_->SetName(L"DescriptorHeap::SAMPLER");
+    break;
+  case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+    heap_->SetName(L"DescriptorHeap::RTV");
+    break;
+  case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+    heap_->SetName(L"DescriptorHeap::DSV");
+    break;
+  default:
+    heap_->SetName(L"DescriptorHeap::Other");
+    break;
+  }
+
   inc_ = device_->GetDescriptorHandleIncrementSize(type_);
   cpuStart_ = heap_->GetCPUDescriptorHandleForHeapStart();
   if (shaderVisible)

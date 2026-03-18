@@ -2,6 +2,11 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+
+ResultScene::~ResultScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
+}
 #include "imgui/imgui.h"
 
 void ResultScene::OnEnter(SceneContext &ctx) {

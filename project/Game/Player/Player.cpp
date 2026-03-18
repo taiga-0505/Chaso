@@ -27,6 +27,13 @@ void Player::Init(int modelIndex, SceneContext &ctx) {
   prevSpace_ = false;
 }
 
+Player::~Player() {
+  if (model_ >= 0) {
+    RC::UnloadModel(model_);
+    model_ = -1;
+  }
+}
+
 void Player::Update() {
 #if RC_ENABLE_IMGUI
   RC::DrawImGui3D(model_, "Player");

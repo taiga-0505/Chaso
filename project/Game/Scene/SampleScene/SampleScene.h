@@ -12,6 +12,7 @@ public:
   void Update(SceneManager &sm, SceneContext &ctx) override;
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
   void DrawImGui();
+  ~SampleScene() override;
 
 private:
   RC::Matrix4x4 view_, proj_;
@@ -33,7 +34,7 @@ private:
   // ===============
 
   int plane = -1;
-  Transform *planeTransform_;
+  Transform *planeTransform_ = nullptr;
 
   int blockModel = -1;
   RC::Vector4 blockColor_ = {0.8f, 0.9f, 1.0f, 0.12f};
@@ -58,12 +59,12 @@ private:
   // ===============
 
   int sprite = -1;
-  Transform spriteTransform_ = {
-      {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, {100.0f, 100.0f, 0.0f}};
-  RC::Vector2 spriteSize_ = {100.0f, 100.0f};
 
   float t = 0.0f;
 
-  RC::Vector4 fogColor_ = {0.85f, 0.92f, 1.00f, 1.0f};
+  RC::Vector4 fogColor_ = {0.1f, 0.45f, 0.9f, 0.35f};
   bool isFogEnabled_ = false;
+
+  Transform spriteTransform_;
+  RC::Vector2 spriteSize_ = {100.0f, 100.0f};
 };

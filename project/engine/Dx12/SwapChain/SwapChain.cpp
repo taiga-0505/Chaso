@@ -1,4 +1,5 @@
 #include "SwapChain.h"
+#include <format>
 
 void SwapChain::Init(IDXGIFactory6 *factory, ID3D12Device *device,
                      ID3D12CommandQueue *queue, HWND hwnd, UINT width,
@@ -88,6 +89,7 @@ void SwapChain::createBackBufferRTVs() {
   for (UINT i = 0; i < frameCount_; ++i) {
     HRESULT hr = swap_->GetBuffer(i, IID_PPV_ARGS(&backBuffers_[i]));
     assert(SUCCEEDED(hr));
+    backBuffers_[i]->SetName(std::format(L"SwapChain::backBuffers_[{}]", i).c_str());
     if (rtvHeap_) {
       D3D12_CPU_DESCRIPTOR_HANDLE h =
           rtvHeap_->GetCPUDescriptorHandleForHeapStart();

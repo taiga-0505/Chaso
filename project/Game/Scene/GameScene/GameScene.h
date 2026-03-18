@@ -18,6 +18,7 @@ public:
 
   void Update(SceneManager &sm, SceneContext &ctx) override;
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
+  ~GameScene() override;
 
 private:
   // ==============

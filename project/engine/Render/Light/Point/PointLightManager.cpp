@@ -1,4 +1,4 @@
-﻿#include "PointLightManager.h"
+#include "PointLightManager.h"
 #include "Dx12/Dx12Core.h" // CreateBufferResource
 #include <algorithm>
 #include "function/function.h"
@@ -177,7 +177,7 @@ void PointLightManager::EnsureCB_() {
     return;
 
   const UINT size = Align256_((UINT)sizeof(::PointLightsCB));
-  cb_ = CreateBufferResource(device_.Get(), size);
+  cb_ = CreateBufferResource(device_.Get(), size, L"PointLightManager::cb_");
   cb_->Map(0, nullptr, reinterpret_cast<void **>(&mapped_));
 }
 

@@ -1,10 +1,12 @@
 #pragma once
 #include <d3d12.h>
+#include <wrl.h>
 #include <cassert>
 
 // バッファリソース作成
-inline ID3D12Resource *CreateBufferResource(ID3D12Device *device,
-                                            size_t sizeInBytes) {
+inline Microsoft::WRL::ComPtr<ID3D12Resource>
+CreateBufferResource(ID3D12Device *device, size_t sizeInBytes,
+                     const wchar_t *name = nullptr) {
   D3D12_HEAP_PROPERTIES heapProperties{};
   heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
 
@@ -17,10 +19,15 @@ inline ID3D12Resource *CreateBufferResource(ID3D12Device *device,
   bufferDesc.SampleDesc.Count = 1;
   bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-  ID3D12Resource *buffer = nullptr;
+  Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
   HRESULT hr = device->CreateCommittedResource(
       &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc,
       D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
   assert(SUCCEEDED(hr));
+
+  if (buffer && name) {
+    buffer->SetName(name);
+  }
+
   return buffer;
 }

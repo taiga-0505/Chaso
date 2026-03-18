@@ -68,6 +68,10 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::LoadFromFile(SRVManager &srv, 
                                        D3D12_RESOURCE_STATE_COPY_DEST,
                                        nullptr, IID_PPV_ARGS(&resource_));
   assert(SUCCEEDED(hr));
+  if (resource_) {
+    std::wstring wpath(path.begin(), path.end());
+    resource_->SetName((L"Texture: " + wpath).c_str());
+  }
 
   // ---- 3) IntermediateResource (UploadHeap) の作成と転送 ----
   UINT numMipLevels = (UINT)metadata_.mipLevels;
@@ -96,6 +100,10 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::LoadFromFile(SRVManager &srv, 
   hr = device->CreateCommittedResource(&uploadHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadRes));
   assert(SUCCEEDED(hr));
+  if (uploadRes) {
+    std::wstring wpath(path.begin(), path.end());
+    uploadRes->SetName((L"TextureUpload: " + wpath).c_str());
+  }
 
   uint8_t* pData = nullptr;
   hr = uploadRes->Map(0, nullptr, reinterpret_cast<void**>(&pData));

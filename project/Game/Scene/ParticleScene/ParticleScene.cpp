@@ -327,3 +327,10 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawSprite(guide);
 }
+
+ParticleScene::~ParticleScene() {
+  if (guide >= 0) {
+    RC::UnloadSprite(guide);
+    guide = -1;
+  }
+}

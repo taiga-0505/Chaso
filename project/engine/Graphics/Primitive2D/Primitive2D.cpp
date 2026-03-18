@@ -1,4 +1,4 @@
-﻿#include "Primitive2D.h"
+#include "Primitive2D.h"
 #include "RenderCommon.h" // RC::LoadTex / RC::GetSrv
 #include <cassert>
 #include <cstring>
@@ -60,7 +60,7 @@ void Primitive2D::Initialize(ID3D12Device *device, float screenW,
   cbStride_ = Align256((uint32_t)sizeof(Params));
 
   // ★リング分まとめて確保
-  cbParamsRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame);
+  cbParamsRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame, L"Primitive2D::cbParamsRes_");
   cbParamsRes_->Map(0, nullptr, reinterpret_cast<void **>(&cbParamsMap_));
 
   // CPU側初期化
@@ -71,13 +71,13 @@ void Primitive2D::Initialize(ID3D12Device *device, float screenW,
   paramsCPU_.U = {SHAPE_LINE, 0, 0, 0};
 
   // Dummy VS は今まで通り
-  cbDummy_.res = CreateBufferResource(device_.Get(), sizeof(DummyVS));
+  cbDummy_.res = CreateBufferResource(device_.Get(), sizeof(DummyVS), L"Primitive2D::cbDummy_.res");
   cbDummy_.res->Map(0, nullptr, reinterpret_cast<void **>(&cbDummy_.map));
   cbDummy_.map->World = MakeIdentity4x4();
   cbDummy_.map->WVP = MakeIdentity4x4();
 
   // VB は今まで通り
-  vb_.res = CreateBufferResource(device_.Get(), sizeof(Vertex) * 3);
+  vb_.res = CreateBufferResource(device_.Get(), sizeof(Vertex) * 3, L"Primitive2D::vb_.res");
   WriteFullTri(vb_.res.Get());
   vb_.view.BufferLocation = vb_.res->GetGPUVirtualAddress();
   vb_.view.SizeInBytes = sizeof(Vertex) * 3;

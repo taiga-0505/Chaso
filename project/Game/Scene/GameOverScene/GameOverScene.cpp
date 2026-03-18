@@ -2,6 +2,11 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+
+GameOverScene::~GameOverScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
+}
 #include "imgui/imgui.h"
 
 void GameOverScene::OnEnter(SceneContext &ctx) {

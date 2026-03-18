@@ -71,9 +71,9 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
   HRESULT hr = CreateDXGIFactory2(factoryFlags, IID_PPV_ARGS(&factory_));
   assert(SUCCEEDED(hr));
 
-  adapter_ = pickHardwareAdapter_();
+  adapter_.Attach(pickHardwareAdapter_());
   if (!adapter_) {
-    adapter_ = getWarpAdapter_();
+    adapter_.Attach(getWarpAdapter_());
     assert(adapter_ && "No suitable DXGI adapter found");
   }
 
@@ -100,12 +100,13 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
     hr = D3D12CreateDevice(adapter_.Get(), tryLevels[i], IID_PPV_ARGS(&dev));
     if (SUCCEEDED(hr)) {
       featureLevel_ = tryLevels[i];
-      device_ = dev; // 所有
+      device_.Attach(dev); // 所有権を移譲 (AddRefしない)
       logger.WriteLog(std::format("FeatureLevel : {}\n", tryLevelStr[i]));
       break;
     }
   }
   assert(device_ && "D3D12 device creation failed");
+  device_->SetName(L"MainDevice");
   logger.WriteLog("Complete create D3D12Device!!!\n");
 }
 

@@ -11,9 +11,9 @@ void StructuredBufferManager::Init(SRVManager *srvMgr) {
 }
 
 void StructuredBufferManager::Term() {
-  // まとめて破棄（※基本は WaitForGPU 後に呼ぶ想定）
+  // まとめて破棄
   for (int i = 0; i < (int)entries_.size(); ++i) {
-    Destroy(i);
+    Destroy(static_cast<BufferID>(i));
   }
   entries_.clear();
   device_.Reset();
@@ -48,6 +48,9 @@ StructuredBufferManager::Create(UINT elementCount, UINT strideBytes) {
       &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
       D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resource));
   assert(SUCCEEDED(hr) && "Failed to create structured buffer resource");
+  if (resource) {
+    resource->SetName(L"StructuredBuffer");
+  }
 
   // ---- 2) SRV 作成（SRVManager 経由）----
   // ここで index / CPU / GPU ハンドルまで全部揃う

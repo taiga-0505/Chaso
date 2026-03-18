@@ -1,4 +1,4 @@
-﻿#include "Primitive3D.h"
+#include "Primitive3D.h"
 #include <cassert>
 #include <cmath>
 
@@ -105,7 +105,7 @@ void Primitive3D::Initialize(ID3D12Device *device) {
   device_ = device;
 
   cbStride_ = Align256((uint32_t)sizeof(PerFrameCB));
-  cbRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame);
+  cbRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame, L"Primitive3D::cbRes_");
   cbRes_->Map(0, nullptr, reinterpret_cast<void **>(&cbMap_));
 
   // 初期VB（とりあえず 4096 頂点）
@@ -142,7 +142,7 @@ void Primitive3D::EnsureVB_(size_t vertexCount) {
 
   // ちょい余裕持たせる（伸びた時の再確保回数を減らす）
   vbCapacity_ = (vertexCount < 4096) ? 4096 : vertexCount;
-  vb_ = CreateBufferResource(device_.Get(), sizeof(Vertex) * vbCapacity_);
+  vb_ = CreateBufferResource(device_.Get(), sizeof(Vertex) * vbCapacity_, L"Primitive3D::vb_");
   vb_->Map(0, nullptr, reinterpret_cast<void **>(&vbMap_));
 
   vbView_.BufferLocation = vb_->GetGPUVirtualAddress();

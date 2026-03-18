@@ -281,11 +281,11 @@ void Init(SceneContext &ctx) {
   gAreaLightMan.Init(gDevice.Get());
 
   // CameraCB: Upload に置いて Map しっぱなしで更新する
-  gCameraCB = CreateBufferResource(gDevice.Get(), sizeof(CameraCB));
+  gCameraCB = CreateBufferResource(gDevice.Get(), sizeof(CameraCB), L"RenderCommon::gCameraCB");
   gCameraCB->Map(0, nullptr, reinterpret_cast<void **>(&gCameraCBMapped));
 
   // FogOverlayCB: 画面全体の白い霧（寒い表現）
-  gFogCB = CreateBufferResource(gDevice.Get(), sizeof(FogOverlayCB));
+  gFogCB = CreateBufferResource(gDevice.Get(), sizeof(FogOverlayCB), L"RenderCommon::gFogCB");
   gFogCB->Map(0, nullptr, reinterpret_cast<void **>(&gFogCBMapped));
   if (gFogCBMapped) {
     // 既定値（後から DrawFogOverlay の引数で上書きされる）
@@ -323,6 +323,9 @@ void Term() {
 
   gPrim2D.ptr.reset();
   gPrim2D.inUse = false;
+
+  gPrim3D.ptr.reset();
+  gPrim3D.inUse = false;
 
   if (gCameraCB) {
     if (gCameraCBMapped) {

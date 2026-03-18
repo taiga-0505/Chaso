@@ -2,6 +2,11 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+
+SelectScene::~SelectScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
+}
 #include "StageSelection/StageSelection.h"
 #include "imgui/imgui.h"
 #include <cmath>
@@ -83,7 +88,19 @@ void SelectScene::OnEnter(SceneContext &ctx) {
   DTransform->scale = {0.5f, 0.5f, 0.5f};
 }
 
-void SelectScene::OnExit(SceneContext &ctx) {}
+void SelectScene::OnExit(SceneContext &) {
+  for (int i = 0; i < kStageMax; ++i) {
+    RC::UnloadModel(stageModels[i]);
+    stageModels[i] = -1;
+  }
+  RC::UnloadSphere(skydomeModel);
+  skydomeModel = -1;
+
+  RC::UnloadModel(AModel);
+  AModel = -1;
+  RC::UnloadModel(DModel);
+  DModel = -1;
+}
 
 void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
 

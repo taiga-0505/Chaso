@@ -1,4 +1,4 @@
-﻿#include "ModelObject.h"
+#include "ModelObject.h"
 #include "Texture/TextureManager/TextureManager.h"
 #include "imgui/imgui.h"
 #include <algorithm>
@@ -28,14 +28,14 @@ void ModelObject::Initialize(ID3D12Device *device) {
   device_ = device;
 
   // WVP CB（単発用：互換のため残す）
-  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix));
+  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix), L"ModelObject::cbWvp_");
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
   cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // Material CB
-  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material));
+  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material), L"ModelObject::cbMat_");
   cbMat_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.mapped));
   cbMat_.mapped->color = {1, 1, 1, 1};
   cbMat_.mapped->lightingMode = 2; // 既定 HalfLambert
@@ -46,7 +46,7 @@ void ModelObject::Initialize(ID3D12Device *device) {
   cbMat_.mapped->padding[1] = 0.0f; // roughness
 
   // Light CB（各Objectが自前で持つ）
-  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight));
+  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight), L"ModelObject::cbLight_");
   cbLight_.resource->Map(0, nullptr,
                          reinterpret_cast<void **>(&cbLight_.mapped));
   cbLight_.mapped->color = {1, 1, 1, 1};
@@ -103,7 +103,8 @@ void ModelObject::EnsureWvpBatchCapacity_(uint32_t count) {
   cbWvpBatchCapacity_ =
       (std::max)(count, cbWvpBatchCapacity_ * 2u + 16u); // ちょい多め
   const uint64_t totalSize = uint64_t(oneSize) * cbWvpBatchCapacity_;
-  cbWvpBatch_ = CreateBufferResource(device_.Get(), totalSize);
+  cbWvpBatch_ = CreateBufferResource(device_.Get(), totalSize, L"ModelObject::cbWvpBatch_");
+  cbWvpBatchCapacity_ = count;
   cbWvpBatch_->Map(0, nullptr, reinterpret_cast<void **>(&cbWvpBatchMapped_));
 }
 
@@ -170,7 +171,8 @@ void ModelObject::EnsureInstanceBatchCapacity_(uint32_t count) {
   const uint64_t totalSize =
       uint64_t(sizeof(InstanceDataGPU)) * instanceBatchCapacity_;
 
-  instanceBatch_ = CreateBufferResource(device_.Get(), totalSize);
+  instanceBatch_ = CreateBufferResource(device_.Get(), totalSize, L"ModelObject::instanceBatch_");
+  instanceBatchCapacity_ = count;
   instanceBatch_->Map(0, nullptr,
                       reinterpret_cast<void **>(&instanceBatchMapped_));
 }

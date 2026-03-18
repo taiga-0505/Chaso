@@ -21,6 +21,7 @@ public:
   // 初期化 / 終了
   void Initialize(SceneContext &ctx);
   void Finalize();
+  ~Particle() { Finalize(); }
 
   // 1フレーム分の更新 / 描画
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);

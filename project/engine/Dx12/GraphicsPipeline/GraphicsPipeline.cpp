@@ -417,6 +417,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   hr = device_->CreateRootSignature(0, sig->GetBufferPointer(),
                                     sig->GetBufferSize(), IID_PPV_ARGS(&root_));
   assert(SUCCEEDED(hr));
+  root_->SetName(L"GraphicsPipeline::RootSignature");
 }
 
 void GraphicsPipeline::buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems,
@@ -463,4 +464,5 @@ void GraphicsPipeline::buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems,
 
   HRESULT hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
   assert(SUCCEEDED(hr));
+  pso_->SetName(L"GraphicsPipeline::PSO");
 }

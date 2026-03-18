@@ -12,13 +12,15 @@
 #pragma comment(lib, "d3d12.lib")
 #include <dxgidebug.h>
 #include <wrl.h>
-inline void ReportDXGI(const char *tag) {
+inline void ReportLiveObjectsDbg(const char *tag) {
   using Microsoft::WRL::ComPtr;
-  ComPtr<IDXGIDebug> dbg;
-  if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dbg)))) {
-    OutputDebugStringA(
-        ("==== DXGI LIVE REPORT @" + std::string(tag) + " ====\n").c_str());
-    dbg->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
+  OutputDebugStringA(
+      ("==== LIVE REPORT @" + std::string(tag) + " ====\n").c_str());
+      
+  // Report DXGI
+  ComPtr<IDXGIDebug> dxgiDbg;
+  if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDbg)))) {
+    dxgiDbg->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
   }
 }
 
@@ -170,9 +172,7 @@ void App::Term() {
   // Render Layer
   // ====================
   // RenderCommon 終了
-  ReportDXGI("before RC::Term");
   RC::Term();
-  ReportDXGI("after RC::Term");
 
   // ====================
   // Pipeline / ImGui
@@ -185,9 +185,9 @@ void App::Term() {
   // Core
   // ====================
   // コア終了
-  ReportDXGI("before core_.Term");
   core_.Term();
-  ReportDXGI("after core_.Term");
+  device_ = nullptr;
+  cl_ = nullptr;
 
   // ====================
   // Input / Window
@@ -195,4 +195,6 @@ void App::Term() {
   // 入力とウィンドウ破棄
   input_.reset();
   window_.reset();
+
+  ReportLiveObjectsDbg("FINAL Report at the end of App::Term");
 }

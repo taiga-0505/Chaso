@@ -1,4 +1,4 @@
-﻿#include "ModelMesh.h"
+#include "ModelMesh.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -332,7 +332,10 @@ void ModelMesh::UploadVB_(const std::vector<VertexData> &vertices) {
     vb_.resource.Reset();
   }
 
-  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes);
+  vb_.resource = CreateBufferResource(
+      device_.Get(), sizeBytes,
+      (L"ModelVB: " + std::wstring(sourceInputPath_.begin(), sourceInputPath_.end()))
+          .c_str());
 
   void *mapped = nullptr;
   vb_.resource->Map(0, nullptr, &mapped);

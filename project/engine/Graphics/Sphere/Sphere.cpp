@@ -1,4 +1,4 @@
-﻿#include "Sphere.h"
+#include "Sphere.h"
 #include "Math/Math.h"
 #include "imgui/imgui.h"
 #include <cassert>
@@ -29,21 +29,21 @@ void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
   UploadIB_();
 
   // CB: WVP
-  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix));
+  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix), L"Sphere::cbWvp_");
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
   cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // CB: Material
-  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material));
+  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material), L"Sphere::cbMat_");
   cbMat_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.mapped));
   cbMat_.mapped->color = {1, 1, 1, 1};
   cbMat_.mapped->uvTransform = MakeIdentity4x4();
   cbMat_.mapped->lightingMode = 2; // HalfLambert 既定
 
   // CB: Light（球ごとに持つ）
-  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight));
+  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight), L"Sphere::cbLight_");
   cbLight_.resource->Map(0, nullptr,
                          reinterpret_cast<void **>(&cbLight_.mapped));
   cbLight_.mapped->color = {1, 1, 1, 1};
@@ -249,7 +249,7 @@ void Sphere::UploadVB_() {
     return;
 
   const UINT sizeBytes = UINT(sizeof(VertexData) * vb_.vertexCount);
-  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes);
+  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Sphere::vb_");
 
   void *mapped = nullptr;
   vb_.resource->Map(0, nullptr, &mapped);
@@ -267,24 +267,8 @@ void Sphere::UploadIB_() {
     return;
 
   const UINT sizeBytes = UINT(sizeof(uint16_t) * ib_.indexCount);
-  // アップロードヒープでOK（頻繁に書き換えない・簡易）
-  D3D12_HEAP_PROPERTIES heapProps{};
-  heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-  D3D12_RESOURCE_DESC resDesc{};
-  resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  resDesc.Width = sizeBytes;
-  resDesc.Height = 1;
-  resDesc.DepthOrArraySize = 1;
-  resDesc.MipLevels = 1;
-  resDesc.Format = DXGI_FORMAT_UNKNOWN;
-  resDesc.SampleDesc.Count = 1;
-  resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-  HRESULT hr = device_->CreateCommittedResource(
-      &heapProps, D3D12_HEAP_FLAG_NONE, &resDesc,
-      D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&ib_.resource));
-  assert(SUCCEEDED(hr));
+  ib_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Sphere::ib_");
+  assert(ib_.resource);
 
   uint16_t *mapped = nullptr;
   ib_.resource->Map(0, nullptr, reinterpret_cast<void **>(&mapped));

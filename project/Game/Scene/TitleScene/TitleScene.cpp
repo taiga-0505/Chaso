@@ -35,10 +35,21 @@ void TitleScene::OnEnter(SceneContext &ctx) {
   RC::SetSpriteColor(guideSprite, {1.0f, 1.0f, 1.0f, 0.9f});
 }
 
-void TitleScene::OnExit(SceneContext &ctx) {
+void TitleScene::OnExit(SceneContext &) {
   // タイトルモデル破棄
   RC::UnloadModel(titleModel);
   titleModel = -1;
+
+  RC::UnloadSphere(skydomeModel);
+  skydomeModel = -1;
+
+  RC::UnloadSprite(guideSprite);
+  guideSprite = -1;
+}
+
+TitleScene::~TitleScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
 }
 
 void TitleScene::Update(SceneManager &sm, SceneContext &ctx) {

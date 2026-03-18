@@ -29,6 +29,7 @@ public:
   // ==============
   // ======= Lifecycle =======
   void Init(int modelIndex, SceneContext &ctx);
+  ~Player();
   void Update();
   void Draw();
 

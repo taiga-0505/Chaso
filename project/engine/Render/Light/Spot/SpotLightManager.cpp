@@ -1,4 +1,4 @@
-﻿#include "SpotLightManager.h"
+#include "SpotLightManager.h"
 #include "Dx12/Dx12Core.h" // CreateBufferResource
 #include <algorithm>
 #include "function/function.h"
@@ -169,7 +169,7 @@ void SpotLightManager::EnsureCB_() {
     return;
 
   const UINT size = Align256_((UINT)sizeof(::SpotLightsCB));
-  cb_ = CreateBufferResource(device_.Get(), size);
+  cb_ = CreateBufferResource(device_.Get(), size, L"SpotLightManager::cb_");
   cb_->Map(0, nullptr, reinterpret_cast<void **>(&mapped_));
 }
 

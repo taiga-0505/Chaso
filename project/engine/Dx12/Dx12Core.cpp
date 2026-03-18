@@ -218,13 +218,6 @@ void Dx12Core::Term() {
   cmd_.Term();
 
   // ====================
-  // Live Objects Report
-  // ====================
-  // Live Objects レポート（デバイス・ファクトリが生きているうちに）
-  ReportD3D12LiveObjects(device_.GetDevice());
-  ReportDXGILiveObjects();
-
-  // ====================
   // Device Release
   // ====================
   // デバイス/ファクトリ解放

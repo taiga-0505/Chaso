@@ -1,4 +1,4 @@
-﻿#include "DirectionalLightManager.h"
+#include "DirectionalLightManager.h"
 
 #include "Dx12/Dx12Core.h" // CreateBufferResource
 #include "function/function.h"
@@ -196,7 +196,7 @@ void DirectionalLightManager::EnsureCB_(Slot &s) {
     return;
   }
 
-  s.cb = CreateBufferResource(device_.Get(), sizeof(DirectionalLight));
+  s.cb = CreateBufferResource(device_.Get(), sizeof(DirectionalLight), L"DirectionalLight::cb");
   s.cb->Map(0, nullptr, reinterpret_cast<void **>(&s.mapped));
   if (s.mapped) {
     *s.mapped = s.light.DataForGPU();

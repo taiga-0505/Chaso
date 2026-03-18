@@ -3,6 +3,11 @@
 #include "SceneManager.h"
 #include "StageSelection/StageSelection.h"
 
+GameScene::~GameScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
+}
+
 void GameScene::OnEnter(SceneContext &ctx) {
   // ==============
   // シーン初期化

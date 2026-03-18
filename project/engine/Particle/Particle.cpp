@@ -1,4 +1,4 @@
-﻿#include "Particle.h"
+#include "Particle.h"
 #include "Dx12Core.h"
 #include "PipelineManager.h"
 #include "RenderCommon.h"
@@ -65,7 +65,7 @@ void Particle::Initialize(SceneContext &ctx) {
   // 頂点バッファ生成 ＆ 転送
   // ==================
   vbResource_ =
-      CreateBufferResource(device_.Get(), sizeof(VertexData) * vertexCount_);
+      CreateBufferResource(device_.Get(), sizeof(VertexData) * vertexCount_, L"Particle::vbResource_");
 
   VertexData *vbMapped = nullptr;
   vbResource_->Map(0, nullptr, reinterpret_cast<void **>(&vbMapped));
@@ -90,7 +90,7 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==================
   // Material 用定数バッファ (b0)
   // ==================
-  cbMat_ = CreateBufferResource(device_.Get(), Align256(sizeof(SpriteMaterial)));
+  cbMat_ = CreateBufferResource(device_.Get(), Align256(sizeof(SpriteMaterial)), L"Particle::cbMat_");
   cbMat_->Map(0, nullptr, reinterpret_cast<void **>(&cbMatMapped_));
   *cbMatMapped_ = SpriteMaterial{}; // 一旦 0 クリア
   cbMatMapped_->color = {1, 1, 1, 1};

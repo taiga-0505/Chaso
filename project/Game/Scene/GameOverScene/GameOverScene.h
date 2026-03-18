@@ -10,6 +10,7 @@ public:
   void OnExit(SceneContext &);
   void Update(SceneManager &sm, SceneContext &ctx) override;
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
+  ~GameOverScene() override;
 
 private:
   // ==============

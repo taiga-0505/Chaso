@@ -1,4 +1,5 @@
 #include "CommandContext.h"
+#include <format>
 
 void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
                           uint32_t frameCount) {
@@ -12,11 +13,14 @@ void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
   qdesc.Type = type_;
   HRESULT hr = device_->CreateCommandQueue(&qdesc, IID_PPV_ARGS(&queue_));
   assert(SUCCEEDED(hr));
+  queue_->SetName(L"CommandContext::Queue");
 
   // Allocator(s)
   for (uint32_t i = 0; i < frameCount_; ++i) {
     hr = device_->CreateCommandAllocator(type_, IID_PPV_ARGS(&alloc_[i]));
     assert(SUCCEEDED(hr));
+    alloc_[i]->SetName(
+        std::format(L"CommandContext::Allocator_{}", i).c_str());
     frameFenceValue_[i] = 0;
   }
 
@@ -24,6 +28,7 @@ void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
   hr = device_->CreateCommandList(0, type_, alloc_[0].Get(), nullptr,
                                   IID_PPV_ARGS(&list_));
   assert(SUCCEEDED(hr));
+  list_->SetName(L"CommandContext::List");
   hr = list_->Close(); // 最初は閉じておく
   assert(SUCCEEDED(hr));
 
@@ -31,6 +36,7 @@ void CommandContext::Init(ID3D12Device *device, D3D12_COMMAND_LIST_TYPE type,
   hr = device_->CreateFence(globalFenceValue_, D3D12_FENCE_FLAG_NONE,
                             IID_PPV_ARGS(&fence_));
   assert(SUCCEEDED(hr));
+  fence_->SetName(L"CommandContext::Fence");
   fenceEvent_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
   assert(fenceEvent_ != nullptr);
 }

@@ -6,6 +6,11 @@
 #include "SceneManager.h"
 #include "imgui/imgui.h"
 
+SampleScene::~SampleScene() {
+  SceneContext dummy{};
+  OnExit(dummy);
+}
+
 void SampleScene::OnEnter(SceneContext &ctx) {
 
   // =============================

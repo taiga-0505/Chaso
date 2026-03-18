@@ -9,6 +9,7 @@ public:
   void OnExit(SceneContext &ctx) override;
   void Update(SceneManager &sm, SceneContext &ctx) override;
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) override;
+  ~ParticleScene() override;
 
 private:
   RC::Matrix4x4 view_, proj_;

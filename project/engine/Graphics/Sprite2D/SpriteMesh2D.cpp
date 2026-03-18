@@ -1,4 +1,4 @@
-﻿#include "SpriteMesh2D.h"
+#include "SpriteMesh2D.h"
 
 static void WriteQuadVertices_(ID3D12Resource *vb) {
   SpriteVertex *v = nullptr;
@@ -53,14 +53,14 @@ bool SpriteMesh2D::Initialize(ID3D12Device *device) {
   device_ = device;
 
   // VB (4頂点)
-  vb_ = CreateBufferResource(device_.Get(), sizeof(SpriteVertex) * 4);
+  vb_ = CreateBufferResource(device_.Get(), sizeof(SpriteVertex) * 4, L"SpriteMesh2D::vb_");
   WriteQuadVertices_(vb_.Get());
   vbv_.BufferLocation = vb_->GetGPUVirtualAddress();
   vbv_.SizeInBytes = sizeof(SpriteVertex) * 4;
   vbv_.StrideInBytes = sizeof(SpriteVertex);
 
   // IB (6 index)
-  ib_ = CreateBufferResource(device_.Get(), sizeof(uint32_t) * 6);
+  ib_ = CreateBufferResource(device_.Get(), sizeof(uint32_t) * 6, L"SpriteMesh2D::ib_");
   WriteQuadIndices_(ib_.Get());
   ibv_.BufferLocation = ib_->GetGPUVirtualAddress();
   ibv_.SizeInBytes = sizeof(uint32_t) * 6;
