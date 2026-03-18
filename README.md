@@ -1,18 +1,10 @@
-# master
-[![DebugBuild](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml)
-[![ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml)
-
-# GE3 branch
-[![GE3DebugBuild](https://github.com/reachaso/CG2/actions/workflows/GE3DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/GE3DebugBuild.yml)
-[![GE3ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/GE3ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/GE3ReleaseBuild.yml)
-
 # Chaso Engine
 
 DirectX 12ベースの自作ゲームエンジンです。
 アプリケーション層から独立しており、描画、入力、ウィンドウ管理、各種リソース管理の基盤を提供します。
 
-[![GE3DebugBuild](https://github.com/reachaso/CG2/actions/workflows/GE3DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/GE3DebugBuild.yml)
-[![GE3ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/GE3ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/GE3ReleaseBuild.yml)
+[![DebugBuild](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml)
+[![ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml)
 
 ## 概要 (Overview)
 
