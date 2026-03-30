@@ -55,6 +55,8 @@ void AreaLightSource::SetSize(float width, float height) {
 }
 
 void AreaLightSource::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
   std::string label = name ? std::string(name) : std::string("AreaLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
@@ -93,6 +95,8 @@ void AreaLightSource::DrawImGui(const char *name) {
       data_.twoSided = two ? 1u : 0u;
     }
   }
+
+#endif
 }
 
 

@@ -46,6 +46,8 @@ DirectionalLight DirectionalLightSource::DataForGPU() const {
 }
 
 void DirectionalLightSource::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
 
   std::string label = name ? std::string(name) : std::string("Light");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -108,6 +110,8 @@ void DirectionalLightSource::DrawImGui(const char *name) {
       ImGui::TextDisabled("(0で鏡面なし)");
     }
   }
+
+#endif
 }
 
 } // namespace RC

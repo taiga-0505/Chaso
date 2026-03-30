@@ -211,6 +211,8 @@ void LightScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 }
 
 void LightScene::DrawImGui() {
+#if RC_ENABLE_IMGUI
+
   camera_.DrawImGui();
 
   ImGui::Begin("Debug");
@@ -250,4 +252,6 @@ void LightScene::DrawImGui() {
   }
 
   ImGui::End();
+
+#endif
 }

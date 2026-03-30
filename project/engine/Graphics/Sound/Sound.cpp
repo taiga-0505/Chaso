@@ -284,6 +284,8 @@ void Sound::Initialize(const char *filename) {
 }
 
 void Sound::SoundImGui(const char *soundname) {
+#if RC_ENABLE_IMGUI
+
   std::string Label = std::string(soundname);
 
   if (ImGui::CollapsingHeader(Label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -308,6 +310,8 @@ void Sound::SoundImGui(const char *soundname) {
 
     ImGui::Dummy(ImVec2(0.0f, 5.0f));
   }
+
+#endif
 }
 
 void Sound::SetVolume(float volume_) {

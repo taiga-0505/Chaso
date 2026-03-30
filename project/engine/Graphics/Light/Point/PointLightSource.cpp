@@ -21,6 +21,8 @@ PointLightSource::PointLightSource() {
 }
 
 void PointLightSource::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
   std::string label = name ? std::string(name) : std::string("PointLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
@@ -44,6 +46,8 @@ void PointLightSource::DrawImGui(const char *name) {
     ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(),
                      &data_.decay, 0.05f, 0.0f, 32.0f, "%.2f");
   }
+
+#endif
 }
 
 } // namespace RC

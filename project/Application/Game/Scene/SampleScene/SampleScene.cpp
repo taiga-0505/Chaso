@@ -188,6 +188,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
 }
 
+#if RC_ENABLE_IMGUI
 void SampleScene::DrawImGui() {
 
   ImGui::Begin("Debug");
@@ -263,3 +264,5 @@ void SampleScene::DrawImGui() {
 
   ImGui::End();
 }
+#endif
+

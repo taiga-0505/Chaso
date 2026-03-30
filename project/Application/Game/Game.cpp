@@ -65,6 +65,8 @@ const std::string &Game::CurrentSceneName() const {
 }
 
 void Game::DrawDebugUI() {
+#if RC_ENABLE_IMGUI
+
 
 #ifdef _DEBUG
   ImGui::Begin("Scene");
@@ -100,6 +102,8 @@ void Game::DrawDebugUI() {
     ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
   }
   ImGui::End();
+
+#endif
 
 #endif
 }

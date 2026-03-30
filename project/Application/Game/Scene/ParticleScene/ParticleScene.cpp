@@ -58,6 +58,8 @@ void ParticleScene::OnExit(SceneContext &ctx) {
 }
 
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
+#if RC_ENABLE_IMGUI
+
 
   particle_.DrawImGui();
 
@@ -291,6 +293,8 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   } else {
     impact_particle_.StopImpact();
   }
+
+#endif
 }
 
 void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {

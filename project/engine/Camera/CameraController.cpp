@@ -77,8 +77,12 @@ void CameraController::Update(float dt) {
 #endif
 
   if (useDebug_) {
-    if (!(ImGui::GetIO().WantCaptureMouse ||
+    #if RC_ENABLE_IMGUI
+if (!(ImGui::GetIO().WantCaptureMouse ||
           ImGui::GetIO().WantCaptureKeyboard)) {
+#else
+if (true) {
+#endif
       debug_.Update();
     }
   } else {
@@ -219,6 +223,7 @@ void CameraController::UpdateFollow_(float dt) {
 
 void CameraController::DrawImGui() {
 #if RC_ENABLE_IMGUI
+#if RC_ENABLE_IMGUI
   ImGui::Begin("カメラモード : Tab");
 
   if (useDebug_) {
@@ -260,6 +265,8 @@ void CameraController::DrawImGui() {
     ImGui::Text(" マウスホイール押しながらドラッグ : 上下左右移動");
     ImGui::End();
   }
+
+#endif
 
 #endif
 }

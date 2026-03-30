@@ -43,6 +43,8 @@ void SpotLightSource::SetAngleRad(float rad) {
 }
 
 void SpotLightSource::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
   std::string label = name ? std::string(name) : std::string("SpotLight");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
     return;
@@ -79,6 +81,8 @@ void SpotLightSource::DrawImGui(const char *name) {
       SetAngleDeg(angleDeg);
     }
   }
+
+#endif
 }
 
 } // namespace RC

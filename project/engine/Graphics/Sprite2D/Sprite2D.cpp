@@ -94,6 +94,8 @@ void Sprite2D::Draw(ID3D12GraphicsCommandList *cmdList) const {
 }
 
 void Sprite2D::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
 
   std::string label = name ? std::string(name) : std::string("Sprite2D");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
@@ -136,4 +138,6 @@ void Sprite2D::DrawImGui(const char *name) {
 
     ImGui::Text("SRV ptr: 0x%llx", (unsigned long long)srv_.ptr);
   }
+
+#endif
 }

@@ -23,9 +23,11 @@ Window::~Window() {
 LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT msg, WPARAM wparam,
                                     LPARAM lparam) {
 
+  #if RC_ENABLE_IMGUI
   if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam)) {
     return true; // ImGuiが処理した場合はtrueを返す
   }
+#endif
 
   switch (msg) {
   case WM_DESTROY:

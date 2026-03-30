@@ -317,9 +317,9 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::SetBlendMode(prevBlend);
 }
 
+#if RC_ENABLE_IMGUI
 void Particle::DrawImGui() {
 
-#ifdef RC_ENABLE_IMGUI
   if (ImGui::TreeNode("Particle")) {
 
     // ==================
@@ -490,8 +490,10 @@ void Particle::DrawImGui() {
     ImGui::TreePop();
   }
 
-#endif // _DEBUG
+ // _DEBUG
 }
+#endif
+
 
 ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine,
                                        const Vector3 &translate) {

@@ -90,6 +90,8 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
 }
 
 void Sphere::DrawImGui(const char *name) {
+#if RC_ENABLE_IMGUI
+
   std::string label = name ? std::string(name) : std::string("Sphere");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     return;
@@ -148,6 +150,8 @@ void Sphere::DrawImGui(const char *name) {
     }
     ImGui::Dummy(ImVec2(0, 6));
   }
+
+#endif
 }
 
 void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,

@@ -459,6 +459,8 @@ static void ShowLongTextJP(const std::string &s) {
 }
 
 void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
+#if RC_ENABLE_IMGUI
+
   std::string label = name ? std::string(name) : std::string("ModelObject");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     return;
@@ -660,4 +662,6 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
   }
 
   ImGui::Dummy(ImVec2(0, 6));
+
+#endif
 }

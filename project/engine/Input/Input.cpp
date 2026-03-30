@@ -125,6 +125,8 @@ void Input::SetXInputVibration(WORD leftMotor, WORD rightMotor) {
 }
 
 void Input::ControllerImGui(const char *label) {
+#if RC_ENABLE_IMGUI
+
   // ラベルをIDに使えるように##で衝突回避
   std::string base = label ? label : "コントローラー";
   if (!ImGui::CollapsingHeader((base + "##ControllerHeader").c_str(),
@@ -205,4 +207,6 @@ void Input::ControllerImGui(const char *label) {
   }
 
   ImGui::Dummy(ImVec2(0.0f, 5.0f));
+
+#endif
 }
