@@ -1,0 +1,244 @@
+<?xml version="1.0" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <ItemGroup>
+    <Filter Include="..">
+      <UniqueIdentifier>{58b9e70b-65a7-7700-ba66-e9c64d6b9f89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Framework">
+      <UniqueIdentifier>{07782c22-a88d-1e82-a099-10124a9225a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{63d72051-e901-c069-f8aa-1b32aa0c43bb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Coin">
+      <UniqueIdentifier>{b1e56660-b058-1532-89f9-6015914609ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Goal">
+      <UniqueIdentifier>{f1191db5-f296-0d81-5a19-943f7a1667c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\MapChipField">
+      <UniqueIdentifier>{0f1be898-f98c-2395-5879-627e854639a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Player">
+      <UniqueIdentifier>{9be8b11a-403f-5c70-a44f-b2865377fd9a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene">
+      <UniqueIdentifier>{257654ef-124c-c4e9-e8f4-ba8e3de21951}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\Fade">
+      <UniqueIdentifier>{1d5917ef-2d66-e5e3-be4e-94084a0fb9f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\GameOverScene">
+      <UniqueIdentifier>{05671636-bdf8-58cb-e1a1-c77c13acbff7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\GameScene">
+      <UniqueIdentifier>{0e08a43d-0154-a148-5e98-f89944a188ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\LightScene">
+      <UniqueIdentifier>{09aa9018-e68d-8d1b-6faf-3a5c034579b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\ParticleScene">
+      <UniqueIdentifier>{c8cf4e5e-96e3-488b-cab4-76b4ea44aa59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\ResultScene">
+      <UniqueIdentifier>{84889b9b-b70e-b1c0-d6a3-efdd8c41adc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\SampleScene">
+      <UniqueIdentifier>{af56e491-32ca-0b9d-d10c-8becd3517abd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\SelectScene">
+      <UniqueIdentifier>{e861b798-cff7-b598-471f-844b704aa802}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Scene\TitleScene">
+      <UniqueIdentifier>{c8dde5de-1a5a-a7ac-6d65-07cc54cfeab0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\StageSelection">
+      <UniqueIdentifier>{78326a14-83cb-ef16-3694-70bb9dd994a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{ddcf50c2-9294-d441-4f3f-7c1bbc892cb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader">
+      <UniqueIdentifier>{992709fc-4716-38e5-cfc8-01b92b877647}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Object3d">
+      <UniqueIdentifier>{7e1f3ecc-8cd5-7f8e-9cea-98e6454c124a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Particle">
+      <UniqueIdentifier>{e16c3d54-ef2c-7b54-8bb1-f29e3d5dfc36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Post">
+      <UniqueIdentifier>{65a34bd5-f09e-a1fc-1254-e2c4b862e738}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Primitive2D">
+      <UniqueIdentifier>{fd38a6c3-be20-c085-b0f9-ab2363eaa4e9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Primitive3D">
+      <UniqueIdentifier>{008980ce-0bb4-6ecf-1f9d-a657dd08dc18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Sprite">
+      <UniqueIdentifier>{e154087b-a457-5cd9-788f-df6d22fb77aa}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\main.cpp">
+      <Filter>..</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Framework\App.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Coin\Coin.cpp">
+      <Filter>Game\Coin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Game.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Goal\Goal.cpp">
+      <Filter>Game\Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\MapChipField\MapChipField.cpp">
+      <Filter>Game\MapChipField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Player\Player.cpp">
+      <Filter>Game\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\Fade\Fade.cpp">
+      <Filter>Game\Scene\Fade</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\GameOverScene\GameOverScene.cpp">
+      <Filter>Game\Scene\GameOverScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\GameScene\GameScene.cpp">
+      <Filter>Game\Scene\GameScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\LightScene\LightScene.cpp">
+      <Filter>Game\Scene\LightScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\ParticleScene\ParticleScene.cpp">
+      <Filter>Game\Scene\ParticleScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\ResultScene\ResultScene.cpp">
+      <Filter>Game\Scene\ResultScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\SampleScene\SampleScene.cpp">
+      <Filter>Game\Scene\SampleScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\SelectScene\SelectScene.cpp">
+      <Filter>Game\Scene\SelectScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\TitleScene\TitleScene.cpp">
+      <Filter>Game\Scene\TitleScene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Application\Game\StageSelection\StageSelection.cpp">
+      <Filter>Game\StageSelection</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Application\Framework\App.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Framework\AppConfig.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Coin\Coin.h">
+      <Filter>Game\Coin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Game.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Goal\Goal.h">
+      <Filter>Game\Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\MapChipField\MapChipField.h">
+      <Filter>Game\MapChipField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Player\Player.h">
+      <Filter>Game\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\Fade\Fade.h">
+      <Filter>Game\Scene\Fade</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\GameOverScene\GameOverScene.h">
+      <Filter>Game\Scene\GameOverScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\GameScene\GameScene.h">
+      <Filter>Game\Scene\GameScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\LightScene\LightScene.h">
+      <Filter>Game\Scene\LightScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\ParticleScene\ParticleScene.h">
+      <Filter>Game\Scene\ParticleScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\ResultScene\ResultScene.h">
+      <Filter>Game\Scene\ResultScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\SampleScene\SampleScene.h">
+      <Filter>Game\Scene\SampleScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\Scene.h">
+      <Filter>Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\SceneManager.h">
+      <Filter>Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\SelectScene\SelectScene.h">
+      <Filter>Game\Scene\SelectScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\TitleScene\TitleScene.h">
+      <Filter>Game\Scene\TitleScene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\StageSelection\StageSelection.h">
+      <Filter>Game\StageSelection</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\Resources\Shader\Object3d\Object3d.PS.hlsl">
+      <Filter>Resources\Shader\Object3d</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Object3d\Object3D_Inst.VS.hlsl">
+      <Filter>Resources\Shader\Object3d</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Object3d\Object3D_Single.VS.hlsl">
+      <Filter>Resources\Shader\Object3d</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Object3d\Object3D_Glass.PS.hlsl">
+      <Filter>Resources\Shader\Object3d</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Particle\Particle.PS.hlsl">
+      <Filter>Resources\Shader\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Particle\Particle.VS.hlsl">
+      <Filter>Resources\Shader\Particle</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Post\FogOverlay.hlsl">
+      <Filter>Resources\Shader\Post</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Primitive2D\Primitive2D.PS.hlsl">
+      <Filter>Resources\Shader\Primitive2D</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Primitive2D\Primitive2D.VS.hlsl">
+      <Filter>Resources\Shader\Primitive2D</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Primitive3D\Primitive3D.PS.hlsl">
+      <Filter>Resources\Shader\Primitive3D</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Primitive3D\Primitive3D.VS.hlsl">
+      <Filter>Resources\Shader\Primitive3D</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Sprite\Sprite.PS.hlsl">
+      <Filter>Resources\Shader\Sprite</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Sprite\Sprite.VS.hlsl">
+      <Filter>Resources\Shader\Sprite</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Resources\Shader\Object3d\Object3d.hlsli">
+      <Filter>Resources\Shader\Object3d</Filter>
+    </None>
+    <None Include="..\Resources\Shader\Particle\Particle.hlsli">
+      <Filter>Resources\Shader\Particle</Filter>
+    </None>
+  </ItemGroup>
+</Project>
