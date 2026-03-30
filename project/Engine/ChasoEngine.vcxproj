@@ -137,7 +137,6 @@
     <ClCompile Include="..\Engine\Dx12\DepthStencil\DepthStencil.cpp" />
     <ClCompile Include="..\Engine\Dx12\DescriptorHeap\DescriptorHeap.cpp" />
     <ClCompile Include="..\Engine\Dx12\Device\Device.cpp" />
-    <ClCompile Include="..\Engine\Dx12\Dx12Core.cpp" />
     <ClCompile Include="..\Engine\Dx12\FixFps\FixFps.cpp" />
     <ClCompile Include="..\Engine\Dx12\GraphicsPipeline\GraphicsPipeline.cpp" />
     <ClCompile Include="..\Engine\Dx12\PipelineManager.cpp" />
@@ -185,6 +184,7 @@
     <ClCompile Include="..\Engine\Render\Sprite2D\SpriteManager.cpp" />
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
+    <ClCompile Include="Dx12\Dx12Core.cpp" />
   </ItemGroup>
   <ItemGroup>
     <!-- Camera -->

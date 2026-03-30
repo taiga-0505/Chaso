@@ -1,15 +1,6 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
-    <Filter Include="Camera">
-      <UniqueIdentifier>{967d35e4-0f3f-95b1-f538-bd248640bf3b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Camera\DebugCamera">
-      <UniqueIdentifier>{8b90aebf-c898-d332-b9c6-f1417ab85f4e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Camera\MainCamera">
-      <UniqueIdentifier>{cb64a2bf-ff92-5ad8-3bfc-77d72206776f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Common">
       <UniqueIdentifier>{d13bc5b6-8b2b-d9e1-8f29-777db17cc563}</UniqueIdentifier>
     </Filter>
@@ -175,11 +166,17 @@
     <Filter Include="Window">
       <UniqueIdentifier>{c89686a3-87d2-b12b-3c72-9ce35a0bcb5b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Camera">
+      <UniqueIdentifier>{21e0079e-1921-43fc-9d68-b78712a20e8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Camera\DebugCamera">
+      <UniqueIdentifier>{8b90aebf-c898-d332-b9c6-f1417ab85f4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Camera\MainCamera">
+      <UniqueIdentifier>{cb64a2bf-ff92-5ad8-3bfc-77d72206776f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Engine\Camera\CameraController.cpp">
-      <Filter>Camera</Filter>
-    </ClCompile>
     <ClCompile Include="..\Engine\Camera\DebugCamera\DebugCamera.cpp">
       <Filter>Camera\DebugCamera</Filter>
     </ClCompile>
@@ -203,9 +200,6 @@
     </ClCompile>
     <ClCompile Include="..\Engine\Dx12\Device\Device.cpp">
       <Filter>Dx12\Device</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Dx12\Dx12Core.cpp">
-      <Filter>Dx12</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Dx12\FixFps\FixFps.cpp">
       <Filter>Dx12\FixFps</Filter>
@@ -330,14 +324,14 @@
     <ClCompile Include="..\Engine\Window\Window.cpp">
       <Filter>Window</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Camera\CameraController.cpp">
+      <Filter>Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Dx12\Dx12Core.cpp">
+      <Filter>Dx12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Engine\Camera\CameraController.h">
-      <Filter>Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Camera\CameraMath.h">
-      <Filter>Camera</Filter>
-    </ClInclude>
     <ClInclude Include="..\Engine\Camera\DebugCamera\DebugCamera.h">
       <Filter>Camera\DebugCamera</Filter>
     </ClInclude>
@@ -511,6 +505,12 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Window\Window.h">
       <Filter>Window</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Camera\CameraController.h">
+      <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Camera\CameraMath.h">
+      <Filter>Camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
