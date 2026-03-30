@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -261,11 +261,8 @@
     <ProjectReference Include="..\Externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
       <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\Externals\imgui\Imgui.vcxproj">
+    <ProjectReference Include="..\Externals\imgui\Imgui.vcxproj" Condition="'$(Configuration)|$(Platform)'!='Release|x64'">
       <Project>{CD815B9C-90B1-4125-ABA7-7246E7561FEA}</Project>
-      <LinkLibraryDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkLibraryDependencies>
-      <ReferenceOutputAssembly Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ReferenceOutputAssembly>
-      <UseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</UseInBuild>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
