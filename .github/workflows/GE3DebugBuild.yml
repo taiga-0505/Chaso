@@ -5,7 +5,7 @@ on:
       - GE3
 
 env:
-  SOLUTION_FILE_PATH: project/CG2.sln
+  SOLUTION_FILE_PATH: project/chaso.sln
   CONFIGURATION: Debug
 
 jobs:
