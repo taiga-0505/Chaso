@@ -263,8 +263,9 @@
     </ProjectReference>
     <ProjectReference Include="..\Externals\imgui\Imgui.vcxproj">
       <Project>{CD815B9C-90B1-4125-ABA7-7246E7561FEA}</Project>
-      <LinkLibraryDependencies Condition="'$(Configuration)'=='Release'">false</LinkLibraryDependencies>
-      <ReferenceOutputAssembly Condition="'$(Configuration)'=='Release'">false</ReferenceOutputAssembly>
+      <LinkLibraryDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkLibraryDependencies>
+      <ReferenceOutputAssembly Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ReferenceOutputAssembly>
+      <UseInBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</UseInBuild>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
