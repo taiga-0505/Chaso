@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197
@@ -53,7 +53,6 @@ Global
 		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Development|x64.ActiveCfg = Development|x64
 		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Development|x64.Build.0 = Development|x64
 		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Release|x64.ActiveCfg = Release|x64
-		{CD815B9C-90B1-4125-ABA7-7246E7561FEA}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
