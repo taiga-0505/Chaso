@@ -324,6 +324,24 @@
     <ClCompile Include="..\Engine\Render\RenderCommon.cpp">
       <Filter>Render</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderContext.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderLight.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderModel.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderPrimitive.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderSphere.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\RenderSprite.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Render\Sphere\SphereManager.cpp">
       <Filter>Render\Sphere</Filter>
     </ClCompile>
@@ -513,6 +531,9 @@
       <Filter>Render\Model3D</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\RenderCommon.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Render\RenderContext.h">
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\Sphere\SphereManager.h">

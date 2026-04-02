@@ -15,6 +15,7 @@ namespace RC {
 class SphereManager {
 public:
   void Init(ID3D12Device *device, TextureManager *texman);
+  ~SphereManager();
   void Term();
 
   int Create(int textureHandle, float radius, unsigned int sliceCount,

@@ -2,6 +2,7 @@
 
 #include "Model3d/ModelObject.h"
 #include "Model3d/ModelMesh.h"
+#include "Common/Log/Log.h"
 
 #include <filesystem>
 
@@ -113,6 +114,10 @@ int ModelManager::Load(const std::string &path) {
     return -1;
   }
   obj->SetMesh(mesh);
+
+  // パスを保存してロードログ出力
+  obj->SetFilePath(path);
+  Log::Print("[Model] Loaded: " + path);
 
   models_[handle].ptr = std::move(obj);
   models_[handle].inUse = true;

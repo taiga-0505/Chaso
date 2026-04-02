@@ -1,11 +1,17 @@
 #include "Sprite2D.h"
+#include "Common/Log/Log.h"
 #include "imgui/imgui.h"
 #include <cassert>
 #include <string>
 
 using namespace RC;
 
-Sprite2D::~Sprite2D() { Release(); }
+Sprite2D::~Sprite2D() {
+  if (!filePath_.empty()) {
+    Log::Print("[Sprite] Unloaded: " + filePath_);
+  }
+  Release();
+}
 
 void Sprite2D::Release() {
   mesh_.reset();

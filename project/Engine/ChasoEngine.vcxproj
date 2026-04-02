@@ -180,6 +180,12 @@
     <ClCompile Include="..\Engine\Render\Light\Spot\SpotLightManager.cpp" />
     <ClCompile Include="..\Engine\Render\Model3D\ModelManager.cpp" />
     <ClCompile Include="..\Engine\Render\RenderCommon.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderContext.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderLight.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderModel.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderPrimitive.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderSphere.cpp" />
+    <ClCompile Include="..\Engine\Render\RenderSprite.cpp" />
     <ClCompile Include="..\Engine\Render\Sphere\SphereManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite2D\SpriteManager.cpp" />
     <!-- Window -->
@@ -255,6 +261,7 @@
     <ClInclude Include="..\Engine\Render\Light\Spot\SpotLightManager.h" />
     <ClInclude Include="..\Engine\Render\Model3D\ModelManager.h" />
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
+    <ClInclude Include="..\Engine\Render\RenderContext.h" />
     <ClInclude Include="..\Engine\Render\Sphere\SphereManager.h" />
     <ClInclude Include="..\Engine\Render\Sprite2D\SpriteManager.h" />
     <!-- Window -->

@@ -1,4 +1,5 @@
 #include "ModelObject.h"
+#include "Common/Log/Log.h"
 #include "Texture/TextureManager/TextureManager.h"
 #include "imgui/imgui.h"
 #include <algorithm>
@@ -11,6 +12,9 @@ using namespace RC;
 namespace fs = std::filesystem;
 
 ModelObject::~ModelObject() {
+  if (!filePath_.empty()) {
+    Log::Print("[Model] Unloaded: " + filePath_);
+  }
   cbWvp_.resource.Reset();
   cbMat_.resource.Reset();
   cbLight_.resource.Reset();

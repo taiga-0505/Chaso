@@ -2,6 +2,7 @@
 
 #include "Math/Math.h"
 #include "Texture/TextureManager/TextureManager.h"
+#include "Common/Log/Log.h"
 
 namespace RC {
 
@@ -81,6 +82,8 @@ int SpriteManager::Load(const std::string &path, float screenW, float screenH,
   // 初期化
   s.ptr->Initialize(device_, quad, screenW, screenH);
   s.ptr->SetTexture(texman_->GetSrv(texHandle));
+  s.ptr->SetFilePath(path);
+  Log::Print("[Sprite] Loaded: " + path);
 
   // 初期値（必要なら外側で SetTransform/SetSize 等で上書き）
   s.ptr->SetSize(100, 100);

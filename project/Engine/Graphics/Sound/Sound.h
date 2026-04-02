@@ -2,6 +2,7 @@
 #include "EngineConfig.h"
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <windows.h>
 #include <wrl/client.h>
 #include <xaudio2.h>
@@ -94,4 +95,5 @@ private:
 
   bool isLoop = false;
   float volume = 1.0f;
+  std::string filePath_;
 };

@@ -34,6 +34,15 @@ void Log::WriteLog(const std::string &message) {
   OutputDebugStringA(message.c_str());
 }
 
+void Log::Print(const std::string &message) {
+  std::string msg = message;
+  // 末尾に改行がなければ追加
+  if (msg.empty() || msg.back() != '\n') {
+    msg += "\n";
+  }
+  OutputDebugStringA(msg.c_str());
+}
+
 std::wstring Log::ConvertString(const std::string &str) {
   // stringのサイズを取得
   int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);

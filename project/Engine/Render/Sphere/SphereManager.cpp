@@ -5,6 +5,8 @@
 
 namespace RC {
 
+SphereManager::~SphereManager() = default;
+
 void SphereManager::Init(ID3D12Device *device, TextureManager *texman) {
   device_ = device;
   texman_ = texman;

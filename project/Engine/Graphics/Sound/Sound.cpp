@@ -1,4 +1,5 @@
 #include "Sound.h"
+#include "Common/Log/Log.h"
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_dx12.h"
 #include "imgui/backends/imgui_impl_win32.h"
@@ -262,6 +263,9 @@ Sound::Sound() {
 }
 
 Sound::~Sound() {
+  if (!filePath_.empty()) {
+    Log::Print("[Sound] Unloaded: " + filePath_);
+  }
   // unique_ptr のデリータで止めて破棄される
   Stop();
   Unload();
@@ -281,6 +285,8 @@ void Sound::Initialize(const char *filename) {
   }
   // ここを WAV 固定から、拡張子自動判定ローダに変更
   soundData = SoundLoadAudio(filename);
+  filePath_ = filename;
+  Log::Print("[Sound] Loaded: " + filePath_);
 }
 
 void Sound::SoundImGui(const char *soundname) {

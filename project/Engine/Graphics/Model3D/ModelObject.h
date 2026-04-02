@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 #include <wrl/client.h>
 
 class TextureManager; // 前方宣言
@@ -101,6 +102,9 @@ public:
   bool Visible() const { return visible_; }
 
   void SetTextureManager(TextureManager *tm) { texman_ = tm; }
+
+  void SetFilePath(const std::string &path) { filePath_ = path; }
+  const std::string &GetFilePath() const { return filePath_; }
 
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
@@ -200,4 +204,6 @@ private:
   bool hasVP_ = false;
 
   LightingConfig initialLighting_{};
+
+  std::string filePath_;
 };

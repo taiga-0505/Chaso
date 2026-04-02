@@ -4,6 +4,7 @@
 #include <d3d12.h>
 #include <memory>
 #include <string>
+#include <iostream>
 #include <wrl/client.h>
 
 #include "Math/Math.h"
@@ -39,6 +40,9 @@ public:
   SpriteMaterial *Mat() { return cbMat_.map; }
   RC::Matrix4x4 &UVTransform() { return cbMat_.map->uvTransform; }
 
+  void SetFilePath(const std::string &path) { filePath_ = path; }
+  const std::string &GetFilePath() const { return filePath_; }
+
   void DrawImGui(const char *name);
 
 private:
@@ -72,4 +76,5 @@ private:
 
   Transform transform_{{100, 100, 1}, {0, 0, 0}, {0, 0, 0}};
   bool visible_ = true;
+  std::string filePath_;
 };

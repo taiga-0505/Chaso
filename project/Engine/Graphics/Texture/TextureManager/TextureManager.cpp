@@ -1,6 +1,7 @@
 #include "TextureManager.h"
 #include "DescriptorHeap/DescriptorHeap.h"
 #include "SRVManager/SRVManager.h"
+#include "Common/Log/Log.h"
 
 void TextureManager::Init(SRVManager *srv) {
   srv_ = srv;
@@ -51,6 +52,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
   Texture2D &tex = cache_[path];
   auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
   if (uploadRes) {
+    Log::Print("[Texture] Loaded: " + path);
     uint64_t fence = loadCmd_.ExecuteAndReset();
     pendingUploads_.push_back({uploadRes, fence});
   }
@@ -78,6 +80,7 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
     if (!tex.IsLoaded()) {
       auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
       if (uploadRes) {
+        Log::Print("[Texture] Loaded: " + path);
         uint64_t fence = loadCmd_.ExecuteAndReset();
         pendingUploads_.push_back({uploadRes, fence});
       }
@@ -90,6 +93,7 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
   if (!tex.IsLoaded()) {
     auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
     if (uploadRes) {
+      Log::Print("[Texture] Loaded: " + path);
       uint64_t fence = loadCmd_.ExecuteAndReset();
       pendingUploads_.push_back({uploadRes, fence});
     }
