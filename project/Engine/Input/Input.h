@@ -1,81 +1,63 @@
 #pragma once
 #include "EngineConfig.h"
-#ifndef DIRECTINPUT_VERSION
-#define DIRECTINPUT_VERSION 0x0800
-#endif
-#include <cstdint>
-#include <dinput.h>
-#include <windows.h>
-#include <Xinput.h>
-#include <wrl/client.h>
-#pragma comment(lib, "xinput.lib")
-#pragma comment(lib, "dinput8.lib")
-#pragma comment(lib, "dxguid.lib")
+#include <memory>
+#include "InputCommon.h"
+
+// 各デバイスクラスの前方宣言
+class Keyboard;
+class Mouse;
+class Controller;
 
 class Input {
-
 public:
-  Input(HWND hwnd);
-  ~Input();
+    Input(HWND hwnd);
+    ~Input();
 
-  Microsoft::WRL::ComPtr<IDirectInput8> directInput;
+    void Update();
 
-  void Update(); // 毎フレーム呼び出す関数
+    // デバイスへのアクセス
+    Keyboard* GetKeyboard() const { return keyboard_.get(); }
+    Mouse* GetMouse() const { return mouse_.get(); }
+    Controller* GetController() const { return controller_.get(); }
 
-  // ============================
-  // キーボード入力
-  // ============================
+    // ============================
+    // キーボード入力 (互換性維持用)
+    // ============================
+    bool IsKeyPressed(uint8_t keyCode) const;
+    bool IsKeyUp(uint8_t keyCode) const;
+    bool IsKeyTrigger(uint8_t keyCode) const;
+    bool IsKeyRelease(uint8_t keyCode) const;
 
-  Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard;
+    // ============================
+    // マウス入力 (互換性維持用)
+    // ============================
+    LONG GetMouseX() const;
+    LONG GetMouseY() const;
+    LONG GetMouseZ() const;
+    bool IsMousePressed(int button) const;
+    bool IsMouseTrigger(int button) const;
+    bool IsMouseRelease(int button) const;
 
-  BYTE key[256] = {};    // 256キーの状態を保持
-  BYTE preKey[256] = {}; // 前フレームのキー状態を保持
+    // ============================
+    // コントローラー入力 (互換性維持用)
+    // ============================
+    bool IsXInputConnected() const;
+    bool IsXInputButtonPressed(WORD button) const;
+    bool IsXInputButtonTrigger(WORD button) const;
+    bool IsXInputButtonRelease(WORD button) const;
+    SHORT GetXInputThumbLX() const;
+    SHORT GetXInputThumbLY() const;
+    SHORT GetXInputThumbRX() const;
+    SHORT GetXInputThumbRY() const;
+    BYTE GetXInputLeftTrigger() const;
+    BYTE GetXInputRightTrigger() const;
+    void SetXInputVibration(WORD leftMotor, WORD rightMotor);
+    void ControllerImGui(const char* label = "コントローラー");
 
-  bool IsKeyPressed(uint8_t keyCode) const; // 押し続けてる状態（押しっぱなし）
-  bool IsKeyUp(uint8_t keyCode) const;      // 押されてない状態
-  bool IsKeyTrigger(uint8_t keyCode) const; // 今フレームで押された瞬間
-  bool IsKeyRelease(uint8_t keyCode) const; // 今フレームで離された瞬間
+private:
+    Microsoft::WRL::ComPtr<IDirectInput8> directInput_;
 
-  // ============================
-  // マウス入力
-  // ============================
-
-  Microsoft::WRL::ComPtr<IDirectInputDevice8> mouse;
-
-  DIMOUSESTATE mouseState = {};   // マウス状態
-  DIMOUSESTATE preMouseState = {};// 前フレームのマウス状態
-
-  // マウス座標・ホイール
-  LONG GetMouseX() const;
-  LONG GetMouseY() const;
-  LONG GetMouseZ() const;
-
-  bool IsMousePressed(int button) const; // 押しっぱなし
-  bool IsMouseTrigger(int button) const; // 押された瞬間
-  bool IsMouseRelease(int button) const; // 離された瞬間
-
-  // ============================
-  // コントローラー入力
-  // ============================
-  // XInput用
-  XINPUT_STATE xinputState = {};
-  XINPUT_STATE preXinputState = {};
-  int leftVibration = 30000;
-  int rightVibration = 30000;
-
-  bool IsXInputConnected() const;
-  bool IsXInputButtonPressed(WORD button) const;
-  bool IsXInputButtonTrigger(WORD button) const;
-  bool IsXInputButtonRelease(WORD button) const;
-  SHORT GetXInputThumbLX() const;
-  SHORT GetXInputThumbLY() const;
-  SHORT GetXInputThumbRX() const;
-  SHORT GetXInputThumbRY() const;
-  BYTE GetXInputLeftTrigger() const;
-  BYTE GetXInputRightTrigger() const;
-
-    // --- XInput 振動制御 ---
-  void SetXInputVibration(WORD leftMotor, WORD rightMotor);
-
-  void ControllerImGui(const char *label = "コントローラー");
+    std::unique_ptr<Keyboard> keyboard_;
+    std::unique_ptr<Mouse> mouse_;
+    std::unique_ptr<Controller> controller_;
 };

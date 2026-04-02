@@ -175,6 +175,15 @@
     <Filter Include="Camera\MainCamera">
       <UniqueIdentifier>{cb64a2bf-ff92-5ad8-3bfc-77d72206776f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Input\Controller">
+      <UniqueIdentifier>{b5bb0a2c-b700-410d-bf6a-f6c3d9e86b4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input\Mouse">
+      <UniqueIdentifier>{e56f4783-34ad-4716-bed5-b82da3b6b7df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Input\Keyboard">
+      <UniqueIdentifier>{f475ecf4-8298-46d8-b588-26ca5dc50843}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Engine\Camera\DebugCamera\DebugCamera.cpp">
@@ -329,6 +338,15 @@
     </ClCompile>
     <ClCompile Include="Dx12\Dx12Core.cpp">
       <Filter>Dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\Controller\Controller.cpp">
+      <Filter>Input\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\Mouse\Mouse.cpp">
+      <Filter>Input\Mouse</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\Keyboard\Keyboard.cpp">
+      <Filter>Input\Keyboard</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -511,6 +529,15 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Camera\CameraMath.h">
       <Filter>Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\Controller\Controller.h">
+      <Filter>Input\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\Mouse\Mouse.h">
+      <Filter>Input\Mouse</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\Keyboard\Keyboard.h">
+      <Filter>Input\Keyboard</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

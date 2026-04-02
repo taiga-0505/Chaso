@@ -185,6 +185,9 @@
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
     <ClCompile Include="Dx12\Dx12Core.cpp" />
+    <ClCompile Include="Input\Controller\Controller.cpp" />
+    <ClCompile Include="Input\Keyboard\Keyboard.cpp" />
+    <ClCompile Include="Input\Mouse\Mouse.cpp" />
   </ItemGroup>
   <ItemGroup>
     <!-- Camera -->
@@ -256,6 +259,9 @@
     <ClInclude Include="..\Engine\Render\Sprite2D\SpriteManager.h" />
     <!-- Window -->
     <ClInclude Include="..\Engine\Window\Window.h" />
+    <ClInclude Include="Input\Controller\Controller.h" />
+    <ClInclude Include="Input\Keyboard\Keyboard.h" />
+    <ClInclude Include="Input\Mouse\Mouse.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
