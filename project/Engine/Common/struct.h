@@ -1,4 +1,5 @@
 #pragma once
+#include "EngineConfig.h"
 #include "Math/MathTypes.h"
 #include <cstdint>
 #include <string>

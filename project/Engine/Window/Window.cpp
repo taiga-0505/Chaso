@@ -1,8 +1,9 @@
 #include "Window.h"
 #include <cstring>
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_dx12.h"
-#include "imgui/imgui_impl_win32.h"
+#include "imgui/backends/imgui_impl_dx12.h"
+#include "imgui/backends/imgui_impl_win32.h"
+#include "../Common/EngineConfig.h"
 
 #pragma comment(lib, "winmm.lib") // timeGetTimeを使う場合に必要
 

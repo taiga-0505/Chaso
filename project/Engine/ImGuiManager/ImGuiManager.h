@@ -6,8 +6,8 @@
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_dx12.h"
-#include "imgui/imgui_impl_win32.h"
+#include "imgui/backends/imgui_impl_dx12.h"
+#include "imgui/backends/imgui_impl_win32.h"
 #else
 struct ImFont; // Releaseでは型だけ前方宣言
 #endif
@@ -15,7 +15,7 @@ struct ImFont; // Releaseでは型だけ前方宣言
 class ImGuiManager {
 public:
   void
-  Init(HWND hwnd, Dx12Core &core, float jpFontSize = 15.0f,
+  Init(HWND hwnd, Dx12Core &core, bool enableDocking = true, float jpFontSize = 15.0f,
        const char *jpFontPath = "Resources/fonts/Huninn/Huninn-Regular.ttf");
   void NewFrame();
   void Render(ID3D12GraphicsCommandList *cmdList);
@@ -30,5 +30,6 @@ private:
   bool initialized_ = false;
   ImFont *fontDefault_ = nullptr;
   ImFont *fontJP_ = nullptr;
+  bool dockingEnabled_ = false;
   void reserveSrvSlotForImGui_(Dx12Core &core);
 };

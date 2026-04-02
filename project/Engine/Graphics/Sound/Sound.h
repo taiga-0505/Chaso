@@ -1,4 +1,5 @@
 #pragma once
+#include "EngineConfig.h"
 #include <cstdint>
 #include <memory>
 #include <windows.h>

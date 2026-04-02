@@ -1,13 +1,7 @@
 #pragma once
 #include <array>
 #include <string>
-#ifndef RC_ENABLE_IMGUI
-#if defined(_DEBUG) || defined(RC_DEVELOPMENT)
-#define RC_ENABLE_IMGUI 1
-#else
-#define RC_ENABLE_IMGUI 0
-#endif
-#endif
+#include "EngineConfig.h"
 
 /// <summary>
 /// アプリケーションの起動設定を保持する

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EngineConfig.h"
+
 // 描画関連の共通ヘッダ
 #include "RenderCommon.h"
 
