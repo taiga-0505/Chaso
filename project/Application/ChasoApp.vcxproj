@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Audio;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -108,7 +108,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Audio;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -139,7 +139,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\ ;$(ProjectDir);$(ProjectDir)..\Engine\;$(ProjectDir)..\Engine\Audio;$(ProjectDir)..\Engine\Common;$(ProjectDir)..\Engine\Camera;$(ProjectDir)..\Engine\Dx12;$(ProjectDir)..\Engine\Graphics;$(ProjectDir)..\Engine\Particle;$(ProjectDir)..\Engine\Render;$(ProjectDir)..\Engine\Window;$(ProjectDir)..\Engine\Input;$(ProjectDir)..\Engine\ImGuiManager;$(ProjectDir)Framework\;$(ProjectDir)Game\;$(ProjectDir)Game\Scene\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Resources\Shader\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -2,8 +2,8 @@
 
 #include "Dx12/Dx12Core.h"
 #include "PipelineManager.h"
-#include "Primitive2D/Primitive2D.h"
-#include "Primitive3D/Primitive3D.h"
+#include "Primitive/Primitive2D.h"
+#include "Primitive/Primitive3D.h"
 #include "Scene.h"
 
 namespace RC {
@@ -143,7 +143,6 @@ GraphicsPipeline *RenderContext::BindPipeline(std::string_view prefix) {
 
   cl_->SetGraphicsRootSignature(pso->Root());
   cl_->SetPipelineState(pso->PSO());
-  cl_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
   return pso;
 }
 
@@ -232,4 +231,61 @@ void RenderContext::SetFogColor(const Vector4 &color) {
   }
 }
 
+void RenderContext::PushPrimitive3DCommand(bool depth, uint32_t start,
+                                           uint32_t count) {
+  if (count == 0)
+    return;
+
+  if (!commandQueue3D_.empty()) {
+    auto &last = commandQueue3D_.back();
+    if (last.type == RenderCommand3D::Primitive && last.primDepth == depth) {
+      // 連続するプリミティブ描画ならマージ
+      // 頂点バッファには追加順に並んでいる前提なので、count を増やすだけでよい
+      last.primCount += count;
+      return;
+    }
+  }
+
+  RenderCommand3D cmd;
+  cmd.type = RenderCommand3D::Primitive;
+  cmd.primDepth = depth;
+  cmd.primStart = start;
+  cmd.primCount = count;
+  commandQueue3D_.push_back(std::move(cmd));
+}
+
+void RenderContext::Execute3DCommands() {
+  if (!cl_) {
+    return;
+  }
+
+  // 1) プリミティブの頂点転送
+  if (prim3D_ && prim3D_->HasAny()) {
+    prim3D_->TransferVertices();
+  }
+
+  // 2) キューに積まれたコマンドを順に実行
+  for (auto &cmd : commandQueue3D_) {
+    if (cmd.type == RenderCommand3D::Primitive) {
+      if (prim3D_) {
+        // プリミティブ用のパイプラインをバインド
+        if (BindPipeline(cmd.primDepth ? "primitive3d" : "primitive3d_nodepth")) {
+          prim3D_->DrawRange(cl_, cmd.primDepth, cmd.primStart, cmd.primCount);
+        }
+      }
+    } else if (cmd.func) {
+      cmd.func(cl_);
+    }
+  }
+
+
+  // 3) 実行後の後始末
+  Clear3DCommands();
+  if (prim3D_) {
+    prim3D_->Clear();
+  }
+}
+
 } // namespace RC
+
+

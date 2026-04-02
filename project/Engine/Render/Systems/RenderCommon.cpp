@@ -21,8 +21,8 @@
 
 #include "Dx12/Dx12Core.h"
 #include "PipelineManager.h"
-#include "Primitive2D/Primitive2D.h"
-#include "Primitive3D/Primitive3D.h"
+#include "Primitive/Primitive2D.h"
+#include "Primitive/Primitive3D.h"
 #include "Scene.h"
 
 #include <string_view>
@@ -93,26 +93,11 @@ void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   s_ctx.SetSceneContext(&ctx);
   s_ctx.SetBlendMode(kBlendModeNormal);
 
-  // 3D の Primitive3D を先にフラッシュ
-  if (auto *prim = s_ctx.EnsurePrimitive3D()) {
-    if (prim->HasAny()) {
-      const BlendMode saved = s_ctx.CurrentBlendMode();
-      s_ctx.SetBlendMode(prim->BlendAt3D());
-
-      if (s_ctx.BindPipeline("primitive3d")) {
-        cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-        prim->Draw(cl, true);
-      }
-      if (s_ctx.BindPipeline("primitive3d_nodepth")) {
-        cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-        prim->Draw(cl, false);
-      }
-
-      s_ctx.SetBlendMode(saved);
-    }
-  }
+  // 3D コマンドキューを一括実行（モデルとプリミティブが混在した順序で描画される）
+  s_ctx.Execute3DCommands();
 
   // 2D Viewport / Scissor
+
   D3D12_VIEWPORT viewport{};
   viewport.TopLeftX = 0.0f;
   viewport.TopLeftY = 0.0f;

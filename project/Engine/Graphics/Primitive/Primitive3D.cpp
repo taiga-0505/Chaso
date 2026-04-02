@@ -472,16 +472,29 @@ void Primitive3D::AddFrustumCamera(const RC::Vector3 &camPos,
   AddFrustum(c, color, depth);
 }
 
-void Primitive3D::Draw(ID3D12GraphicsCommandList *cl, bool depth) {
-  auto &v = depth ? vtxDepth_ : vtxNoDepth_;
-  if (v.empty() || !cl || !device_)
+void Primitive3D::TransferVertices() {
+  size_t total = vtxDepth_.size() + vtxNoDepth_.size();
+  if (total == 0 || !device_)
     return;
 
-  EnsureVB_(v.size());
+  EnsureVB_(total);
 
-  // VB 転送（Upload heap を Map しっぱなし運用）
-  std::memcpy(vbMap_, v.data(), sizeof(Vertex) * v.size());
-  vbView_.SizeInBytes = (UINT)(sizeof(Vertex) * v.size());
+  // vtxDepth_ を先に、vtxNoDepth_ を後にコピーする
+  if (!vtxDepth_.empty()) {
+    std::memcpy(vbMap_, vtxDepth_.data(), sizeof(Vertex) * vtxDepth_.size());
+  }
+  if (!vtxNoDepth_.empty()) {
+    std::memcpy(vbMap_ + vtxDepth_.size(), vtxNoDepth_.data(),
+                sizeof(Vertex) * vtxNoDepth_.size());
+  }
+
+  vbView_.SizeInBytes = (UINT)(sizeof(Vertex) * total);
+}
+
+void Primitive3D::DrawRange(ID3D12GraphicsCommandList *cl, bool depth,
+                            uint32_t start, uint32_t count) {
+  if (count == 0 || !cl || !device_)
+    return;
 
   // CB ring（Drawごとに別スロット）
   const uint32_t idx =
@@ -497,8 +510,26 @@ void Primitive3D::Draw(ID3D12GraphicsCommandList *cl, bool depth) {
   // RootParam[0] = b0(VS)
   cl->SetGraphicsRootConstantBufferView(0, cbAddr);
 
-  cl->DrawInstanced((UINT)v.size(), 1, 0, 0);
+  // depth が false の場合は vtxDepth_ の後ろから始まる
+  uint32_t offset = depth ? start : (uint32_t)vtxDepth_.size() + start;
+  cl->DrawInstanced(count, 1, offset, 0);
+}
+
+uint32_t Primitive3D::GetVertexCount(bool depth) const {
+  return (uint32_t)(depth ? vtxDepth_.size() : vtxNoDepth_.size());
+}
+
+void Primitive3D::Draw(ID3D12GraphicsCommandList *cl, bool depth) {
+  auto &v = depth ? vtxDepth_ : vtxNoDepth_;
+  if (v.empty() || !cl || !device_)
+    return;
+
+  // 旧方式との互換性用
+  TransferVertices();
+  uint32_t count = (uint32_t)v.size();
+  DrawRange(cl, depth, 0, count);
 
   // 描いた分は消してOK（“そのフレームだけ”）
   v.clear();
 }
+

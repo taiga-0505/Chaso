@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "Sprite2D/Sprite2D.h"
+#include "Sprite/Sprite2D.h"
 
 class TextureManager; // 前方宣言
 

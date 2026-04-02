@@ -149,14 +149,14 @@
     <ClCompile Include="..\Engine\Graphics\Light\Directional\DirectionalLightSource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Light\Point\PointLightSource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Light\Spot\SpotLightSource.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Model3D\ModelMesh.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Model3D\ModelObject.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Primitive2D\Primitive2D.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Primitive3D\Primitive3D.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Sound\Sound.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Model\ModelMesh.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp" />
+    <ClCompile Include="..\Engine\Audio\Sound.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sphere\Sphere.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Sprite2D\Sprite2D.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Sprite2D\SpriteMesh2D.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
     <!-- ImGui Manager -->
@@ -178,16 +178,16 @@
     <ClCompile Include="..\Engine\Render\Light\Directional\DirectionalLightManager.cpp" />
     <ClCompile Include="..\Engine\Render\Light\Point\PointLightManager.cpp" />
     <ClCompile Include="..\Engine\Render\Light\Spot\SpotLightManager.cpp" />
-    <ClCompile Include="..\Engine\Render\Model3D\ModelManager.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderCommon.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderContext.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderLight.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderModel.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderPrimitive.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderSphere.cpp" />
-    <ClCompile Include="..\Engine\Render\RenderSprite.cpp" />
+    <ClCompile Include="..\Engine\Render\Model\ModelManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderCommon.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderContext.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderLight.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderModel.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderPrimitive.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderSphere.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp" />
     <ClCompile Include="..\Engine\Render\Sphere\SphereManager.cpp" />
-    <ClCompile Include="..\Engine\Render\Sprite2D\SpriteManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
     <ClCompile Include="Dx12\Dx12Core.cpp" />
@@ -228,16 +228,16 @@
     <ClInclude Include="..\Engine\Graphics\Light\Directional\DirectionalLightSource.h" />
     <ClInclude Include="..\Engine\Graphics\Light\Point\PointLightSource.h" />
     <ClInclude Include="..\Engine\Graphics\Light\Spot\SpotLightSource.h" />
-    <ClInclude Include="..\Engine\Graphics\Model3D\ModelMesh.h" />
-    <ClInclude Include="..\Engine\Graphics\Model3D\ModelObject.h" />
-    <ClInclude Include="..\Engine\Graphics\Primitive2D\Primitive2D.h" />
-    <ClInclude Include="..\Engine\Graphics\Primitive3D\Primitive3D.h" />
-    <ClInclude Include="..\Engine\Graphics\Sound\BgmManager.h" />
-    <ClInclude Include="..\Engine\Graphics\Sound\SeManager.h" />
-    <ClInclude Include="..\Engine\Graphics\Sound\Sound.h" />
+    <ClInclude Include="..\Engine\Graphics\Model\ModelMesh.h" />
+    <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h" />
+    <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h" />
+    <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
+    <ClInclude Include="..\Engine\Audio\BgmManager.h" />
+    <ClInclude Include="..\Engine\Audio\SeManager.h" />
+    <ClInclude Include="..\Engine\Audio\Sound.h" />
     <ClInclude Include="..\Engine\Graphics\Sphere\Sphere.h" />
-    <ClInclude Include="..\Engine\Graphics\Sprite2D\Sprite2D.h" />
-    <ClInclude Include="..\Engine\Graphics\Sprite2D\SpriteMesh2D.h" />
+    <ClInclude Include="..\Engine\Graphics\Sprite\Sprite2D.h" />
+    <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.h" />
     <!-- ImGui Manager -->
@@ -259,11 +259,11 @@
     <ClInclude Include="..\Engine\Render\Light\Directional\DirectionalLightManager.h" />
     <ClInclude Include="..\Engine\Render\Light\Point\PointLightManager.h" />
     <ClInclude Include="..\Engine\Render\Light\Spot\SpotLightManager.h" />
-    <ClInclude Include="..\Engine\Render\Model3D\ModelManager.h" />
+    <ClInclude Include="..\Engine\Render\Model\ModelManager.h" />
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
     <ClInclude Include="..\Engine\Render\RenderContext.h" />
     <ClInclude Include="..\Engine\Render\Sphere\SphereManager.h" />
-    <ClInclude Include="..\Engine\Render\Sprite2D\SpriteManager.h" />
+    <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h" />
     <!-- Window -->
     <ClInclude Include="..\Engine\Window\Window.h" />
     <ClInclude Include="Input\Controller\Controller.h" />

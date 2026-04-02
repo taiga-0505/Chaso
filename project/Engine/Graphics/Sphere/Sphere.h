@@ -22,6 +22,12 @@ public:
   // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
+  /// <summary>
+  /// ワールド行列を外部から指定して描画する（コマンドキュー用）
+  /// </summary>
+  void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
+
+
   void DrawImGui(const char *name = nullptr);
 
   // 外からテクスチャSRV(GPUハンドル)をセット

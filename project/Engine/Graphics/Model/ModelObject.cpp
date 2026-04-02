@@ -182,6 +182,15 @@ void ModelObject::EnsureInstanceBatchCapacity_(uint32_t count) {
 }
 
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
+  // 現在のトランスフォームから行列を作って描画
+  Matrix4x4 world = MakeAffineMatrix(transform_.scale, transform_.rotation,
+                                     transform_.translation);
+  Draw(cmdList, world);
+}
+
+void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
+                       const Matrix4x4 &world) {
+
   if (!mesh_ || !mesh_->Ready() || !visible_)
     return;
 
@@ -211,10 +220,6 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
   const Matrix4x4 view = hasVP_ ? cachedView_ : MakeIdentity4x4();
   const Matrix4x4 proj = hasVP_ ? cachedProj_ : MakeIdentity4x4();
 
-  // ObjectのWorld
-  const Matrix4x4 objectWorld = MakeAffineMatrix(
-      transform_.scale, transform_.rotation, transform_.translation);
-
   // ---------------------------------------------------------
   // ★重要：同じCBアドレスに何回も上書きすると、全部最後の値になる
   // ので、DrawItem分のCB領域を確保して「GPUアドレスをずらして」描く
@@ -228,9 +233,9 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
   if (items.empty()) {
     // 互換：DrawItemが無い場合は全頂点を1発
     TransformationMatrix tm{};
-    tm.World = objectWorld;
-    tm.WVP = Multiply(objectWorld, Multiply(view, proj));
-    tm.worldInverseTranspose = Transpose(Inverse(objectWorld));
+    tm.World = world;
+    tm.WVP = Multiply(world, Multiply(view, proj));
+    tm.worldInverseTranspose = Transpose(Inverse(world));
 
     auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_);
     *dst = tm;
@@ -249,17 +254,17 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
   for (uint32_t i = 0; i < items.size(); ++i) {
     const auto &it = items[i];
 
-    // Node行列（モデル空間）→ ObjectWorld を掛ける
-    const Matrix4x4 world = Multiply(it.nodeWorld, objectWorld);
+    // Node行列（モデル空間）→ world を掛ける
+    const Matrix4x4 nodeWorld = Multiply(it.nodeWorld, world);
 
     TransformationMatrix tm{};
-    tm.World = world;
-    tm.WVP = Multiply(world, Multiply(view, proj));
-    tm.worldInverseTranspose = Transpose(Inverse(world));
+    tm.World = nodeWorld;
+    tm.WVP = Multiply(nodeWorld, Multiply(view, proj));
+    tm.worldInverseTranspose = Transpose(Inverse(nodeWorld));
 
     // CB書き込み
     auto *dst = reinterpret_cast<TransformationMatrix *>(cbWvpBatchMapped_ +
-                                                         uint64_t(i) * oneSize);
+                                                          uint64_t(i) * oneSize);
     *dst = tm;
 
     // CBアドレスをずらす
@@ -279,6 +284,7 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
 }
 
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
+
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
   if (!mesh_ || !mesh_->Ready() || instances.empty()) {

@@ -12,22 +12,25 @@
 // ============================================================================
 
 #include <d3d12.h>
+#include <functional>
 #include <memory>
 #include <string_view>
+#include <vector>
 #include <wrl.h>
+
 
 #include "Light/Area/AreaLightManager.h"
 #include "Light/Directional/DirectionalLightManager.h"
 #include "Light/Point/PointLightManager.h"
 #include "Light/Spot/SpotLightManager.h"
-#include "Model3D/ModelManager.h"
+#include "Model/ModelManager.h"
 #include "Sphere/SphereManager.h"
-#include "Sprite2D/SpriteManager.h"
+#include "Sprite/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
 #include "GraphicsPipeline/GraphicsPipeline.h" // BlendMode
 #include "Math/Math.h"
-#include "Model3d/ModelObject.h" // ModelManager の unique_ptr<ModelObject> に必要
+#include "Model/ModelObject.h" // ModelManager の unique_ptr<ModelObject> に必要
 #include "Sphere/Sphere.h"      // SphereManager の unique_ptr<Sphere> に必要
 #include "function/function.h"
 #include "struct.h"
@@ -89,7 +92,49 @@ public:
   Primitive2D *EnsurePrimitive2D();
   Primitive3D *EnsurePrimitive3D();
 
+  // ── コマンドキュー ─────────────────────────────────
+  struct RenderCommand3D {
+    enum Type {
+      Other,
+      Primitive,
+    } type = Other;
+
+    std::function<void(ID3D12GraphicsCommandList *)> func;
+
+    // Primitive マージ用の情報
+    bool primDepth = false;
+    uint32_t primStart = 0;
+    uint32_t primCount = 0;
+  };
+
+  /// <summary>
+  /// 一般的な3D描画コマンドをキューに追加する
+  /// </summary>
+  void PushCommand3D(std::function<void(ID3D12GraphicsCommandList *)> func) {
+    RenderCommand3D cmd;
+    cmd.type = RenderCommand3D::Other;
+    cmd.func = std::move(func);
+    commandQueue3D_.push_back(std::move(cmd));
+  }
+
+  /// <summary>
+  /// プリミティブ描画コマンドをキューに追加（または直前のコマンドとマージ）する
+  /// </summary>
+  void PushPrimitive3DCommand(bool depth, uint32_t start, uint32_t count);
+
+  /// <summary>
+  /// 蓄積された3Dコマンドを、登録された順番通りに実行する
+  /// </summary>
+  void Execute3DCommands();
+
+  /// <summary>
+  /// 3Dコマンドキューを空にする
+  /// </summary>
+  void Clear3DCommands() { commandQueue3D_.clear(); }
+
+
   // ── Fog CB ─────────────────────────────────────────
+
   void UpdateFogCB(float timeSec, float intensity, float scale, float speed,
                    const Vector2 &wind, float feather, float bottomBias);
   void SetFogColor(const Vector4 &color);
@@ -144,7 +189,12 @@ private:
   // Primitive
   std::unique_ptr<Primitive2D> prim2D_;
   std::unique_ptr<Primitive3D> prim3D_;
+
+  // コマンドキュー
+  std::vector<RenderCommand3D> commandQueue3D_;
 };
+
+
 
 // ============================================================================
 // GetRenderContext

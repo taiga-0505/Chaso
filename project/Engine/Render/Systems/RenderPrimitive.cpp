@@ -8,8 +8,8 @@
 #include "RenderContext.h"
 
 #include "PipelineManager.h"
-#include "Primitive2D/Primitive2D.h"
-#include "Primitive3D/Primitive3D.h"
+#include "Primitive/Primitive2D.h"
+#include "Primitive/Primitive3D.h"
 #include "Scene.h"
 
 namespace RC {
@@ -102,6 +102,20 @@ void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2,
   prim->Draw(ctx.CL());
 }
 
+namespace {
+/// <summary>
+/// 頂点が追加された後の範囲をコマンドキューに登録するヘルパー
+/// </summary>
+static void AddPrimitiveCommand_(RenderContext &ctx, Primitive3D *prim,
+                                 bool depth, uint32_t prevCount) {
+  uint32_t currentCount = prim->GetVertexCount(depth);
+  uint32_t added = currentCount - prevCount;
+  if (added > 0) {
+    ctx.PushPrimitive3DCommand(depth, prevCount, added);
+  }
+}
+} // namespace
+
 // ============================================================================
 // Primitive3D
 // ============================================================================
@@ -109,90 +123,104 @@ void DrawTriangle(const Vector2 &pos1, const Vector2 &pos2,
 void DrawLine3D(const Vector3 &a, const Vector3 &b, const Vector4 &color,
                 bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddLine(a, b, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawAABB3D(const Vector3 &mn, const Vector3 &mx, const Vector4 &color,
                 bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddAABB(mn, mx, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawGridXZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridXZ(halfSize, step, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawGridXY3D(int halfSize, float step, const Vector4 &color, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridXY(halfSize, step, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawGridYZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridYZ(halfSize, step, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawWireSphere3D(const Vector3 &center, float radius,
                       const Vector4 &color, int slices, int stacks,
                       bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddSphere(center, radius, color, slices, stacks, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawSphereRings3D(const Vector3 &center, float radius,
                        const Vector4 &color, int segments, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddSphereRings(center, radius, color, segments, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawArc3D(const Vector3 &center, const Vector3 &normal,
@@ -200,100 +228,91 @@ void DrawArc3D(const Vector3 &center, const Vector3 &normal,
                float endRad, const Vector4 &color, int segments, bool depth,
                bool drawToCenter) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddArc(center, normal, fromDir, radius, startRad, endRad, color,
                segments, depth, drawToCenter);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawCapsule3D(const Vector3 &p0, const Vector3 &p1, float radius,
                    const Vector4 &color, int segments, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddCapsule(p0, p1, radius, color, segments, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawOBB3D(const Vector3 &center, const Vector3 &axisX,
                const Vector3 &axisY, const Vector3 &axisZ,
                const Vector3 &halfExtents, const Vector4 &color, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddOBB(center, axisX, axisY, axisZ, halfExtents, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
                           bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddFrustum(corners, color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
                    const Vector3 &up, float fovYRad, float aspect, float nearZ,
                    float farZ, const Vector4 &color, bool depth) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
   auto *prim = ctx.EnsurePrimitive3D();
   if (!prim) {
     return;
   }
+  uint32_t prev = prim->GetVertexCount(depth);
   prim->AddFrustumCamera(camPos, forward, up, fovYRad, aspect, nearZ, farZ,
                          color, depth);
+  AddPrimitiveCommand_(ctx, prim, depth, prev);
 }
 
 void FlushPrimitive3D() {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized() || !ctx.CL()) {
+  if (!ctx.IsInitialized()) {
     return;
   }
-  auto *prim = ctx.EnsurePrimitive3D();
-  if (!prim) {
-    return;
-  }
-
-  if (!prim->HasAny()) {
-    return;
-  }
-
-  const BlendMode saved = ctx.CurrentBlendMode();
-  ctx.SetBlendMode(prim->BlendAt3D());
-
-  if (ctx.BindPipeline("primitive3d")) {
-    ctx.CL()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-    prim->Draw(ctx.CL(), true);
-  }
-  if (ctx.BindPipeline("primitive3d_nodepth")) {
-    ctx.CL()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
-    prim->Draw(ctx.CL(), false);
-  }
-
-  ctx.SetBlendMode(saved);
+  // コマンドキューを一括実行する（後方互換用）
+  ctx.Execute3DCommands();
 }
+
 
 // ============================================================================
 // Fog (画面オーバーレイ)

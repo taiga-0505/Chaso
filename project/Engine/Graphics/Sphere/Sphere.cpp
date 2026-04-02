@@ -1,4 +1,5 @@
 #include "Sphere.h"
+#include "../../Render/RenderContext.h"
 #include "Math/Math.h"
 #include "imgui/imgui.h"
 #include <cassert>
@@ -88,6 +89,21 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
 
   cmdList->DrawIndexedInstanced(ib_.indexCount, 1, 0, 0, 0);
 }
+
+void Sphere::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
+  if (!vb_.resource || !ib_.resource || !visible_ || !cbWvp_.mapped)
+    return;
+
+  auto &ctx = GetRenderContext();
+  cbWvp_.mapped->World = world;
+  Matrix4x4 vp = Multiply(ctx.View(), ctx.Proj());
+  cbWvp_.mapped->WVP = Multiply(world, vp);
+  cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
+
+
+  Draw(cmdList);
+}
+
 
 void Sphere::DrawImGui(const char *name) {
 #if RC_ENABLE_IMGUI

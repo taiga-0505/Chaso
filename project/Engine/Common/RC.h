@@ -6,7 +6,7 @@
 #include "RenderCommon.h"
 
 // サウンド関連の共通ヘッダ
-#include "Sound/Sound.h"
+#include "Audio/Sound.h"
 
 // カメラ制御関連の共通ヘッダ
 #include "Camera/CameraController.h"

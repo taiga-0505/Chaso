@@ -1,7 +1,7 @@
 #include "ModelManager.h"
 
-#include "Model3d/ModelObject.h"
-#include "Model3d/ModelMesh.h"
+#include "Model/ModelObject.h"
+#include "Model/ModelMesh.h"
 #include "Common/Log/Log.h"
 
 #include <filesystem>

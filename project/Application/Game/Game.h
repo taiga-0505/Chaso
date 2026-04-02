@@ -1,8 +1,8 @@
 #pragma once
 #include "Scene.h"
 #include "SceneManager.h"
-#include "Sound/BgmManager.h"
-#include "Sound/SeManager.h"
+#include "Audio/BgmManager.h"
+#include "Audio/SeManager.h"
 #include <string>
 
 class Game {

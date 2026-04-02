@@ -110,6 +110,12 @@ public:
 
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
+  /// <summary>
+  /// ワールド行列を外部から指定して描画する（コマンドキュー用）
+  /// </summary>
+  void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
+
+
   // 既存の「Transform配列インスタンス」描画
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,

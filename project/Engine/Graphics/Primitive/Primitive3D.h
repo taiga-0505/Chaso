@@ -94,10 +94,27 @@ public:
   // RenderCommon 側で PSO/Root はセット済み前提
   void Draw(ID3D12GraphicsCommandList *cl, bool depth);
 
+  /// <summary>
+  /// 現在蓄積されている頂点データをすべて GPU (VB) に転送する
+  /// </summary>
+  void TransferVertices();
+
+  /// <summary>
+  /// 転送済みの VB 内の特定範囲を描画する
+  /// </summary>
+  void DrawRange(ID3D12GraphicsCommandList *cl, bool depth, uint32_t start,
+                 uint32_t count);
+
+  /// <summary>
+  /// 現在蓄積されている頂点数を取得する
+  /// </summary>
+  uint32_t GetVertexCount(bool depth) const;
+
   bool HasAny() const { return !vtxDepth_.empty() || !vtxNoDepth_.empty(); }
   BlendMode BlendAt3D() const { return blendAt3D_; }
 
   void Clear();
+
 
 private:
   struct Vertex {

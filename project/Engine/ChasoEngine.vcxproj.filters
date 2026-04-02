@@ -64,22 +64,19 @@
     <Filter Include="Graphics\Light\Spot">
       <UniqueIdentifier>{cdcd3fd3-30ee-9ddf-9d63-369c9cc46504}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Graphics\Model3D">
+    <Filter Include="Graphics\Model">
       <UniqueIdentifier>{5aca5f74-47db-b7e1-4076-c8b8b97cce7a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Graphics\Primitive2D">
+    <Filter Include="Graphics\Primitive">
       <UniqueIdentifier>{1b23c465-fa22-e2c4-bdba-b651faa3a757}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Graphics\Primitive3D">
-      <UniqueIdentifier>{71051168-d245-ed48-6c7a-b108440b7ec7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Graphics\Sound">
+    <Filter Include="Audio">
       <UniqueIdentifier>{df8e2667-e400-3cf9-3a77-5d67a3e97be5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Graphics\Sphere">
       <UniqueIdentifier>{ee7c49c1-1940-41bc-2159-bab03e2f9f47}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Graphics\Sprite2D">
+    <Filter Include="Graphics\Sprite">
       <UniqueIdentifier>{0e8b317f-e4fb-d7ea-1397-cf71255b0267}</UniqueIdentifier>
     </Filter>
     <Filter Include="Graphics\Texture">
@@ -142,14 +139,17 @@
     <Filter Include="Render\Light\Spot">
       <UniqueIdentifier>{75360f83-7368-08f5-316d-83ab852ca33c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Render\Model3D">
+    <Filter Include="Render\Model">
       <UniqueIdentifier>{ad2b9d8f-005b-f8bb-cef7-c4a633d7461a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Render\Sphere">
       <UniqueIdentifier>{38a93e75-92a0-d64a-0172-0664be0cde5d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Render\Sprite2D">
+    <Filter Include="Render\Sprite">
       <UniqueIdentifier>{a79c31e4-476c-db46-9f9a-17dfba8aeec7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Systems">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-7890-abcd-ef1234567890}</UniqueIdentifier>
     </Filter>
     <Filter Include="Resources">
       <UniqueIdentifier>{ddcf50c2-9294-d441-4f3f-7c1bbc892cb5}</UniqueIdentifier>
@@ -243,29 +243,29 @@
     <ClCompile Include="..\Engine\Graphics\Light\Spot\SpotLightSource.cpp">
       <Filter>Graphics\Light\Spot</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Model3D\ModelMesh.cpp">
-      <Filter>Graphics\Model3D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Model\ModelMesh.cpp">
+      <Filter>Graphics\Model</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Model3D\ModelObject.cpp">
-      <Filter>Graphics\Model3D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp">
+      <Filter>Graphics\Model</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Primitive2D\Primitive2D.cpp">
-      <Filter>Graphics\Primitive2D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp">
+      <Filter>Graphics\Primitive</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Primitive3D\Primitive3D.cpp">
-      <Filter>Graphics\Primitive3D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp">
+      <Filter>Graphics\Primitive</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Sound\Sound.cpp">
-      <Filter>Graphics\Sound</Filter>
+    <ClCompile Include="..\Engine\Audio\Sound.cpp">
+      <Filter>Audio</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Sphere\Sphere.cpp">
       <Filter>Graphics\Sphere</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Sprite2D\Sprite2D.cpp">
-      <Filter>Graphics\Sprite2D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp">
+      <Filter>Graphics\Sprite</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Sprite2D\SpriteMesh2D.cpp">
-      <Filter>Graphics\Sprite2D</Filter>
+    <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp">
+      <Filter>Graphics\Sprite</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp">
       <Filter>Graphics\Texture\Texture2D</Filter>
@@ -318,35 +318,35 @@
     <ClCompile Include="..\Engine\Render\Light\Spot\SpotLightManager.cpp">
       <Filter>Render\Light\Spot</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\Model3D\ModelManager.cpp">
-      <Filter>Render\Model3D</Filter>
+    <ClCompile Include="..\Engine\Render\Model\ModelManager.cpp">
+      <Filter>Render\Model</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderCommon.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderCommon.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderContext.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderContext.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderLight.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderLight.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderModel.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderModel.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderPrimitive.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderPrimitive.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderSphere.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderSphere.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\RenderSprite.cpp">
-      <Filter>Render</Filter>
+    <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Render\Sphere\SphereManager.cpp">
       <Filter>Render\Sphere</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\Sprite2D\SpriteManager.cpp">
-      <Filter>Render\Sprite2D</Filter>
+    <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp">
+      <Filter>Render\Sprite</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Window\Window.cpp">
       <Filter>Window</Filter>
@@ -446,35 +446,35 @@
     <ClInclude Include="..\Engine\Graphics\Light\Spot\SpotLightSource.h">
       <Filter>Graphics\Light\Spot</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Model3D\ModelMesh.h">
-      <Filter>Graphics\Model3D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Model\ModelMesh.h">
+      <Filter>Graphics\Model</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Model3D\ModelObject.h">
-      <Filter>Graphics\Model3D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h">
+      <Filter>Graphics\Model</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Primitive2D\Primitive2D.h">
-      <Filter>Graphics\Primitive2D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h">
+      <Filter>Graphics\Primitive</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Primitive3D\Primitive3D.h">
-      <Filter>Graphics\Primitive3D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h">
+      <Filter>Graphics\Primitive</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Sound\BgmManager.h">
-      <Filter>Graphics\Sound</Filter>
+    <ClInclude Include="..\Engine\Audio\BgmManager.h">
+      <Filter>Audio</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Sound\SeManager.h">
-      <Filter>Graphics\Sound</Filter>
+    <ClInclude Include="..\Engine\Audio\SeManager.h">
+      <Filter>Audio</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Sound\Sound.h">
-      <Filter>Graphics\Sound</Filter>
+    <ClInclude Include="..\Engine\Audio\Sound.h">
+      <Filter>Audio</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Sphere\Sphere.h">
       <Filter>Graphics\Sphere</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Sprite2D\Sprite2D.h">
-      <Filter>Graphics\Sprite2D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Sprite\Sprite2D.h">
+      <Filter>Graphics\Sprite</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Sprite2D\SpriteMesh2D.h">
-      <Filter>Graphics\Sprite2D</Filter>
+    <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h">
+      <Filter>Graphics\Sprite</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h">
       <Filter>Graphics\Texture\Texture2D</Filter>
@@ -527,8 +527,8 @@
     <ClInclude Include="..\Engine\Render\Light\Spot\SpotLightManager.h">
       <Filter>Render\Light\Spot</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Render\Model3D\ModelManager.h">
-      <Filter>Render\Model3D</Filter>
+    <ClInclude Include="..\Engine\Render\Model\ModelManager.h">
+      <Filter>Render\Model</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\RenderCommon.h">
       <Filter>Render</Filter>
@@ -539,8 +539,8 @@
     <ClInclude Include="..\Engine\Render\Sphere\SphereManager.h">
       <Filter>Render\Sphere</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Render\Sprite2D\SpriteManager.h">
-      <Filter>Render\Sprite2D</Filter>
+    <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h">
+      <Filter>Render\Sprite</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Window\Window.h">
       <Filter>Window</Filter>
