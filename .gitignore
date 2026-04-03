@@ -21,6 +21,7 @@ generated/
 logs/
 project/imgui.ini
 project/Resources/desktop.ini
+Reference/
 
 *.pdb
 
