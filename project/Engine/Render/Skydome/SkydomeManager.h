@@ -1,41 +1,39 @@
 #pragma once
 
 #include <d3d12.h>
-
 #include <memory>
 #include <vector>
 
-#include "struct.h"
+#include "../../Common/struct.h"
 
-class Sphere;
+class Skydome;
 class TextureManager;
 
 namespace RC {
 
-class SphereManager {
+class SkydomeManager {
 public:
   void Init(ID3D12Device *device, TextureManager *texman);
-  ~SphereManager();
+  ~SkydomeManager();
   void Term();
 
-  int Create(int textureHandle, float radius, unsigned int sliceCount,
-             unsigned int stackCount, bool inward);
+  int Create(int textureHandle, float radius = 100.0f, unsigned int sliceCount = 32,
+             unsigned int stackCount = 32);
   void Unload(int handle);
 
   bool IsValid(int handle) const;
 
-  Sphere *Get(int handle);
-  const Sphere *Get(int handle) const;
+  Skydome *Get(int handle);
+  const Skydome *Get(int handle) const;
 
   Transform *GetTransformPtr(int handle);
   void SetColor(int handle, const Vector4 &color);
-  void SetLightingMode(int handle, LightingMode m);
 
   void ApplyTexture(int handle, int overrideTexHandle);
 
 private:
   struct Slot {
-    std::unique_ptr<Sphere> ptr;
+    std::unique_ptr<Skydome> ptr;
     bool inUse = false;
     int defaultTexHandle = -1;
   };
@@ -45,7 +43,7 @@ private:
 private:
   ID3D12Device *device_ = nullptr;
   TextureManager *texman_ = nullptr;
-  std::vector<Slot> spheres_;
+  std::vector<Slot> skydomes_;
 };
 
 } // namespace RC

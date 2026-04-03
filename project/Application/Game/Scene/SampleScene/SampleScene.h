@@ -45,14 +45,22 @@ private:
   int terrain = -1;
   Transform *terrainT_ = nullptr;
 
-  // ===== 天球 =====
-  int sphere = -1;
-  int tx_Sphere_ = -1;
-  Transform *sphereT_ = nullptr;
+  // ===== 天球 (Skydome) =====
+  int skydome = -1;
+  int tx_Skydome_ = -1;
+  Transform *skydomeT_ = nullptr;
 
-  int ball = -1;
+  // ===== プリミティブメッシュ (PrimitiveMesh) =====
+  int primitiveSphere = -1;
   int tx_ball = -1;
-  Transform *ballT_ = nullptr;
+  Transform *primitiveSphereT_ = nullptr;
+
+  int testBox = -1;
+  int testPlane = -1;
+  int testCylinder = -1;
+  int testCone = -1;
+  int testTorus = -1;
+  int testCapsule = -1;
 
   // ===============
   // スプライト

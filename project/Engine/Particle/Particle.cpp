@@ -10,12 +10,7 @@
 
 namespace RC {
 
-void Particle::Initialize(SceneContext &ctx) {
-
-  // ==================
-  // デバイス／StructuredBufferManager を取得
-  // ＋ ImGui 用パラメータ初期化
-  // ==================
+void Particle::CommonInit_(SceneContext &ctx) {
   device_ = ctx.core->GetDevice();
   sbMgr_ = &ctx.core->StructuredBuffers();
 
@@ -24,75 +19,19 @@ void Particle::Initialize(SceneContext &ctx) {
   uvRotate_ = 0.0f;
 
   // ==================
-  // 板ポリゴン用の頂点データ作成
-  //   - 左上(-1,  1) 右上(1,  1)
-  //   - 左下(-1, -1) 右下(1, -1)
-  //   2枚の三角形で1枚の四角形を作る
-  // ==================
-  modelData.vertices.clear();
-  // modelData.vertices.reserve(6);
-
-  // 1枚目: 左上 -> 右上 -> 左下 （時計回り）
-  modelData.vertices.push_back({.position = {-1.0f, 1.0f, 0.0f, 1.0f},
-                                .texcoord = {0.0f, 0.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 左上
-
-  modelData.vertices.push_back({.position = {1.0f, 1.0f, 0.0f, 1.0f},
-                                .texcoord = {1.0f, 0.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 右上
-
-  modelData.vertices.push_back({.position = {-1.0f, -1.0f, 0.0f, 1.0f},
-                                .texcoord = {0.0f, 1.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 左下
-
-  // 2枚目: 左下 -> 右上 -> 右下 （時計回り）
-  modelData.vertices.push_back({.position = {-1.0f, -1.0f, 0.0f, 1.0f},
-                                .texcoord = {0.0f, 1.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 左下
-
-  modelData.vertices.push_back({.position = {1.0f, 1.0f, 0.0f, 1.0f},
-                                .texcoord = {1.0f, 0.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 右上
-
-  modelData.vertices.push_back({.position = {1.0f, -1.0f, 0.0f, 1.0f},
-                                .texcoord = {1.0f, 1.0f},
-                                .normal = {0.0f, 0.0f, 1.0f}}); // 右下
-
-  vertexCount_ = static_cast<uint32_t>(modelData.vertices.size());
-  assert(vertexCount_ > 0);
-
-  // ==================
-  // 頂点バッファ生成 ＆ 転送
-  // ==================
-  vbResource_ =
-      CreateBufferResource(device_.Get(), sizeof(VertexData) * vertexCount_, L"Particle::vbResource_");
-
-  VertexData *vbMapped = nullptr;
-  vbResource_->Map(0, nullptr, reinterpret_cast<void **>(&vbMapped));
-  std::memcpy(vbMapped, modelData.vertices.data(),
-              sizeof(VertexData) * vertexCount_);
-  vbResource_->Unmap(0, nullptr);
-
-  vbView_.BufferLocation = vbResource_->GetGPUVirtualAddress();
-  vbView_.StrideInBytes = sizeof(VertexData);
-  vbView_.SizeInBytes = sizeof(VertexData) * vertexCount_;
-
-  // ==================
   // Instancing 用 StructuredBuffer
-  //   - ParticleForGPU を kNumMaxInstance 個分確保
-  //   - CPU から常に Map して直接書き込む
   // ==================
   instanceBufferId_ = sbMgr_->Create(sizeof(ParticleForGPU), kNumMaxInstance);
-  instancingData_ =
-      static_cast<ParticleForGPU *>(sbMgr_->Map(instanceBufferId_));
+  instancingData_ = static_cast<ParticleForGPU *>(sbMgr_->Map(instanceBufferId_));
   instanceSrv_ = sbMgr_->GetSrv(instanceBufferId_);
 
   // ==================
   // Material 用定数バッファ (b0)
   // ==================
-  cbMat_ = CreateBufferResource(device_.Get(), Align256(sizeof(SpriteMaterial)), L"Particle::cbMat_");
+  cbMat_ = CreateBufferResource(device_.Get(), Align256(sizeof(SpriteMaterial)),
+                                L"Particle::cbMat_");
   cbMat_->Map(0, nullptr, reinterpret_cast<void **>(&cbMatMapped_));
-  *cbMatMapped_ = SpriteMaterial{}; // 一旦 0 クリア
+  *cbMatMapped_ = SpriteMaterial{};
   cbMatMapped_->color = {1, 1, 1, 1};
   cbMatMapped_->uvTransform = MakeIdentity4x4();
   cbMat_->Unmap(0, nullptr);
@@ -108,7 +47,9 @@ void Particle::Initialize(SceneContext &ctx) {
   // パーティクル配列の初期生成
   // ==================
   particles.clear();
-  for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+  particles.reserve(kNumMaxInstance);
+  // 初期状態で数個出しておく
+  for (uint32_t i = 0; i < 3; ++i) {
     particles.push_back(
         MakeNewParticle(randomEngine, emitter_.transform.translation));
   }
@@ -126,9 +67,61 @@ void Particle::Initialize(SceneContext &ctx) {
   // ==================
   // 重力フィールド初期化
   // ==================
-  accelerationField_.acceleration = {0.01f, 0.0f, 0.0f}; // 強めの右向き重力
+  accelerationField_.acceleration = {0.01f, 0.0f, 0.0f};
   accelerationField_.area.min = {-8.0f, -8.0f, -1.0f};
   accelerationField_.area.max = {8.0f, 8.0f, 1.0f};
+}
+
+void Particle::SetupVBFromModelData_(const ModelData &data) {
+  modelData = data;
+  vertexCount_ = static_cast<uint32_t>(modelData.vertices.size());
+  assert(vertexCount_ > 0);
+
+  vbResource_ = CreateBufferResource(device_.Get(),
+                                     sizeof(VertexData) * vertexCount_,
+                                     L"Particle::vbResource_");
+
+  VertexData *vbMapped = nullptr;
+  vbResource_->Map(0, nullptr, reinterpret_cast<void **>(&vbMapped));
+  std::memcpy(vbMapped, modelData.vertices.data(),
+              sizeof(VertexData) * vertexCount_);
+  vbResource_->Unmap(0, nullptr);
+
+  vbView_.BufferLocation = vbResource_->GetGPUVirtualAddress();
+  vbView_.StrideInBytes = sizeof(VertexData);
+  vbView_.SizeInBytes = sizeof(VertexData) * vertexCount_;
+}
+
+void Particle::Initialize(SceneContext &ctx) {
+  CommonInit_(ctx);
+
+  // デフォルトの板ポリゴン
+  ModelData quad;
+  quad.vertices.push_back({.position = {-1.0f, 1.0f, 0.0f, 1.0f},
+                           .texcoord = {0.0f, 0.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+  quad.vertices.push_back({.position = {1.0f, 1.0f, 0.0f, 1.0f},
+                           .texcoord = {1.0f, 0.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+  quad.vertices.push_back({.position = {-1.0f, -1.0f, 0.0f, 1.0f},
+                           .texcoord = {0.0f, 1.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+  quad.vertices.push_back({.position = {-1.0f, -1.0f, 0.0f, 1.0f},
+                           .texcoord = {0.0f, 1.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+  quad.vertices.push_back({.position = {1.0f, 1.0f, 0.0f, 1.0f},
+                           .texcoord = {1.0f, 0.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+  quad.vertices.push_back({.position = {1.0f, -1.0f, 0.0f, 1.0f},
+                           .texcoord = {1.0f, 1.0f},
+                           .normal = {0.0f, 0.0f, 1.0f}});
+
+  SetupVBFromModelData_(quad);
+}
+
+void Particle::InitializeWithModel(SceneContext &ctx, const ModelData &model) {
+  CommonInit_(ctx);
+  SetupVBFromModelData_(model);
 }
 
 void Particle::Finalize() {
@@ -195,11 +188,15 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   }
 
   if (enableUpdate_ && useEmitterAutoSpawn_) {
-    emitter_.frequencyTime += deltaTime;
+    emitter_.frequencyTime += deltaTime * emitter_.timeScale;
     if (emitter_.frequencyTime >= emitter_.frequency) {
       // 周期が来たらパーティクルを追加
-      particles.splice(particles.end(), Emit(emitter_, randomEngine));
-      TrimToMax_();
+      std::vector<ParticleData> newBatch = Emit(emitter_, randomEngine);
+      for (auto &np : newBatch) {
+        if (particles.size() < kNumMaxInstance) {
+          particles.push_back(std::move(np));
+        }
+      }
       emitter_.frequencyTime -= emitter_.frequency;
     }
   }
@@ -207,45 +204,49 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   // ==================
   // 生きているパーティクルだけ更新して
   // GPU用の instancing バッファに詰める
-  //   ※ CPU側は std::list なので、ここで寿命切れを erase していく
+  //   ※ CPU側は vector なので、スワップ削除で効率化
   // ==================
   numInstance = 0;
 
-  auto it = particles.begin();
-  while (it != particles.end()) {
-    ParticleData &p = *it;
+  for (size_t i = 0; i < particles.size();) {
+    ParticleData &p = particles[i];
 
     if (p.lifeTime <= p.currentTime) {
-      it = particles.erase(it);
-      continue;
+      // 寿命切れ: 末尾とスワップして pop_back (要素順序は変わるが高速)
+      if (i != particles.size() - 1) {
+        p = std::move(particles.back());
+      }
+      particles.pop_back();
+      continue; // インデックスは進めない
     }
 
     if (enableUpdate_) {
-      UpdateOneParticle(p, deltaTime);
+      UpdateOneParticle(p, deltaTime * emitter_.timeScale);
     }
 
-    // numInstance が上限でも it は必ず進める
+    // numInstance が上限でも更新自体は行う
     if (numInstance < kNumMaxInstance) {
-
-      const RC::Vector3 &s = p.transform.scale;
-      const RC::Vector3 &r = p.transform.rotation;
-      const RC::Vector3 &t = p.transform.translation;
 
       Matrix4x4 world = BuildWorldMatrix(p, billboardMatrix);
 
       ParticleForGPU wvp{};
       wvp.World = world;
       wvp.WVP = Multiply(world, Multiply(view, proj));
-      wvp.color = p.color;
+
+      // 個別カラー * エミッタ一括カラー
+      wvp.color.x = p.color.x * emitter_.globalColor.x;
+      wvp.color.y = p.color.y * emitter_.globalColor.y;
+      wvp.color.z = p.color.z * emitter_.globalColor.z;
+      wvp.color.w = p.color.w * emitter_.globalColor.w;
 
       float alpha = ComputeAlpha(p);
-      wvp.color.w = p.color.w * alpha;
+      wvp.color.w *= alpha;
 
       instancingData_[numInstance] = wvp;
       ++numInstance;
     }
 
-    ++it;
+    ++i;
   }
 }
 
@@ -503,9 +504,10 @@ ParticleData Particle::MakeNewParticle(std::mt19937 &randomEngine,
   return particle;
 }
 
-std::list<ParticleData> Particle::Emit(const Emitter &emitter,
-                                       std::mt19937 &randomEngine) {
-  std::list<ParticleData> newParticles;
+std::vector<ParticleData> Particle::Emit(const Emitter &emitter,
+                                         std::mt19937 &randomEngine) {
+  std::vector<ParticleData> newParticles;
+  newParticles.reserve(emitter.count);
   for (uint32_t count = 0; count < emitter.count; ++count) {
     newParticles.push_back(
         MakeNewParticle(randomEngine, emitter.transform.translation));
@@ -553,7 +555,12 @@ void Particle::InitParticleCore(ParticleData &particle,
 
 Matrix4x4 Particle::BuildWorldMatrix(const ParticleData &p,
                                      const Matrix4x4 &billboardMatrix) const {
-  const Vector3 &s = p.transform.scale;
+  // 個別スケール * 一括スケール
+  Vector3 s = {
+      p.transform.scale.x * emitter_.globalScale.x,
+      p.transform.scale.y * emitter_.globalScale.y,
+      p.transform.scale.z * emitter_.globalScale.z,
+  };
   const Vector3 &r = p.transform.rotation;
   const Vector3 &t = p.transform.translation;
 
@@ -594,9 +601,9 @@ void Particle::UpdateOneParticle(ParticleData &p, float dt) {
 }
 
 void Particle::TrimToMax_() {
-  // 「同時に存在できるパーティクル数」を超えたら古いのから落とす
-  while (particles.size() > kNumMaxInstance) {
-    particles.pop_front();
+  // vector では末尾削除のみ行う（順序維持が必要な場合は要修正だが、パーティクルなので基本不要）
+  if (particles.size() > kNumMaxInstance) {
+    particles.resize(kNumMaxInstance);
   }
 }
 
@@ -637,8 +644,12 @@ void Particle::MoveEmitter(const Vector3 &delta) {
 }
 
 void Particle::AddParticlesFromEmitter() {
-  particles.splice(particles.end(), Emit(emitter_, randomEngine));
-  TrimToMax_();
+  std::vector<ParticleData> newBatch = Emit(emitter_, randomEngine);
+  for (auto &np : newBatch) {
+    if (particles.size() < kNumMaxInstance) {
+      particles.push_back(std::move(np));
+    }
+  }
 }
 
 void Particle::SetEmitterAutoSpawn(bool enable) {

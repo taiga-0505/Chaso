@@ -100,16 +100,15 @@ void GameScene::OnEnter(SceneContext &ctx) {
 
   // ======= スカイドーム生成 =======
   txSphere_ = RC::LoadTex("Resources/skydome.jpg");
-  const float kSkyRadius = kFarZ * 0.95f;
-  skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
-  sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
-  RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+  skydomeModel = RC::GenerateSkydomeEx(txSphere_, 100.0f);
+  skydomeT_ = RC::GetSkydomeTransformPtr(skydomeModel);
+  RC::SetSkydomeColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
   // カメラ座標に追従
-  sphereT_->translation = camera_.GetWorldPos();
+  skydomeT_->translation = camera_.GetWorldPos();
   // 高さオフセット
-  sphereT_->translation.y -= skydomeTranslateY_;
+  skydomeT_->translation.y -= skydomeTranslateY_;
   // 自転処理
-  sphereT_->rotation.y += skydomeRotateSpeed_;
+  skydomeT_->rotation.y += skydomeRotateSpeed_;
 
   // ======= 追従カメラ設定 =======
   if (Transform *pt = RC::GetModelTransformPtr(playerModel)) {
@@ -148,7 +147,7 @@ void GameScene::OnExit(SceneContext &) {
   playerModel = -1;
   RC::UnloadModel(blockModel);
   blockModel = -1;
-  RC::UnloadSphere(skydomeModel);
+  RC::UnloadSkydome(skydomeModel);
   skydomeModel = -1;
   for (auto &c : coins_) {
     if (!c)
@@ -209,13 +208,13 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
   // ===========================================
 
   // ======= スカイドーム更新 =======
-  if (sphereT_) {
+  if (skydomeT_) {
     // カメラ座標に追従
-    sphereT_->translation = camera_.GetWorldPos();
+    skydomeT_->translation = camera_.GetWorldPos();
     // 高さオフセット
-    sphereT_->translation.y -= skydomeTranslateY_;
+    skydomeT_->translation.y -= skydomeTranslateY_;
     // 自転処理
-    sphereT_->rotation.y += skydomeRotateSpeed_;
+    skydomeT_->rotation.y += skydomeRotateSpeed_;
   }
 
   // ======= エンティティ更新 =======
@@ -322,7 +321,9 @@ void GameScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   // ======= 3D描画 =======
   RC::PreDraw3D(ctx, cl);
-  RC::DrawSphere(skydomeModel);
+  
+  // ======= スカイドーム描画 =======
+  RC::DrawSkydome(skydomeModel);
 
   player_->Draw();
   for (auto &c : coins_) {

@@ -11,27 +11,16 @@ void FireParticle::Initialize(SceneContext &ctx) {
   e.frequency = 1.0f;
 }
 
-std::list<ParticleData> FireParticle::Emit(const Emitter &emitter,
+std::vector<ParticleData> FireParticle::Emit(const Emitter &emitter,
                                            std::mt19937 &randomEngine) {
-  Emitter &e = EmitterRef();
-
-  size_t current = particles.size();
-  if (current == 0) {
-    e.count = 100;
-  } else if (current < 30) {
-    e.count = 70;
-  } else if (current < 50) {
-    e.count = 50;
-  } else {
-    e.count = 10;
+  std::vector<ParticleData> newParts;
+  newParts.reserve(emitter.count);
+  for (uint32_t i = 0; i < emitter.count; ++i) {
+    ParticleData p{};
+    InitParticleCore(p, randomEngine, emitter.transform.translation);
+    newParts.push_back(p);
   }
-
-  std::list<ParticleData> newParticles;
-  for (uint32_t i = 0; i < e.count; ++i) {
-    newParticles.push_back(
-        MakeNewParticle(randomEngine, e.transform.translation));
-  }
-  return newParticles;
+  return newParts;
 }
 
 void FireParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,

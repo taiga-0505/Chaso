@@ -55,9 +55,9 @@ void SelectScene::OnEnter(SceneContext &ctx) {
   // ======= スカイドーム生成 =======
   txSphere_ = RC::LoadTex("Resources/skydome.jpg");
   const float kSkyRadius = kFarZ * 0.95f;
-  skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
-  sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
-  RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+  skydomeModel = RC::GenerateSkydomeEx(txSphere_, kSkyRadius);
+  skydomeT_ = RC::GetSkydomeTransformPtr(skydomeModel);
+  RC::SetSkydomeColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
 
   // ======= ステージ選択用モデル読み込み =======
   stageModels[0] = RC::LoadModel("Resources/model/stage1");
@@ -93,7 +93,7 @@ void SelectScene::OnExit(SceneContext &) {
     RC::UnloadModel(stageModels[i]);
     stageModels[i] = -1;
   }
-  RC::UnloadSphere(skydomeModel);
+  RC::UnloadSkydome(skydomeModel);
   skydomeModel = -1;
 
   RC::UnloadModel(AModel);
@@ -126,13 +126,13 @@ void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   // ======= スカイドーム更新 =======
-  if (sphereT_) {
+  if (skydomeT_) {
     // カメラ座標に追従
-    sphereT_->translation = camera_.GetWorldPos();
+    skydomeT_->translation = camera_.GetWorldPos();
     // 高さオフセット
-    sphereT_->translation.y -= 10.0f;
+    skydomeT_->translation.y -= 10.0f;
     // 自転処理
-    sphereT_->rotation.y += 0.0005f;
+    skydomeT_->rotation.y += 0.0005f;
   }
 
   if (ctx.input->IsKeyTrigger(DIK_A)) {
@@ -180,7 +180,7 @@ void SelectScene::Update(SceneManager &sm, SceneContext &ctx) {
 void SelectScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw3D(ctx, cl);
 
-  RC::DrawSphere(skydomeModel);
+  RC::DrawSkydome(skydomeModel);
 
   for (int i = 0; i < kStageMax; ++i) {
     RC::DrawModel(stageModels[i]);

@@ -6,15 +6,14 @@
 #include <vector>
 #include <wrl/client.h>
 
-class Sphere {
+class Skydome {
 public:
-  Sphere() = default;
-  ~Sphere();
+  Skydome() = default;
+  ~Skydome();
 
-  // Device依存リソースの作成 + 球メッシュ生成
-  void Initialize(ID3D12Device *device, float radius = 0.5f,
-                  UINT sliceCount = 16, UINT stackCount = 16,
-                  bool inward = true);
+  // Device依存リソースの作成 + 天球メッシュ生成
+  void Initialize(ID3D12Device *device, float radius = 100.0f,
+                  UINT sliceCount = 32, UINT stackCount = 32);
 
   // 毎フレームの行列更新（外部カメラの View/Proj を渡す）
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
@@ -26,7 +25,6 @@ public:
   /// ワールド行列を外部から指定して描画する（コマンドキュー用）
   /// </summary>
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
-
 
   void DrawImGui(const char *name = nullptr);
 
@@ -51,13 +49,10 @@ public:
 
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
-  void SetInward(bool inward) { inward_ = inward; }
-  bool GetInward() const { return inward_; }
 
 private:
-  // メッシュ生成
-  void BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
-                     bool inward);
+  // メッシュ生成 (常に内向き)
+  void BuildGeometry(float radius, UINT sliceCount, UINT stackCount);
   void UploadVB_();
   void UploadIB_();
 
@@ -102,7 +97,6 @@ private:
   // 変換
   Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
 
-  bool inward_ = true; // 内向きメッシュにするか
   bool visible_ = true;
 
   // 0 なら自前の cbLight_ を使用。0以外なら外部ライトCB（LightManager）を使用。

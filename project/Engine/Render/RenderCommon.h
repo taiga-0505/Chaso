@@ -623,18 +623,15 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h);
 void DrawImGui2D(int spriteHandle, const char *name);
 
 // ===============================
-// 天球用
+// 天球用 (Skydome)
 // ===============================
 
 /// <summary>
-/// 天球を生成する（最小形：半径0.5, 16x16, 内向き）
+/// 天球を生成する（最小形：半径100.0, 32x32）
 /// </summary>
 /// <param name="textureHandle">テクスチャハンドル（必須）</param>
 /// <returns>天球ハンドル（失敗時は -1）</returns>
-/// <remarks>
-/// キューブマップ等のスカイ用。必ず有効なテクスチャハンドルを渡してください。
-/// </remarks>
-int GenerateSphere(int textureHandle);
+int GenerateSkydome(int textureHandle);
 
 /// <summary>
 /// 天球を生成する（パラメータ指定版）
@@ -643,52 +640,95 @@ int GenerateSphere(int textureHandle);
 /// <param name="radius">半径</param>
 /// <param name="sliceCount">スライス数</param>
 /// <param name="stackCount">スタック数</param>
-/// <param name="inward">内向き（true）/ 外向き（false）</param>
 /// <returns>天球ハンドル（失敗時は -1）</returns>
-int GenerateSphereEx(int textureHandle = -1, float radius = 0.5f,
-                     unsigned int sliceCount = 16, unsigned int stackCount = 16,
-                     bool inward = true);
+int GenerateSkydomeEx(int textureHandle = -1, float radius = 100.0f,
+                      unsigned int sliceCount = 32, unsigned int stackCount = 32);
 
 /// <summary>
 /// 天球を描画する
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
+/// <param name="skydomeHandle">天球ハンドル</param>
 /// <param name="texHandle">一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ）</param>
-void DrawSphere(int sphereHandle, int texHandle = -1);
+void DrawSkydome(int skydomeHandle, int texHandle = -1);
 
 /// <summary>
 /// 天球の ImGui 表示を行う
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
-/// <param name="name">表示名（nullptr ならデフォルト）</param>
-void DrawSphereImGui(int sphereHandle, const char *name = nullptr);
+void DrawSkydomeImGui(int skydomeHandle, const char *name = nullptr);
 
 /// <summary>
 /// 天球を解放する
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
-void UnloadSphere(int sphereHandle);
+void UnloadSkydome(int skydomeHandle);
 
 /// <summary>
 /// 天球の Transform ポインタを取得する
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
-/// <returns>Transform*（無効ハンドルなら nullptr）</returns>
-Transform *GetSphereTransformPtr(int sphereHandle);
+Transform *GetSkydomeTransformPtr(int skydomeHandle);
 
 /// <summary>
 /// 天球の色（乗算カラー）を設定する
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
-/// <param name="color">色（RGBA）</param>
-void SetSphereColor(int sphereHandle, const Vector4 &color);
+void SetSkydomeColor(int skydomeHandle, const Vector4 &color);
+
+// ===============================
+// 汎用プロシージャルメッシュ（PrimitiveMesh）
+// ===============================
 
 /// <summary>
-/// 天球のライティングモードを設定する
+/// 平面メッシュを生成
 /// </summary>
-/// <param name="sphereHandle">天球ハンドル</param>
-/// <param name="m">ライティングモード</param>
-void SetSphereLightingMode(int sphereHandle, LightingMode m);
+int GeneratePlane(float width = 1.0f, float height = 1.0f, int texHandle = -1);
+
+/// <summary>
+/// ボックスメッシュを生成
+/// </summary>
+int GenerateBox(float width = 1.0f, float height = 1.0f, float depth = 1.0f, int texHandle = -1);
+
+/// <summary>
+/// 球体メッシュを生成（外向き。デバッグやエフェクト用）
+/// </summary>
+int GenerateSphere(float radius = 0.5f, int texHandle = -1);
+
+/// <summary>
+/// 円柱メッシュを生成
+/// </summary>
+int GenerateCylinder(float radius = 0.5f, float height = 1.0f, int texHandle = -1);
+
+/// <summary>
+/// 円錐メッシュを生成
+/// </summary>
+int GenerateCone(float radius = 0.5f, float height = 1.0f, int texHandle = -1);
+
+/// <summary>
+/// トーラスメッシュを生成
+/// </summary>
+int GenerateTorus(float majorRadius = 1.0f, float minorRadius = 0.2f, int texHandle = -1);
+
+/// <summary>
+/// カプセルメッシュを生成
+/// </summary>
+int GenerateCapsule(float radius = 0.5f, float height = 2.0f, int texHandle = -1);
+
+/// <summary>
+/// 汎用プリミティブメッシュを描画
+/// </summary>
+void DrawPrimitiveMesh(int meshHandle, int texHandle = -1);
+
+/// <summary>
+/// 汎用プリミティブメッシュを解放
+/// </summary>
+void UnloadPrimitiveMesh(int meshHandle);
+
+/// <summary>
+/// 汎用プリミティブメッシュの Transform ポインタ取得
+/// </summary>
+Transform *GetPrimitiveMeshTransformPtr(int meshHandle);
+
+/// <summary>
+/// 汎用プリミティブメッシュの ImGui 表示を行う
+/// </summary>
+void DrawPrimitiveMeshImGui(int meshHandle, const char *name = nullptr);
 
 // ===============================
 // Primitive2D（即時描画）

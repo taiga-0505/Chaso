@@ -75,7 +75,7 @@ private:
   float skydomeTranslateY_ = 10.0f;
   float skydomeRotateSpeed_ = 0.0005f;
   // ======= トランスフォーム参照 =======
-  Transform *sphereT_ = nullptr;
+  Transform *skydomeT_ = nullptr;
 
   // ==============
   // ポーズ関連

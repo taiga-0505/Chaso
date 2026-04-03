@@ -29,7 +29,7 @@ private:
   int skydomeModel = -1;
   int txSphere_ = -1;
   // ======= トランスフォーム参照 =======
-  Transform *sphereT_ = nullptr;
+  Transform *skydomeT_ = nullptr;
 
   int titleModel = -1;
   Transform *titleT_ = nullptr;

@@ -1,0 +1,90 @@
+#include "RenderCommon.h"
+#include "RenderContext.h"
+#include "Mesh/PrimitiveMesh.h"
+#include "Mesh/MeshGenerator.h"
+
+namespace RC {
+
+int GeneratePlane(float width, float height, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GeneratePlane(width, height);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateBox(float width, float height, float depth, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateBox(width, height, depth);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateSphere(float radius, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateSphere(radius);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateCylinder(float radius, float height, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateCylinder(radius, height);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateCone(float radius, float height, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateCone(radius, height);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateTorus(float majorRadius, float minorRadius, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateTorus(majorRadius, minorRadius);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+int GenerateCapsule(float radius, float height, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateCapsule(radius, height);
+  return ctx.PrimitiveMeshes().Create(data, texHandle);
+}
+
+void DrawPrimitiveMesh(int meshHandle, int texHandle) {
+  auto &ctx = GetRenderContext();
+  if (!ctx.IsInitialized()) return;
+
+  auto *m = ctx.PrimitiveMeshes().Get(meshHandle);
+  if (!m) return;
+
+  Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
+  D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
+  BlendMode blend = ctx.CurrentBlendMode();
+
+  ctx.PushCommand3D([m, meshHandle, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
+    auto &ctx = GetRenderContext();
+    auto prevBlend = ctx.CurrentBlendMode();
+    ctx.SetBlendMode(blend);
+
+    if (ctx.BindPipeline("object3d")) {
+      ctx.BindCameraCB();
+      cl->SetGraphicsRootConstantBufferView(3, lightAddr);
+      ctx.BindAllLightCBs();
+
+      ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+      m->Draw(cl, world);
+    }
+    ctx.SetBlendMode(prevBlend);
+  });
+}
+
+void UnloadPrimitiveMesh(int meshHandle) {
+  GetRenderContext().PrimitiveMeshes().Unload(meshHandle);
+}
+
+Transform *GetPrimitiveMeshTransformPtr(int meshHandle) {
+  return GetRenderContext().PrimitiveMeshes().GetTransformPtr(meshHandle);
+}
+
+void DrawPrimitiveMeshImGui(int meshHandle, const char *name) {
+  GetRenderContext().PrimitiveMeshes().DrawImGui(meshHandle, name);
+}
+
+} // namespace RC

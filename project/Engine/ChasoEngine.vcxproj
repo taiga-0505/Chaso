@@ -153,8 +153,12 @@
     <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Effect\HitEffect.cpp" />
     <ClCompile Include="..\Engine\Audio\Sound.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Sphere\Sphere.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Mesh\MeshGenerator.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Mesh\PrimitiveMesh.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
@@ -168,11 +172,13 @@
     <ClCompile Include="..\Engine\Particle\Explosion\ExplosionParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\Fire\FireParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\ImpactSpark\ImpactSparkParticle.cpp" />
+    <ClCompile Include="..\Engine\Particle\Flash\FlashParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\Laser\LaserParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\Particle.cpp" />
     <ClCompile Include="..\Engine\Particle\Rain\RainParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\Snow\SnowParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\wind\WindParticle.cpp" />
+    <ClCompile Include="..\Engine\Particle\Ring\RingParticle.cpp" />
     <!-- Render -->
     <ClCompile Include="..\Engine\Render\Light\Area\AreaLightManager.cpp" />
     <ClCompile Include="..\Engine\Render\Light\Directional\DirectionalLightManager.cpp" />
@@ -184,9 +190,11 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderLight.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderModel.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderPrimitive.cpp" />
-    <ClCompile Include="..\Engine\Render\Systems\RenderSphere.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderSkydome.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderPrimitiveMesh.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp" />
-    <ClCompile Include="..\Engine\Render\Sphere\SphereManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
@@ -232,10 +240,14 @@
     <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
+    <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h" />
+    <ClInclude Include="..\Engine\Graphics\Effect\HitEffect.h" />
     <ClInclude Include="..\Engine\Audio\BgmManager.h" />
     <ClInclude Include="..\Engine\Audio\SeManager.h" />
     <ClInclude Include="..\Engine\Audio\Sound.h" />
-    <ClInclude Include="..\Engine\Graphics\Sphere\Sphere.h" />
+    <ClInclude Include="..\Engine\Graphics\Skydome\Skydome.h" />
+    <ClInclude Include="..\Engine\Graphics\Mesh\MeshGenerator.h" />
+    <ClInclude Include="..\Engine\Graphics\Mesh\PrimitiveMesh.h" />
     <ClInclude Include="..\Engine\Graphics\Sprite\Sprite2D.h" />
     <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h" />
@@ -249,11 +261,13 @@
     <ClInclude Include="..\Engine\Particle\Explosion\ExplosionParticle.h" />
     <ClInclude Include="..\Engine\Particle\Fire\FireParticle.h" />
     <ClInclude Include="..\Engine\Particle\ImpactSpark\ImpactSparkParticle.h" />
+    <ClInclude Include="..\Engine\Particle\Flash\FlashParticle.h" />
     <ClInclude Include="..\Engine\Particle\Laser\LaserParticle.h" />
     <ClInclude Include="..\Engine\Particle\Particle.h" />
     <ClInclude Include="..\Engine\Particle\Rain\RainParticle.h" />
     <ClInclude Include="..\Engine\Particle\Snow\SnowParticle.h" />
     <ClInclude Include="..\Engine\Particle\wind\WindParticle.h" />
+    <ClInclude Include="..\Engine\Particle\Ring\RingParticle.h" />
     <!-- Render -->
     <ClInclude Include="..\Engine\Render\Light\Area\AreaLightManager.h" />
     <ClInclude Include="..\Engine\Render\Light\Directional\DirectionalLightManager.h" />
@@ -262,10 +276,12 @@
     <ClInclude Include="..\Engine\Render\Model\ModelManager.h" />
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
     <ClInclude Include="..\Engine\Render\RenderContext.h" />
-    <ClInclude Include="..\Engine\Render\Sphere\SphereManager.h" />
+    <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h" />
+    <ClInclude Include="..\Engine\Render\Mesh\PrimitiveMeshManager.h" />
     <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h" />
     <!-- Window -->
     <ClInclude Include="..\Engine\Window\Window.h" />
+    <ClInclude Include="Common\EngineConfig.h" />
     <ClInclude Include="Input\Controller\Controller.h" />
     <ClInclude Include="Input\Keyboard\Keyboard.h" />
     <ClInclude Include="Input\Mouse\Mouse.h" />

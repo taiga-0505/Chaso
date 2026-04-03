@@ -100,7 +100,7 @@ void ImpactSparkParticle::Initialize(SceneContext &ctx) {
 void ImpactSparkParticle::TrimToMax_() {
   // 最大数を超えた分だけ古い粒子を破棄
   while ((int)particles.size() > maxParticles_) {
-    particles.pop_front();
+    particles.erase(particles.begin());
   }
 }
 

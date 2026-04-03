@@ -18,8 +18,8 @@ public:
                        const RC::Matrix4x4 &proj);
 
   // エミッタの周期が来たときの挙動を炎用に差し替え
-  std::list<ParticleData> Emit(const Emitter &emitter,
-                               std::mt19937 &randomEngine) override;
+  std::vector<ParticleData> Emit(const Emitter &emitter,
+                                 std::mt19937 &randomEngine) override;
 
   // 火力操作API（シーン側からもいじれるように）
   void AddCirclePower(float delta);

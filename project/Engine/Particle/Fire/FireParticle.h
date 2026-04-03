@@ -11,8 +11,8 @@ public:
   void Initialize(SceneContext &ctx);
 
   // エミッタの周期が来たときの挙動を炎用に差し替え
-  std::list<ParticleData> Emit(const Emitter &emitter,
-                               std::mt19937 &randomEngine) override;
+  std::vector<ParticleData> Emit(const Emitter &emitter,
+                                 std::mt19937 &randomEngine) override;
 
 protected:
   // 炎用テクスチャ

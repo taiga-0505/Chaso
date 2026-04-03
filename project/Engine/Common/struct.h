@@ -39,6 +39,11 @@ struct Emitter {
   uint32_t count;      // 一度に放出するパーティクル数
   float frequency;     // 放出間隔（秒）
   float frequencyTime; // 放出間隔タイマー
+
+  // 一括制御パラメータ
+  RC::Vector3 globalScale = {1.0f, 1.0f, 1.0f};
+  RC::Vector4 globalColor = {1.0f, 1.0f, 1.0f, 1.0f};
+  float timeScale = 1.0f;
 };
 
 struct AccelerationField {
@@ -80,6 +85,7 @@ struct Node {
 
 struct ModelData {
   std::vector<VertexData> vertices; // 頂点データの配列
+  std::vector<uint32_t> indices;    // インデックスデータの配列（任意）
   MaterialData material;            // マテリアルデータ
   Node rootNode;
 };

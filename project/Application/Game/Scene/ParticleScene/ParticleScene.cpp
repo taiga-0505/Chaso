@@ -35,12 +35,16 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
   wind_particle_.Initialize(ctx);
   wind_particle_.SetActive(false);
 
-  impactDesc_.interval = 0.03f;
+  hit_effect_.Initialize(ctx);
   impactDesc_.countPerTick = 6;
   impactDesc_.burstOnStart = 24;
 
   guide = RC::LoadSprite("Resources/guide.png", ctx, true);
   RC::SetSpriteScreenSize(guide, 330, 200);
+
+  // プリミティブ用のデフォルトテクスチャ設定
+  int whiteTex = RC::LoadTex("Resources/white1x1.png", true);
+  D3D12_GPU_DESCRIPTOR_HANDLE whiteSrv = RC::GetSrv(whiteTex);
 }
 
 void ParticleScene::OnExit(SceneContext &ctx) {
@@ -89,6 +93,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     particle_.RespawnAllMax();
   }
 
@@ -101,6 +106,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     fire_particle_.RespawnAllMax();
   }
 
@@ -113,6 +119,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     rain_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_4)) {
@@ -124,6 +131,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     snow_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_6)) {
@@ -135,6 +143,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     circle_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_5)) {
@@ -146,6 +155,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = true;
     isLaser = false;
     isWind = false;
+    isHitEffect = false;
     explosion_particle_.RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_7)) {
@@ -157,6 +167,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = true;
     isWind = false;
+    isHitEffect = false;
   }
   if (input->IsKeyTrigger(DIK_8)) {
     isParticle = false;
@@ -167,8 +178,21 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     isExplosion = false;
     isLaser = false;
     isWind = true;
+    isHitEffect = false;
     wind_particle_.SetWind(windOrigin_, windForce_, windRange_, windRadius_,
                            true);
+  }
+
+  if (input->IsKeyTrigger(DIK_9)) {
+    isParticle = false;
+    isFire = false;
+    isRain = false;
+    isSnow = false;
+    isCircle = false;
+    isExplosion = false;
+    isLaser = false;
+    isWind = false;
+    isHitEffect = true;
   }
 
   // IJKL + U/O でエミッタの位置を動かす
@@ -248,6 +272,17 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   if (isWind) {
     wind_particle_.Update(view_, proj_);
   }
+  if (isHitEffect) {
+    ImGui::Begin("HitEffect Control");
+    static RC::Vector3 hitPos{0.0f, 0.0f, 0.0f};
+    ImGui::DragFloat3("Position", &hitPos.x, 0.1f);
+    if (ImGui::Button("Trigger HitEffect")) {
+      hit_effect_.Trigger(hitPos);
+    }
+    ImGui::End();
+    hit_effect_.Update(view_, proj_);
+  }
+
   if (isLaser) {
     ImGui::Begin("Laser Control");
     ImGui::DragFloat3("Start", &laserStart_.x, 0.1f);
@@ -325,6 +360,9 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   if (isLaser) {
     laser_particle_.Render(ctx, cl);
     impact_particle_.Render(ctx, cl);
+  }
+  if (isHitEffect) {
+    hit_effect_.Render(ctx, cl);
   }
 
   RC::PreDraw2D(ctx, cl);

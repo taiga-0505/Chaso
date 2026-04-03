@@ -1,4 +1,4 @@
-#include "Sphere.h"
+#include "Skydome.h"
 #include "../../Render/RenderContext.h"
 #include "Math/Math.h"
 #include "imgui/imgui.h"
@@ -11,7 +11,7 @@
 
 using namespace RC;
 
-Sphere::~Sphere() {
+Skydome::~Skydome() {
   vb_.resource.Reset();
   ib_.resource.Reset();
   cbWvp_.resource.Reset();
@@ -19,45 +19,40 @@ Sphere::~Sphere() {
   cbLight_.resource.Reset();
 }
 
-void Sphere::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
-                        UINT stackCount, bool inward) {
+void Skydome::Initialize(ID3D12Device *device, float radius, UINT sliceCount,
+                        UINT stackCount) {
   device_ = device;
-  inward_ = inward;
 
   // メッシュ生成
-  BuildGeometry(radius, sliceCount, stackCount, inward_);
+  BuildGeometry(radius, sliceCount, stackCount);
   UploadVB_();
   UploadIB_();
 
   // CB: WVP
-  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix), L"Sphere::cbWvp_");
+  cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix), L"Skydome::cbWvp_");
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
   cbWvp_.mapped->WVP = MakeIdentity4x4();
   cbWvp_.mapped->World = MakeIdentity4x4();
   cbWvp_.mapped->worldInverseTranspose = MakeIdentity4x4();
 
   // CB: Material
-  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material), L"Sphere::cbMat_");
+  cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material), L"Skydome::cbMat_");
   cbMat_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.mapped));
   cbMat_.mapped->color = {1, 1, 1, 1};
   cbMat_.mapped->uvTransform = MakeIdentity4x4();
-  cbMat_.mapped->lightingMode = 2; // HalfLambert 既定
+  cbMat_.mapped->lightingMode = 0; // 天球なので初期はライティング無効
 
-  // CB: Light（球ごとに持つ）
-  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight), L"Sphere::cbLight_");
+  // CB: Light（天球ごとに持つが一応残す）
+  cbLight_.resource = CreateBufferResource(device_.Get(), sizeof(DirectionalLight), L"Skydome::cbLight_");
   cbLight_.resource->Map(0, nullptr,
                          reinterpret_cast<void **>(&cbLight_.mapped));
   cbLight_.mapped->color = {1, 1, 1, 1};
   cbLight_.mapped->direction = {0.0f, -1.0f, 0.0f};
   cbLight_.mapped->intensity = 1.0f;
   cbMat_.mapped->shininess = 32.0f;
-
-  if (inward_) {
-    cbMat_.mapped->lightingMode = 0;
-  }
 }
 
-void Sphere::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
+void Skydome::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   Matrix4x4 world = MakeAffineMatrix(transform_.scale, transform_.rotation,
                                      transform_.translation);
   cbWvp_.mapped->World = world;
@@ -65,7 +60,7 @@ void Sphere::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
 }
 
-void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
+void Skydome::Draw(ID3D12GraphicsCommandList *cmdList) {
   if (!vb_.resource || !ib_.resource || !visible_)
     return;
 
@@ -90,7 +85,7 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList) {
   cmdList->DrawIndexedInstanced(ib_.indexCount, 1, 0, 0, 0);
 }
 
-void Sphere::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
+void Skydome::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
   if (!vb_.resource || !ib_.resource || !visible_ || !cbWvp_.mapped)
     return;
 
@@ -105,13 +100,13 @@ void Sphere::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
 }
 
 
-void Sphere::DrawImGui(const char *name) {
+void Skydome::DrawImGui(const char *name) {
 #if RC_ENABLE_IMGUI
 
-  std::string label = name ? std::string(name) : std::string("Sphere");
+  std::string label = name ? std::string(name) : std::string("Skydome");
   if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
     return;
-  // ---- 表示ON/OFF（Model3Dと同様）----
+  // ---- 表示ON/OFF ----
   bool vis = Visible();
   if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
     SetVisible(vis);
@@ -170,13 +165,12 @@ void Sphere::DrawImGui(const char *name) {
 #endif
 }
 
-void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
-                           bool inward) {
+void Skydome::BuildGeometry(float radius, UINT sliceCount, UINT stackCount) {
   vertices_.clear();
   indices_.clear();
 
   // 上極点
-  vertices_.push_back({Vector4(0, +radius, 0, 1), Vector2(0.0f, 0.0f)});
+  vertices_.push_back({Vector4(0, +radius, 0, 1), Vector2(0.5f, 0.0f)});
 
   // 中間リング（緯度）
   for (UINT lat = 1; lat < stackCount; ++lat) {
@@ -196,39 +190,31 @@ void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
   }
 
   // 下極点
-  vertices_.push_back({Vector4(0, -radius, 0, 1), Vector2(0.0f, 1.0f)});
+  vertices_.push_back({Vector4(0, -radius, 0, 1), Vector2(0.5f, 1.0f)});
 
-  // 法線（位置の正規化）
+  // 法線（位置の正規化 + 天球なので内側を向くように反転）
   for (auto &v : vertices_) {
     float len =
         std::sqrt(v.position.x * v.position.x + v.position.y * v.position.y +
                   v.position.z * v.position.z);
     if (len > 0.0f) {
-      v.normal.x = v.position.x / len;
-      v.normal.y = v.position.y / len;
-      v.normal.z = v.position.z / len;
+      // 天球なので内向き
+      v.normal.x = -v.position.x / len;
+      v.normal.y = -v.position.y / len;
+      v.normal.z = -v.position.z / len;
     } else {
-      v.normal = {0.0f, 1.0f, 0.0f};
-    }
-  }
-
-  // 内向き指定なら「法線反転」
-  if (inward) {
-    for (auto &v : vertices_) {
-      v.normal.x = -v.normal.x;
-      v.normal.y = -v.normal.y;
-      v.normal.z = -v.normal.z;
+      v.normal = {0.0f, -1.0f, 0.0f};
     }
   }
 
   // インデックス
   UINT ringVerts = sliceCount + 1;
 
-  // 上極ファン
+  // 上極ファン（内向きなので順序を反転させる）
   for (UINT i = 1; i <= sliceCount; ++i) {
     indices_.push_back(0);
-    indices_.push_back(i + 1);
     indices_.push_back(i);
+    indices_.push_back(i + 1);
   }
 
   // 中間帯のクアッド
@@ -238,12 +224,13 @@ void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
       UINT b = 1 + i * ringVerts + j + 1;
       UINT c = 1 + (i + 1) * ringVerts + j;
       UINT d = 1 + (i + 1) * ringVerts + j + 1;
+      // 内向き
       indices_.push_back(a);
+      indices_.push_back(d);
       indices_.push_back(b);
-      indices_.push_back(d);
       indices_.push_back(a);
-      indices_.push_back(d);
       indices_.push_back(c);
+      indices_.push_back(d);
     }
   }
 
@@ -252,24 +239,18 @@ void Sphere::BuildGeometry(float radius, UINT sliceCount, UINT stackCount,
   UINT baseIndex = southPoleIndex - ringVerts;
   for (UINT i = 0; i < sliceCount; ++i) {
     indices_.push_back(southPoleIndex);
-    indices_.push_back(baseIndex + i);
     indices_.push_back(baseIndex + i + 1);
-  }
-
-  if (inward) {
-    for (size_t i = 0; i + 2 < indices_.size(); i += 3) {
-      std::swap(indices_[i + 1], indices_[i + 2]);
-    }
+    indices_.push_back(baseIndex + i);
   }
 }
 
-void Sphere::UploadVB_() {
+void Skydome::UploadVB_() {
   vb_.vertexCount = static_cast<uint32_t>(vertices_.size());
   if (vb_.vertexCount == 0)
     return;
 
   const UINT sizeBytes = UINT(sizeof(VertexData) * vb_.vertexCount);
-  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Sphere::vb_");
+  vb_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Skydome::vb_");
 
   void *mapped = nullptr;
   vb_.resource->Map(0, nullptr, &mapped);
@@ -281,13 +262,13 @@ void Sphere::UploadVB_() {
   vb_.view.StrideInBytes = sizeof(VertexData);
 }
 
-void Sphere::UploadIB_() {
+void Skydome::UploadIB_() {
   ib_.indexCount = static_cast<uint32_t>(indices_.size());
   if (ib_.indexCount == 0)
     return;
 
   const UINT sizeBytes = UINT(sizeof(uint16_t) * ib_.indexCount);
-  ib_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Sphere::ib_");
+  ib_.resource = CreateBufferResource(device_.Get(), sizeBytes, L"Skydome::ib_");
   assert(ib_.resource);
 
   uint16_t *mapped = nullptr;

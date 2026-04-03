@@ -20,9 +20,9 @@ void ResultScene::OnEnter(SceneContext &ctx) {
   // ======= スカイドーム生成 =======
   txSphere_ = RC::LoadTex("Resources/skydome.jpg");
   const float kSkyRadius = kFarZ * 0.95f;
-  skydomeModel = RC::GenerateSphereEx(txSphere_, kSkyRadius);
-  sphereT_ = RC::GetSphereTransformPtr(skydomeModel);
-  RC::SetSphereColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
+  skydomeModel = RC::GenerateSkydomeEx(txSphere_, kSkyRadius);
+  skydomeT_ = RC::GetSkydomeTransformPtr(skydomeModel);
+  RC::SetSkydomeColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
 
   clearSprite = RC::LoadSprite("Resources/UI/Clear.png", ctx);
 
@@ -44,13 +44,13 @@ void ResultScene::Update(SceneManager &sm, SceneContext &ctx) {
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   // ======= スカイドーム更新 =======
-  if (sphereT_) {
+  if (skydomeT_) {
     // カメラ座標に追従
-    sphereT_->translation = camera_.GetWorldPos();
+    skydomeT_->translation = camera_.GetWorldPos();
     // 高さオフセット
-    sphereT_->translation.y -= 10.0f;
+    skydomeT_->translation.y -= 10.0f;
     // 自転処理
-    sphereT_->rotation.y += 0.0005f;
+    skydomeT_->rotation.y += 0.0005f;
   }
 
   if (ctx.input->IsKeyTrigger(DIK_SPACE)) {
@@ -61,7 +61,7 @@ void ResultScene::Update(SceneManager &sm, SceneContext &ctx) {
 void ResultScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw3D(ctx, cl);
 
-  RC::DrawSphere(skydomeModel);
+  RC::DrawSkydome(skydomeModel);
 
   RC::PreDraw2D(ctx, cl);
 

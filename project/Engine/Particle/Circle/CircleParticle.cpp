@@ -58,9 +58,9 @@ void CircleParticle::SetCirclePower(float v) {
 // ==============================
 // Emit：火力に応じて発生数を変える
 // ==============================
-std::list<ParticleData> CircleParticle::Emit(const Emitter &emitter,
-                                           std::mt19937 &randomEngine) {
-  std::list<ParticleData> newParticles;
+std::vector<ParticleData> CircleParticle::Emit(const Emitter &emitter,
+                                             std::mt19937 &randomEngine) {
+  std::vector<ParticleData> newParticles;
 
   float power = std::clamp(firePower_, firePowerMin_, firePowerMax_);
 
@@ -75,6 +75,7 @@ std::list<ParticleData> CircleParticle::Emit(const Emitter &emitter,
   int spawnCount = static_cast<int>(std::round(baseCount * rate));
   spawnCount = (std::max)(spawnCount, 1);
 
+  newParticles.reserve(spawnCount);
   for (int i = 0; i < spawnCount; ++i) {
     ParticleData p{};
     InitParticleCore(p, randomEngine, EmitterRef().transform.translation);

@@ -24,7 +24,8 @@ void RenderContext::Init(SceneContext &ctx) {
   texMan_.Init(&ctx.core->SRVMan());
   spriteMan_.Init(device_.Get(), &texMan_);
   modelMan_.Init(device_.Get(), &texMan_);
-  sphereMan_.Init(device_.Get(), &texMan_);
+  skydomeMan_.Init(device_.Get(), &texMan_);
+  primitiveMeshMan_.Init(device_.Get(), &texMan_);
 
   dirLightMan_.Init(device_.Get());
   ptLightMan_.Init(device_.Get());
@@ -58,7 +59,8 @@ void RenderContext::Term() {
   }
 
   modelMan_.Term();
-  sphereMan_.Term();
+  skydomeMan_.Term();
+  primitiveMeshMan_.Term();
   spriteMan_.Term();
 
   dirLightMan_.Term();
@@ -239,8 +241,6 @@ void RenderContext::PushPrimitive3DCommand(bool depth, uint32_t start,
   if (!commandQueue3D_.empty()) {
     auto &last = commandQueue3D_.back();
     if (last.type == RenderCommand3D::Primitive && last.primDepth == depth) {
-      // 連続するプリミティブ描画ならマージ
-      // 頂点バッファには追加順に並んでいる前提なので、count を増やすだけでよい
       last.primCount += count;
       return;
     }
@@ -287,5 +287,3 @@ void RenderContext::Execute3DCommands() {
 }
 
 } // namespace RC
-
-

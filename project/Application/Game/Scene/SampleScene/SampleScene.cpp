@@ -60,16 +60,33 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   terrainT_->translation.y = -1.0f;
 
   // 天球
-  tx_Sphere_ = RC::LoadTex("Resources/skydome.jpg");
-  sphere = RC::GenerateSphereEx(tx_Sphere_, 40.0f);
-  sphereT_ = RC::GetSphereTransformPtr(sphere);
-  RC::SetSphereColor(sphere, {0.6f, 1.0f, 1.0f, 1.0f});
+  tx_Skydome_ = RC::LoadTex("Resources/skydome.jpg");
+  skydome = RC::GenerateSkydomeEx(tx_Skydome_, 40.0f);
+  skydomeT_ = RC::GetSkydomeTransformPtr(skydome);
+  RC::SetSkydomeColor(skydome, {0.6f, 1.0f, 1.0f, 1.0f});
 
   tx_ball = RC::LoadTex("Resources/monsterBall.png");
-  ball = RC::GenerateSphereEx(tx_ball, 1.0f, 16, 16, false);
-  ballT_ = RC::GetSphereTransformPtr(ball);
-  RC::SetSphereColor(ball, {1.0f, 1.0f, 1.0f, 1.0f});
-  ballT_->rotation.y = -1.6f;
+  primitiveSphere = RC::GenerateSphere(1.0f, tx_ball);
+  primitiveSphereT_ = RC::GetPrimitiveMeshTransformPtr(primitiveSphere);
+  primitiveSphereT_->rotation.y = -1.6f;
+
+  testBox = RC::GenerateBox(2.0f, 2.0f, 2.0f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testBox)->translation = {5, 1, 0};
+
+  testPlane = RC::GeneratePlane(10.0f, 10.0f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testPlane)->translation = {0, -0.5f, 0};
+
+  testCylinder = RC::GenerateCylinder(0.8f, 2.5f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testCylinder)->translation = {-4, 1.25f, 0};
+
+  testCone = RC::GenerateCone(0.8f, 2.0f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testCone)->translation = {-8, 1.0f, 0};
+
+  testTorus = RC::GenerateTorus(1.0f, 0.3f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testTorus)->translation = {-12, 1.0f, 0};
+
+  testCapsule = RC::GenerateCapsule(0.6f, 2.5f, tx_model);
+  RC::GetPrimitiveMeshTransformPtr(testCapsule)->translation = {9, 1.25f, 0};
 
   // =============================
   // Sprite初期化
@@ -92,14 +109,32 @@ void SampleScene::OnExit(SceneContext &) {
   RC::UnloadModel(terrain);
   terrain = -1;
 
-  RC::UnloadSphere(sphere);
-  sphere = -1;
+  RC::UnloadSkydome(skydome);
+  skydome = -1;
 
   RC::UnloadSprite(sprite);
   sprite = -1;
 
-  RC::UnloadSphere(ball);
-  ball = -1;
+  RC::UnloadPrimitiveMesh(primitiveSphere);
+  primitiveSphere = -1;
+
+  RC::UnloadPrimitiveMesh(testBox);
+  testBox = -1;
+
+  RC::UnloadPrimitiveMesh(testPlane);
+  testPlane = -1;
+
+  RC::UnloadPrimitiveMesh(testCylinder);
+  testCylinder = -1;
+
+  RC::UnloadPrimitiveMesh(testCone);
+  testCone = -1;
+
+  RC::UnloadPrimitiveMesh(testTorus);
+  testTorus = -1;
+
+  RC::UnloadPrimitiveMesh(testCapsule);
+  testCapsule = -1;
 
   RC::DestroyDirectionalLight(directionalLight);
   directionalLight = -1;
@@ -145,7 +180,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
   // === 天球回転 ===
-  sphereT_->rotation.y += 0.001f;
+  skydomeT_->rotation.y += 0.001f;
 }
 
 void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
@@ -155,37 +190,43 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw3D(ctx, cl);
 
   // === 天球 ===
-  RC::DrawSphere(sphere);
+  //RC::DrawSkydome(skydome);
 
-  // RC::DrawSphere(ball);
+  RC::DrawPrimitiveMesh(primitiveSphere);
+  RC::DrawPrimitiveMesh(testBox);
+  RC::DrawPrimitiveMesh(testPlane);
+  RC::DrawPrimitiveMesh(testCylinder);
+  RC::DrawPrimitiveMesh(testCone);
+  RC::DrawPrimitiveMesh(testTorus);
+  RC::DrawPrimitiveMesh(testCapsule);
 
   // モデルの描画
-  RC::DrawModel(plane);
+  //RC::DrawModel(plane);
 
-  RC::DrawModel(model, tx_model);
+  //RC::DrawModel(model, tx_model);
 
-  RC::DrawModel(terrain);
+  //RC::DrawModel(terrain);
 
-  RC::DrawModelGlassTwoPass(blockModel);
+  //RC::DrawModelGlassTwoPass(blockModel);
 
   // ===========================================
   // 2D描画
   // ===========================================
   RC::PreDraw2D(ctx, cl);
 
-  RC::DrawSprite(sprite);
+  //RC::DrawSprite(sprite);
 
-  RC::SetFogOverlayColor(fogColor_); // ちょい青
-  if (isFogEnabled_) {
-    RC::DrawFogOverlay(t,
-                       0.55f,                    // intensity
-                       4.0f,                     // scale
-                       3.5f,                     // speed
-                       RC::Vector2{0.08f, 0.0f}, // wind
-                       0.18f,                    // feather
-                       0.35f                     // bottomBias
-    );
-  }
+  //RC::SetFogOverlayColor(fogColor_); // ちょい青
+  //if (isFogEnabled_) {
+  //  RC::DrawFogOverlay(t,
+  //                     0.55f,                    // intensity
+  //                     4.0f,                     // scale
+  //                     3.5f,                     // speed
+  //                     RC::Vector2{0.08f, 0.0f}, // wind
+  //                     0.18f,                    // feather
+  //                     0.35f                     // bottomBias
+  //  );
+  //}
 }
 
 #if RC_ENABLE_IMGUI
@@ -205,13 +246,33 @@ void SampleScene::DrawImGui() {
 
       RC::DrawImGui3D(model, "model");
 
-      RC::DrawSphereImGui(sphere, "skyDome");
-
-      RC::DrawSphereImGui(ball, "ball");
+      RC::DrawSkydomeImGui(skydome, "skyDome");
 
       RC::DrawImGui3D(blockModel, "blockModel");
       // 色変更用
       ImGui::ColorEdit4("blockColor", &blockColor_.x);
+
+      ImGui::EndTabItem();
+    }
+
+    // -------------------
+    // PrimitiveTab
+    // -------------------
+    if (ImGui::BeginTabItem("PrimitiveTab")) {
+
+      RC::DrawPrimitiveMeshImGui(primitiveSphere, "primitiveSphere");
+
+      RC::DrawPrimitiveMeshImGui(testBox, "testBox");
+
+      RC::DrawPrimitiveMeshImGui(testPlane, "testPlane");
+
+      RC::DrawPrimitiveMeshImGui(testCylinder, "testCylinder");
+
+      RC::DrawPrimitiveMeshImGui(testCone, "testCone");
+
+      RC::DrawPrimitiveMeshImGui(testTorus, "testTorus");
+
+      RC::DrawPrimitiveMeshImGui(testCapsule, "testCapsule");
 
       ImGui::EndTabItem();
     }

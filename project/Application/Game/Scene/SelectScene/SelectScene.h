@@ -30,7 +30,7 @@ private:
   int skydomeModel = -1;
   int txSphere_ = -1;
   // ======= トランスフォーム参照 =======
-  Transform *sphereT_ = nullptr;
+  Transform *skydomeT_ = nullptr;
 
   // ==============
   // ステージ選択用

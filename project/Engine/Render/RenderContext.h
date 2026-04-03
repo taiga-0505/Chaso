@@ -24,14 +24,17 @@
 #include "Light/Point/PointLightManager.h"
 #include "Light/Spot/SpotLightManager.h"
 #include "Model/ModelManager.h"
-#include "Sphere/SphereManager.h"
+#include "Skydome/SkydomeManager.h"
+#include "Mesh/PrimitiveMeshManager.h"
 #include "Sprite/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
 
 #include "GraphicsPipeline/GraphicsPipeline.h" // BlendMode
 #include "Math/Math.h"
 #include "Model/ModelObject.h" // ModelManager の unique_ptr<ModelObject> に必要
-#include "Sphere/Sphere.h"      // SphereManager の unique_ptr<Sphere> に必要
+#include "Graphics/Skydome/Skydome.h"    // SkydomeManager の unique_ptr<Skydome> に必要
+#include "Graphics/Mesh/PrimitiveMesh.h"
+#include "Graphics/Mesh/MeshGenerator.h"
 #include "function/function.h"
 #include "struct.h"
 
@@ -68,7 +71,8 @@ public:
   // ── マネージャーアクセス ───────────────────────────
   ModelManager &Models() { return modelMan_; }
   SpriteManager &Sprites() { return spriteMan_; }
-  SphereManager &Spheres() { return sphereMan_; }
+  SkydomeManager &Skydomes() { return skydomeMan_; }
+  PrimitiveMeshManager &PrimitiveMeshes() { return primitiveMeshMan_; }
   DirectionalLightManager &DirLights() { return dirLightMan_; }
   PointLightManager &PtLights() { return ptLightMan_; }
   SpotLightManager &SpLights() { return spLightMan_; }
@@ -76,16 +80,9 @@ public:
   TextureManager &Textures() { return texMan_; }
 
   // ── PSO バインドヘルパー ───────────────────────────
-  /// prefix + 現在の BlendMode で PSO を選択しバインドする
   GraphicsPipeline *BindPipeline(std::string_view prefix);
-
-  /// prefix + 指定 BlendMode で PSO を取得する（バインドはしない）
   GraphicsPipeline *GetPipeline(std::string_view prefix, BlendMode mode);
-
-  /// CameraCB を RootParam[4] にバインドする
   void BindCameraCB();
-
-  /// PointLight + SpotLight + AreaLight の CB を一括バインド
   void BindAllLightCBs();
 
   // ── Primitive 遅延生成 ─────────────────────────────
@@ -107,9 +104,6 @@ public:
     uint32_t primCount = 0;
   };
 
-  /// <summary>
-  /// 一般的な3D描画コマンドをキューに追加する
-  /// </summary>
   void PushCommand3D(std::function<void(ID3D12GraphicsCommandList *)> func) {
     RenderCommand3D cmd;
     cmd.type = RenderCommand3D::Other;
@@ -117,19 +111,8 @@ public:
     commandQueue3D_.push_back(std::move(cmd));
   }
 
-  /// <summary>
-  /// プリミティブ描画コマンドをキューに追加（または直前のコマンドとマージ）する
-  /// </summary>
   void PushPrimitive3DCommand(bool depth, uint32_t start, uint32_t count);
-
-  /// <summary>
-  /// 蓄積された3Dコマンドを、登録された順番通りに実行する
-  /// </summary>
   void Execute3DCommands();
-
-  /// <summary>
-  /// 3Dコマンドキューを空にする
-  /// </summary>
   void Clear3DCommands() { commandQueue3D_.clear(); }
 
 
@@ -141,8 +124,6 @@ public:
   ID3D12Resource *FogCBResource() const { return fogCB_.Get(); }
 
 private:
-  // ── 所有する状態（すべて private）──────────────────
-
   bool initialized_ = false;
 
   Microsoft::WRL::ComPtr<ID3D12Device> device_;
@@ -157,7 +138,8 @@ private:
   // マネージャー群
   ModelManager modelMan_;
   SpriteManager spriteMan_;
-  SphereManager sphereMan_;
+  SkydomeManager skydomeMan_;
+  PrimitiveMeshManager primitiveMeshMan_;
   DirectionalLightManager dirLightMan_;
   PointLightManager ptLightMan_;
   SpotLightManager spLightMan_;
@@ -194,14 +176,6 @@ private:
   std::vector<RenderCommand3D> commandQueue3D_;
 };
 
-
-
-// ============================================================================
-// GetRenderContext
-// ----------------------------------------------------------------------------
-// RenderCommon.cpp が保持する唯一のインスタンスへの参照を返す。
-// 各サブモジュール (RenderModel.cpp 等) はこれを使ってアクセスする。
-// ============================================================================
 RenderContext &GetRenderContext();
 
 } // namespace RC

@@ -1,6 +1,9 @@
 #pragma once
 #include "Scene.h"
 #include <RC.h>
+#include "Graphics/Effect/HitEffect.h"
+#include <memory>
+#include <vector>
 
 class ParticleScene final : public Scene {
 public:
@@ -50,6 +53,8 @@ private:
   float windRange_ = 6.0f;
   float windRadius_ = 0.4f;
 
+  RC::HitEffect hit_effect_;
+
   bool isParticle = true;
   bool isFire = false;
   bool isRain = false;
@@ -58,6 +63,7 @@ private:
   bool isExplosion = false;
   bool isLaser = false;
   bool isWind = false;
+  bool isHitEffect = false;
 
   int guide;
 };

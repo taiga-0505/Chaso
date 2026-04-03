@@ -20,6 +20,7 @@ class Particle {
 public:
   // 初期化 / 終了
   void Initialize(SceneContext &ctx);
+  void InitializeWithModel(SceneContext &ctx, const ModelData &model);
   void Finalize();
   ~Particle() { Finalize(); }
 
@@ -35,8 +36,8 @@ public:
   ParticleData MakeNewParticle(std::mt19937 &randomEngine,
                                const Vector3 &translate);
 
-  virtual std::list<ParticleData> Emit(const Emitter &emitter,
-                                       std::mt19937 &randomEngine);
+  virtual std::vector<ParticleData> Emit(const Emitter &emitter,
+                                         std::mt19937 &randomEngine);
 
   // ==============================
   // キー操作用のユーティリティ
@@ -66,6 +67,14 @@ public:
 
   // emitter の自動生成を ON/OFF
   void SetEmitterAutoSpawn(bool enable);
+
+  // エミッタへのアクセサ
+  Emitter &GetEmitter() { return emitter_; }
+  const Emitter &GetEmitter() const { return emitter_; }
+
+  void SetEmitterTranslation(const Vector3 &v) { emitter_.transform.translation = v; }
+  void SetEmitterColor(const Vector4 &c) { emitter_.globalColor = c; }
+  void SetEmitterScale(const Vector3 &s) { emitter_.globalScale = s; }
 
 protected:
   // ==============================
@@ -99,15 +108,17 @@ protected:
   Emitter &EmitterRef() { return emitter_; }
   const Emitter &EmitterRef() const { return emitter_; }
 
-  std::list<ParticleData> particles;
+  std::vector<ParticleData> particles;
 
 private:
+  void CommonInit_(SceneContext &ctx);
+  void SetupVBFromModelData_(const ModelData &data);
   void TrimToMax_();
 
   // ==================
   // 定数
   // ==================
-  const uint32_t kNumMaxInstance = 100; // 同時に存在できるパーティクル数
+  const uint32_t kNumMaxInstance = 1000; // 同時に存在できるパーティクル数
 
   static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
 
