@@ -15,28 +15,32 @@ DirectX 12ベースの自作ゲームエンジンです。
 ## 主な機能 (Features)
 
 ### レンダリング (Rendering)
+- **コアアーキテクチャ**:
+  - `RenderContext` による描画コマンドの収集と、GPUへの効率的なコマンド発行。
+  - `RenderModel`, `RenderSprite`, `RenderParticle` 等の機能ごとの描画モジュール化。
 - **3Dグラフィックス**:
   - [Assimp](https://github.com/assimp/assimp) による多種多様な3Dモデル（.obj, .fbx等）の読み込み。
   - カスタム頂点バッファ・インデックスバッファによる高速な描画。
   - テクスチャマッピングおよびUVアニメーション。
 - **2Dグラフィックス**:
-  - スプライト描画、2Dプリミティブ描画。
+  - スプライト描画、2Dプリミティブ描画（線、矩形、球体デバッグ表示等）。
 - **パーティクルシステム**:
   - インスタンス描画による大量のパーティクル制御（爆発、花火、雨、雪など）。
 - **ライティング**:
-  - 平行光源 (Directional Light)
-  - 点光源 (Point Light)
-  - スポットライト (Spot Light)
-  - 面光源 (Area Light)
+  - 平行光源 (Directional Light)、点光源 (Point Light)、スポットライト (Spot Light)、面光源 (Area Light) の制御。
 
 ### システム (System)
 - **ウィンドウ管理**: Win32 APIによる堅牢なウィンドウ制御とメッセージループ。
-- **入力管理**: DirectInput / XInputによるマルチコントローラー、マウス、キーボード入力。
+- **入力管理**: `Input` クラスによる統括管理。`Keyboard`, `Mouse`, `Controller` (XInput) の各デバイスを個別に取得・制御可能。
 - **FPS制御**: デルタタイム計算および60FPS固定機能。
 - **シェーダ**: HLSL (Shader Model 6.0+) 対応。
 
+### オーディオ (Audio)
+- **サウンド再生**: `Media Foundation` を利用したBGMおよび効果音 (SE) の再生管理。
+- **管理クラス**: `BgmManager`, `SeManager` による複数音源の同時再生・ループ制御。
+
 ### ツール (Tools)
-- **デバッグGUI**: [ImGui](https://github.com/ocornut/imgui) を統合し、実行時にリアルタイムでパラメータ調整が可能。
+- **デバッグGUI**: [ImGui](https://github.com/ocornut/imgui) を統合し、実行時にリアルタイムでパラメータ調整が可能（ドッキング機能対応）。
 
 ## 動作環境 (Requirements)
 
@@ -60,29 +64,30 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
-| **[Dx12/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Dx12/)** | デバイス、スワップチェーン、パイプライン等のコアラッパー |
-| **[Graphics/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Graphics/)** | モデル、スプライト、ライト等の描画オブジェクトの実装 |
-| **[Render/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Render/)** | レンダリングフローおよびパイプライン状態の統合管理 |
-| **[Particle/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Particle/)** | パーティクル生成・更新・計算ロジック |
-| **[Camera/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Camera/)** | カメラの管理と変換行列の計算 |
-| **[Window/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Window/)** | Win32ウィンドウ管理、メッセージループ処理 |
-| **[Input/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Input/)** | 入力デバイスの状態取得と管理 |
-| **[Common/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/Common/)** | 数学ライブラリ、ログ出力、基本構造体 |
-| **[ImGuiManager/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Engine/ImGuiManager/)** | ImGuiの初期化・描画フローとの統合 |
+| **[Dx12/](project/Engine/Dx12/)** | デバイス、スワップチェーン、パイプライン等のコアラッパー |
+| **[Graphics/](project/Engine/Graphics/)** | モデル、スプライト、ライト、エフェクト等の描画オブジェクトの実装 |
+| **[Render/](project/Engine/Render/)** | モジュール化された描画クラス（Model/Sprite/Light等）とコンテキスト管理 |
+| **[Audio/](project/Engine/Audio/)** | サウンド再生（Sound/BGM/SE）の制御と管理 |
+| **[Particle/](project/Engine/Particle/)** | パーティクル生成・更新・計算ロジック |
+| **[Camera/](project/Engine/Camera/)** | カメラの管理と変換行列の計算 |
+| **[Window/](project/Engine/Window/)** | Win32ウィンドウ管理、メッセージループ処理 |
+| **[Input/](project/Engine/Input/)** | キーボード、マウス、コントローラー別の入力管理 |
+| **[Common/](project/Engine/Common/)** | 数学ライブラリ、ログ出力、エンジン共通の設定と構造体 |
+| **[ImGuiManager/](project/Engine/ImGuiManager/)** | ImGuiの初期化・描画フローとの統合 |
 
 ### Application (`project/Application/`)
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
-| **[Framework/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Application/Framework/)** | アプリケーション基盤 (`App`) とコンフィグ管理 |
-| **[Game/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Application/Game/)** | ゲームロジック（Player・Scene・MapChip・Goal・Coin 等） |
+| **[Framework/](project/Application/Framework/)** | アプリケーション基盤 (`App`) とコンフィグ管理 |
+| **[Game/](project/Application/Game/)** | ゲームロジック（Player・Scene・MapChip・Goal・Coin 等） |
 
 ### その他
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
-| **[Externals/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Externals/)** | 外部ライブラリ (Assimp / DirectXTex / ImGui / curl / nlohmann) |
-| **[Resources/](file:///c:/Users/rea/source/repos/2025/CG2/CG2/project/Resources/)** | テクスチャ、モデル、シェーダ等のリソースファイル |
+| **[Externals/](project/Externals/)** | 外部ライブラリ (Assimp / DirectXTex / ImGui / curl / nlohmann) |
+| **[Resources/](project/Resources/)** | テクスチャ、モデル、シェーダ等のリソースファイル |
 
 ## ビルド方法 (Build)
 
@@ -98,7 +103,7 @@ DirectX 12ベースの自作ゲームエンジンです。
 - [Assimp](https://github.com/assimp/assimp)
 - [DirectXTex](https://github.com/microsoft/DirectXTex)
 - [ImGui](https://github.com/ocornut/imgui)
-- Media Foundation (Sound/Movie playback)
+- Media Foundation (Sound playback)
 
 ---
 > [!IMPORTANT]
