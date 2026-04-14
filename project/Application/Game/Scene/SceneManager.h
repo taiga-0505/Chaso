@@ -10,6 +10,9 @@ class ISceneState;
 
 class Scene::SceneManager {
 public:
+  SceneManager();
+  ~SceneManager();
+
   // フェード用オブジェクト
   std::unique_ptr<Fade> fade_ = nullptr;
   static inline const float kFadeTime = 1.0f;

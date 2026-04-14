@@ -101,6 +101,9 @@ void FadeInState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // SceneManager 実装
 // =================================================================
 
+Scene::SceneManager::SceneManager() = default;
+Scene::SceneManager::~SceneManager() = default;
+
 void Scene::SceneManager::Init(SceneContext &ctx) {
   float width = float(ctx.app->width);
   float height = float(ctx.app->height);
