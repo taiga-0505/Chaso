@@ -169,6 +169,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="..\Application\Game\MapChipField\MapChipField.cpp" />
     <ClCompile Include="..\Application\Game\Player\Player.cpp" />
     <ClCompile Include="..\Application\Game\Scene\Fade\Fade.cpp" />
+    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp" />
     <ClCompile Include="..\Application\Game\Scene\GameOverScene\GameOverScene.cpp" />
     <ClCompile Include="..\Application\Game\Scene\GameScene\GameScene.cpp" />
     <ClCompile Include="..\Application\Game\Scene\LightScene\LightScene.cpp" />
