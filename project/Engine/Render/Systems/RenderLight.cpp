@@ -12,36 +12,148 @@
 #include "Light/Point/PointLightSource.h"
 #include "Light/Spot/SpotLightSource.h"
 
+#include <concepts>
+#include <type_traits>
+
 namespace RC {
+
+namespace {
+
+// ============================================================================
+// テンプレートヘルパーと Concept
+// ============================================================================
+
+template <typename T>
+concept LightManager = requires(T & m, int h) {
+  { m.Create() } -> std::same_as<int>;
+  { m.Destroy(h) };
+  { m.Get(h) };
+  { m.DrawImGui(h, (const char *)nullptr) };
+  { m.GetActiveHandle() } -> std::same_as<int>;
+  { m.SetActive(h) };
+};
+
+template <typename T>
+concept MultiActiveManager = LightManager<T> && requires(T & m, int h) {
+  { m.AddActive(h) } -> std::same_as<bool>;
+  { m.ClearActive() };
+  { m.RemoveActive(h) };
+  { m.GetActiveCount() } -> std::same_as<int>;
+  { m.GetActiveHandleAt(0) } -> std::same_as<int>;
+};
+
+template <LightManager T> int TCreateLight(T &mgr, LightActivateMode activateMode) {
+  const int h = mgr.Create();
+  if (h < 0) {
+    return h;
+  }
+
+  if (activateMode == LightActivateMode::Set) {
+    if constexpr (MultiActiveManager<T>) {
+      mgr.ClearActive();
+      (void)mgr.AddActive(h);
+    } else {
+      mgr.SetActive(h);
+    }
+  } else if (activateMode == LightActivateMode::Add) {
+    if constexpr (MultiActiveManager<T>) {
+      (void)mgr.AddActive(h);
+    } else {
+      // Directional 等、単一アクティブのみをサポートする場合
+      if constexpr (requires { mgr.HasExplicitActive(); }) {
+        if (!mgr.HasExplicitActive()) {
+          mgr.SetActive(h);
+        }
+      } else {
+        if (mgr.GetActiveHandle() < 0) {
+          mgr.SetActive(h);
+        }
+      }
+    }
+  }
+  return h;
+}
+
+template <LightManager T> void TDestroyLight(T &mgr, int handle) {
+  mgr.Destroy(handle);
+}
+
+template <LightManager T> void TSetActiveLight(T &mgr, int handle) {
+  if constexpr (MultiActiveManager<T>) {
+    mgr.ClearActive();
+    if (handle >= 0) {
+      (void)mgr.AddActive(handle);
+    }
+  } else {
+    mgr.SetActive(handle);
+  }
+}
+
+template <LightManager T> int TGetActiveLightHandle(const T &mgr) {
+  const int h = mgr.GetActiveHandle();
+  if constexpr (!MultiActiveManager<T> && requires { mgr.DefaultHandle(); }) {
+    if (h >= 0)
+      return h;
+    return mgr.DefaultHandle();
+  }
+  return h;
+}
+
+template <LightManager T> void TDrawImGuiLight(T &mgr, int handle, const char *name) {
+  if (handle < 0) {
+    handle = TGetActiveLightHandle(mgr);
+  }
+  mgr.DrawImGui(handle, name);
+}
+
+template <LightManager T> void TSetLightEnabled(T &mgr, int handle, bool enabled) {
+  if (auto *p = mgr.Get(handle)) {
+    p->SetEnabled(enabled);
+    if constexpr (requires { mgr.GetCBAddress(handle); }) {
+       (void)mgr.GetCBAddress(handle);
+    }
+  }
+}
+
+template <LightManager T> bool TIsLightEnabled(const T &mgr, int handle) {
+  if (const auto *p = mgr.Get(handle)) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+template <LightManager T> void TSetActiveLightEnabled(T &mgr, bool enabled) {
+  if (auto *p = mgr.GetActive()) {
+    p->SetEnabled(enabled);
+    if constexpr (requires { mgr.GetActiveCBAddress(); }) {
+      (void)mgr.GetActiveCBAddress();
+    }
+  }
+}
+
+template <LightManager T> bool TIsActiveLightEnabled(const T &mgr) {
+  if (const auto *p = mgr.GetActive()) {
+    return p->IsEnabled();
+  }
+  return false;
+}
+
+} // namespace
 
 // ============================================================================
 // DirectionalLight
 // ============================================================================
 
 int CreateDirectionalLight(LightActivateMode activateMode) {
-  auto &ctx = GetRenderContext();
-  const int h = ctx.DirLights().Create();
-  if (h < 0) {
-    return h;
-  }
-
-  if (activateMode == LightActivateMode::Set) {
-    ctx.DirLights().SetActive(h);
-  } else if (activateMode == LightActivateMode::Add) {
-    if (!ctx.DirLights().HasExplicitActive()) {
-      ctx.DirLights().SetActive(h);
-    }
-  }
-
-  return h;
+  return TCreateLight(GetRenderContext().DirLights(), activateMode);
 }
 
 void DestroyDirectionalLight(int lightHandle) {
-  GetRenderContext().DirLights().Destroy(lightHandle);
+  TDestroyLight(GetRenderContext().DirLights(), lightHandle);
 }
 
 void SetActiveDirectionalLight(int lightHandle) {
-  GetRenderContext().DirLights().SetActive(lightHandle);
+  TSetActiveLight(GetRenderContext().DirLights(), lightHandle);
 }
 
 int GetActiveDirectionalLightHandle() {
@@ -49,12 +161,7 @@ int GetActiveDirectionalLightHandle() {
   if (!ctx.IsInitialized()) {
     return -1;
   }
-
-  const int explicitH = ctx.DirLights().GetActiveHandle();
-  if (explicitH >= 0) {
-    return explicitH;
-  }
-  return ctx.DirLights().DefaultHandle();
+  return TGetActiveLightHandle(ctx.DirLights());
 }
 
 DirectionalLightSource *GetDirectionalLightPtr(int lightHandle) {
@@ -62,41 +169,23 @@ DirectionalLightSource *GetDirectionalLightPtr(int lightHandle) {
 }
 
 void DrawImGuiDirectionalLight(int lightHandle, const char *name) {
-  auto &ctx = GetRenderContext();
-  if (lightHandle < 0) {
-    lightHandle = GetActiveDirectionalLightHandle();
-  }
-  ctx.DirLights().DrawImGui(lightHandle, name);
+  TDrawImGuiLight(GetRenderContext().DirLights(), lightHandle, name);
 }
 
 void SetDirectionalLightEnabled(int lightHandle, bool enabled) {
-  auto &ctx = GetRenderContext();
-  if (auto *p = ctx.DirLights().Get(lightHandle)) {
-    p->SetEnabled(enabled);
-    (void)ctx.DirLights().GetCBAddress(lightHandle);
-  }
+  TSetLightEnabled(GetRenderContext().DirLights(), lightHandle, enabled);
 }
 
 bool IsDirectionalLightEnabled(int lightHandle) {
-  if (const auto *p = GetRenderContext().DirLights().Get(lightHandle)) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsLightEnabled(GetRenderContext().DirLights(), lightHandle);
 }
 
 void SetActiveDirectionalLightEnabled(bool enabled) {
-  auto &ctx = GetRenderContext();
-  if (auto *p = ctx.DirLights().GetActive()) {
-    p->SetEnabled(enabled);
-    (void)ctx.DirLights().GetActiveCBAddress();
-  }
+  TSetActiveLightEnabled(GetRenderContext().DirLights(), enabled);
 }
 
 bool IsActiveDirectionalLightEnabled() {
-  if (const auto *p = GetRenderContext().DirLights().GetActive()) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsActiveLightEnabled(GetRenderContext().DirLights());
 }
 
 // ============================================================================
@@ -104,40 +193,19 @@ bool IsActiveDirectionalLightEnabled() {
 // ============================================================================
 
 int CreatePointLight(LightActivateMode activateMode) {
-  auto &ctx = GetRenderContext();
-  const int h = ctx.PtLights().Create();
-  if (h < 0) {
-    return h;
-  }
-
-  if (activateMode == LightActivateMode::Set) {
-    ctx.PtLights().ClearActive();
-    (void)ctx.PtLights().AddActive(h);
-  } else if (activateMode == LightActivateMode::Add) {
-    (void)ctx.PtLights().AddActive(h);
-  }
-
-  return h;
+  return TCreateLight(GetRenderContext().PtLights(), activateMode);
 }
 
 void DestroyPointLight(int pointLightHandle) {
-  GetRenderContext().PtLights().Destroy(pointLightHandle);
+  TDestroyLight(GetRenderContext().PtLights(), pointLightHandle);
 }
 
 void SetActivePointLight(int pointLightHandle) {
-  auto &ctx = GetRenderContext();
-  ctx.PtLights().ClearActive();
-  if (pointLightHandle >= 0) {
-    (void)ctx.PtLights().AddActive(pointLightHandle);
-  }
+  TSetActiveLight(GetRenderContext().PtLights(), pointLightHandle);
 }
 
 int GetActivePointLightHandle() {
-  auto &ctx = GetRenderContext();
-  if (ctx.PtLights().GetActiveCount() <= 0) {
-    return -1;
-  }
-  return ctx.PtLights().GetActiveHandleAt(0);
+  return TGetActiveLightHandle(GetRenderContext().PtLights());
 }
 
 void ClearActivePointLights() {
@@ -165,33 +233,23 @@ PointLightSource *GetPointLightPtr(int pointLightHandle) {
 }
 
 void DrawImGuiPointLight(int pointLightHandle, const char *name) {
-  GetRenderContext().PtLights().DrawImGui(pointLightHandle, name);
+  TDrawImGuiLight(GetRenderContext().PtLights(), pointLightHandle, name);
 }
 
 void SetPointLightEnabled(int pointLightHandle, bool enabled) {
-  if (auto *p = GetRenderContext().PtLights().Get(pointLightHandle)) {
-    p->SetEnabled(enabled);
-  }
+  TSetLightEnabled(GetRenderContext().PtLights(), pointLightHandle, enabled);
 }
 
 bool IsPointLightEnabled(int pointLightHandle) {
-  if (const auto *p = GetRenderContext().PtLights().Get(pointLightHandle)) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsLightEnabled(GetRenderContext().PtLights(), pointLightHandle);
 }
 
 void SetActivePointLightEnabled(bool enabled) {
-  if (auto *p = GetRenderContext().PtLights().GetActive()) {
-    p->SetEnabled(enabled);
-  }
+  TSetActiveLightEnabled(GetRenderContext().PtLights(), enabled);
 }
 
 bool IsActivePointLightEnabled() {
-  if (const auto *p = GetRenderContext().PtLights().GetActive()) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsActiveLightEnabled(GetRenderContext().PtLights());
 }
 
 // ============================================================================
@@ -199,40 +257,19 @@ bool IsActivePointLightEnabled() {
 // ============================================================================
 
 int CreateSpotLight(LightActivateMode activateMode) {
-  auto &ctx = GetRenderContext();
-  const int h = ctx.SpLights().Create();
-  if (h < 0) {
-    return h;
-  }
-
-  if (activateMode == LightActivateMode::Set) {
-    ctx.SpLights().ClearActive();
-    (void)ctx.SpLights().AddActive(h);
-  } else if (activateMode == LightActivateMode::Add) {
-    (void)ctx.SpLights().AddActive(h);
-  }
-
-  return h;
+  return TCreateLight(GetRenderContext().SpLights(), activateMode);
 }
 
 void DestroySpotLight(int spotLightHandle) {
-  GetRenderContext().SpLights().Destroy(spotLightHandle);
+  TDestroyLight(GetRenderContext().SpLights(), spotLightHandle);
 }
 
 void SetActiveSpotLight(int spotLightHandle) {
-  auto &ctx = GetRenderContext();
-  ctx.SpLights().ClearActive();
-  if (spotLightHandle >= 0) {
-    (void)ctx.SpLights().AddActive(spotLightHandle);
-  }
+  TSetActiveLight(GetRenderContext().SpLights(), spotLightHandle);
 }
 
 int GetActiveSpotLightHandle() {
-  auto &ctx = GetRenderContext();
-  if (ctx.SpLights().GetActiveCount() <= 0) {
-    return -1;
-  }
-  return ctx.SpLights().GetActiveHandleAt(0);
+  return TGetActiveLightHandle(GetRenderContext().SpLights());
 }
 
 void ClearActiveSpotLights() {
@@ -260,33 +297,23 @@ SpotLightSource *GetSpotLightPtr(int spotLightHandle) {
 }
 
 void DrawImGuiSpotLight(int spotLightHandle, const char *name) {
-  GetRenderContext().SpLights().DrawImGui(spotLightHandle, name);
+  TDrawImGuiLight(GetRenderContext().SpLights(), spotLightHandle, name);
 }
 
 void SetSpotLightEnabled(int spotLightHandle, bool enabled) {
-  if (auto *p = GetRenderContext().SpLights().Get(spotLightHandle)) {
-    p->SetEnabled(enabled);
-  }
+  TSetLightEnabled(GetRenderContext().SpLights(), spotLightHandle, enabled);
 }
 
 bool IsSpotLightEnabled(int spotLightHandle) {
-  if (const auto *p = GetRenderContext().SpLights().Get(spotLightHandle)) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsLightEnabled(GetRenderContext().SpLights(), spotLightHandle);
 }
 
 void SetActiveSpotLightEnabled(bool enabled) {
-  if (auto *p = GetRenderContext().SpLights().GetActive()) {
-    p->SetEnabled(enabled);
-  }
+  TSetActiveLightEnabled(GetRenderContext().SpLights(), enabled);
 }
 
 bool IsActiveSpotLightEnabled() {
-  if (const auto *p = GetRenderContext().SpLights().GetActive()) {
-    return p->IsEnabled();
-  }
-  return false;
+  return TIsActiveLightEnabled(GetRenderContext().SpLights());
 }
 
 // ============================================================================
@@ -295,143 +322,92 @@ bool IsActiveSpotLightEnabled() {
 
 int CreateAreaLight(LightActivateMode activateMode) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return -1;
-  }
-  const int h = ctx.ArLights().Create();
-  if (h < 0) {
-    return -1;
-  }
-
-  if (activateMode == LightActivateMode::Set) {
-    ctx.ArLights().ClearActive();
-    ctx.ArLights().AddActive(h);
-  } else if (activateMode == LightActivateMode::Add) {
-    ctx.ArLights().AddActive(h);
-  }
-  return h;
+  if (!ctx.IsInitialized()) return -1;
+  return TCreateLight(ctx.ArLights(), activateMode);
 }
 
 void DestroyAreaLight(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
-  ctx.ArLights().Destroy(areaLightHandle);
+  if (!ctx.IsInitialized()) return;
+  TDestroyLight(ctx.ArLights(), areaLightHandle);
 }
 
 void SetActiveAreaLight(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
-  ctx.ArLights().SetActive(areaLightHandle);
+  if (!ctx.IsInitialized()) return;
+  TSetActiveLight(ctx.ArLights(), areaLightHandle);
 }
 
 int GetActiveAreaLightHandle() {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return -1;
-  }
-  return ctx.ArLights().GetActiveHandle();
+  if (!ctx.IsInitialized()) return -1;
+  return TGetActiveLightHandle(ctx.ArLights());
 }
 
 void ClearActiveAreaLights() {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
+  if (!ctx.IsInitialized()) return;
   ctx.ArLights().ClearActive();
 }
 
 bool AddActiveAreaLight(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return false;
-  }
+  if (!ctx.IsInitialized()) return false;
   return ctx.ArLights().AddActive(areaLightHandle);
 }
 
 void RemoveActiveAreaLight(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
+  if (!ctx.IsInitialized()) return;
   ctx.ArLights().RemoveActive(areaLightHandle);
 }
 
 int GetActiveAreaLightCount() {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return 0;
-  }
+  if (!ctx.IsInitialized()) return 0;
   return ctx.ArLights().GetActiveCount();
 }
 
 int GetActiveAreaLightHandleAt(int index) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return -1;
-  }
+  if (!ctx.IsInitialized()) return -1;
   return ctx.ArLights().GetActiveHandleAt(index);
 }
 
 AreaLightSource *GetAreaLightPtr(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return nullptr;
-  }
+  if (!ctx.IsInitialized()) return nullptr;
   return ctx.ArLights().Get(areaLightHandle);
 }
 
 void DrawImGuiAreaLight(int areaLightHandle, const char *name) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
-  ctx.ArLights().DrawImGui(areaLightHandle, name);
+  if (!ctx.IsInitialized()) return;
+  TDrawImGuiLight(ctx.ArLights(), areaLightHandle, name);
 }
 
 void SetAreaLightEnabled(int areaLightHandle, bool enabled) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
-  if (auto *p = ctx.ArLights().Get(areaLightHandle)) {
-    p->SetEnabled(enabled);
-  }
+  if (!ctx.IsInitialized()) return;
+  TSetLightEnabled(ctx.ArLights(), areaLightHandle, enabled);
 }
 
 bool IsAreaLightEnabled(int areaLightHandle) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return false;
-  }
-  if (const auto *p = ctx.ArLights().Get(areaLightHandle)) {
-    return p->IsEnabled();
-  }
-  return false;
+  if (!ctx.IsInitialized()) return false;
+  return TIsLightEnabled(ctx.ArLights(), areaLightHandle);
 }
 
 void SetActiveAreaLightEnabled(bool enabled) {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return;
-  }
-  if (auto *p = ctx.ArLights().GetActive()) {
-    p->SetEnabled(enabled);
-  }
+  if (!ctx.IsInitialized()) return;
+  TSetActiveLightEnabled(ctx.ArLights(), enabled);
 }
 
 bool IsActiveAreaLightEnabled() {
   auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) {
-    return false;
-  }
-  if (const auto *p = ctx.ArLights().GetActive()) {
-    return p->IsEnabled();
-  }
-  return false;
+  if (!ctx.IsInitialized()) return false;
+  return TIsActiveLightEnabled(ctx.ArLights());
 }
 
 } // namespace RC
