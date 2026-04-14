@@ -30,20 +30,12 @@
 namespace RC {
 
 // ============================================================================
-// 唯一の RenderContext インスタンス
-// ============================================================================
-
-static RenderContext s_ctx;
-
-RenderContext &GetRenderContext() { return s_ctx; }
-
-// ============================================================================
 // Init / Term
 // ============================================================================
 
-void Init(SceneContext &ctx) { s_ctx.Init(ctx); }
+void Init(SceneContext &ctx) { RenderContext::GetInstance().Init(ctx); }
 
-void Term() { s_ctx.Term(); }
+void Term() { RenderContext::GetInstance().Term(); }
 
 // ============================================================================
 // Camera
@@ -51,7 +43,7 @@ void Term() { s_ctx.Term(); }
 
 void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
                const RC::Vector3 camWorldPos) {
-  s_ctx.SetCamera(view, proj, camWorldPos);
+  RenderContext::GetInstance().SetCamera(view, proj, camWorldPos);
 }
 
 // ============================================================================
@@ -59,29 +51,7 @@ void SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
 // ============================================================================
 
 void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
-  s_ctx.SetCommandList(cl);
-  s_ctx.SetSceneContext(&ctx);
-  s_ctx.SetBlendMode(kBlendModeNone);
-
-  auto *pso = s_ctx.GetPipeline("object3d", kBlendModeNone);
-  if (!pso) {
-    s_ctx.SetCommandList(nullptr);
-    s_ctx.SetSceneContext(nullptr);
-    return;
-  }
-
-  cl->SetGraphicsRootSignature(pso->Root());
-  cl->SetPipelineState(pso->PSO());
-  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-  s_ctx.BindCameraCB();
-  s_ctx.BindAllLightCBs();
-
-  s_ctx.Models().ResetAllBatchCursors();
-
-  if (auto *prim = s_ctx.EnsurePrimitive3D()) {
-    prim->BeginFrame(s_ctx.View(), s_ctx.Proj(), kBlendModeNone);
-  }
+  RenderContext::GetInstance().PreDraw3D(ctx, cl);
 }
 
 // ============================================================================
@@ -89,47 +59,7 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 // ============================================================================
 
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
-  s_ctx.SetCommandList(cl);
-  s_ctx.SetSceneContext(&ctx);
-  s_ctx.SetBlendMode(kBlendModeNormal);
-
-  // 3D コマンドキューを一括実行（モデルとプリミティブが混在した順序で描画される）
-  s_ctx.Execute3DCommands();
-
-  // 2D Viewport / Scissor
-
-  D3D12_VIEWPORT viewport{};
-  viewport.TopLeftX = 0.0f;
-  viewport.TopLeftY = 0.0f;
-  viewport.Width = static_cast<float>(ctx.app->width);
-  viewport.Height = static_cast<float>(ctx.app->height);
-  viewport.MinDepth = 0.0f;
-  viewport.MaxDepth = 1.0f;
-
-  D3D12_RECT scissor{};
-  scissor.left = 0;
-  scissor.top = 0;
-  scissor.right = static_cast<LONG>(ctx.app->width);
-  scissor.bottom = static_cast<LONG>(ctx.app->height);
-
-  cl->RSSetViewports(1, &viewport);
-  cl->RSSetScissorRects(1, &scissor);
-
-  auto *pso = s_ctx.GetPipeline("sprite", kBlendModeNormal);
-  if (!pso) {
-    s_ctx.SetCommandList(nullptr);
-    s_ctx.SetSceneContext(nullptr);
-    return;
-  }
-
-  // Primitive2D の BeginFrame
-  if (auto *prim = s_ctx.EnsurePrimitive2D()) {
-    prim->BeginFrame();
-  }
-
-  cl->SetGraphicsRootSignature(pso->Root());
-  cl->SetPipelineState(pso->PSO());
-  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+  RenderContext::GetInstance().PreDraw2D(ctx, cl);
 }
 
 // ============================================================================
@@ -137,29 +67,27 @@ void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 // ============================================================================
 
 int LoadTex(const std::string &path, bool srgb) {
-  if (!s_ctx.IsInitialized()) {
-    return -1;
-  }
-  return s_ctx.Textures().LoadID(path, srgb);
+  return RenderContext::GetInstance().LoadTex(path, srgb);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle) {
-  if (!s_ctx.IsInitialized() || texHandle < 0) {
-    return D3D12_GPU_DESCRIPTOR_HANDLE{0};
-  }
-  return s_ctx.Textures().GetSrv(texHandle);
+  return RenderContext::GetInstance().GetSrv(texHandle);
 }
 
 // ============================================================================
 // State
 // ============================================================================
 
-bool IsInitialized() { return s_ctx.IsInitialized(); }
+bool IsInitialized() { return RenderContext::GetInstance().IsInitialized(); }
 
-ID3D12Device *GetDevice() { return s_ctx.Device(); }
+ID3D12Device *GetDevice() { return RenderContext::GetInstance().Device(); }
 
-void SetBlendMode(BlendMode blendMode) { s_ctx.SetBlendMode(blendMode); }
+void SetBlendMode(BlendMode blendMode) {
+  RenderContext::GetInstance().SetBlendMode(blendMode);
+}
 
-BlendMode GetBlendMode() { return s_ctx.CurrentBlendMode(); }
+BlendMode GetBlendMode() {
+  return RenderContext::GetInstance().CurrentBlendMode();
+}
 
 } // namespace RC

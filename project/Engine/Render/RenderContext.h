@@ -48,6 +48,9 @@ namespace RC {
 
 class RenderContext {
 public:
+  // ── シングルトン ────────────────────────────────────
+  static RenderContext &GetInstance();
+
   // ── 初期化 / 終了 ──────────────────────────────────
   void Init(SceneContext &ctx);
   void Term();
@@ -59,6 +62,14 @@ public:
   void SetCommandList(ID3D12GraphicsCommandList *cl) { cl_ = cl; }
   void SetSceneContext(SceneContext *ctx) { ctxRef_ = ctx; }
   void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
+
+  // ── 描画パス実行 ───────────────────────────────────
+  void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+  void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
+  // ── テクスチャヘルパー ─────────────────────────────
+  int LoadTex(const std::string &path, bool srgb);
+  D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle);
 
   // ── 読み取りアクセス（各サブモジュール用）──────────
   ID3D12GraphicsCommandList *CL() const { return cl_; }

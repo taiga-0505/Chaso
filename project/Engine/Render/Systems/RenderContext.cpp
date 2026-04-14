@@ -9,6 +9,17 @@
 namespace RC {
 
 // ============================================================================
+// シングルトン / 取得
+// ============================================================================
+
+RenderContext &RenderContext::GetInstance() {
+  static RenderContext instance;
+  return instance;
+}
+
+RenderContext &GetRenderContext() { return RenderContext::GetInstance(); }
+
+// ============================================================================
 // Init / Term
 // ============================================================================
 
@@ -110,6 +121,97 @@ void RenderContext::SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
     cameraCBMapped_->worldPos = camWorldPos;
     cameraCBMapped_->_pad = 0.0f;
   }
+}
+
+// ============================================================================
+// 描画パス実行
+// ============================================================================
+
+void RenderContext::PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  cl_ = cl;
+  ctxRef_ = &ctx;
+  currentBlendMode_ = kBlendModeNone;
+
+  auto *pso = GetPipeline("object3d", kBlendModeNone);
+  if (!pso) {
+    cl_ = nullptr;
+    ctxRef_ = nullptr;
+    return;
+  }
+
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
+  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+  BindCameraCB();
+  BindAllLightCBs();
+
+  modelMan_.ResetAllBatchCursors();
+
+  if (auto *prim = EnsurePrimitive3D()) {
+    prim->BeginFrame(view_, proj_, kBlendModeNone);
+  }
+}
+
+void RenderContext::PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  cl_ = cl;
+  ctxRef_ = &ctx;
+  currentBlendMode_ = kBlendModeNormal;
+
+  // 3D コマンドキューを一括実行
+  Execute3DCommands();
+
+  // 2D Viewport / Scissor
+  D3D12_VIEWPORT viewport{};
+  viewport.TopLeftX = 0.0f;
+  viewport.TopLeftY = 0.0f;
+  viewport.Width = static_cast<float>(ctx.app->width);
+  viewport.Height = static_cast<float>(ctx.app->height);
+  viewport.MinDepth = 0.0f;
+  viewport.MaxDepth = 1.0f;
+
+  D3D12_RECT scissor{};
+  scissor.left = 0;
+  scissor.top = 0;
+  scissor.right = static_cast<LONG>(ctx.app->width);
+  scissor.bottom = static_cast<LONG>(ctx.app->height);
+
+  cl->RSSetViewports(1, &viewport);
+  cl->RSSetScissorRects(1, &scissor);
+
+  auto *pso = GetPipeline("sprite", kBlendModeNormal);
+  if (!pso) {
+    cl_ = nullptr;
+    ctxRef_ = nullptr;
+    return;
+  }
+
+  // Primitive2D の BeginFrame
+  if (auto *prim = EnsurePrimitive2D()) {
+    prim->BeginFrame();
+  }
+
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
+  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+// ============================================================================
+// テクスチャヘルパー
+// ============================================================================
+
+int RenderContext::LoadTex(const std::string &path, bool srgb) {
+  if (!initialized_) {
+    return -1;
+  }
+  return texMan_.LoadID(path, srgb);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE RenderContext::GetSrv(int texHandle) {
+  if (!initialized_ || texHandle < 0) {
+    return D3D12_GPU_DESCRIPTOR_HANDLE{0};
+  }
+  return texMan_.GetSrv(texHandle);
 }
 
 // ============================================================================
