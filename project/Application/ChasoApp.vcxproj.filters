@@ -64,6 +64,21 @@
     <Filter Include="Resources\Shader\Sprite">
       <UniqueIdentifier>{e154087b-a457-5cd9-788f-df6d22fb77aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Game\Coin">
+      <UniqueIdentifier>{02d29267-0a55-45c6-bf09-91c05c0a6310}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Player">
+      <UniqueIdentifier>{3021fe6c-a4be-4076-80d5-56295ea2c9ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\MapChipField">
+      <UniqueIdentifier>{de7dfa52-3825-472d-baee-c8f2e3a76287}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\Goal">
+      <UniqueIdentifier>{81ad07a2-1635-419f-9127-2782499115b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game\StageSelection">
+      <UniqueIdentifier>{5ba40d86-71ea-488f-9618-9fc29d14d212}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -103,6 +118,21 @@
       <Filter>Game\Scene\TitleScene</Filter>
     </ClCompile>
     <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp" />
+    <ClCompile Include="Game\Coin\Coin.cpp">
+      <Filter>Game\Coin</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Player\Player.cpp">
+      <Filter>Game\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\MapChipField\MapChipField.cpp">
+      <Filter>Game\MapChipField</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Goal\Goal.cpp">
+      <Filter>Game\Goal</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\StageSelection\StageSelection.cpp">
+      <Filter>Game\StageSelection</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\Framework\App.h">
@@ -146,6 +176,21 @@
     </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\TitleScene\TitleScene.h">
       <Filter>Game\Scene\TitleScene</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Coin\Coin.h">
+      <Filter>Game\Coin</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Player\Player.h">
+      <Filter>Game\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\MapChipField\MapChipField.h">
+      <Filter>Game\MapChipField</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\Goal\Goal.h">
+      <Filter>Game\Goal</Filter>
+    </ClInclude>
+    <ClInclude Include="Game\StageSelection\StageSelection.h">
+      <Filter>Game\StageSelection</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
