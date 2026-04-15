@@ -22,4 +22,23 @@ private:
   // ======= カメラコントローラ =======
   RC::CameraController camera_; 
   
+  // ==============
+  // スカイドーム関連
+  // ==============
+  // ======= モデルとテクスチャ =======
+  int skydomeModel = -1;
+  int txSphere_ = -1;
+  // ======= トランスフォーム参照 =======
+  Transform *skydomeT_ = nullptr;
+
+  int titleModel = -1;
+  Transform *titleT_ = nullptr;
+  int frameCount = 0;
+
+  // ==============
+  // UI
+  // ==============
+
+  int guideSprite = -1;
+
 };
