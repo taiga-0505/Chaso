@@ -1,4 +1,4 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <Filter Include="..">
@@ -9,18 +9,6 @@
     </Filter>
     <Filter Include="Game">
       <UniqueIdentifier>{63d72051-e901-c069-f8aa-1b32aa0c43bb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Coin">
-      <UniqueIdentifier>{b1e56660-b058-1532-89f9-6015914609ba}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Goal">
-      <UniqueIdentifier>{f1191db5-f296-0d81-5a19-943f7a1667c2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\MapChipField">
-      <UniqueIdentifier>{0f1be898-f98c-2395-5879-627e854639a1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Player">
-      <UniqueIdentifier>{9be8b11a-403f-5c70-a44f-b2865377fd9a}</UniqueIdentifier>
     </Filter>
     <Filter Include="Game\Scene">
       <UniqueIdentifier>{257654ef-124c-c4e9-e8f4-ba8e3de21951}</UniqueIdentifier>
@@ -51,9 +39,6 @@
     </Filter>
     <Filter Include="Game\Scene\TitleScene">
       <UniqueIdentifier>{c8dde5de-1a5a-a7ac-6d65-07cc54cfeab0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\StageSelection">
-      <UniqueIdentifier>{78326a14-83cb-ef16-3694-70bb9dd994a7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Resources">
       <UniqueIdentifier>{ddcf50c2-9294-d441-4f3f-7c1bbc892cb5}</UniqueIdentifier>
@@ -87,20 +72,8 @@
     <ClCompile Include="..\Application\Framework\App.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
-    <ClCompile Include="..\Application\Game\Coin\Coin.cpp">
-      <Filter>Game\Coin</Filter>
-    </ClCompile>
     <ClCompile Include="..\Application\Game\Game.cpp">
       <Filter>Game</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Application\Game\Goal\Goal.cpp">
-      <Filter>Game\Goal</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Application\Game\MapChipField\MapChipField.cpp">
-      <Filter>Game\MapChipField</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Application\Game\Player\Player.cpp">
-      <Filter>Game\Player</Filter>
     </ClCompile>
     <ClCompile Include="..\Application\Game\Scene\Fade\Fade.cpp">
       <Filter>Game\Scene\Fade</Filter>
@@ -129,9 +102,7 @@
     <ClCompile Include="..\Application\Game\Scene\TitleScene\TitleScene.cpp">
       <Filter>Game\Scene\TitleScene</Filter>
     </ClCompile>
-    <ClCompile Include="..\Application\Game\StageSelection\StageSelection.cpp">
-      <Filter>Game\StageSelection</Filter>
-    </ClCompile>
+    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\Framework\App.h">
@@ -140,20 +111,8 @@
     <ClInclude Include="..\Application\Framework\AppConfig.h">
       <Filter>Framework</Filter>
     </ClInclude>
-    <ClInclude Include="..\Application\Game\Coin\Coin.h">
-      <Filter>Game\Coin</Filter>
-    </ClInclude>
     <ClInclude Include="..\Application\Game\Game.h">
       <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Application\Game\Goal\Goal.h">
-      <Filter>Game\Goal</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Application\Game\MapChipField\MapChipField.h">
-      <Filter>Game\MapChipField</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Application\Game\Player\Player.h">
-      <Filter>Game\Player</Filter>
     </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\Fade\Fade.h">
       <Filter>Game\Scene\Fade</Filter>
@@ -187,9 +146,6 @@
     </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\TitleScene\TitleScene.h">
       <Filter>Game\Scene\TitleScene</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Application\Game\StageSelection\StageSelection.h">
-      <Filter>Game\StageSelection</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
