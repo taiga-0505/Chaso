@@ -1,7 +1,10 @@
-#include "Dx12Core.h"
-#include <cassert>
 #include <dxgidebug.h>
+#include <format>
 #include <wrl.h>
+
+#include "Common/Log/Log.h"
+#include "Dx12Core.h"
+#include "RC.h"
 
 using Microsoft::WRL::ComPtr;
 // ---------- Debug helpers ----------
@@ -44,8 +47,8 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   // ====================
   // Heaps
   // ====================
-  // ディスクリプタヒープ初期化
-  rtv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, d.frameCount, false);
+  // ディスクリプタヒープ初期化 (RTVはバックバッファ分だけでなく予備を確保)
+  rtv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, d.frameCount + 16, false);
   dsv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
   srv_.Init(dev, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, d.srvHeapCapacity,
             true);
@@ -65,6 +68,11 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
                              : desc_.rtvFormat; // それ以外はそのまま
   swap_.Init(device_.Factory(), dev, cmd_.Queue(), hwnd, d.width, d.height,
              scFormat, d.frameCount, allowTearing_);
+
+  for (uint32_t i = 0; i < d.frameCount; ++i) {
+    rtv_.AllocateCPU();
+  }
+  Log::Print(std::format("[Dx12Core] BackBuffer RTV Index: 0 - {}", d.frameCount - 1));
 
   // ====================
   // Depth
@@ -98,6 +106,21 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
        D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
        0},
   };
+
+  // ====================
+  // GPU Info
+  // ====================
+  // アダプタ情報を取得して表示
+  if (device_.Adapter()) {
+    DXGI_ADAPTER_DESC3 desc;
+    device_.Adapter()->GetDesc3(&desc);
+    std::wstring name = desc.Description;
+    float vramMB = static_cast<float>(desc.DedicatedVideoMemory) / (1024.0f * 1024.0f);
+    Log logger;
+    // .c_str() を使うことで、固定長配列内の NUL 終端以降のゴミを除去
+    Log::Print(std::format("[Dx12Core] GPU: {} (VRAM: {:.1f} MB)", logger.ConvertString(name.c_str()), vramMB));
+    Log::Print(std::format("[Dx12Core] DirectX12 デバイス生成成功 (FeatureLevel: {})", device_.FeatureLevelString()));
+  }
 }
 
 void Dx12Core::BeginFrame() {

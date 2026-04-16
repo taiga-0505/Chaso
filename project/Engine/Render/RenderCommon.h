@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include <d3d12.h>
 #include <string>
+#include <future>
 #include "struct.h"
 
 // D3D12 GPUハンドルを返すために必要
@@ -999,5 +1000,20 @@ void SetBlendMode(BlendMode blendMode);
 /// 現在の BlendMode を取得する
 /// </summary>
 BlendMode GetBlendMode();
+
+  /// <summary>
+  /// バックグラウンドでのロードタスクを追加する
+  /// </summary>
+  void AddLoadingTask(std::future<void> &&task);
+
+  /// <summary>
+  /// 現在進行中のすべてのバックグラウンドロードタスクが完了するまで待機する
+  /// </summary>
+  void WaitAllLoads();
+
+  /// <summary>
+  /// テクスチャのログ出力履歴をクリアする
+  /// </summary>
+  void ClearTextureLogHistory();
 
 } // namespace RC

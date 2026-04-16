@@ -69,6 +69,9 @@ void RenderContext::Term() {
     return;
   }
 
+  // 残っている非同期タスクを全て待機
+  WaitAllLoads();
+
   modelMan_.Term();
   skydomeMan_.Term();
   primitiveMeshMan_.Term();
@@ -385,6 +388,25 @@ void RenderContext::Execute3DCommands() {
   Clear3DCommands();
   if (prim3D_) {
     prim3D_->Clear();
+  }
+}
+
+void RenderContext::AddLoadingTask(std::future<void> &&task) {
+  std::lock_guard<std::mutex> lock(mtxTasks_);
+  ongoingTasks_.push_back(std::move(task));
+}
+
+void RenderContext::WaitAllLoads() {
+  std::vector<std::future<void>> tasks;
+  {
+    std::lock_guard<std::mutex> lock(mtxTasks_);
+    tasks = std::move(ongoingTasks_);
+  }
+
+  for (auto &f : tasks) {
+    if (f.valid()) {
+      f.get();
+    }
   }
 }
 

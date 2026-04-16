@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <Windows.h>
+#include <algorithm>
 #include <format>
 #include <string>
 
@@ -36,11 +37,19 @@ void Log::WriteLog(const std::string &message) {
 
 void Log::Print(const std::string &message) {
   std::string msg = message;
+
+  // 文字列内の NUL 文字（\0）を除去して表示不具合を防ぐ
+  msg.erase(std::remove(msg.begin(), msg.end(), '\0'), msg.end());
+
   // 末尾に改行がなければ追加
   if (msg.empty() || msg.back() != '\n') {
     msg += "\n";
   }
-  OutputDebugStringA(msg.c_str());
+  
+  // UTF-8 から wstring に変換して出力（日本語対応）
+  Log logger;
+  std::wstring wmsg = logger.ConvertString(msg);
+  OutputDebugStringW(wmsg.c_str());
 }
 
 std::wstring Log::ConvertString(const std::string &str) {
@@ -64,4 +73,10 @@ std::string Log::ConvertString(const std::wstring &wstr) {
   WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], size, nullptr,
                       nullptr);
   return str;
+}
+
+std::string Log::NormalizePath(const std::string &path) {
+  std::string ret = path;
+  std::replace(ret.begin(), ret.end(), '\\', '/');
+  return ret;
 }

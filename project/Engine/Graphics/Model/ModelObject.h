@@ -106,6 +106,9 @@ public:
   void SetFilePath(const std::string &path) { filePath_ = path; }
   const std::string &GetFilePath() const { return filePath_; }
 
+  void SetReady(bool r) { isReady_ = r; }
+  bool IsReady() const { return isReady_; }
+
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
   void Draw(ID3D12GraphicsCommandList *cmdList);
@@ -212,4 +215,5 @@ private:
   LightingConfig initialLighting_{};
 
   std::string filePath_;
+  bool isReady_ = false;
 };

@@ -4,7 +4,10 @@
 #include <d3d12.h>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
+#include <mutex>
+#include <future>
 #include <wrl/client.h>
 
 class DescriptorHeap;
@@ -38,6 +41,11 @@ public:
   // SRV(GPUハンドル)からロード元パスを逆引き（見つからなければ空文字）
   std::string GetPathBySrv(D3D12_GPU_DESCRIPTOR_HANDLE srv) const;
 
+  /// <summary>
+  /// このシーンでのログ出力履歴をクリアする
+  /// </summary>
+  void ClearLogHistory() { loggedPaths_.clear(); }
+
 private:
   SRVManager *srv_ = nullptr;
   CommandContext loadCmd_;
@@ -49,4 +57,8 @@ private:
   int nextId_ = 1;
   std::unordered_map<std::string, TextureID> pathToId_;
   std::unordered_map<TextureID, std::string> idToPath_;
+
+  std::unordered_set<std::string> loggedPaths_;
+
+  mutable std::recursive_mutex mtx_;
 };

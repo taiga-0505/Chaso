@@ -17,6 +17,8 @@
 #include <string_view>
 #include <vector>
 #include <wrl.h>
+#include <future>
+#include <mutex>
 
 
 #include "Light/Area/AreaLightManager.h"
@@ -99,6 +101,10 @@ public:
   // ── Primitive 遅延生成 ─────────────────────────────
   Primitive2D *EnsurePrimitive2D();
   Primitive3D *EnsurePrimitive3D();
+
+  // ── 非同期ロード管理 ──────────────────────────────
+  void WaitAllLoads();
+  void AddLoadingTask(std::future<void> &&task);
 
   // ── コマンドキュー ─────────────────────────────────
   struct RenderCommand3D {
@@ -185,6 +191,16 @@ private:
 
   // コマンドキュー
   std::vector<RenderCommand3D> commandQueue3D_;
+
+  // 非同期タスク管理
+  std::vector<std::future<void>> ongoingTasks_;
+  std::mutex mtxTasks_;
+
+  // リソース生成同期用
+  std::mutex mtxResource_;
+
+public:
+  std::mutex &ResourceMutex() { return mtxResource_; }
 };
 
 RenderContext &GetRenderContext();

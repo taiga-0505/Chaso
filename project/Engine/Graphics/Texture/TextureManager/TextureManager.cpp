@@ -2,6 +2,10 @@
 #include "DescriptorHeap/DescriptorHeap.h"
 #include "SRVManager/SRVManager.h"
 #include "Common/Log/Log.h"
+#include <format>
+#include <chrono>
+#include <future>
+#include "RenderCommon.h"
 
 void TextureManager::Init(SRVManager *srv) {
   srv_ = srv;
@@ -42,17 +46,23 @@ void TextureManager::ReleasePendingUploads() {
 
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
                                                  bool srgb) {
+  std::lock_guard lock(mtx_);
   assert(srv_);
   ReleasePendingUploads(); // 前の転送が終わっていれば解放
 
-  auto it = cache_.find(path);
+  std::string npath = Log::NormalizePath(path);
+  auto it = cache_.find(npath);
   if (it != cache_.end() && it->second.IsLoaded()) {
+    if (loggedPaths_.find(npath) == loggedPaths_.end()) {
+      Log::Print(std::format("[Texture] キャッシュ利用: {}, SRV Index: {}", npath, it->second.SrvHandle().index));
+      loggedPaths_.insert(npath);
+    }
     return it->second.GpuSrv();
   }
-  Texture2D &tex = cache_[path];
-  auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
+  Texture2D &tex = cache_[npath];
+  auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, npath, srgb);
   if (uploadRes) {
-    Log::Print("[Texture] Loaded: " + path);
+    Log::Print(std::format("[Texture] ロード完了: {}, SRV Index: {}", npath, tex.SrvHandle().index));
     uint64_t fence = loadCmd_.ExecuteAndReset();
     pendingUploads_.push_back({uploadRes, fence});
   }
@@ -62,52 +72,87 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
 }
 
 Texture2D *TextureManager::Get(const std::string &path) {
-  auto it = cache_.find(path);
+  std::lock_guard lock(mtx_);
+  std::string npath = Log::NormalizePath(path);
+  auto it = cache_.find(npath);
   if (it == cache_.end())
     return nullptr;
   return &it->second;
 }
 
-// TextureManager.cpp
 TextureManager::TextureID TextureManager::LoadID(const std::string &path,
                                                  bool srgb) {
-  assert(srv_);
-  ReleasePendingUploads(); // 前の転送が終わっていれば解放
+  std::string npath = Log::NormalizePath(path);
+  TextureID id = 0;
+  bool alreadyExists = false;
 
-  // 既にIDがあるなら返す（未ロードならロード）
-  if (auto itId = pathToId_.find(path); itId != pathToId_.end()) {
-    auto &tex = cache_[path];
-    if (!tex.IsLoaded()) {
-      auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
-      if (uploadRes) {
-        Log::Print("[Texture] Loaded: " + path);
-        uint64_t fence = loadCmd_.ExecuteAndReset();
-        pendingUploads_.push_back({uploadRes, fence});
+  {
+    std::lock_guard lock(mtx_);
+    // 既にIDがあるか確認
+    if (auto itId = pathToId_.find(npath); itId != pathToId_.end()) {
+      id = itId->second;
+      alreadyExists = true;
+    } else {
+      // 新規ID発行（プレースホルダを作成）
+      id = nextId_++;
+      pathToId_[npath] = id;
+      idToPath_[id] = npath;
+    }
+  }
+
+  // 実際のロード処理（非同期タスクとして実行）
+  auto task = std::async(std::launch::async, [this, npath, srgb] {
+    try {
+      auto start = std::chrono::high_resolution_clock::now();
+
+      auto &tex = [this, &npath]() -> Texture2D & {
+        std::lock_guard lock(mtx_);
+        return cache_[npath];
+      }();
+
+      // 1. CPUデコード (完全並列)
+      if (!tex.LoadCPU(npath, srgb)) {
+        Log::Print("[Texture] ロード失敗: " + npath);
+        return;
       }
+
+      // 2. GPU転送 (最小限のロック)
+      Microsoft::WRL::ComPtr<ID3D12Resource> uploadRes;
+      {
+        std::lock_guard lock(mtx_);
+        // 二重ロード防止（最終確認）
+        if (!tex.IsLoaded()) {
+          uploadRes = tex.Upload(*srv_, loadCmd_);
+          if (uploadRes) {
+            uint64_t fence = loadCmd_.ExecuteAndReset();
+            pendingUploads_.push_back({uploadRes, fence});
+          }
+        }
+      }
+
+      if (tex.IsLoaded()) {
+        auto end = std::chrono::high_resolution_clock::now();
+        Log::Print(std::format(
+            "[Texture] ロード完了: {} (Time: {:.3f}ms), SRV Index: {}", npath,
+            std::chrono::duration<float, std::milli>(end - start).count(),
+            tex.SrvHandle().index));
+      }
+    } catch (const std::exception &e) {
+      Log::Print(
+          std::format("[Texture] ロード中に例外発生 ({}): {}", npath, e.what()));
+    } catch (...) {
+      Log::Print(std::format("[Texture] ロード中に不明な例外発生 ({})", npath));
     }
-    return itId->second;
-  }
+  });
 
-  // 新規
-  auto &tex = cache_[path];
-  if (!tex.IsLoaded()) {
-    auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, path, srgb);
-    if (uploadRes) {
-      Log::Print("[Texture] Loaded: " + path);
-      uint64_t fence = loadCmd_.ExecuteAndReset();
-      pendingUploads_.push_back({uploadRes, fence});
-    }
-  }
+  // RenderContext にタスク追加
+  RC::AddLoadingTask(std::move(task));
 
-
-  TextureID id = nextId_++;
-
-  pathToId_[path] = id;
-  idToPath_[id] = path;
   return id;
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrv(TextureID id) const {
+  std::lock_guard lock(mtx_);
   static D3D12_GPU_DESCRIPTOR_HANDLE nullHandle{}; // 失敗時用
   auto it = idToPath_.find(id);
   if (it == idToPath_.end())
@@ -119,6 +164,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrv(TextureID id) const {
 }
 
 const DirectX::TexMetadata *TextureManager::GetMeta(TextureID id) const {
+  std::lock_guard lock(mtx_);
   auto it = idToPath_.find(id);
   if (it == idToPath_.end())
     return nullptr;
@@ -129,6 +175,7 @@ const DirectX::TexMetadata *TextureManager::GetMeta(TextureID id) const {
 }
 
 Texture2D *TextureManager::GetTexture(TextureID id) {
+  std::lock_guard lock(mtx_);
   auto it = idToPath_.find(id);
   if (it == idToPath_.end())
     return nullptr;
@@ -137,6 +184,7 @@ Texture2D *TextureManager::GetTexture(TextureID id) {
 
 std::string
 TextureManager::GetPathBySrv(D3D12_GPU_DESCRIPTOR_HANDLE srv) const {
+  std::lock_guard lock(mtx_);
   if (srv.ptr == 0)
     return {};
 

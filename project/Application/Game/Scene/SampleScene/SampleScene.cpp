@@ -5,6 +5,8 @@
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "imgui/imgui.h"
+#include <future>
+#include <vector>
 
 SampleScene::~SampleScene() {
   SceneContext dummy{};
@@ -35,37 +37,40 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   }
 
   pointLight = RC::CreatePointLight();
-
   pointLight2 = RC::CreatePointLight();
-
   spotLight = RC::CreateSpotLight();
-
   spotLight2 = RC::CreateSpotLight();
 
   // =============================
-  // モデル初期化
+  // リソースの非同期ロード開始
   // =============================
 
-  plane = RC::LoadModel("Resources/model/plane");
+  // モデルとテクスチャのロードを直列で記述（内部で自動的に並列ロードされる）
+  plane       = RC::LoadModel("Resources/model/plane");
+  blockModel  = RC::LoadModel("Resources/model/block");
+  model       = RC::LoadModel("Resources/model/teapot");
+  tx_model    = RC::LoadTex("Resources/uvChecker.png");
+  terrain     = RC::LoadModel("Resources/model/terrain");
+  tx_Skydome_ = RC::LoadTex("Resources/skydome.jpg");
+  tx_ball     = RC::LoadTex("Resources/monsterBall.png");
+  sprite      = RC::LoadSprite("Resources/uvChecker.png", ctx);
+
+  // =============================
+  // 各オブジェクトへの流し込み
+  // =============================
+
   planeTransform_ = RC::GetModelTransformPtr(plane);
 
-  blockModel = RC::LoadModel("Resources/model/block");
   RC::SetModelColor(blockModel, blockColor_); // ちょい青で透明
 
-  model = RC::LoadModel("Resources/model/teapot");
-  tx_model = RC::LoadTex("Resources/uvChecker.png");
-
-  terrain = RC::LoadModel("Resources/model/terrain");
   terrainT_ = RC::GetModelTransformPtr(terrain);
   terrainT_->translation.y = -1.0f;
 
   // 天球
-  tx_Skydome_ = RC::LoadTex("Resources/skydome.jpg");
   skydome = RC::GenerateSkydomeEx(tx_Skydome_, 40.0f);
   skydomeT_ = RC::GetSkydomeTransformPtr(skydome);
   RC::SetSkydomeColor(skydome, {0.6f, 1.0f, 1.0f, 1.0f});
 
-  tx_ball = RC::LoadTex("Resources/monsterBall.png");
   primitiveSphere = RC::GenerateSphere(1.0f, tx_ball);
   primitiveSphereT_ = RC::GetPrimitiveMeshTransformPtr(primitiveSphere);
   primitiveSphereT_->rotation.y = -1.6f;
@@ -88,11 +93,6 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   testCapsule = RC::GenerateCapsule(0.6f, 2.5f, tx_model);
   RC::GetPrimitiveMeshTransformPtr(testCapsule)->translation = {9, 1.25f, 0};
 
-  // =============================
-  // Sprite初期化
-  // =============================
-
-  sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
   RC::SetSpriteTransform(sprite, spriteTransform_);
   RC::SetSpriteScreenSize(sprite, spriteSize_.x, spriteSize_.y);
 }

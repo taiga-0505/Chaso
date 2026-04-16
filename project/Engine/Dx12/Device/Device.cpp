@@ -77,15 +77,6 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
     assert(adapter_ && "No suitable DXGI adapter found");
   }
 
-  // ===== ここでアダプタ名をログ =====
-  DXGI_ADAPTER_DESC3 desc{};
-  {
-    // GetDesc3 は IDXGIAdapter4
-    hr = adapter_->GetDesc3(&desc);
-    assert(SUCCEEDED(hr));
-    logger.WriteLog(logger.ConvertString(
-        std::format(L"Use Adapter: {}\n", desc.Description)));
-  }
 
   // ===== FeatureLevel を高い順で試す & ログ =====
   const D3D_FEATURE_LEVEL tryLevels[] = {
@@ -101,13 +92,11 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
     if (SUCCEEDED(hr)) {
       featureLevel_ = tryLevels[i];
       device_.Attach(dev); // 所有権を移譲 (AddRefしない)
-      logger.WriteLog(std::format("FeatureLevel : {}\n", tryLevelStr[i]));
       break;
     }
   }
   assert(device_ && "D3D12 device creation failed");
   device_->SetName(L"MainDevice");
-  logger.WriteLog("Complete create D3D12Device!!!\n");
 }
 
 

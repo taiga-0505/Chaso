@@ -90,4 +90,14 @@ BlendMode GetBlendMode() {
   return RenderContext::GetInstance().CurrentBlendMode();
 }
 
+void AddLoadingTask(std::future<void> &&task) {
+  RenderContext::GetInstance().AddLoadingTask(std::move(task));
+}
+
+void WaitAllLoads() { RenderContext::GetInstance().WaitAllLoads(); }
+
+void ClearTextureLogHistory() {
+  RenderContext::GetInstance().Textures().ClearLogHistory();
+}
+
 } // namespace RC

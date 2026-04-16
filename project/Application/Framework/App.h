@@ -2,6 +2,8 @@
 #include "AppConfig.h"
 #include "Dx12Core.h"
 #include "Game.h"
+#include "Graphics/PostProcess/PostProcess.h"
+#include "Graphics/Texture/RenderTexture/RenderTexture.h"
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "ImGuiManager/ImGuiManager.h"
 #include "Input/Input.h"
@@ -75,6 +77,10 @@ private:
 
   // パイプライン
   PipelineManager pm_;
+
+  // オフスクリーンレンダリング / ポストプロセス
+  RenderTexture renderTexture_;
+  std::unique_ptr<PostProcess> postProcess_;
 
   // === シーン管理 ===
   // === Game（シーン切替などゲーム側の責務） ===

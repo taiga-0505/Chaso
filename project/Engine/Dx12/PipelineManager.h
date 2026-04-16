@@ -8,6 +8,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <filesystem>
 
 enum class InputLayoutType {
   Object3D,
@@ -90,6 +91,16 @@ public:
   void RegisterDefaultPipelines();
 
   /// <summary>
+  /// キャッシュファイルをロードする
+  /// </summary>
+  void LoadCache(const std::string &filePath);
+
+  /// <summary>
+  /// キャッシュファイルを保存する
+  /// </summary>
+  void SaveCache(const std::string &filePath);
+
+  /// <summary>
   /// prefix + ブレンドモードからキーを作成する
   /// </summary>
   static std::string MakeKey(std::string_view prefix, BlendMode mode);
@@ -100,7 +111,21 @@ private:
 
   GraphicsPipeline *createFromBlobs_(const std::string &key,
                                      const PipelineDesc &desc, IDxcBlob *vs,
-                                     IDxcBlob *ps);
+                                     IDxcBlob *ps,
+                                     const D3D12_CACHED_PIPELINE_STATE &cachedPSO);
+
+  struct PsoCache {
+    std::vector<uint8_t> psoData;
+    std::vector<uint8_t> vsData;
+    std::vector<uint8_t> psData;
+    int64_t vsTime = 0; // VSファイルの最終更新日時
+    int64_t psTime = 0; // PSファイルの最終更新日時
+  };
+
+  /// <summary>
+  /// パイプライン設定から一意なキャッシュキーを生成する
+  /// </summary>
+  static std::string makePsoCacheKey_(const std::string &key, const PipelineDesc &desc);
 
 private:
   struct Entry {
@@ -114,4 +139,6 @@ private:
 
   ShaderCompiler compiler_;
   std::unordered_map<std::string, Entry> pipelines_;
+  std::unordered_map<std::string, PsoCache> psoCache_;
+  bool cacheUpdated_ = false;
 };

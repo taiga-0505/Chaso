@@ -57,8 +57,9 @@ int SpriteManager::Load(const std::string &path, float screenW, float screenH,
     return -1;
   }
 
+  std::string npath = Log::NormalizePath(path);
   // テクスチャロード（TextureManager 側がキャッシュしている想定）
-  const int texHandle = texman_->LoadID(path, srgb);
+  const int texHandle = texman_->LoadID(npath, srgb);
   if (texHandle < 0) {
     return -1;
   }
@@ -82,8 +83,8 @@ int SpriteManager::Load(const std::string &path, float screenW, float screenH,
   // 初期化
   s.ptr->Initialize(device_, quad, screenW, screenH);
   s.ptr->SetTexture(texman_->GetSrv(texHandle));
-  s.ptr->SetFilePath(path);
-  Log::Print("[Sprite] Loaded: " + path);
+  s.ptr->SetFilePath(npath);
+  Log::Print("[Sprite] ロード完了: " + npath);
 
   // 初期値（必要なら外側で SetTransform/SetSize 等で上書き）
   s.ptr->SetSize(100, 100);
@@ -103,6 +104,7 @@ void SpriteManager::Unload(int handle) {
   if (!s.inUse) {
     return;
   }
+  Log::Print("[Sprite] 破棄完了: " + Log::NormalizePath(s.ptr->GetFilePath()));
   s.ptr.reset();
   s.inUse = false;
   s.texHandle = -1;

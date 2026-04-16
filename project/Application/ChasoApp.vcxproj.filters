@@ -64,6 +64,9 @@
     <Filter Include="Resources\Shader\Sprite">
       <UniqueIdentifier>{e154087b-a457-5cd9-788f-df6d22fb77aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources\Shader\CopyImage">
+      <UniqueIdentifier>{d7a1b2c3-e4f5-6789-abcd-ef123456789a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -102,7 +105,9 @@
     <ClCompile Include="..\Application\Game\Scene\TitleScene\TitleScene.cpp">
       <Filter>Game\Scene\TitleScene</Filter>
     </ClCompile>
-    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp" />
+    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp">
+      <Filter>Game\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\Framework\App.h">
@@ -188,6 +193,12 @@
     <FxCompile Include="..\Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Resources\Shader\Sprite</Filter>
     </FxCompile>
+    <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.PS.hlsl">
+      <Filter>Resources\Shader\CopyImage</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.VS.hlsl">
+      <Filter>Resources\Shader\CopyImage</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shader\Object3d\Object3d.hlsli">
@@ -195,6 +206,9 @@
     </None>
     <None Include="..\Resources\Shader\Particle\Particle.hlsli">
       <Filter>Resources\Shader\Particle</Filter>
+    </None>
+    <None Include="..\Resources\Shader\CopyImage\CopyImage.hlsli">
+      <Filter>Resources\Shader\CopyImage</Filter>
     </None>
   </ItemGroup>
 </Project>
