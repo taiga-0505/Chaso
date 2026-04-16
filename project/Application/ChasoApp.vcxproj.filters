@@ -64,20 +64,8 @@
     <Filter Include="Resources\Shader\Sprite">
       <UniqueIdentifier>{e154087b-a457-5cd9-788f-df6d22fb77aa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Game\Coin">
-      <UniqueIdentifier>{02d29267-0a55-45c6-bf09-91c05c0a6310}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Player">
-      <UniqueIdentifier>{3021fe6c-a4be-4076-80d5-56295ea2c9ef}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\MapChipField">
-      <UniqueIdentifier>{de7dfa52-3825-472d-baee-c8f2e3a76287}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Goal">
-      <UniqueIdentifier>{81ad07a2-1635-419f-9127-2782499115b1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\StageSelection">
-      <UniqueIdentifier>{5ba40d86-71ea-488f-9618-9fc29d14d212}</UniqueIdentifier>
+    <Filter Include="Resources\Shader\CopyImage">
+      <UniqueIdentifier>{d7a1b2c3-e4f5-6789-abcd-ef123456789a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -117,21 +105,8 @@
     <ClCompile Include="..\Application\Game\Scene\TitleScene\TitleScene.cpp">
       <Filter>Game\Scene\TitleScene</Filter>
     </ClCompile>
-    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp" />
-    <ClCompile Include="Game\Coin\Coin.cpp">
-      <Filter>Game\Coin</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Player\Player.cpp">
-      <Filter>Game\Player</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\MapChipField\MapChipField.cpp">
-      <Filter>Game\MapChipField</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\Goal\Goal.cpp">
-      <Filter>Game\Goal</Filter>
-    </ClCompile>
-    <ClCompile Include="Game\StageSelection\StageSelection.cpp">
-      <Filter>Game\StageSelection</Filter>
+    <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp">
+      <Filter>Game\Scene</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -233,6 +208,12 @@
     <FxCompile Include="..\Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Resources\Shader\Sprite</Filter>
     </FxCompile>
+    <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.PS.hlsl">
+      <Filter>Resources\Shader\CopyImage</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.VS.hlsl">
+      <Filter>Resources\Shader\CopyImage</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shader\Object3d\Object3d.hlsli">
@@ -240,6 +221,9 @@
     </None>
     <None Include="..\Resources\Shader\Particle\Particle.hlsli">
       <Filter>Resources\Shader\Particle</Filter>
+    </None>
+    <None Include="..\Resources\Shader\CopyImage\CopyImage.hlsli">
+      <Filter>Resources\Shader\CopyImage</Filter>
     </None>
   </ItemGroup>
 </Project>

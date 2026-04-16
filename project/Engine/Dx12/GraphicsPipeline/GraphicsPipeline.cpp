@@ -58,7 +58,8 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
                                UINT elemCount, D3D12_SHADER_BYTECODE vs,
                                D3D12_SHADER_BYTECODE ps, DXGI_FORMAT rtvFmt,
                                DXGI_FORMAT dsvFmt,
-                               const GPipelineOptions &opt) {
+                               const GPipelineOptions &opt,
+                               const D3D12_CACHED_PIPELINE_STATE &cachedPSO) {
   // ====================
   // Root Signature
   // ====================
@@ -71,8 +72,8 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   // PSO 作成
   D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
   d.pRootSignature = root_.Get();
-  d.VS = vs;
-  d.PS = ps;
+  d.VS = vs.BytecodeLength > 0 ? vs : D3D12_SHADER_BYTECODE{nullptr, 0};
+  d.PS = ps.BytecodeLength > 0 ? ps : D3D12_SHADER_BYTECODE{nullptr, 0};
 
   // 入力レイアウト
   D3D12_INPUT_LAYOUT_DESC ild{};
@@ -182,8 +183,19 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   d.SampleDesc.Count = 1;
   d.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
+  // キャッシュPSO設定
+  d.CachedPSO = cachedPSO;
+
   HRESULT hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
   assert(SUCCEEDED(hr));
+}
+
+Microsoft::WRL::ComPtr<ID3DBlob> GraphicsPipeline::GetSerializedBlob() const {
+  if (!pso_)
+    return nullptr;
+  Microsoft::WRL::ComPtr<ID3DBlob> blob;
+  pso_->GetCachedBlob(blob.GetAddressOf());
+  return blob;
 }
 
 void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
@@ -376,6 +388,21 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[0].Descriptor.ShaderRegister = 0;
     paramCount = 1;
     break;
+  case RootSignatureType::PostProcess:
+    // 0: SRV table t0 (PS) Texture
+    ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[0].BaseShaderRegister = 0;
+    ranges[0].NumDescriptors = 1;
+    ranges[0].OffsetInDescriptorsFromTableStart =
+        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[0].DescriptorTable.NumDescriptorRanges = 1;
+    params[0].DescriptorTable.pDescriptorRanges = &ranges[0];
+
+    paramCount = 1;
+    break;
   }
 
   // ====================
@@ -405,7 +432,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   Microsoft::WRL::ComPtr<ID3DBlob> sig;
   Microsoft::WRL::ComPtr<ID3DBlob> err;
   HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
-                                           &sig, &err);
+                                           sig.GetAddressOf(), err.GetAddressOf());
 
   if (FAILED(hr)) {
     if (err) {

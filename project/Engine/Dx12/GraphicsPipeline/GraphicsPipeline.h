@@ -31,6 +31,7 @@ enum class RootSignatureType {
   Particle,
   FogOverlay,
   Primitive3D,
+  PostProcess,
 };
 
 /// <summary>
@@ -94,7 +95,13 @@ public:
   void BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
                D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
                DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
-               const GPipelineOptions &opt);
+               const GPipelineOptions &opt,
+               const D3D12_CACHED_PIPELINE_STATE &cachedPSO);
+
+  /// <summary>
+  /// 生成した PSO からキャッシュバイナリを取得する
+  /// </summary>
+  Microsoft::WRL::ComPtr<ID3DBlob> GetSerializedBlob() const;
 
   /// <summary>
   /// ルートシグネチャを取得する

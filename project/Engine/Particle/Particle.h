@@ -144,6 +144,7 @@ private:
   Microsoft::WRL::ComPtr<ID3D12Resource> cbMat_; // SpriteMaterial 用 CB
   SpriteMaterial *cbMatMapped_ = nullptr;        // 一時的な Map 先
   D3D12_GPU_DESCRIPTOR_HANDLE textureSrv_{}; // パーティクル用テクスチャ
+  int texHandle_ = -1;
 
   // デバイス
   Microsoft::WRL::ComPtr<ID3D12Device> device_;

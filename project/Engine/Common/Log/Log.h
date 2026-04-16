@@ -1,5 +1,6 @@
 #pragma once
 #include <ostream>
+#include <string>
 
 class Log {
 
@@ -18,4 +19,9 @@ public:
 
   // wstringをstringに変換する関数
   std::string ConvertString(const std::wstring &wstr);
+
+  /// <summary>
+  /// パスの区切り文字を '/' に統一する
+  /// </summary>
+  static std::string NormalizePath(const std::string &path);
 };

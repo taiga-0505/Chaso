@@ -7,9 +7,6 @@
 using namespace RC;
 
 Sprite2D::~Sprite2D() {
-  if (!filePath_.empty()) {
-    Log::Print("[Sprite] Unloaded: " + filePath_);
-  }
   Release();
 }
 
@@ -75,7 +72,7 @@ void Sprite2D::Update() {
 }
 
 void Sprite2D::Draw(ID3D12GraphicsCommandList *cmdList) const {
-  if (!visible_)
+  if (!visible_ || srv_.ptr == 0)
     return;
   if (!mesh_ || !mesh_->Ready())
     return;

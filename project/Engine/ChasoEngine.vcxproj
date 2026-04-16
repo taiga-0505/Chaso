@@ -202,6 +202,8 @@
     <ClCompile Include="Input\Controller\Controller.cpp" />
     <ClCompile Include="Input\Keyboard\Keyboard.cpp" />
     <ClCompile Include="Input\Mouse\Mouse.cpp" />
+    <ClCompile Include="Graphics\Texture\RenderTexture\RenderTexture.cpp" />
+    <ClCompile Include="Graphics\PostProcess\PostProcess.cpp" />
   </ItemGroup>
   <ItemGroup>
     <!-- Camera -->
@@ -285,6 +287,8 @@
     <ClInclude Include="Input\Controller\Controller.h" />
     <ClInclude Include="Input\Keyboard\Keyboard.h" />
     <ClInclude Include="Input\Mouse\Mouse.h" />
+    <ClInclude Include="Graphics\Texture\RenderTexture\RenderTexture.h" />
+    <ClInclude Include="Graphics\PostProcess\PostProcess.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

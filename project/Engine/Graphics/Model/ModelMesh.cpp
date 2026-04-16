@@ -7,6 +7,9 @@
 #include <fstream>
 #include <numbers>
 #include <sstream>
+#include <chrono>
+#include <format>
+#include "Common/Log/Log.h"
 
 #if __has_include(<assimp/version.h>)
 #include <assimp/version.h>
@@ -86,15 +89,13 @@ bool ModelMesh::LoadModel(ID3D12Device *device, const std::string &modelPath) {
 
 bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   Assimp::Importer importer;
+  const unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder;
 
-  // 資料に合わせる：
-  // - 三角形化
-  // - UV上下反転
-  // - 面の向き反転（X反転で三角形の向きが反転するので、ここで補正）
-  const unsigned int flags =
-      aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_FlipWindingOrder;
-
+  auto start = std::chrono::high_resolution_clock::now();
   const aiScene *scene = importer.ReadFile(filePath.c_str(), flags);
+  auto end = std::chrono::high_resolution_clock::now();
+  Log::Print(std::format("[ModelMesh] Assimp ReadFile: {:.3f}ms, Path: {}", std::chrono::duration<float, std::milli>(end - start).count(), filePath));
+
   if (!scene || !scene->HasMeshes()) {
     return false;
   }
@@ -110,9 +111,12 @@ bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   drawItems_.clear();
   materialFile_ = {};
 
+  start = std::chrono::high_resolution_clock::now();
   if (!ExtractScene_(scene, baseDir, verts)) {
     return false;
   }
+  end = std::chrono::high_resolution_clock::now();
+  Log::Print(std::format("[ModelMesh] ExtractScene: {:.3f}ms", std::chrono::duration<float, std::milli>(end - start).count()));
 
   // RootNode（階層）
   rootNode_ = ReadNode_(scene->mRootNode);
@@ -121,8 +125,11 @@ bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   drawItems_.clear();
   BuildDrawItems_(rootNode_, MakeIdentity4x4());
 
+  start = std::chrono::high_resolution_clock::now();
   // VBアップロード
   UploadVB_(verts);
+  end = std::chrono::high_resolution_clock::now();
+  Log::Print(std::format("[ModelMesh] UploadVB: {:.3f}ms", std::chrono::duration<float, std::milli>(end - start).count()));
   return true;
 }
 

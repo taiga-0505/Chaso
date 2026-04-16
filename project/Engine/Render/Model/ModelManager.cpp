@@ -5,6 +5,10 @@
 #include "Common/Log/Log.h"
 
 #include <filesystem>
+#include <future>
+#include <format>
+#include <chrono>
+#include "RenderCommon.h"
 
 namespace RC {
 
@@ -41,6 +45,7 @@ void ModelManager::Term() {
 }
 
 int ModelManager::AllocSlot_() {
+  // すでにロックされた状態で呼ばれる想定（Load 等から）
   for (int i = 0; i < static_cast<int>(models_.size()); ++i) {
     if (!models_[i].inUse) {
       return i;
@@ -56,6 +61,7 @@ bool ModelManager::IsValid(int handle) const {
 }
 
 ::ModelObject *ModelManager::Get(int handle) {
+  std::lock_guard lock(mtx_);
   if (!IsValid(handle)) {
     return nullptr;
   }
@@ -71,10 +77,8 @@ const ::ModelObject *ModelManager::Get(int handle) const {
 
 std::shared_ptr<::ModelMesh> ModelManager::GetOrLoadMesh_(
     const std::string &path) {
-  if (!device_) {
-    return nullptr;
-  }
-
+  // Load 内ですでにロックされている可能性があるため、ここでは個別にロックせず呼び出し側で管理するか、
+  // 内部的に再帰ロックにする必要があります。今回はシンプルに Load 等の各公開メソッド冒頭でロックします。
   const std::string key = NormalizeMeshKey_(path);
 
   // すでにロード済みなら共有
@@ -97,37 +101,77 @@ std::shared_ptr<::ModelMesh> ModelManager::GetOrLoadMesh_(
 }
 
 int ModelManager::Load(const std::string &path) {
+  std::lock_guard lock(mtx_);
   if (!device_) {
     return -1;
   }
 
+  std::string npath = Log::NormalizePath(path);
+
+  // 既に同じパスがロード中、またはロード済みか確認（Meshキャッシュの活用）
+  // ただしハンドルはユニークに返したいので、新しいスロットは常に作る。
   const int handle = AllocSlot_();
+  models_[handle].inUse = true;
 
   auto obj = std::make_unique<::ModelObject>();
-  obj->Initialize(device_);
+  obj->SetReady(false); // まだ準備中
+  obj->SetFilePath(npath);
   obj->SetTextureManager(texman_);
-
-  auto mesh = GetOrLoadMesh_(path);
-  if (!mesh) {
-    models_[handle].inUse = false;
-    models_[handle].ptr.reset();
-    return -1;
-  }
-  obj->SetMesh(mesh);
-
-  // パスを保存してロードログ出力
-  obj->SetFilePath(path);
-  Log::Print("[Model] Loaded: " + path);
-
+  
+  // ポインタを先にセットしておく（Get で null を返さないように）
   models_[handle].ptr = std::move(obj);
-  models_[handle].inUse = true;
+
+  // --- 非同期ロードタスクの開始 ---
+  auto task = std::async(std::launch::async, [this, handle, npath] {
+    try {
+      auto start = std::chrono::high_resolution_clock::now();
+
+      // 1. メッシュのロード (MeshGenerator等で非常に重い処理)
+      std::shared_ptr<::ModelMesh> mesh;
+      {
+        std::lock_guard lock(mtx_);
+        mesh = GetOrLoadMesh_(npath);
+      }
+
+      if (!mesh) {
+        Log::Print("[Model] ロード失敗: " + npath);
+        return;
+      }
+
+      // 2. モデルオブジェクトの初期化 (GPUリソース作成など)
+      {
+        std::lock_guard lock(mtx_);
+        auto *ptr = Get(handle);
+        if (ptr) {
+          ptr->Initialize(device_);
+          ptr->SetMesh(mesh);
+          ptr->SetReady(true); // 完了！
+        }
+      }
+
+      auto end = std::chrono::high_resolution_clock::now();
+      Log::Print(std::format(
+          "[Model] ロード完了: {} (Time: {:.3f}ms)", npath,
+          std::chrono::duration<float, std::milli>(end - start).count()));
+    } catch (const std::exception &e) {
+      Log::Print(std::format("[Model] ロード中に例外発生 ({}): {}", npath, e.what()));
+    } catch (...) {
+      Log::Print(std::format("[Model] ロード中に不明な例外発生 ({})", npath));
+    }
+  });
+
+  // RenderContext にタスクを登録して、WaitAllLoads で待てるようにする
+  RC::AddLoadingTask(std::move(task));
+
   return handle;
 }
 
 void ModelManager::Unload(int handle) {
+  std::lock_guard lock(mtx_);
   if (!IsValid(handle)) {
     return;
   }
+  Log::Print("[Model] 破棄完了: " + Log::NormalizePath(models_[handle].ptr->GetFilePath()));
   models_[handle].ptr.reset();
   models_[handle].inUse = false;
 }
@@ -154,6 +198,7 @@ void ModelManager::SetLightingMode(int handle, LightingMode m) {
 }
 
 void ModelManager::SetMesh(int handle, const std::string &path) {
+  std::lock_guard lock(mtx_);
   if (!IsValid(handle)) {
     return;
   }
@@ -176,6 +221,7 @@ void ModelManager::ResetCursor(int handle) {
 }
 
 void ModelManager::ResetAllBatchCursors() {
+  std::lock_guard lock(mtx_);
   for (auto &s : models_) {
     if (s.inUse && s.ptr) {
       s.ptr->ResetBatchCursor();

@@ -4,6 +4,8 @@
 #include "imgui/backends/imgui_impl_dx12.h"
 #include "imgui/backends/imgui_impl_win32.h"
 #include "../Common/EngineConfig.h"
+#include "../Common/Log/Log.h"
+#include <format>
 
 #pragma comment(lib, "winmm.lib") // timeGetTimeを使う場合に必要
 
@@ -103,6 +105,8 @@ void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
 
   // ウィンドウを表示
   ShowWindow(hwnd, SW_SHOW);
+
+  Log::Print(std::format("[Window] Created: \"{}\" ({}x{})", windowTitle, kClientWidth, kClientHeight));
 }
 
 static std::wstring Utf8ToWStringImpl(const char *s) {

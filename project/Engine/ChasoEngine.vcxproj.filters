@@ -67,6 +67,9 @@
     <Filter Include="Graphics\Effect">
       <UniqueIdentifier>{e1b2c3d4-e5f6-7890-abcd-ef1234567890}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphics\PostProcess">
+      <UniqueIdentifier>{d334dfce-a591-27be-dfcd-be0a3ee7f400}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Graphics\Model">
       <UniqueIdentifier>{5aca5f74-47db-b7e1-4076-c8b8b97cce7a}</UniqueIdentifier>
     </Filter>
@@ -198,6 +201,9 @@
     </Filter>
     <Filter Include="Input\Keyboard">
       <UniqueIdentifier>{f475ecf4-8298-46d8-b588-26ca5dc50843}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics\Texture\RenderTexture">
+      <UniqueIdentifier>{25c84190-1157-48b4-9c65-58c37a545c42}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -393,17 +399,23 @@
     <ClCompile Include="..\Engine\Camera\CameraController.cpp">
       <Filter>Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Dx12\Dx12Core.cpp">
+    <ClCompile Include="..\Engine\Dx12\Dx12Core.cpp">
       <Filter>Dx12</Filter>
     </ClCompile>
-    <ClCompile Include="Input\Controller\Controller.cpp">
+    <ClCompile Include="..\Engine\Input\Controller\Controller.cpp">
       <Filter>Input\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Input\Mouse\Mouse.cpp">
+    <ClCompile Include="..\Engine\Input\Mouse\Mouse.cpp">
       <Filter>Input\Mouse</Filter>
     </ClCompile>
-    <ClCompile Include="Input\Keyboard\Keyboard.cpp">
+    <ClCompile Include="..\Engine\Input\Keyboard\Keyboard.cpp">
       <Filter>Input\Keyboard</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Texture\RenderTexture\RenderTexture.cpp">
+      <Filter>Graphics\Texture\RenderTexture</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\PostProcess\PostProcess.cpp">
+      <Filter>Graphics\PostProcess</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -611,16 +623,24 @@
     <ClInclude Include="..\Engine\Camera\CameraMath.h">
       <Filter>Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Input\Controller\Controller.h">
+    <ClInclude Include="..\Engine\Input\Controller\Controller.h">
       <Filter>Input\Controller</Filter>
     </ClInclude>
-    <ClInclude Include="Input\Mouse\Mouse.h">
+    <ClInclude Include="..\Engine\Input\Mouse\Mouse.h">
       <Filter>Input\Mouse</Filter>
     </ClInclude>
-    <ClInclude Include="Input\Keyboard\Keyboard.h">
+    <ClInclude Include="..\Engine\Input\Keyboard\Keyboard.h">
       <Filter>Input\Keyboard</Filter>
     </ClInclude>
-    <ClInclude Include="Common\EngineConfig.h" />
+    <ClInclude Include="..\Engine\Common\EngineConfig.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Texture\RenderTexture\RenderTexture.h">
+      <Filter>Graphics\Texture\RenderTexture</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\PostProcess\PostProcess.h">
+      <Filter>Graphics\PostProcess</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Resources\Shader\Object3d\Object3d.hlsli">

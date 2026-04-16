@@ -40,8 +40,8 @@ void Particle::CommonInit_(SceneContext &ctx) {
   // ==================
   // テクスチャ読み込み
   // ==================
-  int texHandle = RC::LoadTex(GetTexturePath(), true);
-  textureSrv_ = RC::GetSrv(texHandle);
+  texHandle_ = RC::LoadTex(GetTexturePath(), true);
+  textureSrv_ = {}; // 初期状態は null
 
   // ==================
   // パーティクル配列の初期生成
@@ -254,6 +254,9 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   if (!visible_) {
     return;
   }
+
+  // 非同期ロードに対応するため、描画直前に最新の SRV を取得する
+  textureSrv_ = RC::GetSrv(texHandle_);
 
   if (numInstance == 0) {
     return;

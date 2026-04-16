@@ -12,9 +12,6 @@ using namespace RC;
 namespace fs = std::filesystem;
 
 ModelObject::~ModelObject() {
-  if (!filePath_.empty()) {
-    Log::Print("[Model] Unloaded: " + filePath_);
-  }
   cbWvp_.resource.Reset();
   cbMat_.resource.Reset();
   cbLight_.resource.Reset();
@@ -191,7 +188,7 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList) {
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
                        const Matrix4x4 &world) {
 
-  if (!mesh_ || !mesh_->Ready() || !visible_)
+  if (!IsReady() || !mesh_ || !mesh_->Ready() || !visible_)
     return;
 
   // Node階層を使う場合は DrawItem を使う
@@ -287,7 +284,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
 
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances) {
-  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
+  if (!IsReady() || !mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
   }
 
@@ -351,7 +348,7 @@ void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances,
                             const RC::Vector4 &color) {
-  if (!mesh_ || !mesh_->Ready() || instances.empty()) {
+  if (!IsReady() || !mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
   }
 

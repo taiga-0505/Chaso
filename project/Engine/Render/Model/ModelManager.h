@@ -14,6 +14,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
+#include <future>
 
 #include "struct.h"
 
@@ -105,6 +107,9 @@ private:
 
   std::vector<Slot> models_;
   std::unordered_map<std::string, std::weak_ptr<::ModelMesh>> meshCache_;
+
+  mutable std::recursive_mutex mtx_;
+  std::unordered_map<std::string, std::shared_future<void>> loadingTasks_;
 };
 
 } // namespace RC

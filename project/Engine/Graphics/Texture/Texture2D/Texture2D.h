@@ -15,6 +15,11 @@ public:
   ~Texture2D() { Term(); }
 
   Microsoft::WRL::ComPtr<ID3D12Resource> LoadFromFile(SRVManager &srv, CommandContext &cmd, const std::string &path, bool srgb = true);
+  
+  // 分割版（並列ロード用）
+  bool LoadCPU(const std::string &path, bool srgb = true);
+  Microsoft::WRL::ComPtr<ID3D12Resource> Upload(SRVManager &srv, CommandContext &cmd);
+  
   void Term(SRVManager *srv = nullptr);
 
 
@@ -41,8 +46,9 @@ public:
     o.metadata_ = {};
     return *this;
   }
-  // 取得系
+   // 取得系
   ID3D12Resource *Resource() const { return resource_.Get(); }
+  SRVManager::Handle SrvHandle() const { return srv_; }
   D3D12_GPU_DESCRIPTOR_HANDLE GpuSrv() const { return srv_.gpu; }
   D3D12_CPU_DESCRIPTOR_HANDLE CpuSrv() const { return srv_.cpu; }
   const DirectX::TexMetadata &Metadata() const { return metadata_; }

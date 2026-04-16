@@ -2,6 +2,7 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include <cassert>
+#include <mutex>
 
 // バッファリソース作成
 inline Microsoft::WRL::ComPtr<ID3D12Resource>

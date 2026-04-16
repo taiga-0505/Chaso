@@ -1,5 +1,9 @@
 #include "PipelineManager.h"
+#include "Common/Log/Log.h"
+#include <d3d12.h>
 #include <cassert>
+#include <format>
+#include <fstream>
 
 void PipelineManager::Init(ID3D12Device *device, DXGI_FORMAT rtvFmt,
                            DXGI_FORMAT dsvFmt) {
@@ -41,34 +45,65 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
   assert(!desc.vsPath.empty());
   assert(!desc.psPath.empty());
 
-  // ====================
-  // Compile
-  // ====================
-  // シェーダー設定
-  ShaderDesc vs{};
-  vs.path = desc.vsPath.c_str();
-  vs.entry = desc.vsEntry.c_str();
-  vs.target = desc.vsTarget.c_str();
-  vs.optimize = desc.optimize;
-  vs.debugInfo = desc.debugInfo;
+  // キャッシュヒットチェック
+  const std::string cacheKey = makePsoCacheKey_(key, desc);
+  D3D12_CACHED_PIPELINE_STATE cachedPSO = {};
+  if (auto it = psoCache_.find(cacheKey); it != psoCache_.end()) {
+    // ファイルの更新日時を確認
+    bool stale = false;
+    try {
+      auto vsT = std::filesystem::last_write_time(desc.vsPath).time_since_epoch().count();
+      auto psT = std::filesystem::last_write_time(desc.psPath).time_since_epoch().count();
+      if (vsT != it->second.vsTime || psT != it->second.psTime) {
+        stale = true;
+      }
+    } catch (...) {
+      stale = true; // ファイルがない場合は古いとみなす（通常ありえないが）
+    }
 
-  ShaderDesc ps{};
-  ps.path = desc.psPath.c_str();
-  ps.entry = desc.psEntry.c_str();
-  ps.target = desc.psTarget.c_str();
-  ps.optimize = desc.optimize;
-  ps.debugInfo = desc.debugInfo;
+    if (!stale) {
+      cachedPSO.pCachedBlob = it->second.psoData.data();
+      cachedPSO.CachedBlobSizeInBytes = it->second.psoData.size();
 
-  // コンパイル
-  CompiledShader VS = compiler_.Compile(vs);
-  CompiledShader PS = compiler_.Compile(ps);
-  assert(VS.HasBlob() && PS.HasBlob());
+      // キャッシュヒット時はコンパイル済みのバイナリを利用
+      D3D12_SHADER_BYTECODE vsBC{it->second.vsData.data(), it->second.vsData.size()};
+      D3D12_SHADER_BYTECODE psBC{it->second.psData.data(), it->second.psData.size()};
 
-  // ====================
-  // Create
-  // ====================
-  // パイプライン作成
-  return createFromBlobs_(key, desc, VS.Blob(), PS.Blob());
+      Entry e;
+      e.desc = desc;
+      e.pipeline = std::make_unique<GraphicsPipeline>();
+      e.pipeline->Init(device_);
+
+      const D3D12_INPUT_ELEMENT_DESC *il =
+          e.desc.inputLayout.empty() ? nullptr : e.desc.inputLayout.data();
+      e.pipeline->BuildEx(il, static_cast<UINT>(e.desc.inputLayout.size()), vsBC,
+                          psBC, rtvFmt_, dsvFmt_, e.desc.opt, cachedPSO);
+
+      auto &ref = pipelines_[key] = std::move(e);
+      return ref.pipeline.get();
+    }
+  }
+
+  // シェーダーコンパイル（キャッシュヒットしなかった場合）
+  ShaderDesc vsDesc{};
+  vsDesc.path = desc.vsPath.c_str();
+  vsDesc.entry = desc.vsEntry.c_str();
+  vsDesc.target = desc.vsTarget.c_str();
+  vsDesc.optimize = desc.optimize;
+  vsDesc.debugInfo = desc.debugInfo;
+
+  ShaderDesc psDesc{};
+  psDesc.path = desc.psPath.c_str();
+  psDesc.entry = desc.psEntry.c_str();
+  psDesc.target = desc.psTarget.c_str();
+  psDesc.optimize = desc.optimize;
+  psDesc.debugInfo = desc.debugInfo;
+
+  CompiledShader vs = compiler_.Compile(vsDesc);
+  CompiledShader ps = compiler_.Compile(psDesc);
+  assert(vs.HasBlob() && ps.HasBlob());
+
+  return createFromBlobs_(key, desc, vs.Blob(), ps.Blob(), cachedPSO);
 }
 
 GraphicsPipeline *PipelineManager::CreateFromFiles(
@@ -159,7 +194,8 @@ bool PipelineManager::Rebuild(const std::string &key) {
   const D3D12_INPUT_ELEMENT_DESC *il =
       d.inputLayout.empty() ? nullptr : d.inputLayout.data();
   it->second.pipeline->BuildEx(il, static_cast<UINT>(d.inputLayout.size()),
-                               vsBC, psBC, rtvFmt_, dsvFmt_, d.opt);
+                               vsBC, psBC, rtvFmt_, dsvFmt_, d.opt,
+                               D3D12_CACHED_PIPELINE_STATE{});
 
   return true;
 }
@@ -174,10 +210,9 @@ void PipelineManager::RebuildAll() {
   }
 }
 
-GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
-                                                    const PipelineDesc &desc,
-                                                    IDxcBlob *vs,
-                                                    IDxcBlob *ps) {
+GraphicsPipeline *PipelineManager::createFromBlobs_(
+    const std::string &key, const PipelineDesc &desc, IDxcBlob *vs,
+    IDxcBlob *ps, const D3D12_CACHED_PIPELINE_STATE &cachedPSO) {
   // ====================
   // Create
   // ====================
@@ -187,16 +222,150 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(const std::string &key,
   e.pipeline = std::make_unique<GraphicsPipeline>();
   e.pipeline->Init(device_);
 
-  D3D12_SHADER_BYTECODE vsBC{vs->GetBufferPointer(), vs->GetBufferSize()};
-  D3D12_SHADER_BYTECODE psBC{ps->GetBufferPointer(), ps->GetBufferSize()};
+  D3D12_SHADER_BYTECODE vsBC =
+      vs ? D3D12_SHADER_BYTECODE{vs->GetBufferPointer(), vs->GetBufferSize()}
+         : D3D12_SHADER_BYTECODE{nullptr, 0};
+  D3D12_SHADER_BYTECODE psBC =
+      ps ? D3D12_SHADER_BYTECODE{ps->GetBufferPointer(), ps->GetBufferSize()}
+         : D3D12_SHADER_BYTECODE{nullptr, 0};
 
   const D3D12_INPUT_ELEMENT_DESC *il =
       e.desc.inputLayout.empty() ? nullptr : e.desc.inputLayout.data();
   e.pipeline->BuildEx(il, static_cast<UINT>(e.desc.inputLayout.size()), vsBC,
-                      psBC, rtvFmt_, dsvFmt_, e.desc.opt);
+                      psBC, rtvFmt_, dsvFmt_, e.desc.opt, cachedPSO);
+
+  // キャッシュの更新（新規作成時、またはキャッシュなしで作成した場合）
+  if (cachedPSO.pCachedBlob == nullptr && vs != nullptr && ps != nullptr) {
+    if (auto blob = e.pipeline->GetSerializedBlob()) {
+      const std::string cacheKey = makePsoCacheKey_(key, desc);
+      auto &cache = psoCache_[cacheKey];
+
+      // PSOデータ
+      cache.psoData.assign((uint8_t *)blob->GetBufferPointer(),
+                           (uint8_t *)blob->GetBufferPointer() +
+                               blob->GetBufferSize());
+      // VSデータ
+      cache.vsData.assign((uint8_t *)vs->GetBufferPointer(),
+                          (uint8_t *)vs->GetBufferPointer() +
+                              vs->GetBufferSize());
+      // PSデータ
+      cache.psData.assign((uint8_t *)ps->GetBufferPointer(),
+                          (uint8_t *)ps->GetBufferPointer() +
+                              ps->GetBufferSize());
+
+      // 更新日時も記録
+      try {
+        cache.vsTime = std::filesystem::last_write_time(desc.vsPath).time_since_epoch().count();
+        cache.psTime = std::filesystem::last_write_time(desc.psPath).time_since_epoch().count();
+      } catch (...) {
+        cache.vsTime = 0;
+        cache.psTime = 0;
+      }
+
+      cacheUpdated_ = true;
+    }
+  }
 
   auto &ref = pipelines_[key] = std::move(e);
   return ref.pipeline.get();
+}
+
+void PipelineManager::LoadCache(const std::string &filePath) {
+  std::ifstream ifs(filePath, std::ios::binary);
+  if (!ifs)
+    return;
+
+  size_t count = 0;
+  ifs.read((char *)&count, sizeof(count));
+
+  for (size_t i = 0; i < count; ++i) {
+    size_t keyLen = 0;
+    ifs.read((char *)&keyLen, sizeof(keyLen));
+    std::string key(keyLen, '\0');
+    ifs.read(&key[0], keyLen);
+
+    PsoCache cache;
+
+    // PSO
+    size_t psoSize = 0;
+    ifs.read((char *)&psoSize, sizeof(psoSize));
+    cache.psoData.resize(psoSize);
+    ifs.read((char *)cache.psoData.data(), psoSize);
+
+    // VS
+    size_t vsSize = 0;
+    ifs.read((char *)&vsSize, sizeof(vsSize));
+    cache.vsData.resize(vsSize);
+    ifs.read((char *)cache.vsData.data(), vsSize);
+
+    // PS
+    size_t psSize = 0;
+    ifs.read((char *)&psSize, sizeof(psSize));
+    cache.psData.resize(psSize);
+    ifs.read((char *)cache.psData.data(), psSize);
+
+    // 日時
+    ifs.read((char *)&cache.vsTime, sizeof(cache.vsTime));
+    ifs.read((char *)&cache.psTime, sizeof(cache.psTime));
+
+    psoCache_[key] = std::move(cache);
+  }
+
+  Log::Print(std::format("[PipelineManager] PSOキャッシュロード完了 (Count: {})",
+                         psoCache_.size()));
+}
+
+void PipelineManager::SaveCache(const std::string &filePath) {
+  if (!cacheUpdated_)
+    return;
+
+  // ディレクトリ作成
+  std::filesystem::path path(filePath);
+  if (path.has_parent_path()) {
+    std::filesystem::create_directories(path.parent_path());
+  }
+
+  std::ofstream ofs(filePath, std::ios::binary);
+  if (!ofs)
+    return;
+
+  size_t count = psoCache_.size();
+  ofs.write((const char *)&count, sizeof(count));
+
+  for (const auto &kv : psoCache_) {
+    size_t keyLen = kv.first.length();
+    ofs.write((const char *)&keyLen, sizeof(keyLen));
+    ofs.write(kv.first.data(), keyLen);
+
+    // PSO
+    size_t psoSize = kv.second.psoData.size();
+    ofs.write((const char *)&psoSize, sizeof(psoSize));
+    ofs.write((const char *)kv.second.psoData.data(), psoSize);
+
+    // VS
+    size_t vsSize = kv.second.vsData.size();
+    ofs.write((const char *)&vsSize, sizeof(vsSize));
+    ofs.write((const char *)kv.second.vsData.data(), vsSize);
+
+    // PS
+    size_t psSize = kv.second.psData.size();
+    ofs.write((const char *)&psSize, sizeof(psSize));
+    ofs.write((const char *)kv.second.psData.data(), psSize);
+
+    // 日時
+    ofs.write((const char *)&kv.second.vsTime, sizeof(kv.second.vsTime));
+    ofs.write((const char *)&kv.second.psTime, sizeof(kv.second.psTime));
+  }
+  cacheUpdated_ = false;
+  Log::Print("[PipelineManager] PSOキャッシュ保存完了");
+}
+
+std::string PipelineManager::makePsoCacheKey_(const std::string &key,
+                                              const PipelineDesc &desc) {
+  // 本来は desc の全メンバをハッシュ化すべきだが、
+  // 今回は簡易的に「パイプライン名」をキーとする。
+  // (シェーダーが変更された場合は key が変わるかキャッシュを消す運用)
+  return key;
 }
 
 std::vector<D3D12_INPUT_ELEMENT_DESC>
@@ -300,6 +469,9 @@ std::string PipelineManager::MakeKey(std::string_view prefix, BlendMode mode) {
 }
 
 void PipelineManager::RegisterDefaultPipelines() {
+  // キャッシュロード
+  LoadCache("Resources/Shader/pso_cache.bin");
+
   // ====================
   // Shader Paths
   // ====================
@@ -487,4 +659,27 @@ void PipelineManager::RegisterDefaultPipelines() {
         MakeKey("object3d_glass_inst_front", kBlendModePremultiplied),
         objVsInst, glassPs, InputLayoutType::Object3D, opt);
   }
+  
+  // ====================
+  // PostProcess
+  // ====================
+  // copyimage：ポストプロセス転送用
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false; // 転送なので基本 OFF
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("copyimage.none",
+                    L"Resources/Shader/CopyImage/CopyImage.VS.hlsl",
+                    L"Resources/Shader/CopyImage/CopyImage.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  Log::Print(std::format("[PipelineManager] デフォルトパイプライン登録完了 (Total: {})", pipelines_.size()));
+
+  // キャッシュ保存
+  SaveCache("Resources/Shader/pso_cache.bin");
 }

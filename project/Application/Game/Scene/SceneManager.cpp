@@ -1,5 +1,10 @@
 #include "SceneManager.h"
 #include "Scene.h"
+#include "Common/Log/Log.h"
+#include "RenderCommon.h"
+#include "Fade/Fade.h"
+#include <chrono>
+#include <format>
 
 class FadeOutState;
 class FadeInState;
@@ -138,15 +143,28 @@ void Scene::SceneManager::RequestChange(const std::string &name) {
 
 void Scene::SceneManager::ChangeImmediately(const std::string &name,
                                             SceneContext &ctx) {
+  Log::Print("[Scene] シーン切り替え: " + (currentName_.empty() ? "None" : currentName_) + " -> " + name);
+  
+  auto start = std::chrono::high_resolution_clock::now();
+
   if (current_) {
     current_->OnExit(ctx);
   }
   current_ = get_(name);
   if (current_) {
     current_->OnEnter(ctx);
+    // ロード完了を自動待機（ユーザーが WaitAllLoads を書かなくても済むように）
+    RC::WaitAllLoads();
   }
   currentName_ = name;
   requested_.clear();
+
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<float> duration = end - start;
+  Log::Print(std::format("[Scene] シーン切り替え完了 (Time: {:.3f}s)", duration.count()));
+
+  // 新しいシーンでのテクスチャログ出力を許可するためにリセット
+  RC::ClearTextureLogHistory();
 }
 
 void Scene::SceneManager::Update(SceneContext &ctx) {
