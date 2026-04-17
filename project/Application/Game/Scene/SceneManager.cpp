@@ -145,6 +145,8 @@ void Scene::SceneManager::ChangeImmediately(const std::string &name,
                                             SceneContext &ctx) {
   Log::Print("[Scene] シーン切り替え: " + (currentName_.empty() ? "None" : currentName_) + " -> " + name);
   
+  RC::ClearPostEffects();
+  
   auto start = std::chrono::high_resolution_clock::now();
 
   if (current_) {

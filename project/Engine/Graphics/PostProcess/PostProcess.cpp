@@ -3,8 +3,31 @@
 #include "Dx12/GraphicsPipeline/GraphicsPipeline.h"
 #include "Dx12/PipelineManager.h"
 #include "Graphics/Texture/RenderTexture/RenderTexture.h"
+#include "Common/Log/Log.h"
 
 #include <algorithm>
+#include <format>
+
+namespace {
+const char* ToString(PostEffectType type) {
+  switch (type) {
+  case PostEffectType::Grayscale: return "Grayscale";
+  case PostEffectType::Sepia:     return "Sepia";
+  case PostEffectType::None:      return "None";
+  default:                        return "Unknown";
+  }
+}
+
+std::string ActiveEffectsToString(const std::vector<PostEffectType>& effects) {
+  if (effects.empty()) return "None";
+  std::string result;
+  for (size_t i = 0; i < effects.size(); ++i) {
+    if (i > 0) result += " -> ";
+    result += ToString(effects[i]);
+  }
+  return result;
+}
+} // namespace
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -37,6 +60,9 @@ void PostProcess::SetEffect(PostEffectType type) {
   activeEffects_.clear();
   if (type != PostEffectType::None) {
     activeEffects_.push_back(type);
+    Log::Print(std::format("[PostProcess] SetEffect: {} (Active: {})", ToString(type), ActiveEffectsToString(activeEffects_)));
+  } else {
+    Log::Print(std::format("[PostProcess] SetEffect: None (Active: {})", ActiveEffectsToString(activeEffects_)));
   }
 }
 
@@ -50,6 +76,7 @@ void PostProcess::AddEffect(PostEffectType type) {
   }
   if (!HasEffect(type)) {
     activeEffects_.push_back(type);
+    Log::Print(std::format("[PostProcess] AddEffect: {} (Active: {})", ToString(type), ActiveEffectsToString(activeEffects_)));
   }
 }
 
@@ -57,10 +84,16 @@ void PostProcess::RemoveEffect(PostEffectType type) {
   auto it = std::find(activeEffects_.begin(), activeEffects_.end(), type);
   if (it != activeEffects_.end()) {
     activeEffects_.erase(it);
+    Log::Print(std::format("[PostProcess] RemoveEffect: {} (Active: {})", ToString(type), ActiveEffectsToString(activeEffects_)));
   }
 }
 
-void PostProcess::ClearEffects() { activeEffects_.clear(); }
+void PostProcess::ClearEffects() { 
+  if (!activeEffects_.empty()) {
+    activeEffects_.clear();
+    Log::Print(std::format("[PostProcess] ClearEffects (Active: {})", ActiveEffectsToString(activeEffects_)));
+  }
+}
 
 bool PostProcess::HasEffect(PostEffectType type) const {
   return std::find(activeEffects_.begin(), activeEffects_.end(), type) !=
