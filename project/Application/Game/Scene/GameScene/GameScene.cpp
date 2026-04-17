@@ -165,6 +165,15 @@ void GameScene::OnExit(SceneContext &) {
 
   // ポーズ用スプライト破棄
   pauseOverlay_.Term();
+
+  if (pauseSprite >= 0) {
+    RC::UnloadSprite(pauseSprite);
+    pauseSprite = -1;
+  }
+  if (keyGuideSprite_ >= 0) {
+    RC::UnloadSprite(keyGuideSprite_);
+    keyGuideSprite_ = -1;
+  }
 }
 
 void GameScene::Update(SceneManager &sm, SceneContext &ctx) {

@@ -29,7 +29,6 @@ void Player::Init(int modelIndex, SceneContext &ctx) {
 
 Player::~Player() {
   if (model_ >= 0) {
-    RC::UnloadModel(model_);
     model_ = -1;
   }
 }
