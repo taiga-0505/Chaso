@@ -106,6 +106,7 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
   return createFromBlobs_(key, desc, vs.Blob(), ps.Blob(), cachedPSO);
 }
 
+
 GraphicsPipeline *PipelineManager::CreateFromFiles(
     const std::string &key, const std::wstring &vsPath,
     const std::wstring &psPath, InputLayoutType layoutType,
