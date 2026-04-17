@@ -1,8 +1,8 @@
-name: GE3ReleaseBuild
+name: EngineReleaseBuild
 on:
   push:
     branches:
-      - GE3
+      - Engine
 
 env:
   SOLUTION_FILE_PATH: project/chaso.sln
