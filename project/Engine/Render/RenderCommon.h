@@ -10,6 +10,9 @@
 // D3D12 GPUハンドルを返すために必要
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
 
+// PostEffectType 前方宣言（PostProcess.h で定義）
+enum class PostEffectType;
+
 namespace RC {
 
 // ============================================================================
@@ -1000,6 +1003,46 @@ void SetBlendMode(BlendMode blendMode);
 /// 現在の BlendMode を取得する
 /// </summary>
 BlendMode GetBlendMode();
+
+// ===============================
+// ポストエフェクト切り替え
+// ===============================
+
+/// <summary>
+/// ポストエフェクトを1つだけ設定する（スタックをクリアして設定）
+/// None を指定するとエフェクトなし
+/// </summary>
+void SetPostEffect(::PostEffectType type);
+
+/// <summary>
+/// 先頭のエフェクトを返す（空なら None）
+/// </summary>
+::PostEffectType GetPostEffect();
+
+/// <summary>
+/// エフェクトをスタックに追加する（重ね掛け）
+/// </summary>
+void AddPostEffect(::PostEffectType type);
+
+/// <summary>
+/// エフェクトをスタックから除去する
+/// </summary>
+void RemovePostEffect(::PostEffectType type);
+
+/// <summary>
+/// エフェクトスタックを全クリアする
+/// </summary>
+void ClearPostEffects();
+
+/// <summary>
+/// 指定エフェクトがスタックに含まれているか
+/// </summary>
+bool HasPostEffect(::PostEffectType type);
+
+/// <summary>
+/// ポストエフェクトの ImGui（チェックボックスで重ね掛け切替）
+/// </summary>
+void DrawPostEffectImGui(const char *label = "PostEffect");
 
   /// <summary>
   /// バックグラウンドでのロードタスクを追加する

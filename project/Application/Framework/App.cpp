@@ -81,7 +81,7 @@ bool App::Init() {
   // PostProcess
   renderTexture_.Initialize(&core_, appConfig_.width, appConfig_.height);
   postProcess_ = std::make_unique<PostProcess>();
-  postProcess_->Initialize(&core_, &pm_);
+  postProcess_->Initialize(&core_, &pm_, appConfig_.width, appConfig_.height);
 
   now = std::chrono::high_resolution_clock::now();
   Log::Print(std::format("[App] PostProcess 初期化完了 (Time: {:.3f}ms)", std::chrono::duration<float, std::milli>(now - stepStart).count()));
@@ -93,6 +93,7 @@ bool App::Init() {
   sceneCtx_.app = &appConfig_;
   sceneCtx_.imgui = (RC_ENABLE_IMGUI ? &imgui_ : nullptr);
   sceneCtx_.pipelineManager = &pm_;
+  sceneCtx_.postProcess = postProcess_.get();
   RC::Init(sceneCtx_);
 
   now = std::chrono::high_resolution_clock::now();

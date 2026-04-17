@@ -5,6 +5,8 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 [![DebugBuild](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml)
 [![ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml)
+[![EngineDebugBuild](https://github.com/reachaso/CG2/actions/workflows/EngineDebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/EngineDebugBuild.yml)
+[![EngineReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/EngineReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/EngineReleaseBuild.yml)
 
 ## 概要 (Overview)
 

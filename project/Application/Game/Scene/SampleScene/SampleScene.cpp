@@ -299,6 +299,10 @@ void SampleScene::DrawImGui() {
     // -------------------
     if (ImGui::BeginTabItem("PostEffectTab")) {
 
+      RC::DrawPostEffectImGui();
+
+      ImGui::Separator();
+
       // -------------------
       // Fog
       // -------------------

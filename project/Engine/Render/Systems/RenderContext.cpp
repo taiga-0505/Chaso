@@ -29,6 +29,7 @@ void RenderContext::Init(SceneContext &ctx) {
   }
 
   ctxRef_ = &ctx;
+  postProcess_ = ctx.postProcess;
   device_ = ctx.core->GetDevice();
   srvHeap_ = &ctx.core->SRV();
 

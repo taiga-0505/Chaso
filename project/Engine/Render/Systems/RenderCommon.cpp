@@ -23,6 +23,7 @@
 #include "PipelineManager.h"
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
+#include "Graphics/PostProcess/PostProcess.h"
 #include "Scene.h"
 
 #include <string_view>
@@ -88,6 +89,50 @@ void SetBlendMode(BlendMode blendMode) {
 
 BlendMode GetBlendMode() {
   return RenderContext::GetInstance().CurrentBlendMode();
+}
+
+void SetPostEffect(::PostEffectType type) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetEffect(type);
+  }
+}
+
+::PostEffectType GetPostEffect() {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    return pp->GetEffect();
+  }
+  return ::PostEffectType::None;
+}
+
+void AddPostEffect(::PostEffectType type) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->AddEffect(type);
+  }
+}
+
+void RemovePostEffect(::PostEffectType type) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->RemoveEffect(type);
+  }
+}
+
+void ClearPostEffects() {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->ClearEffects();
+  }
+}
+
+bool HasPostEffect(::PostEffectType type) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    return pp->HasEffect(type);
+  }
+  return false;
+}
+
+void DrawPostEffectImGui(const char *label) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->DrawImGui(label);
+  }
 }
 
 void AddLoadingTask(std::future<void> &&task) {

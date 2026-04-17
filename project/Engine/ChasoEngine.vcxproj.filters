@@ -411,10 +411,10 @@
     <ClCompile Include="..\Engine\Input\Keyboard\Keyboard.cpp">
       <Filter>Input\Keyboard</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Texture\RenderTexture\RenderTexture.cpp">
+    <ClCompile Include="Graphics\Texture\RenderTexture\RenderTexture.cpp">
       <Filter>Graphics\Texture\RenderTexture</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\PostProcess\PostProcess.cpp">
+    <ClCompile Include="Graphics\PostProcess\PostProcess.cpp">
       <Filter>Graphics\PostProcess</Filter>
     </ClCompile>
   </ItemGroup>
@@ -632,13 +632,11 @@
     <ClInclude Include="..\Engine\Input\Keyboard\Keyboard.h">
       <Filter>Input\Keyboard</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Common\EngineConfig.h">
-      <Filter>Common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Texture\RenderTexture\RenderTexture.h">
+    <ClInclude Include="Common\EngineConfig.h" />
+    <ClInclude Include="Graphics\Texture\RenderTexture\RenderTexture.h">
       <Filter>Graphics\Texture\RenderTexture</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\PostProcess\PostProcess.h">
+    <ClInclude Include="Graphics\PostProcess\PostProcess.h">
       <Filter>Graphics\PostProcess</Filter>
     </ClInclude>
   </ItemGroup>
