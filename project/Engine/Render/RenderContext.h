@@ -44,6 +44,7 @@ class Primitive2D;
 class Primitive3D;
 class GraphicsPipeline;
 class DescriptorHeap;
+class PostProcess;
 struct SceneContext;
 
 namespace RC {
@@ -91,6 +92,9 @@ public:
   SpotLightManager &SpLights() { return spLightMan_; }
   AreaLightManager &ArLights() { return arLightMan_; }
   TextureManager &Textures() { return texMan_; }
+
+  // ── PostProcess アクセス ─────────────────────────────
+  PostProcess *GetPostProcess() const { return postProcess_; }
 
   // ── PSO バインドヘルパー ───────────────────────────
   GraphicsPipeline *BindPipeline(std::string_view prefix);
@@ -147,6 +151,7 @@ private:
   DescriptorHeap *srvHeap_ = nullptr;
   ID3D12GraphicsCommandList *cl_ = nullptr;
   SceneContext *ctxRef_ = nullptr;
+  PostProcess *postProcess_ = nullptr;
 
   Matrix4x4 view_;
   Matrix4x4 proj_;

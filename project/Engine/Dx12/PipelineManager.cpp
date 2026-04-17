@@ -663,6 +663,10 @@ void PipelineManager::RegisterDefaultPipelines() {
   // ====================
   // PostProcess
   // ====================
+  // 共通フルスクリーンVS
+  const std::wstring fullscreenVs =
+      L"Resources/Shader/Fullscreen/Fullscreen.VS.hlsl";
+
   // copyimage：ポストプロセス転送用
   {
     GPipelineOptions opt{};
@@ -673,8 +677,38 @@ void PipelineManager::RegisterDefaultPipelines() {
     opt.cull = D3D12_CULL_MODE_NONE;
 
     CreateFromFiles("copyimage.none",
-                    L"Resources/Shader/CopyImage/CopyImage.VS.hlsl",
+                    fullscreenVs,
                     L"Resources/Shader/CopyImage/CopyImage.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // grayscale：グレースケール
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("grayscale.none",
+                    fullscreenVs,
+                    L"Resources/Shader/Grayscale/Grayscale.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // sepia：セピア調
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("sepia.none",
+                    fullscreenVs,
+                    L"Resources/Shader/Sepia/Sepia.PS.hlsl",
                     InputLayoutType::None, opt);
   }
 

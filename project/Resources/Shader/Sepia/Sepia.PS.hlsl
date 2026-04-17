@@ -10,5 +10,8 @@ struct PixelShaderOutPut {
 PixelShaderOutPut main(VertexShaderOutput input) {
     PixelShaderOutPut output;
     output.color = gTexture.Sample(gSampler, input.texcoord);
+    // BT.709 Grayscale -> Sepia
+    float32_t value = dot(output.color.rgb, float32_t3(0.2125f, 0.7154f, 0.0721f));
+    output.color.rgb = value * float32_t3(1.0f, 74.0f / 107.0f, 43.0f / 107.0f);
     return output;
 }

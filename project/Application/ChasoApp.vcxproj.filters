@@ -67,6 +67,15 @@
     <Filter Include="Resources\Shader\CopyImage">
       <UniqueIdentifier>{d7a1b2c3-e4f5-6789-abcd-ef123456789a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources\Shader\Fullscreen">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-7890-1234-567890abcdef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Grayscale">
+      <UniqueIdentifier>{b2c3d4e5-f6a7-8901-2345-67890abcdef1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Sepia">
+      <UniqueIdentifier>{c3d4e5f6-a7b8-9012-3456-7890abcdef12}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -196,8 +205,14 @@
     <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.PS.hlsl">
       <Filter>Resources\Shader\CopyImage</Filter>
     </FxCompile>
-    <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.VS.hlsl">
-      <Filter>Resources\Shader\CopyImage</Filter>
+    <FxCompile Include="..\Resources\Shader\Fullscreen\Fullscreen.VS.hlsl">
+      <Filter>Resources\Shader\Fullscreen</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Grayscale\Grayscale.PS.hlsl">
+      <Filter>Resources\Shader\Grayscale</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Sepia\Sepia.PS.hlsl">
+      <Filter>Resources\Shader\Sepia</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -207,8 +222,8 @@
     <None Include="..\Resources\Shader\Particle\Particle.hlsli">
       <Filter>Resources\Shader\Particle</Filter>
     </None>
-    <None Include="..\Resources\Shader\CopyImage\CopyImage.hlsli">
-      <Filter>Resources\Shader\CopyImage</Filter>
+    <None Include="..\Resources\Shader\Fullscreen\Fullscreen.hlsli">
+      <Filter>Resources\Shader\Fullscreen</Filter>
     </None>
   </ItemGroup>
 </Project>

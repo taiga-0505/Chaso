@@ -1,4 +1,4 @@
-#include "CopyImage.hlsli"
+#include "Fullscreen.hlsli"
 
 static const uint32_t kNumVerTex = 3;
 static const float4 kPositions[kNumVerTex] = {

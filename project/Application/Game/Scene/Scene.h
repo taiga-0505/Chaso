@@ -14,6 +14,7 @@ class ImGuiManager;
 class PipelineManager;
 class BgmManager;
 class SeManager;
+class PostProcess;
 
 // シーンが使う共有コンテキスト
 struct SceneContext {
@@ -23,6 +24,7 @@ struct SceneContext {
   ImGuiManager *imgui = nullptr;
 
   PipelineManager *pipelineManager = nullptr;
+  PostProcess *postProcess = nullptr;
 
   BgmManager *bgmManager = nullptr;
   SeManager *seManager = nullptr;
