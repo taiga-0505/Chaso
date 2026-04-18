@@ -27,6 +27,7 @@
 #include "Light/Spot/SpotLightManager.h"
 #include "Model/ModelManager.h"
 #include "Skydome/SkydomeManager.h"
+#include "Skybox/SkyboxManager.h"
 #include "Mesh/PrimitiveMeshManager.h"
 #include "Sprite/SpriteManager.h"
 #include "Texture/TextureManager/TextureManager.h"
@@ -35,6 +36,7 @@
 #include "Math/Math.h"
 #include "Model/ModelObject.h" // ModelManager の unique_ptr<ModelObject> に必要
 #include "Graphics/Skydome/Skydome.h"    // SkydomeManager の unique_ptr<Skydome> に必要
+#include "Graphics/Skybox/Skybox.h"      // SkyboxManager の unique_ptr<Skybox> に必要
 #include "Graphics/Mesh/PrimitiveMesh.h"
 #include "Graphics/Mesh/MeshGenerator.h"
 #include "function/function.h"
@@ -86,6 +88,7 @@ public:
   ModelManager &Models() { return modelMan_; }
   SpriteManager &Sprites() { return spriteMan_; }
   SkydomeManager &Skydomes() { return skydomeMan_; }
+  SkyboxManager &SkyBoxes() { return skyboxMan_; }
   PrimitiveMeshManager &PrimitiveMeshes() { return primitiveMeshMan_; }
   DirectionalLightManager &DirLights() { return dirLightMan_; }
   PointLightManager &PtLights() { return ptLightMan_; }
@@ -161,6 +164,7 @@ private:
   ModelManager modelMan_;
   SpriteManager spriteMan_;
   SkydomeManager skydomeMan_;
+  SkyboxManager skyboxMan_;
   PrimitiveMeshManager primitiveMeshMan_;
   DirectionalLightManager dirLightMan_;
   PointLightManager ptLightMan_;

@@ -62,6 +62,9 @@ private:
   int testTorus = -1;
   int testCapsule = -1;
 
+  int skybox = -1;
+  Transform *skyboxT_ = nullptr;
+
   // ===============
   // スプライト
   // ===============

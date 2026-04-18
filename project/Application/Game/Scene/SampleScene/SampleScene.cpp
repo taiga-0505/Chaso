@@ -46,14 +46,17 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   // =============================
 
   // モデルとテクスチャのロードを直列で記述（内部で自動的に並列ロードされる）
-  plane       = RC::LoadModel("Resources/model/plane");
-  blockModel  = RC::LoadModel("Resources/model/block");
-  model       = RC::LoadModel("Resources/model/teapot");
-  tx_model    = RC::LoadTex("Resources/uvChecker.png");
-  terrain     = RC::LoadModel("Resources/model/terrain");
-  tx_Skydome_ = RC::LoadTex("Resources/skydome.jpg");
-  tx_ball     = RC::LoadTex("Resources/monsterBall.png");
-  sprite      = RC::LoadSprite("Resources/uvChecker.png", ctx);
+  plane = RC::LoadModel("Resources/model/plane");
+  blockModel = RC::LoadModel("Resources/model/block");
+  model = RC::LoadModel("Resources/model/teapot");
+  tx_model = RC::LoadTex("Resources/uvChecker.png");
+  terrain = RC::LoadModel("Resources/model/terrain");
+  tx_Skydome_ = RC::LoadTex("Resources/sky_sphere.png");
+  tx_ball = RC::LoadTex("Resources/monsterBall.png");
+  sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
+
+  skybox = RC::CreateSkyBox("Resources/rostock_laage_airport_4k.dds");
+  skyboxT_ = RC::GetSkyBoxTransformPtr(skybox);
 
   // =============================
   // 各オブジェクトへの流し込み
@@ -190,7 +193,8 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw3D(ctx, cl);
 
   // === 天球 ===
-  //RC::DrawSkydome(skydome);
+  // RC::DrawSkydome(skydome);
+  RC::DrawSkyBox(skybox);
 
   RC::DrawPrimitiveMesh(primitiveSphere);
   RC::DrawPrimitiveMesh(testBox);
@@ -201,32 +205,32 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawPrimitiveMesh(testCapsule);
 
   // モデルの描画
-  //RC::DrawModel(plane);
+  // RC::DrawModel(plane);
 
-  //RC::DrawModel(model, tx_model);
+  // RC::DrawModel(model, tx_model);
 
-  //RC::DrawModel(terrain);
+  // RC::DrawModel(terrain);
 
-  //RC::DrawModelGlassTwoPass(blockModel);
+  // RC::DrawModelGlassTwoPass(blockModel);
 
   // ===========================================
   // 2D描画
   // ===========================================
   RC::PreDraw2D(ctx, cl);
 
-  //RC::DrawSprite(sprite);
+  // RC::DrawSprite(sprite);
 
-  //RC::SetFogOverlayColor(fogColor_); // ちょい青
-  //if (isFogEnabled_) {
-  //  RC::DrawFogOverlay(t,
-  //                     0.55f,                    // intensity
-  //                     4.0f,                     // scale
-  //                     3.5f,                     // speed
-  //                     RC::Vector2{0.08f, 0.0f}, // wind
-  //                     0.18f,                    // feather
-  //                     0.35f                     // bottomBias
-  //  );
-  //}
+  // RC::SetFogOverlayColor(fogColor_); // ちょい青
+  // if (isFogEnabled_) {
+  //   RC::DrawFogOverlay(t,
+  //                      0.55f,                    // intensity
+  //                      4.0f,                     // scale
+  //                      3.5f,                     // speed
+  //                      RC::Vector2{0.08f, 0.0f}, // wind
+  //                      0.18f,                    // feather
+  //                      0.35f                     // bottomBias
+  //   );
+  // }
 }
 
 #if RC_ENABLE_IMGUI
@@ -239,6 +243,8 @@ void SampleScene::DrawImGui() {
     // ModelTab
     // -------------------
     if (ImGui::BeginTabItem("ModelTab")) {
+
+      RC::DrawSkyBoxImGui(skybox, "skybox");
 
       RC::DrawImGui3D(terrain, "terrain");
 
@@ -330,4 +336,3 @@ void SampleScene::DrawImGui() {
   ImGui::End();
 }
 #endif
-

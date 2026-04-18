@@ -37,6 +37,7 @@ void RenderContext::Init(SceneContext &ctx) {
   spriteMan_.Init(device_.Get(), &texMan_);
   modelMan_.Init(device_.Get(), &texMan_);
   skydomeMan_.Init(device_.Get(), &texMan_);
+  skyboxMan_.Init(device_.Get(), &texMan_);
   primitiveMeshMan_.Init(device_.Get(), &texMan_);
 
   dirLightMan_.Init(device_.Get());
@@ -75,6 +76,7 @@ void RenderContext::Term() {
 
   modelMan_.Term();
   skydomeMan_.Term();
+  skyboxMan_.Term();
   primitiveMeshMan_.Term();
   spriteMan_.Term();
 

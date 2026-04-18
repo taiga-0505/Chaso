@@ -574,6 +574,25 @@ void PipelineManager::RegisterDefaultPipelines() {
   // 汎用3Dライン：深度OFF版
   regPrim3D("primitive3d_nodepth", false);
 
+  // skybox：深度ON、書き込みOFF（最遠に配置）、カリング無し（内側を見る）
+  {
+    const std::wstring skyboxVs =
+        L"Resources/Shader/Skybox/Skybox.VS.hlsl";
+    const std::wstring skyboxPs =
+        L"Resources/Shader/Skybox/Skybox.PS.hlsl";
+
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3D;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false; // DepthWriteMask = ZERO
+    opt.enableAlphaBlend = false;
+    opt.blendMode = kBlendModeNone;
+    opt.cull = D3D12_CULL_MODE_NONE; // 内側を見るためカリング無し
+
+    CreateFromFiles(MakeKey("skybox", kBlendModeNone), skyboxVs, skyboxPs,
+                    InputLayoutType::Object3D, opt);
+  }
+
   // fog overlay：深度OFF、αブレンドON、InputLayout無し、Rootは FogOverlay
   {
     PipelineDesc d{};

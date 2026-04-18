@@ -676,6 +676,43 @@ Transform *GetSkydomeTransformPtr(int skydomeHandle);
 void SetSkydomeColor(int skydomeHandle, const Vector4 &color);
 
 // ===============================
+// スカイボックス用 (Skybox)
+// ===============================
+
+/// <summary>
+/// DDSキューブマップからスカイボックスを生成する
+/// </summary>
+/// <param name="ddsPath">DDSファイルのパス（cubemap形式）</param>
+/// <returns>スカイボックスハンドル（失敗時は -1）</returns>
+int CreateSkyBox(const std::string &ddsPath);
+
+/// <summary>
+/// スカイボックスを描画する（3Dパス内で使用）
+/// </summary>
+/// <param name="skyboxHandle">スカイボックスハンドル</param>
+void DrawSkyBox(int skyboxHandle);
+
+/// <summary>
+/// スカイボックスの ImGui 表示を行う
+/// </summary>
+void DrawSkyBoxImGui(int skyboxHandle, const char *name = nullptr);
+
+/// <summary>
+/// スカイボックスを解放する
+/// </summary>
+void UnloadSkyBox(int skyboxHandle);
+
+/// <summary>
+/// スカイボックスの Transform ポインタを取得する
+/// </summary>
+Transform *GetSkyBoxTransformPtr(int skyboxHandle);
+
+/// <summary>
+/// スカイボックスの色（乗算カラー）を設定する
+/// </summary>
+void SetSkyBoxColor(int skyboxHandle, const Vector4 &color);
+
+// ===============================
 // 汎用プロシージャルメッシュ（PrimitiveMesh）
 // ===============================
 

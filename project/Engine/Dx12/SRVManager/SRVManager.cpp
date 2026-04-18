@@ -78,6 +78,25 @@ SRVManager::Handle SRVManager::CreateTexture2D(ID3D12Resource *res,
   return h;
 }
 
+SRVManager::Handle SRVManager::CreateTextureCube(ID3D12Resource *res,
+                                                 DXGI_FORMAT fmt,
+                                                 UINT mipLevels,
+                                                 UINT mostDetailedMip) {
+  assert(res);
+  auto h = Allocate();
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc{};
+  desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+  desc.Format = fmt;
+  desc.TextureCube.MostDetailedMip = mostDetailedMip;
+  desc.TextureCube.MipLevels = mipLevels;
+  desc.TextureCube.ResourceMinLODClamp = 0.0f;
+
+  device_->CreateShaderResourceView(res, &desc, h.cpu);
+  return h;
+}
+
 SRVManager::Handle SRVManager::CreateStructuredBuffer(ID3D12Resource *res,
                                                       UINT elementCount,
                                                       UINT strideBytes) {
