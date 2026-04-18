@@ -95,14 +95,14 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::Upload(SRVManager &srv, Comman
   }
 
   // ---- UploadHeap の作成と転送 ----
-  UINT numMipLevels = (UINT)metadata_.mipLevels;
+  const UINT numSubresources = (UINT)(metadata_.mipLevels * metadata_.arraySize);
 
-  std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(numMipLevels);
-  std::vector<UINT> numRows(numMipLevels);
-  std::vector<UINT64> rowSizesInBytes(numMipLevels);
+  std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(numSubresources);
+  std::vector<UINT> numRows(numSubresources);
+  std::vector<UINT64> rowSizesInBytes(numSubresources);
   uint64_t uploadBufferSize = 0;
 
-  device->GetCopyableFootprints(&desc, 0, numMipLevels, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &uploadBufferSize);
+  device->GetCopyableFootprints(&desc, 0, numSubresources, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &uploadBufferSize);
 
   D3D12_HEAP_PROPERTIES uploadHeap{};
   uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -125,37 +125,45 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::Upload(SRVManager &srv, Comman
   hr = uploadRes->Map(0, nullptr, reinterpret_cast<void**>(&pData));
   assert(SUCCEEDED(hr));
 
-  for (size_t mip = 0; mip < metadata_.mipLevels; ++mip) {
-    const DirectX::Image *img = mipImages_.GetImage(mip, 0, 0);
-    if (!img) continue;
+  // 全サブリソース（配列面 × ミップ）を転送
+  for (size_t arrayIdx = 0; arrayIdx < metadata_.arraySize; ++arrayIdx) {
+    for (size_t mip = 0; mip < metadata_.mipLevels; ++mip) {
+      const UINT subresource = (UINT)(arrayIdx * metadata_.mipLevels + mip);
+      const DirectX::Image *img = mipImages_.GetImage(mip, arrayIdx, 0);
+      if (!img) continue;
 
-    const auto& layout = layouts[mip];
-    uint8_t* destSlice = pData + layout.Offset;
-    const uint8_t* srcSlice = img->pixels;
-    UINT bytesPerRow = (UINT)std::min<UINT64>(img->rowPitch, rowSizesInBytes[mip]);
+      const auto& layout = layouts[subresource];
+      uint8_t* destSlice = pData + layout.Offset;
+      const uint8_t* srcSlice = img->pixels;
+      UINT bytesPerRow = (UINT)std::min<UINT64>(img->rowPitch, rowSizesInBytes[subresource]);
 
-    for (UINT y = 0; y < numRows[mip]; ++y) {
-      memcpy(destSlice + y * layout.Footprint.RowPitch, srcSlice + y * img->rowPitch, bytesPerRow);
+      for (UINT y = 0; y < numRows[subresource]; ++y) {
+        memcpy(destSlice + y * layout.Footprint.RowPitch, srcSlice + y * img->rowPitch, bytesPerRow);
+      }
+
+      D3D12_TEXTURE_COPY_LOCATION dst{};
+      dst.pResource = resource_.Get();
+      dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+      dst.SubresourceIndex = subresource;
+
+      D3D12_TEXTURE_COPY_LOCATION srcLocation{};
+      srcLocation.pResource = uploadRes.Get();
+      srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+      srcLocation.PlacedFootprint = layout;
+
+      cmd.List()->CopyTextureRegion(&dst, 0, 0, 0, &srcLocation, nullptr);
     }
-
-    D3D12_TEXTURE_COPY_LOCATION dst{};
-    dst.pResource = resource_.Get();
-    dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-    dst.SubresourceIndex = (UINT)mip;
-
-    D3D12_TEXTURE_COPY_LOCATION srcLocation{};
-    srcLocation.pResource = uploadRes.Get();
-    srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-    srcLocation.PlacedFootprint = layout;
-
-    cmd.List()->CopyTextureRegion(&dst, 0, 0, 0, &srcLocation, nullptr);
   }
 
   uploadRes->Unmap(0, nullptr);
   cmd.Transition(resource_.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-  // SRV作成
-  srv_ = srv.CreateTexture2D(resource_.Get(), metadata_.format, (UINT)metadata_.mipLevels);
+  // SRV作成（Cubemap と 2D で分岐）
+  if (metadata_.IsCubemap()) {
+    srv_ = srv.CreateTextureCube(resource_.Get(), metadata_.format, (UINT)metadata_.mipLevels);
+  } else {
+    srv_ = srv.CreateTexture2D(resource_.Get(), metadata_.format, (UINT)metadata_.mipLevels);
+  }
 
   return uploadRes;
 }

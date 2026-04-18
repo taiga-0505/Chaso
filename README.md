@@ -38,7 +38,7 @@ DirectX 12ベースの自作ゲームエンジンです。
 ### システム (System)
 - **アーキテクチャとデザインパターン**:
   - Factory Pattern による直感的なリソース生成 (Model, Sprite等)。
-  - State Pattern による柔軟なシーン遷移や Enemy AI の管理。
+  - State Pattern による柔軟なシーン遷移。
 - **シーン管理**: `SceneManager` によるフェードイン・フェードアウトを利用したスムーズなトランジション。
 - **ウィンドウ管理**: Win32 APIによる堅牢なウィンドウ制御とメッセージループ。
 - **入力管理**: `Input` クラスによる統括管理。`Keyboard`, `Mouse`, `Controller` (XInput) の各デバイスを個別に取得・制御可能。

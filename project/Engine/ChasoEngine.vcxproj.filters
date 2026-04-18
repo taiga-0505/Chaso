@@ -82,6 +82,9 @@
     <Filter Include="Graphics\Skydome">
       <UniqueIdentifier>{ee7c49c1-1940-41bc-2159-bab03e2f9f47}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphics\Skybox">
+      <UniqueIdentifier>{cc8a1b2d-3e4f-5678-9abc-def012345678}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Graphics\Mesh">
       <UniqueIdentifier>{b1c2d3e4-f5a6-7890-abcd-ef1234567890}</UniqueIdentifier>
     </Filter>
@@ -160,6 +163,9 @@
     <Filter Include="Render\Skydome">
       <UniqueIdentifier>{38a93e75-92a0-d64a-0172-0664be0cde5d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Render\Skybox">
+      <UniqueIdentifier>{bb9a2c3d-4e5f-6789-0abc-def123456789}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Render\Mesh">
       <UniqueIdentifier>{f1e2d3c4-b5a6-7890-abcd-ef0987654321}</UniqueIdentifier>
     </Filter>
@@ -180,6 +186,9 @@
     </Filter>
     <Filter Include="Resources\Shader\Particle">
       <UniqueIdentifier>{e16c3d54-ef2c-7b54-8bb1-f29e3d5dfc36}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Skybox">
+      <UniqueIdentifier>{aa7b8c9d-0e1f-2345-6789-abcdef012345}</UniqueIdentifier>
     </Filter>
     <Filter Include="Window">
       <UniqueIdentifier>{c89686a3-87d2-b12b-3c72-9ce35a0bcb5b}</UniqueIdentifier>
@@ -288,6 +297,9 @@
     <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp">
       <Filter>Graphics\Skydome</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Skybox\Skybox.cpp">
+      <Filter>Graphics\Skybox</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Mesh\MeshGenerator.cpp">
       <Filter>Graphics\Mesh</Filter>
     </ClCompile>
@@ -386,6 +398,12 @@
     </ClCompile>
     <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp">
       <Filter>Render\Skydome</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\Skybox\SkyboxManager.cpp">
+      <Filter>Render\Skybox</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp">
+      <Filter>Render\Systems</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp">
       <Filter>Render\Mesh</Filter>
@@ -608,6 +626,12 @@
     <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h">
       <Filter>Render\Skydome</Filter>
     </ClInclude>
+    <ClInclude Include="..\Engine\Render\Skybox\SkyboxManager.h">
+      <Filter>Render\Skybox</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Skybox\Skybox.h">
+      <Filter>Graphics\Skybox</Filter>
+    </ClInclude>
     <ClInclude Include="..\Engine\Render\Mesh\PrimitiveMeshManager.h">
       <Filter>Render\Mesh</Filter>
     </ClInclude>
@@ -646,6 +670,9 @@
     </None>
     <None Include="..\Resources\Shader\Particle\Particle.hlsli">
       <Filter>Resources\Shader\Particle</Filter>
+    </None>
+    <None Include="..\Resources\Shader\Skybox\Skybox.hlsli">
+      <Filter>Resources\Shader\Skybox</Filter>
     </None>
   </ItemGroup>
 </Project>

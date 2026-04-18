@@ -31,6 +31,9 @@ public:
   Handle CreateTexture2D(ID3D12Resource *res, DXGI_FORMAT fmt, UINT mipLevels,
                          UINT mostDetailedMip = 0);
 
+  Handle CreateTextureCube(ID3D12Resource *res, DXGI_FORMAT fmt, UINT mipLevels,
+                           UINT mostDetailedMip = 0);
+
   Handle CreateStructuredBuffer(ID3D12Resource *res, UINT elementCount,
                                 UINT strideBytes);
 

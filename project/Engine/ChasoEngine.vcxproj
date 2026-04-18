@@ -157,6 +157,7 @@
     <ClCompile Include="..\Engine\Graphics\Effect\HitEffect.cpp" />
     <ClCompile Include="..\Engine\Audio\Sound.cpp" />
     <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Skybox\Skybox.cpp" />
     <ClCompile Include="..\Engine\Graphics\Mesh\MeshGenerator.cpp" />
     <ClCompile Include="..\Engine\Graphics\Mesh\PrimitiveMesh.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp" />
@@ -194,6 +195,8 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderPrimitiveMesh.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp" />
     <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Skybox\SkyboxManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp" />
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
     <!-- Window -->
@@ -279,6 +282,8 @@
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
     <ClInclude Include="..\Engine\Render\RenderContext.h" />
     <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h" />
+    <ClInclude Include="..\Engine\Render\Skybox\SkyboxManager.h" />
+    <ClInclude Include="..\Engine\Graphics\Skybox\Skybox.h" />
     <ClInclude Include="..\Engine\Render\Mesh\PrimitiveMeshManager.h" />
     <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h" />
     <!-- Window -->
@@ -301,6 +306,7 @@
   <ItemGroup>
     <None Include="..\Resources\Shader\Object3d\Object3d.hlsli" />
     <None Include="..\Resources\Shader\Particle\Particle.hlsli" />
+    <None Include="..\Resources\Shader\Skybox\Skybox.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
