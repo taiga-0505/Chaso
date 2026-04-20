@@ -732,6 +732,21 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // vignette：ビネット（周辺減光）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("vignette.none",
+                    fullscreenVs,
+                    L"Resources/Shader/Vignette/Vignette.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   Log::Print(std::format("[PipelineManager] デフォルトパイプライン登録完了 (Total: {})", pipelines_.size()));
 
   // キャッシュ保存

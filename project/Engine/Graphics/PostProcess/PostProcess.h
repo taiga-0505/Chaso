@@ -17,6 +17,7 @@ enum class PostEffectType {
   None,       // そのまま転送（CopyImage）
   Grayscale,  // グレースケール
   Sepia,      // セピア調
+  Vignette,   // ビネット（周辺減光）
 };
 
 /// <summary>
@@ -115,6 +116,7 @@ private:
   GraphicsPipeline *pipelineCopy_ = nullptr;
   GraphicsPipeline *pipelineGrayscale_ = nullptr;
   GraphicsPipeline *pipelineSepia_ = nullptr;
+  GraphicsPipeline *pipelineVignette_ = nullptr;
 
   // アクティブなエフェクトスタック（適用順）
   std::vector<PostEffectType> activeEffects_;
