@@ -279,6 +279,9 @@
     <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp">
       <Filter>Graphics\Model</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Model\ModelResource.cpp">
+      <Filter>Graphics\Model</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp">
       <Filter>Graphics\Primitive</Filter>
     </ClCompile>
@@ -405,6 +408,12 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp">
       <Filter>Render\Systems</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Render\Systems\RenderQueue.cpp">
+      <Filter>Render\Systems</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\Systems\FrameResource.cpp">
+      <Filter>Render\Systems</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp">
       <Filter>Render\Mesh</Filter>
     </ClCompile>
@@ -521,6 +530,9 @@
     <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h">
       <Filter>Graphics\Model</Filter>
     </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Model\ModelResource.h">
+      <Filter>Graphics\Model</Filter>
+    </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h">
       <Filter>Graphics\Primitive</Filter>
     </ClInclude>
@@ -621,6 +633,12 @@
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\RenderContext.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Render\RenderQueue.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Render\FrameResource.h">
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h">

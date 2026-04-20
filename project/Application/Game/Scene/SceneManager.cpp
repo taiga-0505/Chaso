@@ -9,6 +9,7 @@
 class FadeOutState;
 class FadeInState;
 class NormalState;
+class LoadingState;
 
 // =================================================================
 // 状態インタフェース
@@ -39,6 +40,15 @@ public:
               ID3D12GraphicsCommandList *cl) override;
 };
 
+class LoadingState : public ISceneState {
+public:
+  void Update(Scene::SceneManager &sm, SceneContext &ctx) override;
+  void Render(Scene::SceneManager &sm, SceneContext &ctx,
+              ID3D12GraphicsCommandList *cl) override;
+private:
+  bool loaded_ = false;
+};
+
 class FadeInState : public ISceneState {
 public:
   void Update(Scene::SceneManager &sm, SceneContext &ctx) override;
@@ -50,11 +60,15 @@ public:
 // NormalState 実装
 // =================================================================
 void NormalState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  // 常にシーンの Update は呼ぶ（カメラ更新等を止めない）
+  if (sm.current_) {
+    sm.current_->Update(sm, ctx);
+  }
+
   if (!sm.requested_.empty()) {
+    Log::Print("[SceneState] NormalState -> FadeOutState (requested: " + sm.requested_ + ")");
     sm.fade_->Start(Fade::Status::FadeOut, sm.kFadeTime);
     sm.ChangeState(std::make_unique<FadeOutState>());
-  } else if (sm.current_) {
-    sm.current_->Update(sm, ctx);
   }
 }
 void NormalState::Render(Scene::SceneManager &sm, SceneContext &ctx,
@@ -68,20 +82,55 @@ void NormalState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // FadeOutState 実装
 // =================================================================
 void FadeOutState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  // フェードアウト中は旧シーンの Update も継続
+  if (sm.current_ && !sm.fade_->IsFinished()) {
+    sm.current_->Update(sm, ctx);
+  }
+
   if (sm.fade_->IsFinished()) {
+    Log::Print("[SceneState] FadeOutState -> LoadingState");
+    sm.ChangeState(std::make_unique<LoadingState>());
+  }
+}
+void FadeOutState::Render(Scene::SceneManager &sm, SceneContext &ctx,
+                          ID3D12GraphicsCommandList *cl) {
+  // フェードアウト中は旧シーンを描画し続ける
+  if (sm.current_) {
+    sm.current_->Render(ctx, cl);
+  } else {
+    Log::Print("[SceneState] FadeOutState::Render - current_ is null!");
+  }
+  // フェード幕を最前面に描画（徐々に黒くなる）
+  sm.fade_->Draw(cl);
+}
+
+// =================================================================
+// LoadingState 実装
+// - 画面が完全に黒い状態でシーン切り替えを行う
+// - 切り替え完了後に FadeIn を開始する
+// =================================================================
+void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  if (!loaded_) {
+    // 画面が真っ黒な状態でシーン切り替え
     sm.ChangeImmediately(sm.requested_, ctx);
+    loaded_ = true;
+
+    // フェードインを開始（黒画面から徐々に明るくなる）
     sm.fade_->Start(Fade::Status::FadeIn, sm.kFadeTime);
     sm.ChangeState(std::make_unique<FadeInState>());
+
+    // 新シーンの初回 Update
     if (sm.current_) {
       sm.current_->Update(sm, ctx);
     }
   }
 }
-void FadeOutState::Render(Scene::SceneManager &sm, SceneContext &ctx,
+void LoadingState::Render(Scene::SceneManager &sm, SceneContext &ctx,
                           ID3D12GraphicsCommandList *cl) {
-  if (sm.current_) {
-    sm.current_->Render(ctx, cl);
-  }
+  // 画面は完全に黒い状態（alpha=1.0）
+  // 3D/2D パイプラインを空で流してフェード幕を描画
+  RC::PreDraw3D(ctx, cl);
+  RC::PreDraw2D(ctx, cl);
   sm.fade_->Draw(cl);
 }
 
@@ -89,6 +138,11 @@ void FadeOutState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // FadeInState 実装
 // =================================================================
 void FadeInState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  // 新シーンの Update
+  if (sm.current_) {
+    sm.current_->Update(sm, ctx);
+  }
+
   if (sm.fade_->IsFinished()) {
     sm.fade_->Stop();
     sm.ChangeState(std::make_unique<NormalState>());
@@ -96,9 +150,13 @@ void FadeInState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
 }
 void FadeInState::Render(Scene::SceneManager &sm, SceneContext &ctx,
                          ID3D12GraphicsCommandList *cl) {
+  // 新シーンを描画
   if (sm.current_) {
     sm.current_->Render(ctx, cl);
+  } else {
+    Log::Print("[SceneState] FadeInState::Render - current_ is null!");
   }
+  // フェード幕を描画（黒から徐々に透明になる）
   sm.fade_->Draw(cl);
 }
 

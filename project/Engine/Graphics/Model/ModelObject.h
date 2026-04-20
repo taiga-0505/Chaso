@@ -2,6 +2,7 @@
 #include "Math/Math.h"
 #include "Math/MathTypes.h"
 #include "ModelMesh.h"
+#include "ModelResource.h"
 #include "function/function.h"
 #include "struct.h"
 #include <array>
@@ -14,12 +15,19 @@
 
 class TextureManager; // 前方宣言
 
+namespace RC {
+class FrameResource; // 前方宣言
+}
+
 // ============================================================
 // ModelObject
 // - 1つのModelMesh(共有)を配置して描画する
 // - ModelMeshが持つ Node/DrawItem を使って「Node行列を反映」して描画できる
 // - Textureは「override（SetTexture）」があればそれを優先。
 //   overrideが無ければ、materialIndexに応じてTextureManagerでロードして使う。
+//
+// ★ 内部的に ModelResource（GPUリソース管理）に委譲している。
+//    このクラスは Transform / 可視性 / ImGui / ライティング設定 を保持するラッパー。
 // ============================================================
 class ModelObject {
 public:
@@ -37,29 +45,27 @@ public:
 
   ModelObject() = default;
   explicit ModelObject(const LightingConfig &cfg) : initialLighting_(cfg) {}
-  ~ModelObject();
+  ~ModelObject() = default;
 
   void Initialize(ID3D12Device *device);
 
   void SetMesh(const std::shared_ptr<ModelMesh> &mesh) {
-    mesh_ = mesh;
-    // meshが変わったらMaterial SRVキャッシュは破棄
-    materialSrvs_.clear();
-    // overrideも一旦クリア（必要なら SetTexture で入れ直してね）
-    textureSrv_ = {};
+    resource_.SetMesh(mesh);
   }
-  const std::shared_ptr<ModelMesh> &GetMesh() const { return mesh_; }
+  const std::shared_ptr<ModelMesh> &GetMesh() const {
+    return resource_.GetMesh();
+  }
 
   void EnsureSphericalUVIfMissing();
 
   // overrideテクスチャ（全サブメッシュ共通でこれを使う）
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {
-    textureSrv_ = srvGPUHandle;
+    resource_.SetTexture(srvGPUHandle);
   }
 
   // override解除して「モデルのMaterialに戻す」
   // - 1枚だけではなく、materialIndexごとに読み直す
-  void ResetTextureToMtl();
+  void ResetTextureToMtl() { resource_.ResetTextureToMtl(); }
 
   ModelObject &SetLightingConfig(const LightingConfig &cfg) {
     initialLighting_ = cfg;
@@ -85,127 +91,67 @@ public:
   }
 
   Transform &T() { return transform_; }
-  Material *Mat() { return cbMat_.mapped; }
+  Material *Mat() { return resource_.Mat(); }
   void SetColor(const RC::Vector4 &color);
-  DirectionalLight *Light() { return cbLight_.mapped; }
+  DirectionalLight *Light() { return resource_.Light(); }
 
   // LightManager の共通ライトCB（b1）を使いたい場合の上書き。
   // 0 を渡すと「自前の cbLight_」に戻る。
   void SetExternalLightCBAddress(D3D12_GPU_VIRTUAL_ADDRESS addr) {
-    externalLightCBAddress_ = addr;
+    resource_.SetExternalLightCBAddress(addr);
   }
   D3D12_GPU_VIRTUAL_ADDRESS GetExternalLightCBAddress() const {
-    return externalLightCBAddress_;
+    return resource_.GetExternalLightCBAddress();
   }
 
   void SetVisible(bool v) { visible_ = v; }
   bool Visible() const { return visible_; }
 
-  void SetTextureManager(TextureManager *tm) { texman_ = tm; }
+  void SetTextureManager(TextureManager *tm) { resource_.SetTextureManager(tm); }
 
   void SetFilePath(const std::string &path) { filePath_ = path; }
   const std::string &GetFilePath() const { return filePath_; }
 
-  void SetReady(bool r) { isReady_ = r; }
-  bool IsReady() const { return isReady_; }
+  void SetReady(bool r) { resource_.SetReady(r); }
+  bool IsReady() const { return resource_.IsReady(); }
 
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
-  void Draw(ID3D12GraphicsCommandList *cmdList);
-
-  /// <summary>
   /// ワールド行列を外部から指定して描画する（コマンドキュー用）
-  /// </summary>
-  void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
-
+  void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
+            RC::FrameResource &frame);
 
   // 既存の「Transform配列インスタンス」描画
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
-                 const std::vector<Transform> &instances);
-
-  // 「Transform配列 + 色」インスタンス描画
-  void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
-                 const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
-                 const std::vector<RC::Vector4> &colors);
+                 RC::FrameResource &frame);
 
   // 「Transform配列 + 単色」インスタンス描画
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
-                 const RC::Vector4 &color);
+                 const RC::Vector4 &color,
+                 RC::FrameResource &frame);
 
   void DrawImGui(const char *name, bool showLightingUi);
 
-  void ResetBatchCursor() {
-    cbWvpBatchHead_ = 0;
-    instanceBatchHead_ = 0;
-  }
+  void ResetBatchCursor() { resource_.ResetBatchCursor(); }
+
+  // ── ModelResource への直接アクセス（エンジン内部用）──
+  ModelResource &Resource() { return resource_; }
+  const ModelResource &Resource() const { return resource_; }
 
 private:
-  struct CB_WVP {
-    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-    TransformationMatrix *mapped = nullptr;
-  };
-  struct CB_Material {
-    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-    Material *mapped = nullptr;
-  };
-  struct CB_Light {
-    Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-    DirectionalLight *mapped = nullptr;
-  };
-
   void ApplyLightingIfReady_();
 
-  static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
-  void EnsureWvpBatchCapacity_(uint32_t count);
-
-  void EnsureInstanceBatchCapacity_(uint32_t count);
-
-  void EnsureMaterialSrvsLoaded_();
-  D3D12_GPU_DESCRIPTOR_HANDLE GetSrvForMaterial_(uint32_t materialIndex) const;
-
 private:
-  struct InstanceDataGPU {
-    RC::Matrix4x4 WVP;
-    RC::Matrix4x4 World;
-    RC::Matrix4x4 WorldInverseTranspose;
-    RC::Vector4 color;
-  };
+  // GPU リソース・描画ロジック（委譲先）
+  ModelResource resource_;
 
-  Microsoft::WRL::ComPtr<ID3D12Resource> instanceBatch_;
-  uint32_t instanceBatchCapacity_ = 0;
-  uint8_t *instanceBatchMapped_ = nullptr;
-  uint32_t instanceBatchHead_ = 0;
-
-  Microsoft::WRL::ComPtr<ID3D12Device> device_;
-  std::shared_ptr<ModelMesh> mesh_;
-
-  CB_WVP cbWvp_{};
-  CB_Material cbMat_{};
-  CB_Light cbLight_{};
-
-  // override（全サブメッシュ共通）
-  D3D12_GPU_DESCRIPTOR_HANDLE textureSrv_{};
-
-  // materialIndexごとのSRV（overrideが無い時に使用）
-  std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> materialSrvs_;
-
+  // CPU側の状態
   Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
   bool visible_ = true;
-
-  // DrawItem用：複数DrawでCBを上書きしないためのリング（upload）
-  Microsoft::WRL::ComPtr<ID3D12Resource> cbWvpBatch_;
-  uint32_t cbWvpBatchCapacity_ = 0;
-  uint8_t *cbWvpBatchMapped_ = nullptr;
-  uint32_t cbWvpBatchHead_ = 0;
-
-  TextureManager *texman_ = nullptr;
-
-  // 0 なら自前の cbLight_ を使用。0以外なら外部ライトCB（LightManager）を使用。
-  D3D12_GPU_VIRTUAL_ADDRESS externalLightCBAddress_ = 0;
 
   // Updateで受け取ったカメラを保持（DrawでNodeごとにWVPを作る）
   RC::Matrix4x4 cachedView_ = {};
@@ -215,5 +161,4 @@ private:
   LightingConfig initialLighting_{};
 
   std::string filePath_;
-  bool isReady_ = false;
 };
