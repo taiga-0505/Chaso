@@ -1042,6 +1042,25 @@ void SetBlendMode(BlendMode blendMode);
 BlendMode GetBlendMode();
 
 // ===============================
+// 表示モード切り替え
+// ===============================
+
+/// <summary>
+/// 以降の 3D 描画のシェーディングモード（Solid / Wireframe / SolidWireframe）を設定する
+/// </summary>
+void SetViewShadingMode(ViewShadingMode mode);
+
+/// <summary>
+/// 現在のシェーディングモードを取得する
+/// </summary>
+ViewShadingMode GetViewShadingMode();
+
+/// <summary>
+/// シェーディングモードの ImGui 表示を行う
+/// </summary>
+void DrawViewShadingModeImGui(const char *label = "View Shading");
+
+// ===============================
 // ポストエフェクト切り替え
 // ===============================
 

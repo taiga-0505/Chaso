@@ -63,13 +63,27 @@ void DrawPrimitiveMesh(int meshHandle, int texHandle) {
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
 
-    if (ctx.BindPipeline("object3d")) {
-      ctx.BindCameraCB();
-      cl->SetGraphicsRootConstantBufferView(3, lightAddr);
-      ctx.BindAllLightCBs();
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-      ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
-      m->Draw(cl, world);
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (ctx.BindPipeline("object3d")) {
+        ctx.BindCameraCB();
+        cl->SetGraphicsRootConstantBufferView(3, lightAddr);
+        ctx.BindAllLightCBs();
+
+        ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+        m->Draw(cl, world);
+      }
+    }
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (ctx.BindPipeline("object3d_wire")) {
+        ctx.BindCameraCB();
+        cl->SetGraphicsRootConstantBufferView(3, lightAddr); // object3d用レイアウトなので必要
+        ctx.BindAllLightCBs();
+
+        ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+        m->Draw(cl, world);
+      }
     }
     ctx.SetBlendMode(prevBlend);
   });

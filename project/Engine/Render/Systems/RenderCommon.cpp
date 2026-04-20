@@ -25,6 +25,7 @@
 #include "Primitive/Primitive3D.h"
 #include "Graphics/PostProcess/PostProcess.h"
 #include "Scene.h"
+#include "imgui/imgui.h"
 
 #include <string_view>
 
@@ -89,6 +90,22 @@ void SetBlendMode(BlendMode blendMode) {
 
 BlendMode GetBlendMode() {
   return RenderContext::GetInstance().CurrentBlendMode();
+}
+
+void SetViewShadingMode(ViewShadingMode mode) {
+  RenderContext::GetInstance().SetViewShadingMode(mode);
+}
+
+ViewShadingMode GetViewShadingMode() {
+  return RenderContext::GetInstance().GetViewShadingMode();
+}
+
+void DrawViewShadingModeImGui(const char *label) {
+  int current = static_cast<int>(GetViewShadingMode());
+  const char *items[] = {"Solid", "Wireframe", "Solid + Wireframe"};
+  if (ImGui::Combo(label, &current, items, 3)) {
+    SetViewShadingMode(static_cast<ViewShadingMode>(current));
+  }
 }
 
 void SetPostEffect(::PostEffectType type) {

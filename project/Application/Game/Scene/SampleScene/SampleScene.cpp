@@ -238,6 +238,9 @@ void SampleScene::DrawImGui() {
 
   ImGui::Begin("Debug");
 
+  RC::DrawViewShadingModeImGui();
+  ImGui::Separator();
+
   if (ImGui::BeginTabBar("MainDebugTabBar")) {
     // -------------------
     // ModelTab

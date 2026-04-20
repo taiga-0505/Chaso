@@ -114,14 +114,25 @@ void DrawModel(int modelHandle, int texHandle) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-    if (BindStandard3D_(ctx, "object3d")) {
-      ApplyTexture_(ctx, m, texHandle);
-      m->SetExternalLightCBAddress(lightAddr);
-      if (lightAddr != 0) {
-        ApplyDirLight_(ctx, m);
+
+    ApplyTexture_(ctx, m, texHandle);
+    m->SetExternalLightCBAddress(lightAddr);
+    if (lightAddr != 0) {
+      ApplyDirLight_(ctx, m);
+    }
+    m->Update(ctx.View(), ctx.Proj());
+
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (BindStandard3D_(ctx, "object3d")) {
+        m->Draw(cl, world, ctx.CurrentFrame());
       }
-      m->Update(ctx.View(), ctx.Proj());
-      m->Draw(cl, world, ctx.CurrentFrame());
+    }
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (BindStandard3D_(ctx, "object3d_wire")) {
+        m->Draw(cl, world, ctx.CurrentFrame());
+      }
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -150,14 +161,25 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-    if (BindStandard3D_(ctx, "object3d_nocull")) {
-      ApplyTexture_(ctx, m, texHandle);
-      m->SetExternalLightCBAddress(lightAddr);
-      if (lightAddr != 0) {
-        ApplyDirLight_(ctx, m);
+
+    ApplyTexture_(ctx, m, texHandle);
+    m->SetExternalLightCBAddress(lightAddr);
+    if (lightAddr != 0) {
+      ApplyDirLight_(ctx, m);
+    }
+    m->Update(ctx.View(), ctx.Proj());
+
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (BindStandard3D_(ctx, "object3d_nocull")) {
+        m->Draw(cl, world, ctx.CurrentFrame());
       }
-      m->Update(ctx.View(), ctx.Proj());
-      m->Draw(cl, world, ctx.CurrentFrame());
+    }
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (BindStandard3D_(ctx, "object3d_wire")) {
+        m->Draw(cl, world, ctx.CurrentFrame());
+      }
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -188,13 +210,24 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-    if (BindStandard3D_(ctx, "object3d_inst")) {
-      ApplyTexture_(ctx, m, texHandle);
-      m->SetExternalLightCBAddress(lightAddr);
-      if (lightAddr != 0) {
-        ApplyDirLight_(ctx, m);
+
+    ApplyTexture_(ctx, m, texHandle);
+    m->SetExternalLightCBAddress(lightAddr);
+    if (lightAddr != 0) {
+      ApplyDirLight_(ctx, m);
+    }
+
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (BindStandard3D_(ctx, "object3d_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
       }
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+    }
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+      }
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -223,13 +256,24 @@ void DrawModelBatchColored(int modelHandle,
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-    if (BindStandard3D_(ctx, "object3d_inst")) {
-      ApplyTexture_(ctx, m, texHandle);
-      m->SetExternalLightCBAddress(lightAddr);
-      if (lightAddr != 0) {
-        ApplyDirLight_(ctx, m);
+
+    ApplyTexture_(ctx, m, texHandle);
+    m->SetExternalLightCBAddress(lightAddr);
+    if (lightAddr != 0) {
+      ApplyDirLight_(ctx, m);
+    }
+
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (BindStandard3D_(ctx, "object3d_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
       }
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    }
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      }
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -260,14 +304,25 @@ void DrawModelGlass(int modelHandle, int texHandle) {
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
         ctx.SetBlendMode(kBlendModePremultiplied);
-        if (BindStandard3D_(ctx, "object3d_glass")) {
-          ApplyTexture_(ctx, m, texHandle);
-          m->SetExternalLightCBAddress(lightAddr);
-          if (lightAddr != 0) {
-            ApplyDirLightGlass_(ctx, m);
+
+        ApplyTexture_(ctx, m, texHandle);
+        m->SetExternalLightCBAddress(lightAddr);
+        if (lightAddr != 0) {
+          ApplyDirLightGlass_(ctx, m);
+        }
+        m->Update(ctx.View(), ctx.Proj());
+
+        ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass")) {
+            m->Draw(cl, world, ctx.CurrentFrame());
           }
-          m->Update(ctx.View(), ctx.Proj());
-          m->Draw(cl, world, ctx.CurrentFrame());
+        }
+        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+          if (BindStandard3D_(ctx, "object3d_wire")) {
+            m->Draw(cl, world, ctx.CurrentFrame());
+          }
         }
         ctx.SetBlendMode(saved);
       });
@@ -295,13 +350,24 @@ void DrawModelGlassBatch(int modelHandle,
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
         ctx.SetBlendMode(kBlendModePremultiplied);
-        if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-          ApplyTexture_(ctx, m, texHandle);
-          m->SetExternalLightCBAddress(lightAddr);
-          if (lightAddr != 0) {
-            ApplyDirLightGlass_(ctx, m);
+
+        ApplyTexture_(ctx, m, texHandle);
+        m->SetExternalLightCBAddress(lightAddr);
+        if (lightAddr != 0) {
+          ApplyDirLightGlass_(ctx, m);
+        }
+
+        ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
           }
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        }
+        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          }
         }
         ctx.SetBlendMode(saved);
       });
@@ -330,13 +396,24 @@ void DrawModelGlassBatchColored(int modelHandle,
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
         ctx.SetBlendMode(kBlendModePremultiplied);
-        if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-          ApplyTexture_(ctx, m, texHandle);
-          m->SetExternalLightCBAddress(lightAddr);
-          if (lightAddr != 0) {
-            ApplyDirLightGlass_(ctx, m);
+
+        ApplyTexture_(ctx, m, texHandle);
+        m->SetExternalLightCBAddress(lightAddr);
+        if (lightAddr != 0) {
+          ApplyDirLightGlass_(ctx, m);
+        }
+
+        ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
           }
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
+        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          }
         }
         ctx.SetBlendMode(saved);
       });
@@ -379,13 +456,24 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
         }
         m->Update(ctx.View(), ctx.Proj());
 
-        // 1) 背面（内側）
-        if (BindStandard3D_(ctx, "object3d_glass_front")) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+        ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+        // 1) 背面（内側） - Solidのみ
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass_front")) {
+            m->Draw(cl, world, ctx.CurrentFrame());
+          }
         }
-        // 2) 表面（外側）
-        if (BindStandard3D_(ctx, "object3d_glass")) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+        // 2) 表面（外側） - SolidWireframeならワイヤーフレームも重ねる
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass")) {
+            m->Draw(cl, world, ctx.CurrentFrame());
+          }
+        }
+        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+          if (BindStandard3D_(ctx, "object3d_wire")) {
+            m->Draw(cl, world, ctx.CurrentFrame());
+          }
         }
 
         ctx.SetBlendMode(saved);
@@ -421,11 +509,20 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
           ApplyDirLightGlass_(ctx, m);
         }
 
-        if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+        if (shadingMode != ViewShadingMode::Wireframe) {
+          if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          }
+          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          }
         }
-        if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          }
         }
 
         ctx.SetBlendMode(saved);
@@ -461,11 +558,20 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
       ApplyDirLightGlass_(ctx, m);
     }
 
-    if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    ViewShadingMode shadingMode = ctx.GetViewShadingMode();
+
+    if (shadingMode != ViewShadingMode::Wireframe) {
+      if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      }
+      if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      }
     }
-    if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      }
     }
 
     ctx.SetBlendMode(saved);
