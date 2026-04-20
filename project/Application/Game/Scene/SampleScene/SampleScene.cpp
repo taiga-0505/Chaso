@@ -205,13 +205,13 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawPrimitiveMesh(testCapsule);
 
   // モデルの描画
-  // RC::DrawModel(plane);
+  RC::DrawModel(plane);
 
-  // RC::DrawModel(model, tx_model);
+  RC::DrawModel(model, tx_model);
 
-  // RC::DrawModel(terrain);
+  RC::DrawModel(terrain);
 
-  // RC::DrawModelGlassTwoPass(blockModel);
+  RC::DrawModelGlassTwoPass(blockModel);
 
   // ===========================================
   // 2D描画

@@ -198,7 +198,7 @@ void LightScene::Update(SceneManager &sm, SceneContext &ctx) {
 }
 
 void LightScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
-  ctx.core->Clear(0.05f, 0.05f, 0.05f, 1.0f);
+  //ctx.core->Clear(0.05f, 0.05f, 0.05f, 1.0f);
   RC::PreDraw3D(ctx, cl);
 
   RC::DrawModel(plane_gltf_);

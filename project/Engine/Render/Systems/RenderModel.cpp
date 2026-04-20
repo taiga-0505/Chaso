@@ -102,28 +102,26 @@ void DrawModel(int modelHandle, int texHandle) {
     return;
   }
 
-  // 状態キャプチャ
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
 
-  ctx.PushCommand3D([m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
+  // ソートキー構築（Opaqueレイヤー + object3d PSO）
+  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+                                     SortKey::HashPSO("object3d"), 0);
+
+  ctx.PushCommand3D(key, [m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-
     if (BindStandard3D_(ctx, "object3d")) {
       ApplyTexture_(ctx, m, texHandle);
       m->SetExternalLightCBAddress(lightAddr);
-      // 注: ApplyDirLight_ は内部的に active light を参照するため
-      // 本来は active light の内容もキャプチャすべきだが、
-      // 殆どの場合 lightAddr の切り替えで対応可能。
       if (lightAddr != 0) {
         ApplyDirLight_(ctx, m);
       }
-
       m->Update(ctx.View(), ctx.Proj());
-      m->Draw(cl, world);
+      m->Draw(cl, world, ctx.CurrentFrame());
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -143,14 +141,15 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
 
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
-
   BlendMode blend = ctx.CurrentBlendMode();
 
-  ctx.PushCommand3D([m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
+  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+                                     SortKey::HashPSO("object3d_nocull"), 0);
+
+  ctx.PushCommand3D(key, [m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-
     if (BindStandard3D_(ctx, "object3d_nocull")) {
       ApplyTexture_(ctx, m, texHandle);
       m->SetExternalLightCBAddress(lightAddr);
@@ -158,7 +157,7 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
         ApplyDirLight_(ctx, m);
       }
       m->Update(ctx.View(), ctx.Proj());
-      m->Draw(cl, world);
+      m->Draw(cl, world, ctx.CurrentFrame());
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -182,19 +181,20 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
 
-  ctx.PushCommand3D([m, instances, texHandle, lightAddr,
-                     blend](ID3D12GraphicsCommandList *cl) {
+  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+                                     SortKey::HashPSO("object3d_inst"), 0);
+
+  ctx.PushCommand3D(key, [m, instances, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-
     if (BindStandard3D_(ctx, "object3d_inst")) {
       ApplyTexture_(ctx, m, texHandle);
       m->SetExternalLightCBAddress(lightAddr);
       if (lightAddr != 0) {
         ApplyDirLight_(ctx, m);
       }
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances);
+      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -215,19 +215,21 @@ void DrawModelBatchColored(int modelHandle,
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
 
-  ctx.PushCommand3D([m, instances, color, texHandle, lightAddr,
-                     blend](ID3D12GraphicsCommandList *cl) {
+  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+                                     SortKey::HashPSO("object3d_inst"), 0);
+
+  ctx.PushCommand3D(key, [m, instances, color, texHandle,
+                     lightAddr, blend](ID3D12GraphicsCommandList *cl) {
     auto &ctx = GetRenderContext();
     auto prevBlend = ctx.CurrentBlendMode();
     ctx.SetBlendMode(blend);
-
     if (BindStandard3D_(ctx, "object3d_inst")) {
       ApplyTexture_(ctx, m, texHandle);
       m->SetExternalLightCBAddress(lightAddr);
       if (lightAddr != 0) {
         ApplyDirLight_(ctx, m);
       }
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color);
+      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
     }
     ctx.SetBlendMode(prevBlend);
   });
@@ -250,13 +252,14 @@ void DrawModelGlass(int modelHandle, int texHandle) {
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass"), 0);
 
-  ctx.PushCommand3D(
+  ctx.PushCommand3D(key,
       [m, world, texHandle, lightAddr](ID3D12GraphicsCommandList *cl) {
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
         ctx.SetBlendMode(kBlendModePremultiplied);
-
         if (BindStandard3D_(ctx, "object3d_glass")) {
           ApplyTexture_(ctx, m, texHandle);
           m->SetExternalLightCBAddress(lightAddr);
@@ -264,7 +267,7 @@ void DrawModelGlass(int modelHandle, int texHandle) {
             ApplyDirLightGlass_(ctx, m);
           }
           m->Update(ctx.View(), ctx.Proj());
-          m->Draw(cl, world);
+          m->Draw(cl, world, ctx.CurrentFrame());
         }
         ctx.SetBlendMode(saved);
       });
@@ -284,19 +287,21 @@ void DrawModelGlassBatch(int modelHandle,
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
-  ctx.PushCommand3D(
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass_inst"), 0);
+
+  ctx.PushCommand3D(key,
       [m, instances, texHandle, lightAddr](ID3D12GraphicsCommandList *cl) {
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
         ctx.SetBlendMode(kBlendModePremultiplied);
-
         if (BindStandard3D_(ctx, "object3d_glass_inst")) {
           ApplyTexture_(ctx, m, texHandle);
           m->SetExternalLightCBAddress(lightAddr);
           if (lightAddr != 0) {
             ApplyDirLightGlass_(ctx, m);
           }
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances);
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
         }
         ctx.SetBlendMode(saved);
       });
@@ -316,27 +321,32 @@ void DrawModelGlassBatchColored(int modelHandle,
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
-  ctx.PushCommand3D([m, instances, color, texHandle,
-                     lightAddr](ID3D12GraphicsCommandList *cl) {
-    auto &ctx = GetRenderContext();
-    const BlendMode saved = ctx.CurrentBlendMode();
-    ctx.SetBlendMode(kBlendModePremultiplied);
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass_inst"), 0);
 
-    if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-      ApplyTexture_(ctx, m, texHandle);
-      m->SetExternalLightCBAddress(lightAddr);
-      if (lightAddr != 0) {
-        ApplyDirLightGlass_(ctx, m);
-      }
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color);
-    }
-    ctx.SetBlendMode(saved);
-  });
+  ctx.PushCommand3D(key,
+      [m, instances, color, texHandle,
+       lightAddr](ID3D12GraphicsCommandList *cl) {
+        auto &ctx = GetRenderContext();
+        const BlendMode saved = ctx.CurrentBlendMode();
+        ctx.SetBlendMode(kBlendModePremultiplied);
+        if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+          ApplyTexture_(ctx, m, texHandle);
+          m->SetExternalLightCBAddress(lightAddr);
+          if (lightAddr != 0) {
+            ApplyDirLightGlass_(ctx, m);
+          }
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
+        ctx.SetBlendMode(saved);
+      });
 }
 
 
 // ============================================================================
 // Glass (2パス: 背面→表面)
+// ※ 2パスは同一パケット内で PSO を切替える必要があるため、
+//    ラムダ方式（PushCommand3D）のまま残す。
 // ============================================================================
 
 void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
@@ -353,7 +363,10 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
 
-  ctx.PushCommand3D(
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass"), 0);
+
+  ctx.PushCommand3D(key,
       [m, world, texHandle, lightAddr](ID3D12GraphicsCommandList *cl) {
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
@@ -368,11 +381,11 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
 
         // 1) 背面（内側）
         if (BindStandard3D_(ctx, "object3d_glass_front")) {
-          m->Draw(cl, world);
+          m->Draw(cl, world, ctx.CurrentFrame());
         }
         // 2) 表面（外側）
         if (BindStandard3D_(ctx, "object3d_glass")) {
-          m->Draw(cl, world);
+          m->Draw(cl, world, ctx.CurrentFrame());
         }
 
         ctx.SetBlendMode(saved);
@@ -393,7 +406,10 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
-  ctx.PushCommand3D(
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass"), 0);
+
+  ctx.PushCommand3D(key,
       [m, instances, texHandle, lightAddr](ID3D12GraphicsCommandList *cl) {
         auto &ctx = GetRenderContext();
         const BlendMode saved = ctx.CurrentBlendMode();
@@ -406,10 +422,10 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
         }
 
         if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances);
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
         }
         if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances);
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
         }
 
         ctx.SetBlendMode(saved);
@@ -430,7 +446,10 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
 
-  ctx.PushCommand3D([m, instances, color, texHandle,
+  const uint64_t key = SortKey::Make(SortKey::kLayerGlass,
+                                     SortKey::HashPSO("object3d_glass"), 0);
+
+  ctx.PushCommand3D(key, [m, instances, color, texHandle,
                      lightAddr](ID3D12GraphicsCommandList *cl) {
     auto &ctx = GetRenderContext();
     const BlendMode saved = ctx.CurrentBlendMode();
@@ -443,10 +462,10 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
     }
 
     if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color);
+      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
     }
     if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color);
+      m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
     }
 
     ctx.SetBlendMode(saved);

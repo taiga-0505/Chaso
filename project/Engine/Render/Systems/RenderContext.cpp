@@ -1,10 +1,13 @@
 #include "RenderContext.h"
 
+#include "Common/Log/Log.h"
 #include "Dx12/Dx12Core.h"
 #include "PipelineManager.h"
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
 #include "Scene.h"
+#include <algorithm>
+#include <format>
 
 namespace RC {
 
@@ -62,6 +65,12 @@ void RenderContext::Init(SceneContext &ctx) {
   proj_ = MakeIdentity4x4();
   cl_ = nullptr;
   currentBlendMode_ = kBlendModeNone;
+
+  // FrameResource 初期化（トリプルバッファ）
+  for (uint32_t i = 0; i < FrameResource::kFrameCount; ++i) {
+    frameResources_[i].Init(device_.Get(), i);
+  }
+  frameIndex_ = 0;
 
   initialized_ = true;
 }
@@ -153,6 +162,10 @@ void RenderContext::PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) 
   BindAllLightCBs();
 
   modelMan_.ResetAllBatchCursors();
+
+  // FrameResource: フレームインデックスを進めてリセット
+  AdvanceFrame();
+  CurrentFrame().Reset();
 
   if (auto *prim = EnsurePrimitive3D()) {
     prim->BeginFrame(view_, proj_, kBlendModeNone);
@@ -367,6 +380,12 @@ void RenderContext::Execute3DCommands() {
     return;
   }
 
+  // 0) ソートキーで安定ソート（sortKey==0 は push 順を維持）
+  std::stable_sort(commandQueue3D_.begin(), commandQueue3D_.end(),
+                   [](const RenderCommand3D &a, const RenderCommand3D &b) {
+                     return a.sortKey < b.sortKey;
+                   });
+
   // 1) プリミティブの頂点転送
   if (prim3D_ && prim3D_->HasAny()) {
     prim3D_->TransferVertices();
@@ -376,7 +395,6 @@ void RenderContext::Execute3DCommands() {
   for (auto &cmd : commandQueue3D_) {
     if (cmd.type == RenderCommand3D::Primitive) {
       if (prim3D_) {
-        // プリミティブ用のパイプラインをバインド
         if (BindPipeline(cmd.primDepth ? "primitive3d" : "primitive3d_nodepth")) {
           prim3D_->DrawRange(cl_, cmd.primDepth, cmd.primStart, cmd.primCount);
         }
@@ -385,7 +403,6 @@ void RenderContext::Execute3DCommands() {
       cmd.func(cl_);
     }
   }
-
 
   // 3) 実行後の後始末
   Clear3DCommands();

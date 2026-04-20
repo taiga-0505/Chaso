@@ -151,6 +151,7 @@
     <ClCompile Include="..\Engine\Graphics\Light\Spot\SpotLightSource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Model\ModelMesh.cpp" />
     <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Model\ModelResource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp" />
@@ -197,6 +198,8 @@
     <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp" />
     <ClCompile Include="..\Engine\Render\Skybox\SkyboxManager.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderQueue.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\FrameResource.cpp" />
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
     <!-- Window -->
@@ -243,6 +246,7 @@
     <ClInclude Include="..\Engine\Graphics\Light\Spot\SpotLightSource.h" />
     <ClInclude Include="..\Engine\Graphics\Model\ModelMesh.h" />
     <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h" />
+    <ClInclude Include="..\Engine\Graphics\Model\ModelResource.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h" />
@@ -281,6 +285,8 @@
     <ClInclude Include="..\Engine\Render\Model\ModelManager.h" />
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
     <ClInclude Include="..\Engine\Render\RenderContext.h" />
+    <ClInclude Include="..\Engine\Render\RenderQueue.h" />
+    <ClInclude Include="..\Engine\Render\FrameResource.h" />
     <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h" />
     <ClInclude Include="..\Engine\Render\Skybox\SkyboxManager.h" />
     <ClInclude Include="..\Engine\Graphics\Skybox\Skybox.h" />

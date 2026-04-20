@@ -54,5 +54,6 @@ private:
   // 内部アクセス用
   friend class NormalState;
   friend class FadeOutState;
+  friend class LoadingState;
   friend class FadeInState;
 };

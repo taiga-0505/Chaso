@@ -20,6 +20,9 @@
 #include <future>
 #include <mutex>
 
+#include "RenderQueue.h"
+#include "FrameResource.h"
+
 
 #include "Light/Area/AreaLightManager.h"
 #include "Light/Directional/DirectionalLightManager.h"
@@ -120,6 +123,8 @@ public:
       Primitive,
     } type = Other;
 
+    uint64_t sortKey = 0; // 0 = ソートなし（push順を維持）
+
     std::function<void(ID3D12GraphicsCommandList *)> func;
 
     // Primitive マージ用の情報
@@ -135,9 +140,24 @@ public:
     commandQueue3D_.push_back(std::move(cmd));
   }
 
+  /// ソートキー付きでコマンドを積む（同じキューでstable_sort）
+  void PushCommand3D(uint64_t sortKey,
+                     std::function<void(ID3D12GraphicsCommandList *)> func) {
+    RenderCommand3D cmd;
+    cmd.type = RenderCommand3D::Other;
+    cmd.sortKey = sortKey;
+    cmd.func = std::move(func);
+    commandQueue3D_.push_back(std::move(cmd));
+  }
+
   void PushPrimitive3DCommand(bool depth, uint32_t start, uint32_t count);
   void Execute3DCommands();
   void Clear3DCommands() { commandQueue3D_.clear(); }
+
+  // ── FrameResource（フレームごとのリニアアロケータ）──
+  FrameResource &CurrentFrame() { return frameResources_[frameIndex_]; }
+  uint32_t FrameIndex() const { return frameIndex_; }
+  void AdvanceFrame() { frameIndex_ = (frameIndex_ + 1) % FrameResource::kFrameCount; }
 
 
   // ── Fog CB ─────────────────────────────────────────
@@ -198,8 +218,12 @@ private:
   std::unique_ptr<Primitive2D> prim2D_;
   std::unique_ptr<Primitive3D> prim3D_;
 
-  // コマンドキュー
+  // コマンドキュー（sortKey によるステーブルソート対応）
   std::vector<RenderCommand3D> commandQueue3D_;
+
+  // FrameResource（ダブル/トリプルバッファリング）
+  std::array<FrameResource, FrameResource::kFrameCount> frameResources_;
+  uint32_t frameIndex_ = 0;
 
   // 非同期タスク管理
   std::vector<std::future<void>> ongoingTasks_;
