@@ -379,6 +379,7 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
     output.color.rgb = (diffuseDir + diffusePoint + diffuseSpot + diffuseArea) + (specularDir + specularPoint + specularSpot + specularArea);
 
     // 環境マップ映り込み
+    [branch]
     if (gMaterial.environmentCoefficient > 0.0f) {
         float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
         float3 reflectedVector = reflect(cameraToPosition, N);
