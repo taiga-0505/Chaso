@@ -26,8 +26,10 @@
 #include "Graphics/PostProcess/PostProcess.h"
 #include "Scene.h"
 #include "imgui/imgui.h"
+#include "Common/Log/Log.h"
 
 #include <string_view>
+#include <format>
 
 namespace RC {
 
@@ -93,7 +95,14 @@ BlendMode GetBlendMode() {
 }
 
 void SetViewShadingMode(ViewShadingMode mode) {
-  RenderContext::GetInstance().SetViewShadingMode(mode);
+  ViewShadingMode current = RenderContext::GetInstance().GetViewShadingMode();
+  if (current != mode) {
+    RenderContext::GetInstance().SetViewShadingMode(mode);
+    const char *modeStr = "Solid";
+    if (mode == ViewShadingMode::Wireframe) modeStr = "Wireframe";
+    else if (mode == ViewShadingMode::SolidWireframe) modeStr = "Solid + Wireframe";
+    Log::Print(std::format("[Render] View Shading Mode changed to: {}", modeStr));
+  }
 }
 
 ViewShadingMode GetViewShadingMode() {

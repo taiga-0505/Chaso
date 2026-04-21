@@ -55,7 +55,7 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   tx_ball = RC::LoadTex("Resources/monsterBall.png");
   sprite = RC::LoadSprite("Resources/uvChecker.png", ctx);
 
-  skybox = RC::CreateSkyBox("Resources/rostock_laage_airport_4k.dds");
+  skybox = RC::CreateSkyBox("Resources/Skybox/skybox.dds");
   skyboxT_ = RC::GetSkyBoxTransformPtr(skybox);
 
   // =============================
