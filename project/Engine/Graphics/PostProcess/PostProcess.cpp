@@ -13,6 +13,7 @@ const char* ToString(PostEffectType type) {
   switch (type) {
   case PostEffectType::Grayscale: return "Grayscale";
   case PostEffectType::Sepia:     return "Sepia";
+  case PostEffectType::Vignette:  return "Vignette";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -50,6 +51,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineSepia_ = pipelineManager_->Get("sepia.none");
   assert(pipelineSepia_ && "Failed to get sepia pipeline");
+
+  pipelineVignette_ = pipelineManager_->Get("vignette.none");
+  assert(pipelineVignette_ && "Failed to get vignette pipeline");
 }
 
 // ============================================================================
@@ -110,6 +114,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineGrayscale_;
   case PostEffectType::Sepia:
     return pipelineSepia_;
+  case PostEffectType::Vignette:
+    return pipelineVignette_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -234,6 +240,7 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
     // 各エフェクトのチェックボックス
     bool grayscale = HasEffect(PostEffectType::Grayscale);
     bool sepia = HasEffect(PostEffectType::Sepia);
+    bool vignette = HasEffect(PostEffectType::Vignette);
 
     if (ImGui::Checkbox("Grayscale", &grayscale)) {
       if (grayscale) {
@@ -248,6 +255,14 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
         AddEffect(PostEffectType::Sepia);
       } else {
         RemoveEffect(PostEffectType::Sepia);
+      }
+    }
+
+    if (ImGui::Checkbox("Vignette", &vignette)) {
+      if (vignette) {
+        AddEffect(PostEffectType::Vignette);
+      } else {
+        RemoveEffect(PostEffectType::Vignette);
       }
     }
 

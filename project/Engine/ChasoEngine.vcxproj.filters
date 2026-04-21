@@ -214,6 +214,9 @@
     <Filter Include="Graphics\Texture\RenderTexture">
       <UniqueIdentifier>{25c84190-1157-48b4-9c65-58c37a545c42}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ECS">
+      <UniqueIdentifier>{a2b3c4d5-e6f7-8901-abcd-ef2345678901}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Engine\Camera\DebugCamera\DebugCamera.cpp">
@@ -680,6 +683,21 @@
     </ClInclude>
     <ClInclude Include="Graphics\PostProcess\PostProcess.h">
       <Filter>Graphics\PostProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\IComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\Entity.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\TransformComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\ModelRendererComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\ColliderComponent.h">
+      <Filter>ECS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

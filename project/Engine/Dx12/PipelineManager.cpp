@@ -484,6 +484,8 @@ void PipelineManager::RegisterDefaultPipelines() {
   const std::wstring objPs = L"Resources/Shader/Object3d/Object3D.PS.hlsl";
   const std::wstring glassPs =
       L"Resources/Shader/Object3d/Object3D_Glass.PS.hlsl";
+  const std::wstring wirePs =
+      L"Resources/Shader/Object3d/Object3D_Wireframe.PS.hlsl";
   const std::wstring sprVs = L"Resources/Shader/Sprite/Sprite.VS.hlsl";
   const std::wstring sprPs = L"Resources/Shader/Sprite/Sprite.PS.hlsl";
   const std::wstring ptlVs = L"Resources/Shader/Particle/Particle.VS.hlsl";
@@ -679,6 +681,30 @@ void PipelineManager::RegisterDefaultPipelines() {
         MakeKey("object3d_glass_inst_front", kBlendModePremultiplied),
         objVsInst, glassPs, InputLayoutType::Object3D, opt);
   }
+
+  // ワイヤーフレーム用
+  {
+    for (int m = (int)kBlendModeNone; m <= (int)kBlendModePremultiplied; ++m) {
+      const BlendMode mode = (BlendMode)m;
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::Object3D;
+      opt.enableDepth = true;
+      opt.enableDepthWrite = false; // ソリッドの上に重なるのでDepthWriteはOFFで運用
+      opt.enableAlphaBlend = (mode != kBlendModeNone);
+      opt.blendMode = mode;
+      opt.cull = D3D12_CULL_MODE_NONE; // 両面のワイヤーフレームを描く
+      opt.fill = D3D12_FILL_MODE_WIREFRAME;
+
+      // 単体用
+      CreateFromFiles(MakeKey("object3d_wire", mode),
+                      objVs, wirePs, InputLayoutType::Object3D, opt);
+
+      // インスタンシング用
+      opt.rootType = RootSignatureType::Object3DInstancing;
+      CreateFromFiles(MakeKey("object3d_wire_inst", mode),
+                      objVsInst, wirePs, InputLayoutType::Object3D, opt);
+    }
+  }
   
   // ====================
   // PostProcess
@@ -729,6 +755,21 @@ void PipelineManager::RegisterDefaultPipelines() {
     CreateFromFiles("sepia.none",
                     fullscreenVs,
                     L"Resources/Shader/Sepia/Sepia.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // vignette：ビネット（周辺減光）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("vignette.none",
+                    fullscreenVs,
+                    L"Resources/Shader/Vignette/Vignette.PS.hlsl",
                     InputLayoutType::None, opt);
   }
 

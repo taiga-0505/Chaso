@@ -202,6 +202,13 @@ enum LightingMode {
   HalfLambert = 2, // ハーフランバート
 };
 
+// ビューポート共有モード
+enum class ViewShadingMode {
+  Solid = 0,          // 通常描画
+  Wireframe = 1,      // ワイヤーフレームのみ
+  SolidWireframe = 2, // ソリッド描画＋ワイヤーフレームのオーバーレイ
+};
+
 // 2Dプリミティブ用: 塗りつぶし/ワイヤー
 // 非スコープ enum: 無修飾で使える（Scene側で kFill / kWire だけでOK）
 enum kFillMode {

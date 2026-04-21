@@ -80,7 +80,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\.\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)ECS;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\./;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
@@ -99,7 +99,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\.\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)ECS;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\./;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
@@ -118,7 +118,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\.\;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)Camera;$(ProjectDir)Common;$(ProjectDir)Dx12;$(ProjectDir)ECS;$(ProjectDir)Graphics;$(ProjectDir)ImGuiManager;$(ProjectDir)Input;$(ProjectDir)Particle;$(ProjectDir)Render;$(ProjectDir)Window;$(ProjectDir)..\./;$(ProjectDir)..\Externals\;$(ProjectDir)..\Externals\imgui;$(ProjectDir)..\Externals\assimp\include;$(ProjectDir)..\Resources\Shader\;$(ProjectDir)..\Application\Framework\;$(ProjectDir)..\Application\Game\;$(ProjectDir)..\Application\Game\Scene\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Lib>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
@@ -300,6 +300,12 @@
     <ClInclude Include="Input\Mouse\Mouse.h" />
     <ClInclude Include="Graphics\Texture\RenderTexture\RenderTexture.h" />
     <ClInclude Include="Graphics\PostProcess\PostProcess.h" />
+    <!-- ECS -->
+    <ClInclude Include="..\Engine\ECS\IComponent.h" />
+    <ClInclude Include="..\Engine\ECS\Entity.h" />
+    <ClInclude Include="..\Engine\ECS\TransformComponent.h" />
+    <ClInclude Include="..\Engine\ECS\ModelRendererComponent.h" />
+    <ClInclude Include="..\Engine\ECS\ColliderComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

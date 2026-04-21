@@ -75,6 +75,10 @@ public:
   void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
   void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+  // ── 表示モード ─────────────────────────────────────
+  void SetViewShadingMode(ViewShadingMode mode) { viewShadingMode_ = mode; }
+  ViewShadingMode GetViewShadingMode() const { return viewShadingMode_; }
+
   // ── テクスチャヘルパー ─────────────────────────────
   int LoadTex(const std::string &path, bool srgb);
   D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(int texHandle);
@@ -179,6 +183,7 @@ private:
   Matrix4x4 view_;
   Matrix4x4 proj_;
   BlendMode currentBlendMode_ = kBlendModeNone;
+  ViewShadingMode viewShadingMode_ = ViewShadingMode::Solid;
 
   // マネージャー群
   ModelManager modelMan_;
