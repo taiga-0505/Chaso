@@ -95,6 +95,15 @@ public:
   void SetColor(const RC::Vector4 &color);
   DirectionalLight *Light() { return resource_.Light(); }
 
+  /// 環境マップ映り込み係数を設定する（非同期ロード対応）
+  void SetEnvironmentCoefficient(float coeff) {
+    initialEnvCoeff_ = coeff;
+    if (Material *mat = resource_.Mat()) {
+      mat->environmentCoefficient = coeff;
+    }
+  }
+  float GetEnvironmentCoefficient() const { return initialEnvCoeff_; }
+
   // LightManager の共通ライトCB（b1）を使いたい場合の上書き。
   // 0 を渡すと「自前の cbLight_」に戻る。
   void SetExternalLightCBAddress(D3D12_GPU_VIRTUAL_ADDRESS addr) {
@@ -159,6 +168,12 @@ private:
   bool hasVP_ = false;
 
   LightingConfig initialLighting_{};
+
+  // 環境マップ映り込み係数（Initialize後にも適用される）
+  float initialEnvCoeff_ = 0.0f;
+
+  // ImGui用: 環境マップOFF時に前回の係数を記憶
+  float lastEnvCoeff_ = 0.5f;
 
   std::string filePath_;
 };

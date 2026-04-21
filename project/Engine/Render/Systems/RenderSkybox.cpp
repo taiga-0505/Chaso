@@ -30,6 +30,12 @@ void DrawSkyBox(int skyboxHandle) {
   Matrix4x4 vp = Multiply(view, proj);
   Matrix4x4 wvp = Multiply(world, vp);
 
+  // Skybox の Cubemap SRV を環境マップとして登録
+  D3D12_GPU_DESCRIPTOR_HANDLE envSrv = ctx.SkyBoxes().GetTextureSrv(skyboxHandle);
+  if (envSrv.ptr != 0) {
+    ctx.SetEnvironmentMap(envSrv);
+  }
+
   // コマンドキューにPSO切り替え→描画→元に戻すを積む
   ctx.PushCommand3D([skyboxHandle, world,
                      wvp](ID3D12GraphicsCommandList *cl) {
@@ -58,6 +64,12 @@ void DrawSkyBox(int skyboxHandle) {
     r.BindCameraCB();
     r.BindAllLightCBs();
   });
+}
+
+void SetEnvironmentMap(int skyboxHandle) {
+  auto &ctx = GetRenderContext();
+  D3D12_GPU_DESCRIPTOR_HANDLE srv = ctx.SkyBoxes().GetTextureSrv(skyboxHandle);
+  ctx.SetEnvironmentMap(srv);
 }
 
 void UnloadSkyBox(int skyboxHandle) {

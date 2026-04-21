@@ -12,6 +12,9 @@
 #include "Light/Point/PointLightSource.h"
 #include "Light/Spot/SpotLightSource.h"
 
+#include "Common/Log/Log.h"
+#include <format>
+
 #include <concepts>
 #include <type_traits>
 
@@ -145,11 +148,14 @@ template <LightManager T> bool TIsActiveLightEnabled(const T &mgr) {
 // ============================================================================
 
 int CreateDirectionalLight(LightActivateMode activateMode) {
-  return TCreateLight(GetRenderContext().DirLights(), activateMode);
+  int h = TCreateLight(GetRenderContext().DirLights(), activateMode);
+  if (h >= 0) Log::Print(std::format("[Light] DirectionalLight 生成 (Handle: {})", h));
+  return h;
 }
 
 void DestroyDirectionalLight(int lightHandle) {
   TDestroyLight(GetRenderContext().DirLights(), lightHandle);
+  Log::Print(std::format("[Light] DirectionalLight 破棄完了 (Handle: {})", lightHandle));
 }
 
 void SetActiveDirectionalLight(int lightHandle) {
@@ -193,11 +199,14 @@ bool IsActiveDirectionalLightEnabled() {
 // ============================================================================
 
 int CreatePointLight(LightActivateMode activateMode) {
-  return TCreateLight(GetRenderContext().PtLights(), activateMode);
+  int h = TCreateLight(GetRenderContext().PtLights(), activateMode);
+  if (h >= 0) Log::Print(std::format("[Light] PointLight 生成 (Handle: {})", h));
+  return h;
 }
 
 void DestroyPointLight(int pointLightHandle) {
   TDestroyLight(GetRenderContext().PtLights(), pointLightHandle);
+  Log::Print(std::format("[Light] PointLight 破棄完了 (Handle: {})", pointLightHandle));
 }
 
 void SetActivePointLight(int pointLightHandle) {
@@ -257,11 +266,14 @@ bool IsActivePointLightEnabled() {
 // ============================================================================
 
 int CreateSpotLight(LightActivateMode activateMode) {
-  return TCreateLight(GetRenderContext().SpLights(), activateMode);
+  int h = TCreateLight(GetRenderContext().SpLights(), activateMode);
+  if (h >= 0) Log::Print(std::format("[Light] SpotLight 生成 (Handle: {})", h));
+  return h;
 }
 
 void DestroySpotLight(int spotLightHandle) {
   TDestroyLight(GetRenderContext().SpLights(), spotLightHandle);
+  Log::Print(std::format("[Light] SpotLight 破棄完了 (Handle: {})", spotLightHandle));
 }
 
 void SetActiveSpotLight(int spotLightHandle) {
@@ -323,13 +335,16 @@ bool IsActiveSpotLightEnabled() {
 int CreateAreaLight(LightActivateMode activateMode) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return -1;
-  return TCreateLight(ctx.ArLights(), activateMode);
+  int h = TCreateLight(ctx.ArLights(), activateMode);
+  if (h >= 0) Log::Print(std::format("[Light] AreaLight 生成 (Handle: {})", h));
+  return h;
 }
 
 void DestroyAreaLight(int areaLightHandle) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return;
   TDestroyLight(ctx.ArLights(), areaLightHandle);
+  Log::Print(std::format("[Light] AreaLight 破棄完了 (Handle: {})", areaLightHandle));
 }
 
 void SetActiveAreaLight(int areaLightHandle) {

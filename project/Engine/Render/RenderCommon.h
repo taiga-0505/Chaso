@@ -713,6 +713,28 @@ Transform *GetSkyBoxTransformPtr(int skyboxHandle);
 void SetSkyBoxColor(int skyboxHandle, const Vector4 &color);
 
 // ===============================
+// 環境マップ（Environment Map）
+// ===============================
+
+/// <summary>
+/// Skybox の Cubemap を環境マップとして登録する
+/// </summary>
+/// <param name="skyboxHandle">スカイボックスハンドル</param>
+/// <remarks>
+/// DrawSkyBox() を呼んだ場合は自動的に登録されるため、
+/// 通常はこの関数を明示的に呼ぶ必要はありません。
+/// Skybox を描画せずに環境マップだけ使いたい時に利用してください。
+/// </remarks>
+void SetEnvironmentMap(int skyboxHandle);
+
+/// <summary>
+/// モデルの環境マップ映り込み係数を設定する
+/// </summary>
+/// <param name="modelHandle">モデルハンドル</param>
+/// <param name="coeff">映り込み係数（0=映り込みなし、1=完全鏡面）</param>
+void SetModelEnvironmentCoefficient(int modelHandle, float coeff);
+
+// ===============================
 // 汎用プロシージャルメッシュ（PrimitiveMesh）
 // ===============================
 

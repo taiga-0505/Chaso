@@ -87,6 +87,11 @@ void ModelObject::ApplyLightingIfReady_() {
   resource_.ApplyLighting(static_cast<int>(initialLighting_.mode),
                           initialLighting_.color, initialLighting_.dir,
                           initialLighting_.intensity);
+
+  // 環境マップ係数を再適用（Initialize後のリセット対策）
+  if (Material *mat = resource_.Mat()) {
+    mat->environmentCoefficient = initialEnvCoeff_;
+  }
 }
 
 // ============================================================================
@@ -181,6 +186,35 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
                          &mat->shininess, 0.5f, 0.0f, 256.0f, "%.1f");
         ImGui::SameLine();
         ImGui::TextDisabled("(0で鏡面なし)");
+      }
+    }
+
+    // 環境マップ映り込み（ライティングモードに関係なく表示）
+    if (mat) {
+      ImGui::Dummy(ImVec2(0, 4));
+      ImGui::TextUnformatted("環境マップ");
+
+      bool envOn = (mat->environmentCoefficient > 0.0f);
+      if (ImGui::Checkbox((std::string("映り込み有効##") + label).c_str(),
+                          &envOn)) {
+        if (envOn) {
+          // ON: 前回値がなければデフォルト 0.5
+          float val = (lastEnvCoeff_ > 0.0f) ? lastEnvCoeff_ : 0.5f;
+          SetEnvironmentCoefficient(val);
+        } else {
+          // OFF: 現在の値を記憶してから 0 にする
+          lastEnvCoeff_ = mat->environmentCoefficient;
+          SetEnvironmentCoefficient(0.0f);
+        }
+      }
+
+      if (envOn) {
+        if (ImGui::SliderFloat(
+                (std::string("映り込み係数##") + label).c_str(),
+                &mat->environmentCoefficient, 0.01f, 1.0f, "%.2f")) {
+          // スライダー変更時も initialEnvCoeff_ を同期
+          initialEnvCoeff_ = mat->environmentCoefficient;
+        }
       }
     }
 

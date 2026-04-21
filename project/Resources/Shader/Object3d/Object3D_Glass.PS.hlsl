@@ -5,7 +5,8 @@ struct Material
     float4 color; // rgb=tint, a=opacity(不透明度)
     int lightingMode; // 0:なし, 1:Lambert, 2:HalfLambert（ガラスでも使ってOK）
     float shininess; // スペキュラ指数（ガラスは 256～1024 くらいが映える）
-    float2 padding; // x=IOR, y=roughness(0..1) として使う
+    float environmentCoefficient; // GlassではIORとして使用
+    float padding; // Glassではroughness(0..1)として使用
     float4x4 uvTransform;
 };
 ConstantBuffer<Material> gMaterial : register(b0);
@@ -83,6 +84,7 @@ cbuffer AreaLightsCB : register(b5)
 };
 
 Texture2D<float4> gTexture : register(t0);
+TextureCube<float4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
 
 struct PixelShaderOutput
@@ -146,13 +148,14 @@ PixelShaderOutput main(VertexShaderOutput input)
     // ==========
     // Fresnel
     // ==========
-    float iorRaw = gMaterial.padding.x;
+    // Glassでは environmentCoefficient を IORに、padding を roughness に流用
+    float iorRaw = gMaterial.environmentCoefficient;
     float ior = (iorRaw > 1.0f && iorRaw < 3.0f) ? iorRaw : 1.5f; // default 1.5
     float f = (1.0f - ior) / (1.0f + ior);
     float F0 = f * f; // ガラスだとだいたい 0.04 付近
     float fresnel = FresnelSchlick(NdotV, F0);
 
-    float rough = saturate(gMaterial.padding.y);
+    float rough = saturate(gMaterial.padding);
 
     // roughness→指数（rough=0で鋭い、rough=1で広い）
     float autoSh = lerp(1024.0f, 64.0f, rough * rough);
@@ -342,6 +345,14 @@ PixelShaderOutput main(VertexShaderOutput input)
     // 反射：フレネルで端が強く、roughで弱く
     float specScale = lerp(1.0f, 0.25f, rough);
     float3 reflection = specularSum * specScale * (0.2f + 2.0f * fresnel);
+
+    // 環境マップ反射（ガラスでもフレネル係数で映り込み）
+    {
+        float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+        float3 reflectedVector = reflect(cameraToPosition, N);
+        float4 envColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
+        reflection += envColor.rgb * fresnel * specScale;
+    }
 
     // 透過っぽい“にじみ”：すりガラスほど増える（超控えめ）
     float scatter = lerp(0.02f, 0.15f, rough);

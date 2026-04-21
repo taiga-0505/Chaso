@@ -49,7 +49,8 @@ void SampleScene::OnEnter(SceneContext &ctx) {
   plane = RC::LoadModel("Resources/model/plane");
   blockModel = RC::LoadModel("Resources/model/block");
   model = RC::LoadModel("Resources/model/teapot");
-  tx_model = RC::LoadTex("Resources/uvChecker.png");
+  tx_model = RC::LoadTex("Resources/white1x1.png");
+  RC::SetModelEnvironmentCoefficient(model,0.5f);
   terrain = RC::LoadModel("Resources/model/terrain");
   tx_Skydome_ = RC::LoadTex("Resources/sky_sphere.png");
   tx_ball = RC::LoadTex("Resources/monsterBall.png");
@@ -196,13 +197,13 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // RC::DrawSkydome(skydome);
   RC::DrawSkyBox(skybox);
 
-  RC::DrawPrimitiveMesh(primitiveSphere);
+ /* RC::DrawPrimitiveMesh(primitiveSphere);
   RC::DrawPrimitiveMesh(testBox);
   RC::DrawPrimitiveMesh(testPlane);
   RC::DrawPrimitiveMesh(testCylinder);
   RC::DrawPrimitiveMesh(testCone);
   RC::DrawPrimitiveMesh(testTorus);
-  RC::DrawPrimitiveMesh(testCapsule);
+  RC::DrawPrimitiveMesh(testCapsule);*/
 
   // モデルの描画
   RC::DrawModel(plane);

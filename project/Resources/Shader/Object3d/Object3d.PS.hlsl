@@ -5,7 +5,8 @@ struct Material
     float4 color; // 色 (RGBA)
     int lightingMode; // 0:なし, 1:Lambert, 2:Half Lambert（※3/4が来てもLambert扱い）
     float shininess; // Blinn-Phongの指数（0以下なら鏡面なし）
-    float2 padding; // アラインメント調整
+    float environmentCoefficient; // 環境マップ映り込み係数 (0〜1)
+    float padding; // アラインメント調整
     float4x4 uvTransform; // UV変換
 };
 
@@ -96,6 +97,7 @@ cbuffer AreaLightsCB : register(b5)
 };
 
 Texture2D<float4> gTexture : register(t0);
+TextureCube<float4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
 
 struct PixelShaderOutput
@@ -375,6 +377,15 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
 
 // 合算
     output.color.rgb = (diffuseDir + diffusePoint + diffuseSpot + diffuseArea) + (specularDir + specularPoint + specularSpot + specularArea);
+
+    // 環境マップ映り込み
+    if (gMaterial.environmentCoefficient > 0.0f) {
+        float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+        float3 reflectedVector = reflect(cameraToPosition, N);
+        float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
+        output.color.rgb += environmentColor.rgb * gMaterial.environmentCoefficient;
+    }
+
     output.color.a = base.a;
 
     return output;

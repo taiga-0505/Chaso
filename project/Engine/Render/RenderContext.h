@@ -112,6 +112,11 @@ public:
   void BindCameraCB();
   void BindAllLightCBs();
 
+  // ── 環境マップ ─────────────────────────────────────
+  void SetEnvironmentMap(D3D12_GPU_DESCRIPTOR_HANDLE srv) { environmentMapSrv_ = srv; }
+  D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentMapSrv() const { return environmentMapSrv_; }
+  void BindEnvironmentMap();
+
   // ── Primitive 遅延生成 ─────────────────────────────
   Primitive2D *EnsurePrimitive2D();
   Primitive3D *EnsurePrimitive3D();
@@ -196,6 +201,9 @@ private:
   SpotLightManager spLightMan_;
   AreaLightManager arLightMan_;
   TextureManager texMan_;
+
+  // 環境マップ SRV（Skybox の Cubemap を流用）
+  D3D12_GPU_DESCRIPTOR_HANDLE environmentMapSrv_{};
 
   // Camera CB
   struct CameraCB {
