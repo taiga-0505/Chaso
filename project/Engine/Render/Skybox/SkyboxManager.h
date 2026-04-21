@@ -42,6 +42,11 @@ public:
 
   void ApplyTexture(int handle);
 
+  /// <summary>
+  /// Cubemap の SRV を取得する（環境マップ用）
+  /// </summary>
+  D3D12_GPU_DESCRIPTOR_HANDLE GetTextureSrv(int handle) const;
+
 private:
   struct Slot {
     std::unique_ptr<Skybox> ptr;

@@ -34,6 +34,14 @@ bool App::Init() {
   auto totalStart = std::chrono::high_resolution_clock::now();
   Log::Print("[App] 初期化開始...");
 
+#if defined(_DEBUG)
+  Log::Print("[App] Build Configuration: Debug");
+#elif defined(RC_DEVELOPMENT)
+  Log::Print("[App] Build Configuration: Development");
+#else
+  Log::Print("[App] Build Configuration: Release");
+#endif
+
   auto stepStart = std::chrono::high_resolution_clock::now();
 
   // Window

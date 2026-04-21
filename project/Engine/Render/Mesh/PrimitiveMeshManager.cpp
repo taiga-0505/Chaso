@@ -1,6 +1,8 @@
 #include "PrimitiveMeshManager.h"
 #include "Mesh/PrimitiveMesh.h"
 #include "Texture/TextureManager/TextureManager.h"
+#include "Common/Log/Log.h"
+#include <format>
 
 namespace RC {
 
@@ -32,7 +34,7 @@ int PrimitiveMeshManager::AllocSlot_() {
   return static_cast<int>(primitives_.size()) - 1;
 }
 
-int PrimitiveMeshManager::Create(const ModelData &data, int textureHandle) {
+int PrimitiveMeshManager::Create(const ModelData &data, int textureHandle, const std::string &typeName) {
   if (!device_) {
     return -1;
   }
@@ -51,6 +53,9 @@ int PrimitiveMeshManager::Create(const ModelData &data, int textureHandle) {
   primitives_[handle].ptr = std::move(prim);
   primitives_[handle].inUse = true;
   primitives_[handle].defaultTexHandle = textureHandle;
+  primitives_[handle].typeName = typeName;
+
+  Log::Print(std::format("[PrimitiveMesh] メッシュ生成 (Type: {}, Handle: {}, TexHandle: {})", typeName, handle, textureHandle));
 
   return handle;
 }
@@ -60,9 +65,12 @@ void PrimitiveMeshManager::Unload(int handle) {
     return;
   }
 
+  Log::Print(std::format("[PrimitiveMesh] 破棄完了 (Type: {}, Handle: {})", primitives_[handle].typeName, handle));
+
   primitives_[handle].ptr.reset();
   primitives_[handle].inUse = false;
   primitives_[handle].defaultTexHandle = -1;
+  primitives_[handle].typeName.clear();
 }
 
 bool PrimitiveMeshManager::IsValid(int handle) const {

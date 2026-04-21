@@ -614,4 +614,11 @@ void ResetCursor(int modelHandle) {
   GetRenderContext().Models().ResetCursor(modelHandle);
 }
 
+void SetModelEnvironmentCoefficient(int modelHandle, float coeff) {
+  auto &ctx = GetRenderContext();
+  auto *m = ctx.Models().Get(modelHandle);
+  if (!m) return;
+  m->SetEnvironmentCoefficient(coeff);
+}
+
 } // namespace RC

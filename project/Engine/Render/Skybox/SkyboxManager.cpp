@@ -103,4 +103,11 @@ void SkyboxManager::ApplyTexture(int handle) {
   skyboxes_[handle].ptr->SetTexture(skyboxes_[handle].texSrv);
 }
 
+D3D12_GPU_DESCRIPTOR_HANDLE SkyboxManager::GetTextureSrv(int handle) const {
+  if (!IsValid(handle)) {
+    return D3D12_GPU_DESCRIPTOR_HANDLE{0};
+  }
+  return skyboxes_[handle].texSrv;
+}
+
 } // namespace RC

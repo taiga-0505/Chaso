@@ -8,43 +8,43 @@ namespace RC {
 int GeneratePlane(float width, float height, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GeneratePlane(width, height);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Plane");
 }
 
 int GenerateBox(float width, float height, float depth, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateBox(width, height, depth);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Box");
 }
 
 int GenerateSphere(float radius, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateSphere(radius);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Sphere");
 }
 
 int GenerateCylinder(float radius, float height, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateCylinder(radius, height);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Cylinder");
 }
 
 int GenerateCone(float radius, float height, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateCone(radius, height);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Cone");
 }
 
 int GenerateTorus(float majorRadius, float minorRadius, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateTorus(majorRadius, minorRadius);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Torus");
 }
 
 int GenerateCapsule(float radius, float height, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GenerateCapsule(radius, height);
-  return ctx.PrimitiveMeshes().Create(data, texHandle);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Capsule");
 }
 
 void DrawPrimitiveMesh(int meshHandle, int texHandle) {

@@ -294,6 +294,16 @@ void RenderContext::BindAllLightCBs() {
   if (const D3D12_GPU_VIRTUAL_ADDRESS addr = arLightMan_.GetCBAddress()) {
     cl_->SetGraphicsRootConstantBufferView(7, addr);
   }
+
+  // EnvironmentMap → RootParam[8]
+  BindEnvironmentMap();
+}
+
+void RenderContext::BindEnvironmentMap() {
+  if (!cl_ || environmentMapSrv_.ptr == 0) {
+    return;
+  }
+  cl_->SetGraphicsRootDescriptorTable(8, environmentMapSrv_);
 }
 
 // ============================================================================

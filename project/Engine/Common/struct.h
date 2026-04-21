@@ -94,7 +94,8 @@ struct Material {
   RC::Vector4 color;         // 色 (RGBA)
   int lightingMode;          // 0:なし, 1:Lambert, 2:Half Lambert
   float shininess;           // 光沢度
-  float padding[2];          // アラインメント調整
+  float environmentCoefficient = 0.0f; // 環境マップ映り込み係数 (0〜1)
+  float padding;             // アラインメント調整
   RC::Matrix4x4 uvTransform; // UV変換行列
 };
 

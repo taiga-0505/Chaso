@@ -1,4 +1,5 @@
 #include "GraphicsPipeline.h"
+#include "Common/Log/Log.h"
 #include <dxcapi.h>
 
 void GraphicsPipeline::Term() {
@@ -187,6 +188,21 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   d.CachedPSO = cachedPSO;
 
   HRESULT hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
+
+  // キャッシュ付きで失敗した場合：キャッシュを破棄してリトライ
+  if (FAILED(hr) && cachedPSO.pCachedBlob != nullptr) {
+    Log::Print(
+        "[PipelineManager] PSOキャッシュ不一致を検出 → キャッシュを破棄して再構築します");
+    Log::Print(
+        "  ※ ルートシグネチャやシェーダーを変更した場合に発生します");
+    Log::Print(
+        "  ※ 次回終了時に新しいキャッシュが自動保存されます");
+
+    d.CachedPSO = {}; // キャッシュなし
+    pso_.Reset();
+    hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
+  }
+
   assert(SUCCEEDED(hr));
 }
 
@@ -205,8 +221,8 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   // 既存ルートシグネチャ解放
   root_.Reset();
 
-  D3D12_ROOT_PARAMETER params[8] = {};
-  D3D12_DESCRIPTOR_RANGE ranges[2] = {}; // ← ここを共通で使う
+  D3D12_ROOT_PARAMETER params[9] = {};
+  D3D12_DESCRIPTOR_RANGE ranges[3] = {}; // t0(Tex), t1(EnvMap), Particle用
   UINT paramCount = 0;
 
   switch (type) {
@@ -258,7 +274,19 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[7].Descriptor.ShaderRegister = 5;
 
-    paramCount = 8;
+    // 8: SRV table t1 (PS) EnvironmentMap (Cubemap)
+    ranges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[1].BaseShaderRegister = 1; // t1
+    ranges[1].NumDescriptors = 1;
+    ranges[1].OffsetInDescriptorsFromTableStart =
+        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[8].DescriptorTable.NumDescriptorRanges = 1;
+    params[8].DescriptorTable.pDescriptorRanges = &ranges[1];
+
+    paramCount = 9;
     break;
 
   case RootSignatureType::Object3DInstancing:
@@ -310,7 +338,19 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     params[7].Descriptor.ShaderRegister = 5;
 
-    paramCount = 8;
+    // 8: SRV table t1 (PS) EnvironmentMap (Cubemap)
+    ranges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[2].BaseShaderRegister = 1; // t1
+    ranges[2].NumDescriptors = 1;
+    ranges[2].OffsetInDescriptorsFromTableStart =
+        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[8].DescriptorTable.NumDescriptorRanges = 1;
+    params[8].DescriptorTable.pDescriptorRanges = &ranges[2];
+
+    paramCount = 9;
     break;
 
   case RootSignatureType::Sprite:

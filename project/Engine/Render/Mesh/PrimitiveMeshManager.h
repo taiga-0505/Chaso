@@ -15,7 +15,7 @@ public:
   ~PrimitiveMeshManager();
   void Term();
 
-  int Create(const ModelData &data, int textureHandle = -1);
+  int Create(const ModelData &data, int textureHandle = -1, const std::string &typeName = "Unknown");
   void Unload(int handle);
 
   bool IsValid(int handle) const;
@@ -34,6 +34,7 @@ private:
     std::unique_ptr<PrimitiveMesh> ptr;
     bool inUse = false;
     int defaultTexHandle = -1;
+    std::string typeName;
   };
 
   int AllocSlot_();

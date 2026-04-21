@@ -24,9 +24,9 @@ void ModelResource::Initialize(ID3D12Device *device) {
   cbMat_.mapped->lightingMode = 2; // 既定 HalfLambert
   cbMat_.mapped->uvTransform = MakeIdentity4x4();
 
-  // padding 初期化（ガラスで使う）
-  cbMat_.mapped->padding[0] = 0.0f; // IOR（0ならPS側で1.5扱いにする）
-  cbMat_.mapped->padding[1] = 0.0f; // roughness
+  // padding 初期化（ガラスでは environmentCoefficient=IOR, padding=roughness として使う）
+  cbMat_.mapped->environmentCoefficient = 0.0f; // 通常モデル: 映り込みなし / Glass: IOR（0ならPS側で1.5扱い）
+  cbMat_.mapped->padding = 0.0f;                // Glass: roughness
 
   // Light CB（各Objectが自前で持つ）
   cbLight_.resource = CreateBufferResource(device_.Get(),
