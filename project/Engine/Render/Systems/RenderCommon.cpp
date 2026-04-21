@@ -26,6 +26,7 @@
 #include "Graphics/PostProcess/PostProcess.h"
 #include "Scene.h"
 #include "imgui/imgui.h"
+#include "Common/EngineConfig.h" // Added for RC_ENABLE_IMGUI
 #include "Common/Log/Log.h"
 
 #include <string_view>
@@ -109,6 +110,7 @@ ViewShadingMode GetViewShadingMode() {
   return RenderContext::GetInstance().GetViewShadingMode();
 }
 
+#if RC_ENABLE_IMGUI
 void DrawViewShadingModeImGui(const char *label) {
   int current = static_cast<int>(GetViewShadingMode());
   const char *items[] = {"Solid", "Wireframe", "Solid + Wireframe"};
@@ -116,6 +118,7 @@ void DrawViewShadingModeImGui(const char *label) {
     SetViewShadingMode(static_cast<ViewShadingMode>(current));
   }
 }
+#endif
 
 void SetPostEffect(::PostEffectType type) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
@@ -155,11 +158,13 @@ bool HasPostEffect(::PostEffectType type) {
   return false;
 }
 
+#if RC_ENABLE_IMGUI
 void DrawPostEffectImGui(const char *label) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
     pp->DrawImGui(label);
   }
 }
+#endif
 
 void AddLoadingTask(std::future<void> &&task) {
   RenderContext::GetInstance().AddLoadingTask(std::move(task));
