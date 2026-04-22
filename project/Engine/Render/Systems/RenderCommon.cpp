@@ -102,6 +102,9 @@ void SetViewShadingMode(ViewShadingMode mode) {
     const char *modeStr = "Solid";
     if (mode == ViewShadingMode::Wireframe) modeStr = "Wireframe";
     else if (mode == ViewShadingMode::SolidWireframe) modeStr = "Solid + Wireframe";
+    else if (mode == ViewShadingMode::FaceOrientation) modeStr = "Face Orientation";
+    else if (mode == ViewShadingMode::RandomColor) modeStr = "Random Color";
+    else if (mode == ViewShadingMode::SolidShading) modeStr = "Solid Shading (Lambert)";
     Log::Print(std::format("[Render] View Shading Mode changed to: {}", modeStr));
   }
 }
@@ -113,8 +116,15 @@ ViewShadingMode GetViewShadingMode() {
 #if RC_ENABLE_IMGUI
 void DrawViewShadingModeImGui(const char *label) {
   int current = static_cast<int>(GetViewShadingMode());
-  const char *items[] = {"Solid", "Wireframe", "Solid + Wireframe"};
-  if (ImGui::Combo(label, &current, items, 3)) {
+  const char *items[] = {
+    "Solid",
+    "Wireframe",
+    "Solid + Wireframe",
+    "Face Orientation",
+    "Random Color",
+    "Solid Shading (Lambert)"
+  };
+  if (ImGui::Combo(label, &current, items, 6)) {
     SetViewShadingMode(static_cast<ViewShadingMode>(current));
   }
 }

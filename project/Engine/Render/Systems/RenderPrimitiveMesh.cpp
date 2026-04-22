@@ -65,24 +65,52 @@ void DrawPrimitiveMesh(int meshHandle, int texHandle) {
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (ctx.BindPipeline("object3d")) {
-        ctx.BindCameraCB();
-        cl->SetGraphicsRootConstantBufferView(3, lightAddr);
-        ctx.BindAllLightCBs();
+    // デバッグシェーディングモードの判定
+    bool isDebug = (shadingMode == ViewShadingMode::FaceOrientation ||
+                    shadingMode == ViewShadingMode::RandomColor ||
+                    shadingMode == ViewShadingMode::SolidShading);
 
+    if (isDebug) {
+      // デバッグモード: 専用 PSO で描画（BlendMode=None固定）
+      auto savedBlend = ctx.CurrentBlendMode();
+      ctx.SetBlendMode(kBlendModeNone);
+
+      std::string_view prefix = "object3d";
+      switch (shadingMode) {
+      case ViewShadingMode::FaceOrientation: prefix = "object3d_faceori"; break;
+      case ViewShadingMode::RandomColor:     prefix = "object3d_randcolor"; break;
+      case ViewShadingMode::SolidShading:    prefix = "object3d_solid"; break;
+      default: break;
+      }
+
+      if (ctx.BindPipeline(prefix)) {
+        ctx.BindCameraCB();
+        ctx.BindAllLightCBs();
         ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
         m->Draw(cl, world);
       }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (ctx.BindPipeline("object3d_wire")) {
-        ctx.BindCameraCB();
-        cl->SetGraphicsRootConstantBufferView(3, lightAddr); // object3d用レイアウトなので必要
-        ctx.BindAllLightCBs();
 
-        ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
-        m->Draw(cl, world);
+      ctx.SetBlendMode(savedBlend);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (ctx.BindPipeline("object3d")) {
+          ctx.BindCameraCB();
+          cl->SetGraphicsRootConstantBufferView(3, lightAddr);
+          ctx.BindAllLightCBs();
+
+          ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+          m->Draw(cl, world);
+        }
+      }
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (ctx.BindPipeline("object3d_wire")) {
+          ctx.BindCameraCB();
+          cl->SetGraphicsRootConstantBufferView(3, lightAddr); // object3d用レイアウトなので必要
+          ctx.BindAllLightCBs();
+
+          ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+          m->Draw(cl, world);
+        }
       }
     }
     ctx.SetBlendMode(prevBlend);

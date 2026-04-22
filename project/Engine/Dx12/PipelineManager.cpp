@@ -718,6 +718,74 @@ void PipelineManager::RegisterDefaultPipelines() {
     }
   }
   
+  // ============================================================
+  // View Shading デバッグパイプライン
+  // ============================================================
+  {
+    const std::wstring faceOriPs =
+        L"Resources/Shader/Object3d/Object3D_FaceOrientation.PS.hlsl";
+    const std::wstring randColorPs =
+        L"Resources/Shader/Object3d/Object3D_RandomColor.PS.hlsl";
+    const std::wstring solidShadingPs =
+        L"Resources/Shader/Object3d/Object3D_SolidShading.PS.hlsl";
+
+    // --- FaceOrientation (カリング無し：裏面を可視化する必要がある) ---
+    {
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::Object3D;
+      opt.enableDepth = true;
+      opt.enableDepthWrite = true;
+      opt.enableAlphaBlend = false;
+      opt.blendMode = kBlendModeNone;
+      opt.cull = D3D12_CULL_MODE_NONE; // 裏面も描画する
+
+      CreateFromFiles("object3d_faceori.none",
+                      objVs, faceOriPs, InputLayoutType::Object3D, opt);
+
+      // インスタンシング用
+      opt.rootType = RootSignatureType::Object3DInstancing;
+      CreateFromFiles("object3d_faceori_inst.none",
+                      objVsInst, faceOriPs, InputLayoutType::Object3D, opt);
+    }
+
+    // --- RandomColor ---
+    {
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::Object3D;
+      opt.enableDepth = true;
+      opt.enableDepthWrite = true;
+      opt.enableAlphaBlend = false;
+      opt.blendMode = kBlendModeNone;
+      opt.cull = D3D12_CULL_MODE_BACK;
+
+      CreateFromFiles("object3d_randcolor.none",
+                      objVs, randColorPs, InputLayoutType::Object3D, opt);
+
+      // インスタンシング用
+      opt.rootType = RootSignatureType::Object3DInstancing;
+      CreateFromFiles("object3d_randcolor_inst.none",
+                      objVsInst, randColorPs, InputLayoutType::Object3D, opt);
+    }
+
+    // --- SolidShading (Half-Lambert) ---
+    {
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::Object3D;
+      opt.enableDepth = true;
+      opt.enableDepthWrite = true;
+      opt.enableAlphaBlend = false;
+      opt.blendMode = kBlendModeNone;
+      opt.cull = D3D12_CULL_MODE_BACK;
+
+      CreateFromFiles("object3d_solid.none",
+                      objVs, solidShadingPs, InputLayoutType::Object3D, opt);
+
+      // インスタンシング用
+      opt.rootType = RootSignatureType::Object3DInstancing;
+      CreateFromFiles("object3d_solid_inst.none",
+                      objVsInst, solidShadingPs, InputLayoutType::Object3D, opt);
+    }
+  }
   // ====================
   // PostProcess
   // ====================
