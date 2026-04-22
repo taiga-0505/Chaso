@@ -18,6 +18,7 @@ enum class PostEffectType {
   Grayscale,  // グレースケール
   Sepia,      // セピア調
   Vignette,   // ビネット（周辺減光）
+  BoxFilter,  // ボックスフィルタ（平滑化）
 };
 
 /// <summary>
@@ -98,7 +99,8 @@ private:
   /// </summary>
   void DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
                       D3D12_GPU_DESCRIPTOR_HANDLE srcSRV,
-                      GraphicsPipeline *pipeline);
+                      GraphicsPipeline *pipeline,
+                      PostEffectType effectType = PostEffectType::None);
 
   /// <summary>
   /// エフェクト種別に対応するパイプラインを返す
@@ -117,6 +119,7 @@ private:
   GraphicsPipeline *pipelineGrayscale_ = nullptr;
   GraphicsPipeline *pipelineSepia_ = nullptr;
   GraphicsPipeline *pipelineVignette_ = nullptr;
+  GraphicsPipeline *pipelineBoxFilter_ = nullptr;
 
   // アクティブなエフェクトスタック（適用順）
   std::vector<PostEffectType> activeEffects_;
@@ -125,6 +128,9 @@ private:
   std::unique_ptr<RenderTexture> pingPongA_;
   std::unique_ptr<RenderTexture> pingPongB_;
   bool pingPongInitialized_ = false;
+
+  // BoxFilter パラメータ
+  int boxFilterK_ = 1; // カーネル半径（1 = 3x3, 2 = 5x5, ...）
 
   void EnsurePingPongTextures();
 };
