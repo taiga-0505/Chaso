@@ -61,7 +61,6 @@ void Window::UpdateBackgroundBrush() {
 
 void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
                         const int32_t kClientHeight) {
-  log.Initialize();
 
   timeBeginPeriod(1); // タイマー精度を1msに設定
 

@@ -7,10 +7,14 @@
 #include <format>
 #include <string>
 
+// 静的メンバの定義
+std::ofstream Log::sLogFile_;
+
 void Log::Initialize() {
 
   // ログのディレクトリを用意
   std::filesystem::create_directory("../logs");
+  std::filesystem::create_directory("../logs/app");
   // 現在の時間を取得(UTC)
   std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
   // ログファイルの名前にコンマ何秒はいらないので、削って秒にする
@@ -21,18 +25,33 @@ void Log::Initialize() {
   // formatを使って年月日_時分秒の文字列に変換
   std::string dateString = std::format("{:%Y-%m-%d_%H-%M-%S}", localTime);
   // 時間を使ってファイル名を決定
-  std::string logFilePath = std::string("../logs/") + dateString + ".log";
-  // ファイルを作って書き込み準備
-  std::ofstream logStream(logFilePath);
+  std::string logFilePath = std::string("../logs/app/") + dateString + ".log";
+  // ファイルを開いて保持する
+  sLogFile_.open(logFilePath, std::ios::out | std::ios::trunc);
+}
+
+void Log::Finalize() {
+  if (sLogFile_.is_open()) {
+    sLogFile_.flush();
+    sLogFile_.close();
+  }
 }
 
 void Log::WriteLog(std::ostream &os, const std::string &message) {
   os << message << std::endl;
   OutputDebugStringA(message.c_str());
+  // ファイルにも書き込む
+  if (sLogFile_.is_open()) {
+    sLogFile_ << message << std::endl;
+  }
 }
 
 void Log::WriteLog(const std::string &message) {
   OutputDebugStringA(message.c_str());
+  // ファイルにも書き込む
+  if (sLogFile_.is_open()) {
+    sLogFile_ << message << std::endl;
+  }
 }
 
 void Log::Print(const std::string &message) {
@@ -50,6 +69,11 @@ void Log::Print(const std::string &message) {
   Log logger;
   std::wstring wmsg = logger.ConvertString(msg);
   OutputDebugStringW(wmsg.c_str());
+
+  // ファイルにも書き込む（UTF-8のまま）
+  if (sLogFile_.is_open()) {
+    sLogFile_ << msg << std::flush;
+  }
 }
 
 std::wstring Log::ConvertString(const std::string &str) {
