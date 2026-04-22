@@ -441,7 +441,14 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[0].DescriptorTable.NumDescriptorRanges = 1;
     params[0].DescriptorTable.pDescriptorRanges = &ranges[0];
 
-    paramCount = 1;
+    // 1: Root32BitConstants b0 (PS) PostEffect params (4 x uint32)
+    params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[1].Constants.ShaderRegister = 0; // b0
+    params[1].Constants.RegisterSpace = 0;
+    params[1].Constants.Num32BitValues = 4;
+
+    paramCount = 2;
     break;
   }
 

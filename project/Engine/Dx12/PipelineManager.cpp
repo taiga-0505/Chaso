@@ -785,6 +785,21 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // boxfilter：ボックスフィルタ（平滑化）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("boxfilter.none",
+                    fullscreenVs,
+                    L"Resources/Shader/BoxFilter/BoxFilter.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   Log::Print(std::format("[PipelineManager] デフォルトパイプライン登録完了 (Total: {})", pipelines_.size()));
 
   // キャッシュ保存

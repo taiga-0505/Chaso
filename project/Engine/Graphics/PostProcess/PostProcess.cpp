@@ -14,6 +14,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::Grayscale: return "Grayscale";
   case PostEffectType::Sepia:     return "Sepia";
   case PostEffectType::Vignette:  return "Vignette";
+  case PostEffectType::BoxFilter: return "BoxFilter";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -54,6 +55,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineVignette_ = pipelineManager_->Get("vignette.none");
   assert(pipelineVignette_ && "Failed to get vignette pipeline");
+
+  pipelineBoxFilter_ = pipelineManager_->Get("boxfilter.none");
+  assert(pipelineBoxFilter_ && "Failed to get boxfilter pipeline");
 }
 
 // ============================================================================
@@ -116,6 +120,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineSepia_;
   case PostEffectType::Vignette:
     return pipelineVignette_;
+  case PostEffectType::BoxFilter:
+    return pipelineBoxFilter_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -145,7 +151,8 @@ void PostProcess::EnsurePingPongTextures() {
 
 void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
                                  D3D12_GPU_DESCRIPTOR_HANDLE srcSRV,
-                                 GraphicsPipeline *pipeline) {
+                                 GraphicsPipeline *pipeline,
+                                 PostEffectType effectType) {
   assert(pipeline);
   cmdList->SetGraphicsRootSignature(pipeline->Root());
   cmdList->SetPipelineState(pipeline->PSO());
@@ -153,6 +160,20 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
 
   // RootSignatureType::PostProcess → params[0] が SRV table (t0)
   cmdList->SetGraphicsRootDescriptorTable(0, srcSRV);
+
+  // params[1] が RootConstants (b0) — エフェクト固有パラメータ
+  struct PostEffectConstants {
+    uint32_t param0;
+    uint32_t param1;
+    uint32_t param2;
+    uint32_t param3;
+  } constants = { 0, 0, 0, 0 };
+
+  if (effectType == PostEffectType::BoxFilter) {
+    constants.param0 = static_cast<uint32_t>(boxFilterK_);
+  }
+
+  cmdList->SetGraphicsRoot32BitConstants(1, 4, &constants, 0);
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
   cmdList->DrawInstanced(3, 1, 0, 0);
@@ -166,14 +187,15 @@ void PostProcess::Draw(ID3D12GraphicsCommandList *cmdList,
                        const RenderTexture &renderTexture) {
   // --- エフェクトなし：そのままコピー ---
   if (activeEffects_.empty()) {
-    DrawSinglePass(cmdList, renderTexture.GetSRVGPU(), pipelineCopy_);
+    DrawSinglePass(cmdList, renderTexture.GetSRVGPU(), pipelineCopy_, PostEffectType::None);
     return;
   }
 
   // --- 1エフェクト：シングルパス ---
   if (activeEffects_.size() == 1) {
     DrawSinglePass(cmdList, renderTexture.GetSRVGPU(),
-                   GetPipelineForEffect(activeEffects_[0]));
+                   GetPipelineForEffect(activeEffects_[0]),
+                   activeEffects_[0]);
     return;
   }
 
@@ -226,7 +248,8 @@ void PostProcess::Draw(ID3D12GraphicsCommandList *cmdList,
 
     // ── 描画 ──
     DrawSinglePass(cmdList, srcSRV,
-                   GetPipelineForEffect(activeEffects_[i]));
+                   GetPipelineForEffect(activeEffects_[i]),
+                   activeEffects_[i]);
   }
 }
 
@@ -264,6 +287,22 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       } else {
         RemoveEffect(PostEffectType::Vignette);
       }
+    }
+
+    bool boxFilter = HasEffect(PostEffectType::BoxFilter);
+    if (ImGui::Checkbox("BoxFilter", &boxFilter)) {
+      if (boxFilter) {
+        AddEffect(PostEffectType::BoxFilter);
+      } else {
+        RemoveEffect(PostEffectType::BoxFilter);
+      }
+    }
+
+    // BoxFilter が有効なとき K スライダーを表示
+    if (boxFilter) {
+      ImGui::Indent();
+      ImGui::SliderInt("K", &boxFilterK_, 1, 10);
+      ImGui::Unindent();
     }
 
     // 現在のスタック表示
