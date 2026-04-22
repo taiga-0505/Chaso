@@ -205,9 +205,12 @@ enum LightingMode {
 
 // ビューポート共有モード
 enum class ViewShadingMode {
-  Solid = 0,          // 通常描画
-  Wireframe = 1,      // ワイヤーフレームのみ
-  SolidWireframe = 2, // ソリッド描画＋ワイヤーフレームのオーバーレイ
+  Solid = 0,            // 通常描画
+  Wireframe = 1,        // ワイヤーフレームのみ
+  SolidWireframe = 2,   // ソリッド描画＋ワイヤーフレームのオーバーレイ
+  FaceOrientation = 3,  // 表面=青, 裏面=赤（法線デバッグ）
+  RandomColor = 4,      // オブジェクトIDベースのランダムカラー
+  SolidShading = 5,     // シンプルHalf-Lambert（テクスチャなし、形状確認用）
 };
 
 // 2Dプリミティブ用: 塗りつぶし/ワイヤー

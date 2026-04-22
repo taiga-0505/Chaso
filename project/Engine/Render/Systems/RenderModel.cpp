@@ -70,6 +70,84 @@ static void ApplyTexture_(RenderContext &ctx, ModelObject *m, int texHandle) {
   }
 }
 
+// ============================================================================
+// ViewShadingMode ヘルパー
+// ============================================================================
+
+/// デバッグ用のプロシージャルシェーダーモードか判定
+static bool IsDebugShadingMode_(ViewShadingMode mode) {
+  return mode == ViewShadingMode::FaceOrientation ||
+         mode == ViewShadingMode::RandomColor ||
+         mode == ViewShadingMode::SolidShading;
+}
+
+/// ViewShadingMode に応じた単体描画用 Pipeline prefix を返す
+static std::string_view ResolveSinglePrefix_(ViewShadingMode mode) {
+  switch (mode) {
+  case ViewShadingMode::FaceOrientation: return "object3d_faceori";
+  case ViewShadingMode::RandomColor:     return "object3d_randcolor";
+  case ViewShadingMode::SolidShading:    return "object3d_solid";
+  default:                               return "object3d";
+  }
+}
+
+/// ViewShadingMode に応じたインスタンシング描画用 Pipeline prefix を返す
+static std::string_view ResolveInstPrefix_(ViewShadingMode mode) {
+  switch (mode) {
+  case ViewShadingMode::FaceOrientation: return "object3d_faceori_inst";
+  case ViewShadingMode::RandomColor:     return "object3d_randcolor_inst";
+  case ViewShadingMode::SolidShading:    return "object3d_solid_inst";
+  default:                               return "object3d_inst";
+  }
+}
+
+/// デバッグモード時の描画実行（単体）
+/// デバッグシェーダーは BlendMode=None 固定、ワイヤーフレーム無し
+static void DrawDebugSingle_(RenderContext &ctx, ModelObject *m,
+                              ID3D12GraphicsCommandList *cl,
+                              const Matrix4x4 &world,
+                              ViewShadingMode mode) {
+  auto prevBlend = ctx.CurrentBlendMode();
+  ctx.SetBlendMode(kBlendModeNone);
+
+  if (BindStandard3D_(ctx, ResolveSinglePrefix_(mode))) {
+    m->Draw(cl, world, ctx.CurrentFrame());
+  }
+
+  ctx.SetBlendMode(prevBlend);
+}
+
+/// デバッグモード時の描画実行（インスタンシング）
+static void DrawDebugInst_(RenderContext &ctx, ModelObject *m,
+                            ID3D12GraphicsCommandList *cl,
+                            const std::vector<Transform> &instances,
+                            ViewShadingMode mode) {
+  auto prevBlend = ctx.CurrentBlendMode();
+  ctx.SetBlendMode(kBlendModeNone);
+
+  if (BindStandard3D_(ctx, ResolveInstPrefix_(mode))) {
+    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+  }
+
+  ctx.SetBlendMode(prevBlend);
+}
+
+/// デバッグモード時の描画実行（インスタンシング + カラー）
+static void DrawDebugInstColored_(RenderContext &ctx, ModelObject *m,
+                                   ID3D12GraphicsCommandList *cl,
+                                   const std::vector<Transform> &instances,
+                                   const Vector4 &color,
+                                   ViewShadingMode mode) {
+  auto prevBlend = ctx.CurrentBlendMode();
+  ctx.SetBlendMode(kBlendModeNone);
+
+  if (BindStandard3D_(ctx, ResolveInstPrefix_(mode))) {
+    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+  }
+
+  ctx.SetBlendMode(prevBlend);
+}
+
 } // namespace
 
 // ============================================================================
@@ -124,14 +202,18 @@ void DrawModel(int modelHandle, int texHandle) {
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (BindStandard3D_(ctx, "object3d")) {
-        m->Draw(cl, world, ctx.CurrentFrame());
+    if (IsDebugShadingMode_(shadingMode)) {
+      DrawDebugSingle_(ctx, m, cl, world, shadingMode);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (BindStandard3D_(ctx, "object3d")) {
+          m->Draw(cl, world, ctx.CurrentFrame());
+        }
       }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (BindStandard3D_(ctx, "object3d_wire")) {
-        m->Draw(cl, world, ctx.CurrentFrame());
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (BindStandard3D_(ctx, "object3d_wire")) {
+          m->Draw(cl, world, ctx.CurrentFrame());
+        }
       }
     }
     ctx.SetBlendMode(prevBlend);
@@ -171,14 +253,18 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (BindStandard3D_(ctx, "object3d_nocull")) {
-        m->Draw(cl, world, ctx.CurrentFrame());
+    if (IsDebugShadingMode_(shadingMode)) {
+      DrawDebugSingle_(ctx, m, cl, world, shadingMode);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (BindStandard3D_(ctx, "object3d_nocull")) {
+          m->Draw(cl, world, ctx.CurrentFrame());
+        }
       }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (BindStandard3D_(ctx, "object3d_wire")) {
-        m->Draw(cl, world, ctx.CurrentFrame());
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (BindStandard3D_(ctx, "object3d_wire")) {
+          m->Draw(cl, world, ctx.CurrentFrame());
+        }
       }
     }
     ctx.SetBlendMode(prevBlend);
@@ -219,14 +305,18 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (BindStandard3D_(ctx, "object3d_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+    if (IsDebugShadingMode_(shadingMode)) {
+      DrawDebugInst_(ctx, m, cl, instances, shadingMode);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (BindStandard3D_(ctx, "object3d_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        }
       }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        }
       }
     }
     ctx.SetBlendMode(prevBlend);
@@ -265,14 +355,18 @@ void DrawModelBatchColored(int modelHandle,
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (BindStandard3D_(ctx, "object3d_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    if (IsDebugShadingMode_(shadingMode)) {
+      DrawDebugInstColored_(ctx, m, cl, instances, color, shadingMode);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (BindStandard3D_(ctx, "object3d_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
       }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
       }
     }
     ctx.SetBlendMode(prevBlend);
@@ -314,14 +408,18 @@ void DrawModelGlass(int modelHandle, int texHandle) {
 
         ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass")) {
-            m->Draw(cl, world, ctx.CurrentFrame());
+        if (IsDebugShadingMode_(shadingMode)) {
+          DrawDebugSingle_(ctx, m, cl, world, shadingMode);
+        } else {
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass")) {
+              m->Draw(cl, world, ctx.CurrentFrame());
+            }
           }
-        }
-        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-          if (BindStandard3D_(ctx, "object3d_wire")) {
-            m->Draw(cl, world, ctx.CurrentFrame());
+          if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+            if (BindStandard3D_(ctx, "object3d_wire")) {
+              m->Draw(cl, world, ctx.CurrentFrame());
+            }
           }
         }
         ctx.SetBlendMode(saved);
@@ -359,14 +457,18 @@ void DrawModelGlassBatch(int modelHandle,
 
         ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        if (IsDebugShadingMode_(shadingMode)) {
+          DrawDebugInst_(ctx, m, cl, instances, shadingMode);
+        } else {
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+            }
           }
-        }
-        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+            if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+            }
           }
         }
         ctx.SetBlendMode(saved);
@@ -405,14 +507,18 @@ void DrawModelGlassBatchColored(int modelHandle,
 
         ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        if (IsDebugShadingMode_(shadingMode)) {
+          DrawDebugInstColored_(ctx, m, cl, instances, color, shadingMode);
+        } else {
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+            }
           }
-        }
-        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+            if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+            }
           }
         }
         ctx.SetBlendMode(saved);
@@ -458,21 +564,25 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
 
         ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-        // 1) 背面（内側） - Solidのみ
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass_front")) {
-            m->Draw(cl, world, ctx.CurrentFrame());
+        if (IsDebugShadingMode_(shadingMode)) {
+          DrawDebugSingle_(ctx, m, cl, world, shadingMode);
+        } else {
+          // 1) 背面（内側） - Solidのみ
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass_front")) {
+              m->Draw(cl, world, ctx.CurrentFrame());
+            }
           }
-        }
-        // 2) 表面（外側） - SolidWireframeならワイヤーフレームも重ねる
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass")) {
-            m->Draw(cl, world, ctx.CurrentFrame());
+          // 2) 表面（外側） - SolidWireframeならワイヤーフレームも重ねる
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass")) {
+              m->Draw(cl, world, ctx.CurrentFrame());
+            }
           }
-        }
-        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-          if (BindStandard3D_(ctx, "object3d_wire")) {
-            m->Draw(cl, world, ctx.CurrentFrame());
+          if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+            if (BindStandard3D_(ctx, "object3d_wire")) {
+              m->Draw(cl, world, ctx.CurrentFrame());
+            }
           }
         }
 
@@ -511,17 +621,21 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
 
         ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-        if (shadingMode != ViewShadingMode::Wireframe) {
-          if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+        if (IsDebugShadingMode_(shadingMode)) {
+          DrawDebugInst_(ctx, m, cl, instances, shadingMode);
+        } else {
+          if (shadingMode != ViewShadingMode::Wireframe) {
+            if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+            }
+            if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+            }
           }
-          if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
-          }
-        }
-        if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-          if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-            m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+            if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+            }
           }
         }
 
@@ -560,17 +674,21 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
 
     ViewShadingMode shadingMode = ctx.GetViewShadingMode();
 
-    if (shadingMode != ViewShadingMode::Wireframe) {
-      if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    if (IsDebugShadingMode_(shadingMode)) {
+      DrawDebugInstColored_(ctx, m, cl, instances, color, shadingMode);
+    } else {
+      if (shadingMode != ViewShadingMode::Wireframe) {
+        if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
+        if (BindStandard3D_(ctx, "object3d_glass_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
       }
-      if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
-      }
-    }
-    if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
-      if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-        m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+      if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
+        if (BindStandard3D_(ctx, "object3d_wire_inst")) {
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+        }
       }
     }
 
