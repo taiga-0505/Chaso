@@ -1,11 +1,14 @@
 #pragma once
 #include <ostream>
+#include <fstream>
 #include <string>
 
 class Log {
 
 public:
-  void Initialize();
+  static void Initialize();
+
+  static void Finalize();
 
   void WriteLog(std::ostream &os, const std::string &message);
 
@@ -24,4 +27,7 @@ public:
   /// パスの区切り文字を '/' に統一する
   /// </summary>
   static std::string NormalizePath(const std::string &path);
+
+private:
+  static std::ofstream sLogFile_;
 };
