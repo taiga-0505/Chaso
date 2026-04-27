@@ -23,4 +23,4 @@ jobs:
 
       - name: Build
         shell: cmd
-        run: msbuild "${{ env.SOLUTION_FILE_PATH }}" /p:Platform=x64 /p:Configuration="${{ env.CONFIGURATION }}"
+        run: msbuild "${{ env.SOLUTION_FILE_PATH }}" /p:Platform=x64 /p:Configuration="${{ env.CONFIGURATION }}" /p:PlatformToolset=v143
