@@ -3,10 +3,11 @@
 DirectX 12ベースの自作ゲームエンジンです。
 エンジン層 (`ChasoEngine`) とアプリケーション層 (`ChasoApp`) に分離されており、描画・入力・ウィンドウ管理・各種リソース管理の基盤を提供します。
 
-[![DebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml/badge.svg?branch=master&event=push)](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml)
-[![ReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml/badge.svg?branch=master&event=push)](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml)
-[![EngineDebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml/badge.svg?branch=Engine&event=push)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml)
-[![EngineReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml/badge.svg?branch=Engine&event=push)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml)
+[![DebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml)
+[![ReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml)
+[![EngineDebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml)
+[![EngineReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml)
+[![CheckUnwantedFiles](https://github.com/taiga-0505/Chaso/actions/workflows/CheckUnwantedFiles.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/CheckUnwantedFiles.yml)
 
 ## 概要 (Overview)
 
