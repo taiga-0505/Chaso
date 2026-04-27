@@ -79,6 +79,7 @@ function Write-Info($msg)  { Write-Host "[INFO] $msg" -ForegroundColor Yellow }
 # ============================================================
 # Main
 # ============================================================
+Clear-Host
 Write-Header "ChasoEngine - Build & Run ($Configuration)"
 
 # Verify solution file
@@ -120,19 +121,14 @@ if (-not $RunOnly) {
         "/nologo"
         "/v:minimal"
         "/fl"
-        "/flp:logfile=`"$LogFile`";verbosity=normal"
+        "/flp:logfile=`"$LogFile`";Encoding=UTF-8;verbosity=normal"
     )
 
     Write-Header "Build starting..."
     $buildStart = Get-Date
 
-    $buildProcess = Start-Process -FilePath $MSBuild `
-                                  -ArgumentList $buildArgs `
-                                  -NoNewWindow `
-                                  -Wait `
-                                  -PassThru
-
-    $buildExitCode = $buildProcess.ExitCode
+    & $MSBuild @buildArgs
+    $buildExitCode = $LASTEXITCODE
 
     $buildEnd = Get-Date
     $elapsed = $buildEnd - $buildStart
