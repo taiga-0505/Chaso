@@ -3,10 +3,10 @@
 DirectX 12ベースの自作ゲームエンジンです。
 エンジン層 (`ChasoEngine`) とアプリケーション層 (`ChasoApp`) に分離されており、描画・入力・ウィンドウ管理・各種リソース管理の基盤を提供します。
 
-[![DebugBuild](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/DebugBuild.yml)
-[![ReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/ReleaseBuild.yml)
-[![EngineDebugBuild](https://github.com/reachaso/CG2/actions/workflows/EngineDebugBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/EngineDebugBuild.yml)
-[![EngineReleaseBuild](https://github.com/reachaso/CG2/actions/workflows/EngineReleaseBuild.yml/badge.svg)](https://github.com/reachaso/CG2/actions/workflows/EngineReleaseBuild.yml)
+[![DebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml)
+[![ReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml)
+[![EngineDebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml)
+[![EngineReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml)
 
 ## 概要 (Overview)
 
@@ -56,7 +56,7 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 - **OS**: Windows 10 / 11 (x64)
 - **DirectX**: DirectX 12 (Feature Level 12.0以上)
-- **IDE**: Visual Studio 2022 (v143セット)
+- **IDE**: Visual Studio 2026 (v145セット)
 - **言語**: C++20
 
 ## プロジェクト構成 (Project Structure)
@@ -101,7 +101,7 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 ## ビルド方法 (Build)
 
-1. `project/chaso.sln` を Visual Studio 2022 で開きます。
+1. `project/chaso.sln` を Visual Studio 2026 で開きます。
 2. 構成を `Debug`, `Release`, または `Development` に設定します。
 3. プラットフォームを `x64` に設定します。
 4. `Ctrl + Shift + B` でソリューションをビルドします。
