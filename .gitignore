@@ -326,3 +326,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /project/externals/DirectXTex/Shaders/Compiled/
 /Docs/EngineInternalKnowledge/
+pso_cache.bin
