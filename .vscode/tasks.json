@@ -20,6 +20,50 @@
             "problemMatcher": []
         },
         {
+            "label": "🧹 Clean & Full Build (キャッシュクリア＆再ビルド)",
+            "type": "shell",
+            "command": "powershell",
+            "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/build/clean_build.ps1", "-Configuration", "Debug"],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🎨 Format Code (コード自動整形)",
+            "type": "shell",
+            "command": "powershell",
+            "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/build/format_code.ps1"],
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📦 Compile Shaders Only (シェーダーコンパイル)",
+            "type": "shell",
+            "command": "powershell",
+            "args": ["-ExecutionPolicy", "Bypass", "-File", "scripts/build/compile_shaders.ps1"],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "🚀 Run Development",
             "type": "shell",
             "command": "powershell",

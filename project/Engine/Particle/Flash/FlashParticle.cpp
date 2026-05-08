@@ -20,11 +20,11 @@ void FlashParticle::Initialize(SceneContext &ctx) {
 
 void FlashParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
                                     const Vector3 &emitterPos) {
-  std::uniform_real_distribution<float> distScaleY(scaleYMin_, scaleYMax_);
-  std::uniform_real_distribution<float> distRotate(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
-  std::uniform_real_distribution<float> distSpeed(speedMin_, speedMax_);
-  std::uniform_real_distribution<float> distLife(lifeMin_, lifeMax_);
-  std::uniform_real_distribution<float> distDir(-1.0f, 1.0f);
+  RC::SafeUniformRealDistribution<float> distScaleY(scaleYMin_, scaleYMax_);
+  RC::SafeUniformRealDistribution<float> distRotate(-std::numbers::pi_v<float>, std::numbers::pi_v<float>);
+  RC::SafeUniformRealDistribution<float> distSpeed(speedMin_, speedMax_);
+  RC::SafeUniformRealDistribution<float> distLife(lifeMin_, lifeMax_);
+  RC::SafeUniformRealDistribution<float> distDir(-1.0f, 1.0f);
 
   // 資料(Reference)に基づく細長いスケールと回転
   // スケール: { 0.05f, random_scale, 1.0f }

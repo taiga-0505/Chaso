@@ -96,9 +96,9 @@ void CircleParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   float power = std::clamp(firePower_, firePowerMin_, firePowerMax_);
 
   // 円形＋少し縦長のボリュームで「魂のかたまり」っぽい形を作る
-  std::uniform_real_distribution<float> distAngle(0.0f, 2.0f * pi_v<float>);
-  std::uniform_real_distribution<float> distRadius(0.0f, 0.6f);
-  std::uniform_real_distribution<float> distHeight(0.0f, 0.8f);
+  RC::SafeUniformRealDistribution<float> distAngle(0.0f, 2.0f * pi_v<float>);
+  RC::SafeUniformRealDistribution<float> distRadius(0.0f, 0.6f);
+  RC::SafeUniformRealDistribution<float> distHeight(0.0f, 0.8f);
 
   float angle = distAngle(rng);
   float radius = distRadius(rng);
@@ -108,7 +108,7 @@ void CircleParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   float offsetY = distHeight(rng); // 上方向に少し伸ばす
 
   // 基本スケール
-  std::uniform_real_distribution<float> distScaleJitter(0.7f, 1.2f);
+  RC::SafeUniformRealDistribution<float> distScaleJitter(0.7f, 1.2f);
   float baseScale = 0.35f;
   float powerScale = 0.6f + 0.4f * (std::min)(power, 1.0f); // 0.6〜1.0
   float s = baseScale * powerScale * distScaleJitter(rng);
@@ -123,12 +123,12 @@ void CircleParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   };
 
   // 横揺れ用のランダム位相を rotation.y に仕込んでおく
-  std::uniform_real_distribution<float> distPhase(0.0f, 2.0f * pi_v<float>);
+  RC::SafeUniformRealDistribution<float> distPhase(0.0f, 2.0f * pi_v<float>);
   p.transform.rotation.y = distPhase(rng);
 
   // ゆっくり上に漂う感じの速度
-  std::uniform_real_distribution<float> distVelSide(-0.005f, 0.005f);
-  std::uniform_real_distribution<float> distVelUp(0.01f, 0.03f);
+  RC::SafeUniformRealDistribution<float> distVelSide(-0.005f, 0.005f);
+  RC::SafeUniformRealDistribution<float> distVelUp(0.01f, 0.03f);
 
   p.velocity = {
       distVelSide(rng),
@@ -140,7 +140,7 @@ void CircleParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   p.color = {0.9f, 0.97f, 1.0f, 0.7f};
 
   // 寿命：少し長め
-  std::uniform_real_distribution<float> distLife(1.2f, 2.0f);
+  RC::SafeUniformRealDistribution<float> distLife(1.2f, 2.0f);
   float life = distLife(rng);
   float lifeFactor = 0.6f + 0.4f * (std::min)(power, 1.0f); // 0.6〜1.0
   p.lifeTime = life * lifeFactor;

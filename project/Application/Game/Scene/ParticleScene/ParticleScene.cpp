@@ -4,59 +4,70 @@
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "imgui/imgui.h"
+#include "Particle/ParticleManager.h"
+#include "Particle/Flash/FlashParticle.h"
+#include "Particle/Ring/RingParticle.h"
 
 void ParticleScene::OnEnter(SceneContext &ctx) {
   // =============================
   // Camera
   // =============================
-
   camera_.Initialize(ctx.input, RC::Vector3{0.0f, 0.0f, -10.0f},
                      RC::Vector3{0.0f, 0.0f, 0.0f}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, 0.1f, 100.0f);
 
-  particle_.Initialize(ctx);
+  auto& pm = RC::ParticleManager::GetInstance();
+  pm.ClearSystems();
 
-  fire_particle_.Initialize(ctx);
+  auto initSys = [&](const std::string& name, std::unique_ptr<RC::Particle> sys) {
+      sys->Initialize(ctx);
+      pm.RegisterSystem(name, std::move(sys));
+  };
 
-  rain_particle_.Initialize(ctx);
+  initSys("Particle", std::make_unique<RC::Particle>());
+  initSys("Fire", std::make_unique<RC::FireParticle>());
+  initSys("Rain", std::make_unique<RC::RainParticle>());
+  initSys("Snow", std::make_unique<RC::SnowParticle>());
+  initSys("Circle", std::make_unique<RC::CircleParticle>());
+  
+  auto exp = std::make_unique<RC::ExplosionParticle>();
+  exp->SetEmitterAutoSpawn(false);
+  initSys("Explosion", std::move(exp));
 
-  snow_particle_.Initialize(ctx);
+  initSys("Laser", std::make_unique<RC::LaserParticle>());
 
-  circle_particle_.Initialize(ctx);
+  auto impact = std::make_unique<RC::ImpactSparkParticle>();
+  impact->SetEmitterAutoSpawn(false);
+  initSys("ImpactSpark", std::move(impact));
 
-  explosion_particle_.Initialize(ctx);
-  explosion_particle_.SetEmitterAutoSpawn(false);
+  auto wind = std::make_unique<RC::WindParticle>();
+  wind->SetActive(false);
+  initSys("Wind", std::move(wind));
 
-  laser_particle_.Initialize(ctx);
+  auto flash = std::make_unique<RC::FlashParticle>();
+  flash->SetEmitterAutoSpawn(false);
+  initSys("Flash", std::move(flash));
 
-  impact_particle_.Initialize(ctx);
-  impact_particle_.SetEmitterAutoSpawn(false);
+  initSys("Ring", std::make_unique<RC::RingParticle>());
 
-  wind_particle_.Initialize(ctx);
-  wind_particle_.SetActive(false);
+  RC::EffectPreset hitEffect;
+  hitEffect.name = "Hit";
+  hitEffect.AddEmitter("Flash", 12, 1.0f);
+  hitEffect.AddEmitter("Ring", 1, 1.0f);
+  pm.RegisterPreset(hitEffect);
 
-  hit_effect_.Initialize(ctx);
   impactDesc_.countPerTick = 6;
   impactDesc_.burstOnStart = 24;
 
   guide = RC::LoadSprite("Resources/guide.png", ctx, true);
   RC::SetSpriteScreenSize(guide, 330, 200);
 
-  // プリミティブ用のデフォルトテクスチャ設定
   int whiteTex = RC::LoadTex("Resources/white1x1.png", true);
   D3D12_GPU_DESCRIPTOR_HANDLE whiteSrv = RC::GetSrv(whiteTex);
 }
 
 void ParticleScene::OnExit(SceneContext &ctx) {
-  particle_.Finalize();
-  fire_particle_.Finalize();
-  rain_particle_.Finalize();
-  snow_particle_.Finalize();
-  circle_particle_.Finalize();
-  explosion_particle_.Finalize();
-  laser_particle_.Finalize();
-  impact_particle_.Finalize();
-  wind_particle_.Finalize();
+  RC::ParticleManager::GetInstance().ClearSystems();
   RC::UnloadSprite(guide);
   guide = -1;
 }
@@ -64,8 +75,10 @@ void ParticleScene::OnExit(SceneContext &ctx) {
 void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 #if RC_ENABLE_IMGUI
 
-
-  particle_.DrawImGui();
+  auto& pm = RC::ParticleManager::GetInstance();
+  if (pm.GetSystem("Particle")) {
+      pm.GetSystem("Particle")->DrawImGui();
+  }
 
   // ===========================================
   // 更新処理
@@ -73,217 +86,105 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   camera_.Update();
 
-  // viewとprojを渡す
   view_ = camera_.GetView();
   proj_ = camera_.GetProjection();
 
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
-  // ==============================
-  // キー入力でパーティクル操作
-  // ==============================
   Input *input = ctx.input;
 
+  auto setMode = [&](bool p, bool f, bool r, bool s, bool c, bool e, bool l, bool w, bool h) {
+      isParticle = p; isFire = f; isRain = r; isSnow = s; isCircle = c; isExplosion = e; isLaser = l; isWind = w; isHitEffect = h;
+  };
+
   if (input->IsKeyTrigger(DIK_1)) {
-    isParticle = true;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    particle_.RespawnAllMax();
+    setMode(true, false, false, false, false, false, false, false, false);
+    if(auto* s = pm.GetSystem("Particle")) s->RespawnAllMax();
   }
-
   if (input->IsKeyTrigger(DIK_2)) {
-    isParticle = false;
-    isFire = true;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    fire_particle_.RespawnAllMax();
+    setMode(false, true, false, false, false, false, false, false, false);
+    if(auto* s = pm.GetSystem("Fire")) s->RespawnAllMax();
   }
-
   if (input->IsKeyTrigger(DIK_3)) {
-    isParticle = false;
-    isFire = false;
-    isRain = true;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    rain_particle_.RespawnAllMax();
+    setMode(false, false, true, false, false, false, false, false, false);
+    if(auto* s = pm.GetSystem("Rain")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_4)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = true;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    snow_particle_.RespawnAllMax();
+    setMode(false, false, false, true, false, false, false, false, false);
+    if(auto* s = pm.GetSystem("Snow")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_6)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = true;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    circle_particle_.RespawnAllMax();
+    setMode(false, false, false, false, true, false, false, false, false);
+    if(auto* s = pm.GetSystem("Circle")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_5)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = true;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = false;
-    explosion_particle_.RespawnAllMax();
+    setMode(false, false, false, false, false, true, false, false, false);
+    if(auto* s = pm.GetSystem("Explosion")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_7)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = true;
-    isWind = false;
-    isHitEffect = false;
+    setMode(false, false, false, false, false, false, true, false, false);
   }
   if (input->IsKeyTrigger(DIK_8)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = true;
-    isHitEffect = false;
-    wind_particle_.SetWind(windOrigin_, windForce_, windRange_, windRadius_,
-                           true);
+    setMode(false, false, false, false, false, false, false, true, false);
+    if(auto* s = dynamic_cast<RC::WindParticle*>(pm.GetSystem("Wind"))) {
+      s->SetWind(windOrigin_, windForce_, windRange_, windRadius_, true);
+    }
   }
-
   if (input->IsKeyTrigger(DIK_9)) {
-    isParticle = false;
-    isFire = false;
-    isRain = false;
-    isSnow = false;
-    isCircle = false;
-    isExplosion = false;
-    isLaser = false;
-    isWind = false;
-    isHitEffect = true;
+    setMode(false, false, false, false, false, false, false, false, true);
   }
 
-  // IJKL + U/O でエミッタの位置を動かす
-  //   A : -X方向, D : +X方向
-  //   W : +Y方向, S : -Y方向
-  //   Q : +Z方向, E : -Z方向
   const float emitterMoveSpeed = 0.05f;
   RC::Vector3 emitterDelta{0.0f, 0.0f, 0.0f};
 
-  if (input->IsKeyPressed(DIK_A)) {
-    emitterDelta.x -= emitterMoveSpeed;
-  }
-  if (input->IsKeyPressed(DIK_D)) {
-    emitterDelta.x += emitterMoveSpeed;
-  }
-  if (input->IsKeyPressed(DIK_W)) {
-    emitterDelta.y += emitterMoveSpeed;
-  }
-  if (input->IsKeyPressed(DIK_S)) {
-    emitterDelta.y -= emitterMoveSpeed;
-  }
-  if (input->IsKeyPressed(DIK_Q)) {
-    emitterDelta.z += emitterMoveSpeed;
-  }
-  if (input->IsKeyPressed(DIK_E)) {
-    emitterDelta.z -= emitterMoveSpeed;
-  }
+  if (input->IsKeyPressed(DIK_A)) emitterDelta.x -= emitterMoveSpeed;
+  if (input->IsKeyPressed(DIK_D)) emitterDelta.x += emitterMoveSpeed;
+  if (input->IsKeyPressed(DIK_W)) emitterDelta.y += emitterMoveSpeed;
+  if (input->IsKeyPressed(DIK_S)) emitterDelta.y -= emitterMoveSpeed;
+  if (input->IsKeyPressed(DIK_Q)) emitterDelta.z += emitterMoveSpeed;
+  if (input->IsKeyPressed(DIK_E)) emitterDelta.z -= emitterMoveSpeed;
 
-  if (emitterDelta.x != 0.0f || emitterDelta.y != 0.0f ||
-      emitterDelta.z != 0.0f) {
-    if (isParticle) {
-      particle_.MoveEmitter(emitterDelta);
-    }
-    if (isFire) {
-      fire_particle_.MoveEmitter(emitterDelta);
-    }
-    if (isRain) {
-      rain_particle_.MoveEmitter(emitterDelta);
-    }
-    if (isSnow) {
-      snow_particle_.MoveEmitter(emitterDelta);
-    }
-    if (isCircle) {
-      circle_particle_.MoveEmitter(emitterDelta);
-    }
-    if (isExplosion) {
-      explosion_particle_.MoveEmitter(emitterDelta);
-    }
-    if (isWind) {
-      wind_particle_.MoveEmitter(emitterDelta);
-    }
+  if (emitterDelta.x != 0.0f || emitterDelta.y != 0.0f || emitterDelta.z != 0.0f) {
+    if (isParticle) if(auto* s = pm.GetSystem("Particle")) s->MoveEmitter(emitterDelta);
+    if (isFire) if(auto* s = pm.GetSystem("Fire")) s->MoveEmitter(emitterDelta);
+    if (isRain) if(auto* s = pm.GetSystem("Rain")) s->MoveEmitter(emitterDelta);
+    if (isSnow) if(auto* s = pm.GetSystem("Snow")) s->MoveEmitter(emitterDelta);
+    if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->MoveEmitter(emitterDelta);
+    if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->MoveEmitter(emitterDelta);
+    if (isWind) if(auto* s = pm.GetSystem("Wind")) s->MoveEmitter(emitterDelta);
   }
 
   if (input->IsKeyTrigger(DIK_SPACE)) {
     RC::Vector3 pos{0.0f, 0.0f, 0.0f};
-    explosion_particle_.Trigger(pos);
+    if(auto* s = dynamic_cast<RC::ExplosionParticle*>(pm.GetSystem("Explosion"))) {
+        s->Trigger(pos);
+    }
   }
 
-  if (isParticle) {
-    particle_.Update(view_, proj_);
-  }
-  if (isFire) {
-    fire_particle_.Update(view_, proj_);
-  }
-  if (isRain) {
-    rain_particle_.Update(view_, proj_);
-  }
-  if (isSnow) {
-    snow_particle_.Update(view_, proj_);
-  }
-  if (isCircle) {
-    circle_particle_.Update(view_, proj_);
-  }
-  if (isExplosion) {
-    explosion_particle_.Update(view_, proj_);
-  }
-  if (isWind) {
-    wind_particle_.Update(view_, proj_);
-  }
+  if (isParticle) if(auto* s = pm.GetSystem("Particle")) s->Update(view_, proj_);
+  if (isFire) if(auto* s = pm.GetSystem("Fire")) s->Update(view_, proj_);
+  if (isRain) if(auto* s = pm.GetSystem("Rain")) s->Update(view_, proj_);
+  if (isSnow) if(auto* s = pm.GetSystem("Snow")) s->Update(view_, proj_);
+  if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->Update(view_, proj_);
+  if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->Update(view_, proj_);
+  if (isWind) if(auto* s = pm.GetSystem("Wind")) s->Update(view_, proj_);
+
   if (isHitEffect) {
     ImGui::Begin("HitEffect Control");
     static RC::Vector3 hitPos{0.0f, 0.0f, 0.0f};
     ImGui::DragFloat3("Position", &hitPos.x, 0.1f);
     if (ImGui::Button("Trigger HitEffect")) {
-      hit_effect_.Trigger(hitPos);
+      pm.PlayEffect("Hit", hitPos);
     }
     ImGui::End();
-    hit_effect_.Update(view_, proj_);
+    if(auto* s = pm.GetSystem("Flash")) s->Update(view_, proj_);
+    if(auto* s = pm.GetSystem("Ring")) s->Update(view_, proj_);
   }
 
-  if (isLaser) {
+  auto* laserSys = dynamic_cast<RC::LaserParticle*>(pm.GetSystem("Laser"));
+  auto* impactSys = dynamic_cast<RC::ImpactSparkParticle*>(pm.GetSystem("ImpactSpark"));
+
+  if (isLaser && laserSys && impactSys) {
     ImGui::Begin("Laser Control");
     ImGui::DragFloat3("Start", &laserStart_.x, 0.1f);
     ImGui::DragFloat3("End", &laserEnd_.x, 0.1f);
@@ -297,36 +198,26 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     ImGui::DragFloat("Streak Min Length", &streakMinLen_, 0.01f, 0.01f, 10.0f);
     ImGui::DragFloat("Streak Max Length", &streakMaxLen_, 0.01f, 0.01f, 10.0f);
     ImGui::DragFloat("Streak Width", &streakWidth_, 0.001f, 0.001f, 1.0f);
-    ImGui::DragFloat("Streak Spread Z Ratio", &streakSpreadZRatio_, 0.01f, 0.0f,
-                     1.0f);
+    ImGui::DragFloat("Streak Spread Z Ratio", &streakSpreadZRatio_, 0.01f, 0.0f, 1.0f);
 
     ImGui::Separator();
 
     ImGui::Text("impact particle settings");
-    ImGui::DragFloat("Impact Interval", &impactDesc_.interval, 0.01f, 0.0f,
-                     1.0f);
+    ImGui::DragFloat("Impact Interval", &impactDesc_.interval, 0.01f, 0.0f, 1.0f);
     ImGui::DragInt("Count Per Tick", &impactDesc_.countPerTick, 1, 1, 100);
     ImGui::DragInt("Burst On Start", &impactDesc_.burstOnStart, 1, 0, 100);
 
     ImGui::End();
 
-    laser_particle_.SetStyle(RC::LaserParticle::Style::Streak);
-    laser_particle_.SetStreakParams(
-        streakCount_,       // streakCount
-        streakMinLen_,      // minLen
-        streakMaxLen_,      // maxLen
-        streakWidth_,       // streakWidth（細さ）
-        streakSpreadZRatio_ // spreadZRatio（奥行き散らし、縦筋なら小さめがオススメ）
-    );
+    laserSys->SetStyle(RC::LaserParticle::Style::Streak);
+    laserSys->SetStreakParams(streakCount_, streakMinLen_, streakMaxLen_, streakWidth_, streakSpreadZRatio_);
+    laserSys->SetBeam(laserStart_, laserEnd_, laserWidth_, laserLife_, laserColor_);
+    laserSys->Update(view_, proj_);
 
-    laser_particle_.SetBeam(laserStart_, laserEnd_, laserWidth_, laserLife_,
-                            laserColor_);
-    laser_particle_.Update(view_, proj_);
-
-    impact_particle_.SetImpactFromBeam(laserStart_, laserEnd_, impactDesc_);
-    impact_particle_.Update(view_, proj_);
-  } else {
-    impact_particle_.StopImpact();
+    impactSys->SetImpactFromBeam(laserStart_, laserEnd_, impactDesc_);
+    impactSys->Update(view_, proj_);
+  } else if (impactSys) {
+    impactSys->StopImpact();
   }
 
 #endif
@@ -336,37 +227,27 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   ctx.core->Clear(0.05f, 0.05f, 0.05f, 1.0f);
   RC::PreDraw3D(ctx, cl);
 
-  if (isParticle) {
-    particle_.Render(ctx, cl);
-  }
-  if (isFire) {
-    fire_particle_.Render(ctx, cl);
-  }
-  if (isRain) {
-    rain_particle_.Render(ctx, cl);
-  }
-  if (isSnow) {
-    snow_particle_.Render(ctx, cl);
-  }
-  if (isCircle) {
-    circle_particle_.Render(ctx, cl);
-  }
-  if (isExplosion) {
-    explosion_particle_.Render(ctx, cl);
-  }
-  if (isWind) {
-    wind_particle_.Render(ctx, cl);
-  }
+  auto& pm = RC::ParticleManager::GetInstance();
+
+  if (isParticle) if(auto* s = pm.GetSystem("Particle")) s->Render(ctx, cl);
+  if (isFire) if(auto* s = pm.GetSystem("Fire")) s->Render(ctx, cl);
+  if (isRain) if(auto* s = pm.GetSystem("Rain")) s->Render(ctx, cl);
+  if (isSnow) if(auto* s = pm.GetSystem("Snow")) s->Render(ctx, cl);
+  if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->Render(ctx, cl);
+  if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->Render(ctx, cl);
+  if (isWind) if(auto* s = pm.GetSystem("Wind")) s->Render(ctx, cl);
+  
   if (isLaser) {
-    laser_particle_.Render(ctx, cl);
-    impact_particle_.Render(ctx, cl);
+    if(auto* s = pm.GetSystem("Laser")) s->Render(ctx, cl);
+    if(auto* s = pm.GetSystem("ImpactSpark")) s->Render(ctx, cl);
   }
+  
   if (isHitEffect) {
-    hit_effect_.Render(ctx, cl);
+    if(auto* s = pm.GetSystem("Flash")) s->Render(ctx, cl);
+    if(auto* s = pm.GetSystem("Ring")) s->Render(ctx, cl);
   }
 
   RC::PreDraw2D(ctx, cl);
-
   RC::DrawSprite(guide);
 }
 

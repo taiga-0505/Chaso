@@ -155,7 +155,7 @@
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Effect\HitEffect.cpp" />
+    <ClCompile Include="..\Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="..\Engine\Audio\Sound.cpp" />
     <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp" />
     <ClCompile Include="..\Engine\Graphics\Skybox\Skybox.cpp" />
@@ -250,7 +250,8 @@
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h" />
-    <ClInclude Include="..\Engine\Graphics\Effect\HitEffect.h" />
+    <ClInclude Include="..\Engine\Particle\ParticleManager.h" />
+    <ClInclude Include="..\Engine\Particle\EffectPreset.h" />
     <ClInclude Include="..\Engine\Audio\BgmManager.h" />
     <ClInclude Include="..\Engine\Audio\SeManager.h" />
     <ClInclude Include="..\Engine\Audio\Sound.h" />

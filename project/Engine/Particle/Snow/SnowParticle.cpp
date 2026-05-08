@@ -20,14 +20,14 @@ void SnowParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
                                     const Vector3 &emitterPos) {
 
   // エミッタの「ちょっと上の広い範囲」からふわっと落ちるイメージ
-  std::uniform_real_distribution<float> distXZ(-8.0f, 8.0f);
-  std::uniform_real_distribution<float> distY(4.0f, 8.0f);
+  RC::SafeUniformRealDistribution<float> distXZ(-8.0f, 8.0f);
+  RC::SafeUniformRealDistribution<float> distY(4.0f, 8.0f);
 
   // 大きさ・速度・寿命
-  std::uniform_real_distribution<float> distScale(0.15f, 0.35f);
-  std::uniform_real_distribution<float> distVelXZ(-0.02f, 0.02f);
-  std::uniform_real_distribution<float> distVelY(-0.003f, -0.001f);
-  std::uniform_real_distribution<float> distLife(2.5f, 5.0f);
+  RC::SafeUniformRealDistribution<float> distScale(0.15f, 0.35f);
+  RC::SafeUniformRealDistribution<float> distVelXZ(-0.02f, 0.02f);
+  RC::SafeUniformRealDistribution<float> distVelY(-0.003f, -0.001f);
+  RC::SafeUniformRealDistribution<float> distLife(2.5f, 5.0f);
 
   float s = distScale(rng);
 

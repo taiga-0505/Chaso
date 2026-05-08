@@ -42,7 +42,7 @@ static RC::Vector3 RandomDirInCone(std::mt19937 &rng, const RC::Vector3 &normal,
   RC::Vector3 b = Normalize(Cross(n, t));
 
   // コーン内をサンプル
-  std::uniform_real_distribution<float> u01(0.0f, 1.0f);
+  RC::SafeUniformRealDistribution<float> u01(0.0f, 1.0f);
   float u = u01(rng);
   float v = u01(rng);
 
@@ -75,7 +75,7 @@ static RC::Vector3 RandomOffsetInDisc(std::mt19937 &rng,
   RC::Vector3 t = Normalize(Cross(SafeOrtho(n), n));
   RC::Vector3 b = Normalize(Cross(n, t));
 
-  std::uniform_real_distribution<float> u01(0.0f, 1.0f);
+  RC::SafeUniformRealDistribution<float> u01(0.0f, 1.0f);
   float u = u01(rng);
   float v = u01(rng);
 
@@ -205,7 +205,7 @@ void ImpactSparkParticle::SetImpact(const Vector3 &hitPos,
 
 void ImpactSparkParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
                                            const Vector3 &emitterPos) {
-  std::uniform_real_distribution<float> u01(0.0f, 1.0f);
+  RC::SafeUniformRealDistribution<float> u01(0.0f, 1.0f);
 
   // 寿命
   float life = Lerp(lifeMin_, lifeMax_, u01(rng));

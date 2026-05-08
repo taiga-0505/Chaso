@@ -11,6 +11,25 @@ class StructuredBufferManager;
 
 namespace RC {
 
+template<typename T>
+class SafeUniformRealDistribution {
+    std::uniform_real_distribution<T> dist;
+    T minVal, maxVal;
+public:
+    SafeUniformRealDistribution(T a, T b) : minVal(a), maxVal(b) {
+        if (minVal < maxVal) {
+            dist = std::uniform_real_distribution<T>(minVal, maxVal);
+        } else {
+            dist = std::uniform_real_distribution<T>(minVal, minVal + (T)0.0001);
+        }
+    }
+    template<typename Engine>
+    T operator()(Engine& eng) {
+        if (minVal >= maxVal) return minVal;
+        return dist(eng);
+    }
+};
+
 // ==================
 // パーティクル描画クラス
 //  - 板ポリ1枚 + Instancing で複数描画
