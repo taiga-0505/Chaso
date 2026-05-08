@@ -27,14 +27,14 @@ void FireParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
                                     const Vector3 &emitterPos) {
 
   // エミッタの周りにちょっとだけ広がる
-  std::uniform_real_distribution<float> distXZ(-0.3f, 0.3f);
-  std::uniform_real_distribution<float> distY(0.0f, 0.2f);
+  RC::SafeUniformRealDistribution<float> distXZ(-0.3f, 0.3f);
+  RC::SafeUniformRealDistribution<float> distY(0.0f, 0.2f);
 
   // 大きさ・寿命・速度用
-  std::uniform_real_distribution<float> distScale(0.3f, 0.8f);
-  std::uniform_real_distribution<float> distVelXZ(-0.01f, 0.01f);
-  std::uniform_real_distribution<float> distVelY(0.04f, 0.10f);
-  std::uniform_real_distribution<float> distLife(0.5f, 1.2f);
+  RC::SafeUniformRealDistribution<float> distScale(0.3f, 0.8f);
+  RC::SafeUniformRealDistribution<float> distVelXZ(-0.01f, 0.01f);
+  RC::SafeUniformRealDistribution<float> distVelY(0.04f, 0.10f);
+  RC::SafeUniformRealDistribution<float> distLife(0.5f, 1.2f);
 
   float s = distScale(rng);
 

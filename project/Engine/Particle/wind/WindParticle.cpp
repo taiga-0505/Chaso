@@ -28,7 +28,7 @@ static inline float SmoothStep(float e0, float e1, float x) {
 }
 
 static inline float RandRange(std::mt19937 &rng, float a, float b) {
-  std::uniform_real_distribution<float> dist(a, b);
+  RC::SafeUniformRealDistribution<float> dist(a, b);
   return dist(rng);
 }
 } // namespace

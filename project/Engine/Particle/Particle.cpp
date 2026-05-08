@@ -529,7 +529,7 @@ void Particle::InitParticleCore(ParticleData &particle,
   // ==================
   // 1個分のパーティクルをランダム初期化（今までの実装をそのまま移植）
   // ==================
-  std::uniform_real_distribution<float> distribution{-1.0f, 1.0f};
+  RC::SafeUniformRealDistribution<float> distribution{-1.0f, 1.0f};
 
   particle.transform.scale = {1.0f, 1.0f, 1.0f};
   particle.transform.rotation = {0.0f, 0.0f, 0.0f};
@@ -547,11 +547,11 @@ void Particle::InitParticleCore(ParticleData &particle,
                        distribution(randomEngine) * 0.01f,
                        distribution(randomEngine) * 0.01f};
 
-  std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+  RC::SafeUniformRealDistribution<float> distColor(0.0f, 1.0f);
   particle.color = {distColor(randomEngine), distColor(randomEngine),
                     distColor(randomEngine), 1.0f};
 
-  std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+  RC::SafeUniformRealDistribution<float> distTime(1.0f, 3.0f);
   particle.lifeTime = distTime(randomEngine);
   particle.currentTime = 0.0f;
 }

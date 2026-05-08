@@ -19,12 +19,12 @@ void RainParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
                                     const Vector3 &emitterPos) {
 
   // エミッタの「上空の広い範囲」から降ってくるイメージ
-  std::uniform_real_distribution<float> distXZ(-10.0f, 10.0f);
-  std::uniform_real_distribution<float> distY(8.0f, 12.0f);
+  RC::SafeUniformRealDistribution<float> distXZ(-10.0f, 10.0f);
+  RC::SafeUniformRealDistribution<float> distY(8.0f, 12.0f);
 
   // スケール
-  std::uniform_real_distribution<float> distScaleX(0.03f, 0.06f);
-  std::uniform_real_distribution<float> distScaleY(0.8f, 1.4f);
+  RC::SafeUniformRealDistribution<float> distScaleX(0.03f, 0.06f);
+  RC::SafeUniformRealDistribution<float> distScaleY(0.8f, 1.4f);
 
   float sx = distScaleX(rng);
   float sy = distScaleY(rng);
@@ -40,8 +40,8 @@ void RainParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   };
 
   // 速度
-  std::uniform_real_distribution<float> distVelXZ(-0.02f, 0.02f);
-  std::uniform_real_distribution<float> distVelY(-0.6f, -0.35f);
+  RC::SafeUniformRealDistribution<float> distVelXZ(-0.02f, 0.02f);
+  RC::SafeUniformRealDistribution<float> distVelY(-0.6f, -0.35f);
 
   p.velocity = {
       distVelXZ(rng), // 横ブレ
@@ -53,7 +53,7 @@ void RainParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
   p.color = {0.7f, 0.8f, 1.0f, 1.0f};
 
   // 寿命（秒
-  std::uniform_real_distribution<float> distLife(0.8f, 1.5f);
+  RC::SafeUniformRealDistribution<float> distLife(0.8f, 1.5f);
   p.lifeTime = distLife(rng);
   p.currentTime = 0.0f;
 }

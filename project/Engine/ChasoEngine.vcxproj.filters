@@ -294,8 +294,8 @@
     <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp">
       <Filter>Graphics\Primitive</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Effect\HitEffect.cpp">
-      <Filter>Graphics\Effect</Filter>
+    <ClCompile Include="..\Engine\Particle\ParticleManager.cpp">
+      <Filter>Particle</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Audio\Sound.cpp">
       <Filter>Audio</Filter>
@@ -545,8 +545,11 @@
     <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h">
       <Filter>Graphics\Primitive</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Effect\HitEffect.h">
-      <Filter>Graphics\Effect</Filter>
+    <ClInclude Include="..\Engine\Particle\ParticleManager.h">
+      <Filter>Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Particle\EffectPreset.h">
+      <Filter>Particle</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Audio\BgmManager.h">
       <Filter>Audio</Filter>

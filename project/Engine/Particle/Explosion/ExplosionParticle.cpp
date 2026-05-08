@@ -35,13 +35,13 @@ void ExplosionParticle::InitParticleCore(ParticleData &particle,
                                          std::mt19937 &randomEngine,
                                          const Vector3 &emitterTranslate) {
   // 角度と速度
-  std::uniform_real_distribution<float> distAngle(
+  RC::SafeUniformRealDistribution<float> distAngle(
       0.0f, 2.0f * std::numbers::pi_v<float>);
-  std::uniform_real_distribution<float> distPitch(-0.4f,
+  RC::SafeUniformRealDistribution<float> distPitch(-0.4f,
                                                   0.4f); // 少し上下にばらける
-  std::uniform_real_distribution<float> distSpeed(minSpeed_, maxSpeed_);
-  std::uniform_real_distribution<float> distLife(minLife_, maxLife_);
-  std::uniform_real_distribution<float> distScale(0.15f, 0.35f);
+  RC::SafeUniformRealDistribution<float> distSpeed(minSpeed_, maxSpeed_);
+  RC::SafeUniformRealDistribution<float> distLife(minLife_, maxLife_);
+  RC::SafeUniformRealDistribution<float> distScale(0.15f, 0.35f);
 
   float yaw = distAngle(randomEngine);   // Y軸周り
   float pitch = distPitch(randomEngine); // 上下方向
@@ -56,7 +56,7 @@ void ExplosionParticle::InitParticleCore(ParticleData &particle,
   // Normalize(dir) があるなら正規化してもOK
 
   // 位置：エミッタの周辺に少しだけランダムオフセット
-  std::uniform_real_distribution<float> distPos(-0.1f, 0.1f);
+  RC::SafeUniformRealDistribution<float> distPos(-0.1f, 0.1f);
   particle.transform.translation = {
       emitterTranslate.x + distPos(randomEngine),
       emitterTranslate.y + distPos(randomEngine),
