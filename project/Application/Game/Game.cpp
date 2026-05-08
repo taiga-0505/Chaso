@@ -86,6 +86,9 @@ void Game::DrawDebugUI() {
     }
     ImGui::EndCombo();
   }
+  
+  RC::DrawViewShadingModeImGui();
+
   ImGui::End();
 
   // === FPS overlay ===
