@@ -46,6 +46,7 @@ private:
   bool isLaser = false;
   bool isWind = false;
   bool isHitEffect = false;
+  bool isCylinder = false;
 
   int guide;
 };

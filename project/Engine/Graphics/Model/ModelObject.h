@@ -29,13 +29,20 @@ class FrameResource; // 前方宣言
 // ★ 内部的に ModelResource（GPUリソース管理）に委譲している。
 //    このクラスは Transform / 可視性 / ImGui / ライティング設定 を保持するラッパー。
 // ============================================================
+/// @class ModelObject
+/// @brief 共有モデルリソース（ModelMesh）を配置・管理するためのオブジェクトクラス
+/// @details トランスフォーム（座標・回転・スケール）、可視性、ライティング設定、
+/// およびテクスチャのオーバーライド機能を持ちます。
+/// 描画ロジックの詳細は内部の ModelResource クラスに委譲されています。
 class ModelObject {
 public:
+  /// @struct LightingConfig
+  /// @brief オブジェクト固有のライティング設定を保持する構造体
   struct LightingConfig {
-    LightingMode mode = HalfLambert;
-    float color[3] = {1.0f, 1.0f, 1.0f};
-    float dir[3] = {0.0f, -1.0f, 0.0f};
-    float intensity = 1.0f;
+    LightingMode mode = HalfLambert;      ///< ライティングモード
+    float color[3] = {1.0f, 1.0f, 1.0f}; ///< ライトカラー
+    float dir[3] = {0.0f, -1.0f, 0.0f};  ///< ライト方向
+    float intensity = 1.0f;              ///< ライト強度
 
     constexpr LightingConfig() = default;
     constexpr LightingConfig(LightingMode m) : mode(m) {}
@@ -47,133 +54,197 @@ public:
   explicit ModelObject(const LightingConfig &cfg) : initialLighting_(cfg) {}
   ~ModelObject() = default;
 
+  /// @brief オブジェクトを初期化する
+  /// @param device D3D12 デバイス
   void Initialize(ID3D12Device *device);
 
+  /// @brief 使用するモデルメッシュを設定する
+  /// @param mesh 設定する ModelMesh の shared_ptr
   void SetMesh(const std::shared_ptr<ModelMesh> &mesh) {
     resource_.SetMesh(mesh);
   }
+
+  /// @brief 設定されているモデルメッシュを取得する
+  /// @return ModelMesh の shared_ptr
   const std::shared_ptr<ModelMesh> &GetMesh() const {
     return resource_.GetMesh();
   }
 
+  /// @brief モデルにUV座標がない場合、球面投影UVを生成する
   void EnsureSphericalUVIfMissing();
 
-  // overrideテクスチャ（全サブメッシュ共通でこれを使う）
+  /// @brief モデル全体のテクスチャを1つのハンドルでオーバーライドする
+  /// @param srvGPUHandle 使用するテクスチャの GPU ハンドル
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {
     resource_.SetTexture(srvGPUHandle);
   }
 
-  // override解除して「モデルのMaterialに戻す」
-  // - 1枚だけではなく、materialIndexごとに読み直す
+  /// @brief テクスチャのオーバーライドを解除し、モデル本来のマテリアル設定に戻す
   void ResetTextureToMtl() { resource_.ResetTextureToMtl(); }
 
+  /// @brief ライティング設定を一括で適用する
+  /// @param cfg ライティング設定構造体
+  /// @return 自身への参照（メソッドチェーン用）
   ModelObject &SetLightingConfig(const LightingConfig &cfg) {
     initialLighting_ = cfg;
     ApplyLightingIfReady_();
     return *this;
   }
+
+  /// @brief ライティング設定を個別のパラメータで指定する
+  /// @param mode ライティングモード
+  /// @param color ライトカラー
+  /// @param dir ライト方向
+  /// @param intensity ライト強度
+  /// @return 自身への参照
   ModelObject &SetLightingConfig(LightingMode mode,
                                  const std::array<float, 3> &color,
                                  const std::array<float, 3> &dir,
                                  float intensity);
-  ModelObject &SetLightingConfig(int mode, const std::array<float, 3> &color,
-                                 const std::array<float, 3> &dir,
-                                 float intensity) {
-    return SetLightingConfig(static_cast<LightingMode>(mode), color, dir,
-                             intensity);
-  }
 
+  /// @brief ライティングモードのみを更新する
+  /// @param m 設定する LightingMode
+  /// @return 自身への参照
   ModelObject &SetLightingMode(LightingMode m) {
     return SetLightingConfig(LightingConfig{m});
   }
-  ModelObject &SetLightingMode(int m) {
-    return SetLightingConfig(LightingConfig{m});
-  }
 
+  /// @brief トランスフォーム情報を取得する（読み書き可能）
+  /// @return Transform への参照
   Transform &T() { return transform_; }
+
+  /// @brief マテリアル情報を取得する（読み書き可能）
+  /// @return Material ポインタ
   Material *Mat() { return resource_.Mat(); }
+
+  /// @brief オブジェクトのベースカラーを設定する
+  /// @param color 設定するカラーベクトル
   void SetColor(const RC::Vector4 &color);
+
+  /// @brief ライト情報を取得する（読み書き可能）
+  /// @return DirectionalLight ポインタ
   DirectionalLight *Light() { return resource_.Light(); }
 
-  /// 環境マップ映り込み係数を設定する（非同期ロード対応）
+  /// @brief 環境マップ映り込み係数を設定する（非同期ロード対応）
+  /// @param coeff 係数 (0.0: なし, 1.0: 最大)
   void SetEnvironmentCoefficient(float coeff) {
     initialEnvCoeff_ = coeff;
     if (Material *mat = resource_.Mat()) {
       mat->environmentCoefficient = coeff;
     }
   }
+
+  /// @brief 環境マップ映り込み係数を取得する
+  /// @return 係数値
   float GetEnvironmentCoefficient() const { return initialEnvCoeff_; }
 
-  // LightManager の共通ライトCB（b1）を使いたい場合の上書き。
-  // 0 を渡すと「自前の cbLight_」に戻る。
+  /// @brief 外部のライトCBアドレスを指定してライト設定を共有する
+  /// @param addr ライトCBの GPU 仮想アドレス（0 で自前ライトに戻る）
   void SetExternalLightCBAddress(D3D12_GPU_VIRTUAL_ADDRESS addr) {
     resource_.SetExternalLightCBAddress(addr);
   }
+
+  /// @brief 外部ライトCBの GPU 仮想アドレスを取得する
+  /// @return アドレス値
   D3D12_GPU_VIRTUAL_ADDRESS GetExternalLightCBAddress() const {
     return resource_.GetExternalLightCBAddress();
   }
 
+  /// @brief オブジェクトの可視状態を設定する
+  /// @param v true で表示
   void SetVisible(bool v) { visible_ = v; }
+
+  /// @brief オブジェクトが可視状態か取得する
+  /// @return 可視なら true
   bool Visible() const { return visible_; }
 
+  /// @brief テクスチャマネージャを設定する（モデル読み込み時のテクスチャ解決に使用）
+  /// @param tm テクスチャマネージャへのポインタ
   void SetTextureManager(TextureManager *tm) { resource_.SetTextureManager(tm); }
 
+  /// @brief モデルのファイルパスを保存する
+  /// @param path ファイルパス
   void SetFilePath(const std::string &path) { filePath_ = path; }
+
+  /// @brief モデルのファイルパスを取得する
+  /// @return ファイルパス文字列
   const std::string &GetFilePath() const { return filePath_; }
 
+  /// @brief 準備完了フラグを設定する
+  /// @param r 準備完了状態
   void SetReady(bool r) { resource_.SetReady(r); }
+
+  /// @brief モデルデータの準備が完了しているか確認する
+  /// @return 準備完了なら true
   bool IsReady() const { return resource_.IsReady(); }
 
+  /// @brief 毎フレームの更新処理（行列計算等）
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
-  /// ワールド行列を外部から指定して描画する（コマンドキュー用）
+  /// @brief ワールド行列を指定してオブジェクトを描画する
+  /// @param cmdList グラフィックスコマンドリスト
+  /// @param world 描画に使用するワールド行列
+  /// @param frame フレームリソース（一時メモリ用）
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
             RC::FrameResource &frame);
 
-  // 既存の「Transform配列インスタンス」描画
+  /// @brief 複数のインスタンス（Transformリスト）を一括描画する
+  /// @param cmdList グラフィックスコマンドリスト
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
+  /// @param instances インスタンスごとの Transform 配列
+  /// @param frame フレームリソース
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
                  RC::FrameResource &frame);
 
-  // 「Transform配列 + 単色」インスタンス描画
+  /// @brief インスタンス一括描画（単色オーバーライド付き）
+  /// @param cmdList グラフィックスコマンドリスト
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
+  /// @param instances インスタンスごとの Transform 配列
+  /// @param color 全インスタンスに適用するオーバーライドカラー
+  /// @param frame フレームリソース
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
                  const RC::Vector4 &color,
                  RC::FrameResource &frame);
 
+  /// @brief ImGui を使用したデバッグ用 UI を表示する
+  /// @param name 表示名
+  /// @param showLightingUi ライティング設定を表示するか
   void DrawImGui(const char *name, bool showLightingUi);
 
+  /// @brief バッチ描画用のカーソルをリセットする
   void ResetBatchCursor() { resource_.ResetBatchCursor(); }
 
-  // ── ModelResource への直接アクセス（エンジン内部用）──
+  /// @brief 内部の ModelResource インスタンスを取得する
+  /// @return ModelResource への参照
   ModelResource &Resource() { return resource_; }
   const ModelResource &Resource() const { return resource_; }
 
 private:
+  /// @brief ライティング設定を GPU リソースに反映する（準備完了時のみ）
   void ApplyLightingIfReady_();
 
 private:
-  // GPU リソース・描画ロジック（委譲先）
-  ModelResource resource_;
+  ModelResource resource_; ///< 描画リソース・ロジック本体
 
-  // CPU側の状態
-  Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
-  bool visible_ = true;
+  Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}}; ///< オブジェクトの座標・回転・スケール
+  bool visible_ = true; ///< 可視フラグ
 
-  // Updateで受け取ったカメラを保持（DrawでNodeごとにWVPを作る）
-  RC::Matrix4x4 cachedView_ = {};
-  RC::Matrix4x4 cachedProj_ = {};
-  bool hasVP_ = false;
+  RC::Matrix4x4 cachedView_ = {}; ///< Update で受け取ったビュー行列のキャッシュ
+  RC::Matrix4x4 cachedProj_ = {}; ///< Update で受け取ったプロジェクション行列のキャッシュ
+  bool hasVP_ = false;           ///< ビュー・プロジェクション行列がセットされているか
 
-  LightingConfig initialLighting_{};
+  LightingConfig initialLighting_{}; ///< 初期化時または外部から設定されたライティング情報
 
-  // 環境マップ映り込み係数（Initialize後にも適用される）
-  float initialEnvCoeff_ = 0.0f;
+  float initialEnvCoeff_ = 0.0f; ///< 環境マップ映り込み係数の初期設定値
+  float lastEnvCoeff_ = 0.5f;    ///< ImGui用：環境マップトグル時の係数保存用
 
-  // ImGui用: 環境マップOFF時に前回の係数を記憶
-  float lastEnvCoeff_ = 0.5f;
-
-  std::string filePath_;
+  std::string filePath_; ///< モデルのアセットパス
 };

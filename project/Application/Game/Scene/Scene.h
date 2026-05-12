@@ -16,34 +16,49 @@ class BgmManager;
 class SeManager;
 class PostProcess;
 
-// シーンが使う共有コンテキスト
+/// @struct SceneContext
+/// @brief シーン間で共有されるエンジンコンポーネントへの参照を保持する構造体
+/// @details 各シーンの Update/Render に渡され、グラフィックスデバイス、入力、オーディオ、デバッグツールなどへのアクセスを提供します。
 struct SceneContext {
-  Dx12Core *core = nullptr;
-  Input *input = nullptr;
-  AppConfig *app = nullptr;
-  ImGuiManager *imgui = nullptr;
-
-  PipelineManager *pipelineManager = nullptr;
-  PostProcess *postProcess = nullptr;
-
-  BgmManager *bgmManager = nullptr;
-  SeManager *seManager = nullptr;
+  Dx12Core *core = nullptr;             ///< DirectX12 コアシステム
+  Input *input = nullptr;               ///< 入力システム（キーボード、マウス、コントローラー）
+  AppConfig *app = nullptr;             ///< アプリケーション設定
+  ImGuiManager *imgui = nullptr;         ///< ImGui 管理
+  PipelineManager *pipelineManager = nullptr; ///< パイプライン管理
+  PostProcess *postProcess = nullptr;     ///< ポストプロセス管理
+  BgmManager *bgmManager = nullptr;      ///< BGM 管理
+  SeManager *seManager = nullptr;        ///< SE 管理
 };
 
-// シーン基底クラス
+/// @class Scene
+/// @brief ゲームシーンの基底抽象クラス
+/// @details 全てのゲームシーン（タイトル、ゲーム本編、リザルトなど）はこのクラスを継承して実装します。
+/// シーンのライフサイクル（入場・退場・更新・描画）を定義します。
 class Scene {
 public:
   virtual ~Scene() = default;
+
+  /// @brief シーン名を取得する
+  /// @return シーン名（文字列リテラル）
   virtual const char *Name() const = 0;
 
-  // シーン遷移の入り口／出口
+  /// @brief シーンに遷移した瞬間に呼び出される
+  /// @param ctx シーンコンテキスト
   virtual void OnEnter(SceneContext &) {}
+
+  /// @brief シーンから離れる瞬間に呼び出される
+  /// @param ctx シーンコンテキスト
   virtual void OnExit(SceneContext &) {}
 
-  // 1フレーム更新／描画
-  // Update 内で SceneManager に遷移要求を出せるよう、後述の SceneManager
-  // を前方宣言で受ける
-  class SceneManager;
+  class SceneManager; ///< 前方宣言
+
+  /// @brief シーンの更新処理
+  /// @param sm シーンマネージャー（シーン遷移要求に使用）
+  /// @param ctx シーンコンテキスト
   virtual void Update(SceneManager &sm, SceneContext &ctx) = 0;
+
+  /// @brief シーンの描画処理
+  /// @param ctx シーンコンテキスト
+  /// @param cl グラフィックスコマンドリスト
   virtual void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) = 0;
 };

@@ -4,10 +4,14 @@
 #include <algorithm>
 #include <cmath>
 
+/// @brief カメラに関連する数学計算関数をまとめた名前空間
 namespace RC::CameraMath {
 
-// ここはあなたのエンジンのカメラと揃える前提：
-// yaw = atan2(x, z) なので「+Zが前」系
+/// @brief 視点座標と注視点座標から、カメラの回転角(Yaw, Pitch)を計算する
+/// @param eye 視点座標 (カメラの位置)
+/// @param target 注視点座標 (カメラが向く位置)
+/// @param fallbackForward ベクトルの長さが0だった場合に使用するデフォルトの前方方向
+/// @return 回転角 (x: Pitch, y: Yaw, z: 0)
 inline Vector3 LookAtYawPitch(const Vector3 &eye, const Vector3 &target,
                               const Vector3 &fallbackForward = Vector3{0, 0,
                                                                        1}) {
@@ -19,7 +23,10 @@ inline Vector3 LookAtYawPitch(const Vector3 &eye, const Vector3 &target,
   return Vector3{pitch, yaw, 0.0f}; // rollは使わない想定
 }
 
-// yaw/pitch から forward を作る（DebugCamera でよく使う）
+/// @brief Yaw角とPitch角から前方ベクトルを計算する。DebugCameraの移動計算などで使用。
+/// @param yaw Yaw角 (ラジアン)
+/// @param pitch Pitch角 (ラジアン)
+/// @return 前方ベクトル
 inline Vector3 ForwardFromYawPitch(float yaw, float pitch) {
   const float cy = std::cos(yaw);
   const float sy = std::sin(yaw);
@@ -30,6 +37,9 @@ inline Vector3 ForwardFromYawPitch(float yaw, float pitch) {
   return Vector3{sy * cp, sp, cy * cp};
 }
 
+/// @brief 回転角(Vector3)から前方ベクトルを計算する
+/// @param rot 回転角 (x: Pitch, y: Yaw, z: Roll)
+/// @return 前方ベクトル
 inline Vector3 ForwardFromRotation(const Vector3 &rot) {
   return ForwardFromYawPitch(rot.y, rot.x); // rot = {pitch, yaw, roll} の前提
 }

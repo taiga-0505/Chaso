@@ -5,11 +5,15 @@
 #include <string>
 #include <vector>
 
+/// @brief オブジェクトの基本変換情報（スケール、回転、並進）
 struct Transform {
-  RC::Vector3 scale;
-  RC::Vector3 rotation;
-  RC::Vector3 translation;
+  RC::Vector3 scale;       ///< スケール
+  RC::Vector3 rotation;    ///< 回転角 (ラジアン)
+  RC::Vector3 translation; ///< 座標 (並進)
 
+  /// @brief 移動ベクトルを座標に加算する
+  /// @param velocity 加算する移動量
+  /// @return 自身の参照
   Transform &operator+=(const RC::Vector3 &velocity) {
     this->translation.x += velocity.x;
     this->translation.y += velocity.y;
@@ -18,204 +22,205 @@ struct Transform {
   }
 };
 
+/// @brief GPU転送用のカメラデータ構造体
 struct CameraForGPU {
-  RC::Vector3 worldPosition; // カメラのワールド座標位置
+  RC::Vector3 worldPosition; ///< カメラのワールド座標位置
 };
 
+/// @brief 軸に平行な境界ボックス (Axis-Aligned Bounding Box)
 struct AABB {
-  RC::Vector3 min = {-1.0f, -1.0f, -1.0f};
-  RC::Vector3 max = {1.0f, 1.0f, 1.0f};
+  RC::Vector3 min = {-1.0f, -1.0f, -1.0f}; ///< 最小座標
+  RC::Vector3 max = {1.0f, 1.0f, 1.0f};    ///< 最大座標
 };
 
+/// @brief 矩形領域（2D座標等に使用）
 struct Rect {
-  float left;
-  float right;
-  float bottom;
-  float top;
+  float left;   ///< 左端
+  float right;  ///< 右端
+  float bottom; ///< 下端
+  float top;    ///< 上端
 };
 
+/// @brief パーティクル放出器の設定
 struct Emitter {
-  Transform transform;
-  uint32_t count;      // 一度に放出するパーティクル数
-  float frequency;     // 放出間隔（秒）
-  float frequencyTime; // 放出間隔タイマー
+  Transform transform; ///< 放出器の位置・姿勢
+  uint32_t count;      ///< 一度に放出するパーティクル数
+  float frequency;     ///< 放出間隔（秒）
+  float frequencyTime; ///< 放出間隔タイマー用経過時間
 
   // 一括制御パラメータ
-  RC::Vector3 globalScale = {1.0f, 1.0f, 1.0f};
-  RC::Vector4 globalColor = {1.0f, 1.0f, 1.0f, 1.0f};
-  float timeScale = 1.0f;
+  RC::Vector3 globalScale = {1.0f, 1.0f, 1.0f};    ///< パーティクル全体のスケール倍率
+  RC::Vector4 globalColor = {1.0f, 1.0f, 1.0f, 1.0f}; ///< パーティクル全体の色
+  float timeScale = 1.0f;                          ///< パーティクル全体の時間軸倍率
 };
 
+/// @brief 加速度フィールド（空間内の特定領域に加速度を与える）
 struct AccelerationField {
-  RC::Vector3 acceleration; // 加速度ベクトル
-  AABB area;
+  RC::Vector3 acceleration; ///< 加速度ベクトル
+  AABB area;                ///< 加速度が適用される範囲
 };
 
+/// @brief パーティクルの個別データ
 struct ParticleData {
-  Transform transform;
-  RC::Vector3 velocity;
-  RC::Vector4 color;
-  float lifeTime;
-  float currentTime;
+  Transform transform; ///< パーティクルの位置・回転・スケール
+  RC::Vector3 velocity; ///< 速度ベクトル
+  RC::Vector4 color;    ///< パーティクルの色 (RGBA)
+  float lifeTime;       ///< 生存時間 (秒)
+  float currentTime;    ///< 現在の経過時間 (秒)
 };
 
+/// @brief 線分データ（デバッグ描画等に使用）
 struct Segment {
-  RC::Vector3 origin = {0.0f, 0.0f, 0.0f};
-  RC::Vector3 diff = {1.0f, 1.0f, 1.0f};
-  uint32_t color = 0x000000FF;
+  RC::Vector3 origin = {0.0f, 0.0f, 0.0f}; ///< 始点
+  RC::Vector3 diff = {1.0f, 1.0f, 1.0f};   ///< 終点への差分ベクトル
+  uint32_t color = 0x000000FF;            ///< 色 (RGBA8)
 };
 
+/// @brief 頂点データ構造体
 struct VertexData {
-  RC::Vector4 position; // 頂点の位置
-  RC::Vector2 texcoord; // テクスチャ座標
-  RC::Vector3 normal;   // 法線ベクトル
+  RC::Vector4 position; ///< 頂点座標 (x, y, z, w)
+  RC::Vector2 texcoord; ///< テクスチャ座標 (u, v)
+  RC::Vector3 normal;   ///< 法線ベクトル
 };
 
+/// @brief マテリアルの基本データ（ファイルパス等）
 struct MaterialData {
-  std::string textureFilePath; // テクスチャファイルのパス
+  std::string textureFilePath; ///< テクスチャファイルのパス
 };
 
+/// @brief モデル内のノード構造体（階層構造管理用）
 struct Node {
-  RC::Matrix4x4 localMatrix; // ローカル変換行列
-  std::string name;          // ノードの名前
-  std::vector<uint32_t> meshIndices; // このノードが参照するMeshのindex配列（assimp:
-                                     // node->mMeshes）
-  std::vector<Node> children; // 子ノードの配列
+  RC::Matrix4x4 localMatrix;         ///< 親ノードからの相対変換行列
+  std::string name;                  ///< ノード名
+  std::vector<uint32_t> meshIndices; ///< このノードが参照するメッシュのインデックス
+  std::vector<Node> children;        ///< 子ノードの配列
 };
 
+/// @brief モデル全体のデータ構造体
 struct ModelData {
-  std::vector<VertexData> vertices; // 頂点データの配列
-  std::vector<uint32_t> indices;    // インデックスデータの配列（任意）
-  MaterialData material;            // マテリアルデータ
-  Node rootNode;
+  std::vector<VertexData> vertices; ///< 頂点データの配列
+  std::vector<uint32_t> indices;    ///< インデックスデータの配列
+  MaterialData material;            ///< マテリアル情報
+  Node rootNode;                    ///< ルートノード
 };
 
+/// @brief 3Dオブジェクト用マテリアル設定（GPU転送用）
 struct Material {
-  RC::Vector4 color;         // 色 (RGBA)
-  int lightingMode;          // 0:なし, 1:Lambert, 2:Half Lambert
-  float shininess;           // 光沢度
-  float environmentCoefficient = 0.0f; // 環境マップ映り込み係数 (0〜1)
-  float padding;             // アラインメント調整
-  RC::Matrix4x4 uvTransform; // UV変換行列
+  RC::Vector4 color;                    ///< 基本色 (RGBA)
+  int lightingMode;                     ///< ライティングモード (0:なし, 1:Lambert, 2:Half Lambert)
+  float shininess;                      ///< 光沢度
+  float environmentCoefficient = 0.0f;  ///< 環境マップ映り込み係数 (0.0 ~ 1.0)
+  float padding;                        ///< パディング（16byteアラインメント用）
+  RC::Matrix4x4 uvTransform;            ///< UV変換行列
 };
 
+/// @brief スプライト用マテリアル設定
 struct SpriteMaterial {
-  RC::Vector4 color;         // 色 (RGBA)
-  RC::Matrix4x4 uvTransform; // UV変換行列
+  RC::Vector4 color;         ///< 色 (RGBA)
+  RC::Matrix4x4 uvTransform; ///< UV変換行列
 };
 
+/// @brief GPU転送用の座標変換行列データ（b0番）
 struct TransformationMatrix {
-  RC::Matrix4x4 WVP;
-  RC::Matrix4x4 World;
-  RC::Matrix4x4 worldInverseTranspose;
+  RC::Matrix4x4 WVP;                    ///< World-View-Projection 行列
+  RC::Matrix4x4 World;                  ///< World 行列
+  RC::Matrix4x4 worldInverseTranspose;  ///< World行列の逆転置（法線変換用）
 };
 
+/// @brief GPU転送用のパーティクルインスタンシングデータ
 struct ParticleForGPU {
-  RC::Matrix4x4 WVP;
-  RC::Matrix4x4 World;
-  RC::Vector4 color;
+  RC::Matrix4x4 WVP;   ///< World-View-Projection 行列
+  RC::Matrix4x4 World; ///< World 行列
+  RC::Vector4 color;   ///< 色 (RGBA)
 };
-;
 
+/// @brief 平行光源データ
 struct DirectionalLight {
-  RC::Vector4 color;     // 光の色 (RGBA)
-  RC::Vector3 direction; // 光の方向
-  float intensity;       // 光の強度
+  RC::Vector4 color;     ///< 光の色 (RGBA)
+  RC::Vector3 direction; ///< 光の方向
+  float intensity;       ///< 光の強度
 };
 
+/// @brief 点光源データ
 struct PointLight {
-  RC::Vector4 color;    // 光の色 (RGBA)
-  RC::Vector3 position; // 光の位置
-  float intensity;      // 光の強度
-  float radius;         // 光の届く距離
-  float decay;          // 減衰率
-  float padding[2];     // アラインメント調整
+  RC::Vector4 color;    ///< 光の色 (RGBA)
+  RC::Vector3 position; ///< 光の座標
+  float intensity;      ///< 光の強度
+  float radius;         ///< 影響半径
+  float decay;          ///< 減衰率
+  float padding[2];     ///< パディング
 };
 
+/// @brief スポットライトデータ
 struct SpotLight {
-  RC::Vector4 color;     // 光の色 (RGBA)
-  RC::Vector3 position;  // 光の位置
-  float intensity;       // 光の強度
-  RC::Vector3 direction; // 光の方向
-  float distance;        // 光の届く距離
-  float decay;           // 減衰率
-  float cosAngle;        // スポットライトの余弦
-  float padding[2];      // アラインメント調整
+  RC::Vector4 color;     ///< 光の色 (RGBA)
+  RC::Vector3 position;  ///< 光の座標
+  float intensity;       ///< 光の強度
+  RC::Vector3 direction; ///< 光の方向
+  float distance;        ///< 影響距離
+  float decay;           ///< 減衰率
+  float cosAngle;        ///< スポットライトの照射角のコサイン
+  float padding[2];      ///< パディング
 };
 
+/// @brief 面光源 (Area Light) データ
 struct AreaLight {
-  RC::Vector4 color;    // rgb + a
-  RC::Vector3 position; // 中心
-  float intensity;
+  RC::Vector4 color;    ///< 光の色 (RGBA)
+  RC::Vector3 position; ///< 中心座標
+  float intensity;      ///< 光の強度
 
-  RC::Vector3 right; // 面の右方向(正規化推奨)
-  float halfWidth;   // 半幅
+  RC::Vector3 right; ///< 面の右方向ベクトル
+  float halfWidth;   ///< 幅の半分
 
-  RC::Vector3 up;   // 面の上方向(正規化推奨)
-  float halfHeight; // 半高さ
+  RC::Vector3 up;   ///< 面の上方向ベクトル
+  float halfHeight; ///< 高さの半分
 
-  float range;       // 影響距離（0以下なら無効扱いでもOK）
-  float decay;       // 減衰指数
-  uint32_t twoSided; // 1なら両面発光
-  uint32_t padding;  // 16byte合わせ
+  float range;       ///< 影響距離
+  float decay;       ///< 減衰指数
+  uint32_t twoSided; ///< 1なら両面発光、0なら片面
+  uint32_t padding;  ///< パディング
 };
 
-// =============================================
-// 複数ライト用CB（Object3D: Point/Spot を最大4個）
-// - HLSL側の cbuffer とレイアウトを合わせる
-// - RootSig: Point=b3, Spot=b4 のまま
-// =============================================
-
-static constexpr uint32_t kMaxPointLights = 4;
-static constexpr uint32_t kMaxSpotLights = 4;
-static const int kMaxAreaLights = 4;
-
-// b3 用（PointLight配列）
+/// @brief 点光源群の定数バッファ構造体 (b3番)
 struct PointLightsCB {
-  uint32_t count = 0;                     // 有効なライト数（0〜4）
-  float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
-  PointLight lights[kMaxPointLights]{};
+  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ 4)
+  float padding0[3] = {0.0f, 0.0f, 0.0f}; ///< 16byte境界合わせ用
+  PointLight lights[4]{};                ///< 点光源の配列
 };
 
-// b4 用（SpotLight配列）
+/// @brief スポットライト群の定数バッファ構造体 (b4番)
 struct SpotLightsCB {
-  uint32_t count = 0;                     // 有効なライト数（0〜4）
-  float padding0[3] = {0.0f, 0.0f, 0.0f}; // 16byte境界
-  SpotLight lights[kMaxSpotLights]{};
+  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ 4)
+  float padding0[3] = {0.0f, 0.0f, 0.0f}; ///< 16byte境界合わせ用
+  SpotLight lights[4]{};                 ///< スポットライトの配列
 };
 
+/// @brief 面光源群の定数バッファ構造体
 struct AreaLightsCB {
-  uint32_t count = 0;            // areaCount
-  float padding0[3] = {0, 0, 0}; // 16byte境界合わせ
-  AreaLight lights[kMaxAreaLights]{};
+  uint32_t count = 0;            ///< 有効なライト数 (0 ~ 4)
+  float padding0[3] = {0, 0, 0}; ///< 16byte境界合わせ用
+  AreaLight lights[4]{};        ///< 面光源の配列
 };
 
-// 事故防止（おすすめ）
-static_assert(offsetof(AreaLightsCB, lights) == 16,
-              "AreaLightsCB layout mismatch");
-
-// -------------------------------
-// 非スコープ enum: 無修飾で使える
-// -------------------------------
+/// @brief ライティングの計算方式
 enum LightingMode {
-  None = 0,        // ライティング無し
-  Lambert = 1,     // ランバート
-  HalfLambert = 2, // ハーフランバート
+  None = 0,        ///< ライティングなし
+  Lambert = 1,     ///< ランバート反射
+  HalfLambert = 2, ///< ハーフランバート反射
 };
 
-// ビューポート共有モード
+/// @brief ビューポートのデバッグ表示モード
 enum class ViewShadingMode {
-  Solid = 0,            // 通常描画
-  Wireframe = 1,        // ワイヤーフレームのみ
-  SolidWireframe = 2,   // ソリッド描画＋ワイヤーフレームのオーバーレイ
-  FaceOrientation = 3,  // 表面=青, 裏面=赤（法線デバッグ）
-  RandomColor = 4,      // オブジェクトIDベースのランダムカラー
-  SolidShading = 5,     // シンプルHalf-Lambert（テクスチャなし、形状確認用）
+  Solid = 0,            ///< 通常のソリッド表示
+  Wireframe = 1,        ///< ワイヤーフレーム表示
+  SolidWireframe = 2,   ///< ソリッド表示にワイヤーを重ねる
+  FaceOrientation = 3,  ///< 法線デバッグ（表=青, 裏=赤）
+  RandomColor = 4,      ///< オブジェクト毎のランダムカラー
+  SolidShading = 5,     ///< テクスチャなしの形状確認用表示
 };
 
-// 2Dプリミティブ用: 塗りつぶし/ワイヤー
-// 非スコープ enum: 無修飾で使える（Scene側で kFill / kWire だけでOK）
+/// @brief 2D図形の描画塗りつぶしモード
 enum kFillMode {
-  kFill = 0, // 塗りつぶし
-  kWire = 1, // 枠線（ワイヤー）
+  kFill = 0, ///< 塗りつぶしあり
+  kWire = 1, ///< 枠線のみ（塗りつぶしなし）
 };

@@ -3,6 +3,7 @@
 #include "DescriptorHeap/DescriptorHelpers.h"
 #include "function/function.h"
 #include "Dx12/CommandContext/CommandContext.h"
+#include "Common/Log/Log.h"
 #include <vector>
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::LoadFromFile(SRVManager &srv, CommandContext &cmd, const std::string &path, bool srgb) {
@@ -70,7 +71,11 @@ bool Texture2D::LoadCPU(const std::string &path, bool srgb) {
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::Upload(SRVManager &srv, CommandContext &cmd) {
   ID3D12Device *device = srv.Device();
-  assert(mipImages_.GetImageCount() > 0 && "LoadCPU must be called before Upload.");
+  if (mipImages_.GetImageCount() == 0) {
+    Log::Print("[Texture2D] LoadCPU must be called before Upload (or texture was cleared during load).");
+    assert(false && "LoadCPU must be called before Upload (or texture was cleared during load).");
+    return nullptr;
+  }
 
   // ---- GPUテクスチャ作成 ----
   D3D12_RESOURCE_DESC desc{};
@@ -88,7 +93,11 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::Upload(SRVManager &srv, Comman
   HRESULT hr = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
                                                D3D12_RESOURCE_STATE_COPY_DEST,
                                                nullptr, IID_PPV_ARGS(&resource_));
-  assert(SUCCEEDED(hr));
+  if (FAILED(hr)) {
+    Log::Print("[Texture2D] Failed to create committed resource for texture: " + path_);
+    assert(false && "Failed to create committed resource for texture");
+    return nullptr;
+  }
   if (resource_) {
     std::wstring wpath(path_.begin(), path_.end());
     resource_->SetName((L"Texture: " + wpath).c_str());
@@ -119,11 +128,19 @@ Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::Upload(SRVManager &srv, Comman
   Microsoft::WRL::ComPtr<ID3D12Resource> uploadRes;
   hr = device->CreateCommittedResource(&uploadHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
                                        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadRes));
-  assert(SUCCEEDED(hr));
+  if (FAILED(hr)) {
+    Log::Print("[Texture2D] Failed to create upload heap for texture: " + path_);
+    assert(false && "Failed to create upload heap for texture");
+    return nullptr;
+  }
   
   uint8_t* pData = nullptr;
   hr = uploadRes->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-  assert(SUCCEEDED(hr));
+  if (FAILED(hr)) {
+    Log::Print("[Texture2D] Failed to map upload resource for texture: " + path_);
+    assert(false && "Failed to map upload resource for texture");
+    return nullptr;
+  }
 
   // 全サブリソース（配列面 × ミップ）を転送
   for (size_t arrayIdx = 0; arrayIdx < metadata_.arraySize; ++arrayIdx) {

@@ -1,29 +1,28 @@
 #pragma once
 
-// ============================================================================
-// ModelRendererComponent
-// ----------------------------------------------------------------------------
-// モデル描画コンポーネント。RC::LoadModel のハンドルを保持し、
-// RenderSystem が自動で描画を行う。
-// ============================================================================
-
 #include "IComponent.h"
 #include "Math/MathTypes.h"
 
+/// @brief 3Dモデルの描画を担当するコンポーネント
+/// モデルのハンドルを保持し、RenderSystem による自動描画の対象となります。
 class ModelRendererComponent : public IComponent {
 public:
-  /// RC::LoadModel() の戻り値
+  /// @brief モデルハンドル
+  /// RC::LoadModel() によって返されたIDを保持します。
   int modelHandle = -1;
 
-  /// テクスチャオーバーライド（-1 = マテリアルデフォルト）
+  /// @brief テクスチャのオーバーライド
+  /// マテリアル設定とは別のテクスチャを強制する場合に使用します（-1 でデフォルト）。
   int texOverride = -1;
 
-  /// 描画の可視性
+  /// @brief 描画の可視性フラグ
   bool visible = true;
 
-  /// ブレンドモード（将来拡張用）
+  /// @brief ブレンドモード
+  /// 描画時のブレンディング設定を指定します。
   int blendMode = 0;
 
-  /// 有効なモデルを保持しているか
+  /// @brief 有効なモデルが設定されているか確認
+  /// @return 有効なハンドルを保持していれば true
   bool HasModel() const { return modelHandle >= 0; }
 };

@@ -1,27 +1,27 @@
 #pragma once
-
-// ============================================================================
-// Entity
-// ----------------------------------------------------------------------------
-// 軽量エンティティ。コンポーネントをアタッチするための最小コンテナ。
-// テンプレートベースの AddComponent / GetComponent で型安全にアクセスする。
-// ============================================================================
-
 #include "IComponent.h"
-
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <typeindex>
 #include <unordered_map>
 
+/// @brief 軽量エンティティクラス。コンポーネントを保持するための最小限のコンテナ。
+/// テンプレートベースの AddComponent / GetComponent により型安全にコンポーネントを管理します。
 class Entity {
 public:
-  /// コンストラクタ（内部IDは自動採番）
+  /// @brief コンストラクタ。内部IDは自動で採番されます。
   Entity() : id_(NextId()) {}
+  
+  /// @brief 名前指定付きコンストラクタ
+  /// @param name エンティティの名称
   explicit Entity(const std::string &name) : id_(NextId()), name_(name) {}
 
-  /// コンポーネントの追加（既に同型があれば上書き）
+  /// @brief コンポーネントの追加
+  /// @tparam T 追加するコンポーネントの型（IComponentを継承している必要があります）
+  /// @tparam Args コンポーネントのコンストラクタ引数
+  /// @param args 引数の実体
+  /// @return 追加されたコンポーネントへの参照（既に同型があれば上書きされます）
   template <typename T, typename... Args> T &AddComponent(Args &&...args) {
     static_assert(std::is_base_of_v<IComponent, T>,
                   "T must derive from IComponent");
@@ -31,7 +31,9 @@ public:
     return ref;
   }
 
-  /// コンポーネントの取得（なければ nullptr）
+  /// @brief コンポーネントの取得
+  /// @tparam T 取得したいコンポーネントの型
+  /// @return コンポーネントへのポインタ。存在しない場合は nullptr
   template <typename T> T *GetComponent() {
     auto it = components_.find(std::type_index(typeid(T)));
     if (it != components_.end()) {
@@ -40,6 +42,9 @@ public:
     return nullptr;
   }
 
+  /// @brief コンポーネントの取得 (const)
+  /// @tparam T 取得したいコンポーネントの型
+  /// @return コンポーネントへのポインタ。存在しない場合は nullptr
   template <typename T> const T *GetComponent() const {
     auto it = components_.find(std::type_index(typeid(T)));
     if (it != components_.end()) {
@@ -48,17 +53,21 @@ public:
     return nullptr;
   }
 
-  /// コンポーネントを持っているか
+  /// @brief 指定した型のコンポーネントを保持しているか確認
+  /// @tparam T 保持を確認したいコンポーネントの型
+  /// @return 保持していれば true
   template <typename T> bool HasComponent() const {
     return components_.count(std::type_index(typeid(T))) > 0;
   }
 
-  /// コンポーネントの削除
+  /// @brief 指定した型のコンポーネントを削除
+  /// @tparam T 削除したいコンポーネントの型
   template <typename T> void RemoveComponent() {
     components_.erase(std::type_index(typeid(T)));
   }
 
-  /// 全コンポーネントの Update を呼ぶ
+  /// @brief 保持している全コンポーネントの更新処理を呼び出す
+  /// @param deltaTime 前フレームからの経過時間
   void UpdateAll(float deltaTime) {
     for (auto &[type, comp] : components_) {
       if (comp && comp->IsEnabled()) {
@@ -67,22 +76,36 @@ public:
     }
   }
 
-  // ── アクティブ状態 ──
+  /// @brief エンティティがアクティブか取得
+  /// @return アクティブなら true
   bool IsActive() const { return active_; }
+  
+  /// @brief エンティティのアクティブ状態を設定
+  /// @param active 設定する状態
   void SetActive(bool active) { active_ = active; }
 
-  // ── 識別 ──
+  /// @brief ユニークなIDを取得
+  /// @return エンティティID
   uint32_t Id() const { return id_; }
+  
+  /// @brief エンティティ名を取得
+  /// @return 名前文字列
   const std::string &Name() const { return name_; }
+  
+  /// @brief エンティティ名を設定
+  /// @param name 設定する名前
   void SetName(const std::string &name) { name_ = name; }
 
 private:
-  uint32_t id_;
-  std::string name_;
-  bool active_ = true;
+  uint32_t id_; ///< エンティティ固有のID
+  std::string name_; ///< 識別用の名前
+  bool active_ = true; ///< アクティブフラグ
 
+  /// 型インデックスをキーとしたコンポーネントのマップ
   std::unordered_map<std::type_index, std::unique_ptr<IComponent>> components_;
 
+  /// @brief 次のユニークIDを生成する
+  /// @return 生成されたID
   static uint32_t NextId() {
     static uint32_t counter = 0;
     return ++counter;

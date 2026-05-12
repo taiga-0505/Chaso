@@ -8,96 +8,118 @@
 
 namespace RC {
 
-/// <summary>
-/// Light を「ハンドル制」で管理し、各ライト用の Upload CB（LightSlotCB）も保持する。
-/// RenderCommon からライトの寿命/CB管理を分離するためのクラス。
-/// </summary>
+/// @brief 平行光源(Directional Light)を管理するマネージャクラス
+/// ライトをハンドル制で管理し、各ライト用の定数バッファ(Upload CB)の寿命管理と同期を担当します。
 class DirectionalLightManager {
 public:
+  /// @brief デフォルトコンストラクタ
   DirectionalLightManager() = default;
+  
+  /// @brief デストラクタ。内部リソースを解放します。
   ~DirectionalLightManager() { Term(); }
 
+  // コピー禁止
   DirectionalLightManager(const DirectionalLightManager &) = delete;
   DirectionalLightManager &operator=(const DirectionalLightManager &) = delete;
 
-  /// <summary>初期化（Device が有効になった後に一度だけ呼ぶ）</summary>
+  /// @brief 初期化処理
+  /// @param device DirectX12デバイス。定数バッファの作成に使用します。
   void Init(ID3D12Device *device);
 
-  /// <summary>終了（確保したCBなどを解放）</summary>
+  /// @brief 終了処理。確保した定数バッファなどのリソースをすべて解放します。
   void Term();
 
-  /// <summary>
-  /// ライトを生成してハンドルを返す（0 はデフォルトスロット予約）
-  /// </summary>
-  /// <returns>ライトハンドル（失敗時 -1）</returns>
+  /// @brief 新規ライトを生成する
+  /// @return 生成されたライトのハンドル（失敗時は -1）。ハンドル 0 はデフォルトスロットとして予約されます。
   int Create();
 
-  /// <summary>ライトを破棄する（0 は破棄不可）</summary>
+  /// @brief 指定したハンドルに対応するライトを破棄する
+  /// @param handle ライトハンドル（0 は破棄できません）
   void Destroy(int handle);
 
-  /// <summary>
-  /// 3D描画で使用する「アクティブライト」を切り替える。
-  /// -1 の場合は「明示的なアクティブ無し」になり、内部では default(0) を使う。
-  /// </summary>
+  /// @brief シーン内で使用する「アクティブなライト」を設定する
+  /// @param handle ライトハンドル。-1 を指定すると明示的なアクティブなし（デフォルトスロットを使用）になります。
   void SetActive(int handle);
 
-  /// <summary>現在の「明示的なアクティブ」ハンドルを返す（未設定なら -1）</summary>
+  /// @brief 現在設定されている「明示的なアクティブ」ハンドルの取得
+  /// @return ライトハンドル。未設定なら -1
   int GetActiveHandle() const { return activeHandle_; }
 
-  /// <summary>ライトの実体ポインタを取得（無効なら nullptr）</summary>
+  /// @brief ハンドルからライトの実体を取得
+  /// @param handle ライトハンドル
+  /// @return ライトソースへのポインタ。無効なハンドルの場合は nullptr
   DirectionalLightSource *Get(int handle);
 
-  /// <summary>ライトの実体ポインタを取得（無効なら nullptr）</summary>
+  /// @brief ハンドルからライトの実体を取得 (const)
+  /// @param handle ライトハンドル
+  /// @return ライトソースへのconstポインタ。無効なハンドルの場合は nullptr
   const DirectionalLightSource *Get(int handle) const;
 
-  /// <summary>描画時に使用される「実効アクティブ」を返す（未設定時は default(0)）</summary>
+  /// @brief 現在のアクティブなライトの実体を取得
+  /// 明示的なアクティブが設定されていない場合は、デフォルトスロット(0)のライトを返します。
+  /// @return アクティブなライトソースへのポインタ
   DirectionalLightSource *GetActive();
 
-  /// <summary>描画時に使用される「実効アクティブ」を返す（未設定時は default(0)）</summary>
+  /// @brief 現在のアクティブなライトの実体を取得 (const)
+  /// @return アクティブなライトソースへのconstポインタ
   const DirectionalLightSource *GetActive() const;
 
-  /// <summary>実効アクティブの LightSlotCB の GPU アドレスを返す（準備できない時は 0）</summary>
+  /// @brief アクティブなライトの定数バッファ(CB)のGPU仮想アドレスを取得
+  /// @return GPU上の仮想アドレス。準備できていない場合は 0
   D3D12_GPU_VIRTUAL_ADDRESS GetActiveCBAddress();
 
-  /// <summary>指定ハンドルの LightSlotCB の GPU アドレスを返す（準備できない時は 0）</summary>
+  /// @brief 指定したハンドルのライトの定数バッファ(CB)のGPU仮想アドレスを取得
+  /// @param handle ライトハンドル
+  /// @return GPU上の仮想アドレス。準備できていない場合は 0
   D3D12_GPU_VIRTUAL_ADDRESS GetCBAddress(int handle);
 
-  /// <summary>ライトの ImGui 表示を行う（編集後は GPU バッファにも反映）</summary>
+  /// @brief ImGuiによるパラメータ編集UIを表示
+  /// 編集された値は自動的にGPU側の定数バッファに同期されます。
+  /// @param handle 対象의 ライトハンドル
+  /// @param name UIに表示するラベル
   void DrawImGui(int handle, const char *name);
 
-  /// <summary>明示的なアクティブが設定されているか（>=0）を返す</summary>
+  /// @brief 明示的なアクティブライトが設定されているか確認
+  /// @return 設定されていれば true (handle >= 0)
   bool HasExplicitActive() const { return activeHandle_ >= 0; }
 
-  /// <summary>デフォルトライトのハンドル（常に 0）</summary>
+  /// @brief デフォルトライトのハンドルを取得
+  /// @return 常に 0
   int DefaultHandle() const { return 0; }
 
 private:
+  /// @brief ライト管理用のスロット構造体
   struct Slot {
-    DirectionalLightSource light;
-
-    // Upload CB for this light (b1).
-    Microsoft::WRL::ComPtr<ID3D12Resource> cb;
-    DirectionalLight *mapped = nullptr;
-
-    bool inUse = false;
+    DirectionalLightSource light; ///< ライトソース実体
+    Microsoft::WRL::ComPtr<ID3D12Resource> cb; ///< GPU定数バッファ
+    DirectionalLight *mapped = nullptr;       ///< マップ済みポインタ
+    bool inUse = false;                       ///< 使用中フラグ
   };
 
+  /// @brief 未使用スロットを検索・確保する
   int AllocSlot_();
+  
+  /// @brief ハンドルの有効性をチェックする
   bool IsValid_(int handle) const;
+  
+  /// @brief 最終的なアクティブハンドルを解決する（未設定なら0を返す）
   int ResolveActiveHandle_() const;
 
+  /// @brief スロットのリソースを解放する
   void ReleaseSlot_(Slot &s);
+  
+  /// @brief スロット用の定数バッファを確保する
   void EnsureCB_(Slot &s);
+  
+  /// @brief CPU側のデータをGPU定数バッファに同期（コピー）する
   void SyncCB_(Slot &s);
 
 private:
-  Microsoft::WRL::ComPtr<ID3D12Device> device_;
-  std::vector<Slot> slots_;
+  Microsoft::WRL::ComPtr<ID3D12Device> device_; ///< デバイス保持
+  std::vector<Slot> slots_;                    ///< ライトスロット配列
 
-  // -1 = 明示的なアクティブ無し（default slot を使う）
-  int activeHandle_ = -1;
-
-  bool initialized_ = false;
+  int activeHandle_ = -1; ///< 現在のアクティブハンドル
+  bool initialized_ = false; ///< 初期化済みフラグ
 };
 
 } // namespace RC

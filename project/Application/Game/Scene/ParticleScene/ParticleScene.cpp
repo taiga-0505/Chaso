@@ -7,6 +7,7 @@
 #include "Particle/ParticleManager.h"
 #include "Particle/Flash/FlashParticle.h"
 #include "Particle/Ring/RingParticle.h"
+#include "Particle/Cylinder/CylinderParticle.h"
 
 void ParticleScene::OnEnter(SceneContext &ctx) {
   // =============================
@@ -49,6 +50,7 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
   initSys("Flash", std::move(flash));
 
   initSys("Ring", std::make_unique<RC::RingParticle>());
+  initSys("Cylinder", std::make_unique<RC::CylinderParticle>());
 
   RC::EffectPreset hitEffect;
   hitEffect.name = "Hit";
@@ -93,45 +95,58 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   Input *input = ctx.input;
 
-  auto setMode = [&](bool p, bool f, bool r, bool s, bool c, bool e, bool l, bool w, bool h) {
-      isParticle = p; isFire = f; isRain = r; isSnow = s; isCircle = c; isExplosion = e; isLaser = l; isWind = w; isHitEffect = h;
+  auto setMode = [&](int mode) {
+      isParticle = (mode == 1);
+      isFire = (mode == 2);
+      isRain = (mode == 3);
+      isSnow = (mode == 4);
+      isExplosion = (mode == 5);
+      isCircle = (mode == 6);
+      isLaser = (mode == 7);
+      isWind = (mode == 8);
+      isHitEffect = (mode == 9);
+      isCylinder = (mode == 0);
   };
 
   if (input->IsKeyTrigger(DIK_1)) {
-    setMode(true, false, false, false, false, false, false, false, false);
+    setMode(1);
     if(auto* s = pm.GetSystem("Particle")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_2)) {
-    setMode(false, true, false, false, false, false, false, false, false);
+    setMode(2);
     if(auto* s = pm.GetSystem("Fire")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_3)) {
-    setMode(false, false, true, false, false, false, false, false, false);
+    setMode(3);
     if(auto* s = pm.GetSystem("Rain")) s->RespawnAllMax();
   }
   if (input->IsKeyTrigger(DIK_4)) {
-    setMode(false, false, false, true, false, false, false, false, false);
+    setMode(4);
     if(auto* s = pm.GetSystem("Snow")) s->RespawnAllMax();
   }
-  if (input->IsKeyTrigger(DIK_6)) {
-    setMode(false, false, false, false, true, false, false, false, false);
-    if(auto* s = pm.GetSystem("Circle")) s->RespawnAllMax();
-  }
   if (input->IsKeyTrigger(DIK_5)) {
-    setMode(false, false, false, false, false, true, false, false, false);
+    setMode(5);
     if(auto* s = pm.GetSystem("Explosion")) s->RespawnAllMax();
   }
+  if (input->IsKeyTrigger(DIK_6)) {
+    setMode(6);
+    if(auto* s = pm.GetSystem("Circle")) s->RespawnAllMax();
+  }
   if (input->IsKeyTrigger(DIK_7)) {
-    setMode(false, false, false, false, false, false, true, false, false);
+    setMode(7);
   }
   if (input->IsKeyTrigger(DIK_8)) {
-    setMode(false, false, false, false, false, false, false, true, false);
+    setMode(8);
     if(auto* s = dynamic_cast<RC::WindParticle*>(pm.GetSystem("Wind"))) {
       s->SetWind(windOrigin_, windForce_, windRange_, windRadius_, true);
     }
   }
   if (input->IsKeyTrigger(DIK_9)) {
-    setMode(false, false, false, false, false, false, false, false, true);
+    setMode(9);
+  }
+  if (input->IsKeyTrigger(DIK_0)) {
+    setMode(0);
+    if(auto* s = pm.GetSystem("Cylinder")) s->RespawnAllMax();
   }
 
   const float emitterMoveSpeed = 0.05f;
@@ -152,6 +167,7 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
     if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->MoveEmitter(emitterDelta);
     if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->MoveEmitter(emitterDelta);
     if (isWind) if(auto* s = pm.GetSystem("Wind")) s->MoveEmitter(emitterDelta);
+    if (isCylinder) if(auto* s = pm.GetSystem("Cylinder")) s->MoveEmitter(emitterDelta);
   }
 
   if (input->IsKeyTrigger(DIK_SPACE)) {
@@ -168,6 +184,14 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
   if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->Update(view_, proj_);
   if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->Update(view_, proj_);
   if (isWind) if(auto* s = pm.GetSystem("Wind")) s->Update(view_, proj_);
+  if (isCylinder) {
+    if(auto* s = pm.GetSystem("Cylinder")) {
+      s->Update(view_, proj_);
+      if (input->IsKeyTrigger(DIK_SPACE)) {
+        s->RespawnAllMax();
+      }
+    }
+  }
 
   if (isHitEffect) {
     ImGui::Begin("HitEffect Control");
@@ -236,6 +260,7 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->Render(ctx, cl);
   if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->Render(ctx, cl);
   if (isWind) if(auto* s = pm.GetSystem("Wind")) s->Render(ctx, cl);
+  if (isCylinder) if(auto* s = pm.GetSystem("Cylinder")) s->Render(ctx, cl);
   
   if (isLaser) {
     if(auto* s = pm.GetSystem("Laser")) s->Render(ctx, cl);

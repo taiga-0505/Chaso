@@ -6,74 +6,124 @@
 #include <vector>
 #include <wrl/client.h>
 
+/// @class Skydome
+/// @brief 天球（ドーム状の背景）の描画を管理するクラス
+/// @details 半球または全球のメッシュを生成し、背景テクスチャを貼り付けて無限遠の背景として描画します。
+/// 外部のライト設定（LightManager等）を共有する機能も備えています。
 class Skydome {
 public:
   Skydome() = default;
   ~Skydome();
 
-  // Device依存リソースの作成 + 天球メッシュ生成
+  /// @brief 初期化（Device 依存リソースの作成と天球メッシュ生成）
+  /// @param device D3D12 デバイス
+  /// @param radius 天球の半径
+  /// @param sliceCount 経度分割数
+  /// @param stackCount 緯度分割数
   void Initialize(ID3D12Device *device, float radius = 100.0f,
                   UINT sliceCount = 32, UINT stackCount = 32);
 
-  // 毎フレームの行列更新（外部カメラの View/Proj を渡す）
+  /// @brief 毎フレームの行列更新
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
   void Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj);
 
-  // 描画（RootParam: 0:Material, 1:WVP, 2:SRV, 3:Light）
+  /// @brief 描画実行
+  /// @param cmdList コマンドリスト
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
-  /// <summary>
-  /// ワールド行列を外部から指定して描画する（コマンドキュー用）
-  /// </summary>
+  /// @brief ワールド行列を外部から指定して描画する（コマンドキュー用）
+  /// @param cmdList コマンドリスト
+  /// @param world 使用するワールド行列
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
 
+  /// @brief ImGui を使用したデバッグ用 UI を表示する
+  /// @param name 表示ラベル
   void DrawImGui(const char *name = nullptr);
 
-  // 外からテクスチャSRV(GPUハンドル)をセット
+  /// @brief 天球に使用するテクスチャ（SRV）を設定する
+  /// @param srvGPUHandle テクスチャの GPU ハンドル
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {
     textureSrv_ = srvGPUHandle;
   }
 
-  // 外から調整したいとき用のアクセサ
+  /// @brief トランスフォーム情報を取得する（読み書き可能）
+  /// @return Transform への参照
   Transform &T() { return transform_; }
+
+  /// @brief マテリアル情報を取得する（読み書き可能）
+  /// @return Material へのポインタ
   Material *Mat() { return cbMat_.mapped; }
+
+  /// @brief ライト情報を取得する（読み書き可能）
+  /// @return DirectionalLight へのポインタ
   DirectionalLight *Light() { return cbLight_.mapped; }
 
-  // LightManager の共通ライトCB（b1）を使いたい場合の上書き。
-  // 0 を渡すと「自前の cbLight_」に戻る。
+  /// @brief 外部で管理されているライトCBのアドレスを設定する
+  /// @param addr ライトCBの GPU 仮想アドレス（0 で自前ライトに戻る）
   void SetExternalLightCBAddress(D3D12_GPU_VIRTUAL_ADDRESS addr) {
     externalLightCBAddress_ = addr;
   }
+
+  /// @brief 外部ライトCBの GPU 仮想アドレスを取得する
+  /// @return アドレス値
   D3D12_GPU_VIRTUAL_ADDRESS GetExternalLightCBAddress() const {
     return externalLightCBAddress_;
   }
 
+  /// @brief 可視状態を設定する
+  /// @param v true で表示
   void SetVisible(bool v) { visible_ = v; }
+
+  /// @brief 可視状態か確認する
+  /// @return 可視なら true
   bool Visible() const { return visible_; }
 
 private:
-  // メッシュ生成 (常に内向き)
+  /// @brief 天球メッシュを構築する（常に内向き）
+  /// @param radius 半径
+  /// @param sliceCount 経度分割数
+  /// @param stackCount 緯度分割数
   void BuildGeometry(float radius, UINT sliceCount, UINT stackCount);
+
+  /// @brief 頂点データを GPU に転送する
   void UploadVB_();
+
+  /// @brief インデックスデータを GPU に転送する
   void UploadIB_();
 
+  /// @struct VB
+  /// @brief 頂点バッファ管理構造体
   struct VB {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_VERTEX_BUFFER_VIEW view{};
     uint32_t vertexCount = 0;
   };
+
+  /// @struct IB
+  /// @brief インデックスバッファ管理構造体
   struct IB {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_INDEX_BUFFER_VIEW view{};
     uint32_t indexCount = 0;
   };
+
+  /// @struct CB_WVP
+  /// @brief 行列用定数バッファ
   struct CB_WVP {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     TransformationMatrix *mapped = nullptr;
   };
+
+  /// @struct CB_Material
+  /// @brief マテリアル用定数バッファ
   struct CB_Material {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     Material *mapped = nullptr;
   };
+
+  /// @struct CB_Light
+  /// @brief ライト用定数バッファ
   struct CB_Light {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     DirectionalLight *mapped = nullptr;
@@ -82,11 +132,9 @@ private:
 private:
   Microsoft::WRL::ComPtr<ID3D12Device> device_;
 
-  // CPU側バッファ
-  std::vector<VertexData> vertices_;
-  std::vector<uint16_t> indices_;
+  std::vector<VertexData> vertices_; ///< CPU側の頂点データ配列
+  std::vector<uint16_t> indices_;   ///< CPU側のインデックスデータ配列
 
-  // GPUリソース
   VB vb_{};
   IB ib_{};
   CB_WVP cbWvp_{};
@@ -94,11 +142,9 @@ private:
   CB_Light cbLight_{};
   D3D12_GPU_DESCRIPTOR_HANDLE textureSrv_{};
 
-  // 変換
-  Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}};
+  Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}}; ///< 天球のトランスフォーム
 
   bool visible_ = true;
 
-  // 0 なら自前の cbLight_ を使用。0以外なら外部ライトCB（LightManager）を使用。
-  D3D12_GPU_VIRTUAL_ADDRESS externalLightCBAddress_ = 0;
+  D3D12_GPU_VIRTUAL_ADDRESS externalLightCBAddress_ = 0; ///< 外部ライトCBのアドレス
 };

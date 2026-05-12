@@ -21,6 +21,10 @@
 // =========================
 // ユーティリティ
 // =========================
+/// @brief パスが指定された拡張子を持っているか判定する（大文字小文字を区別しない）
+/// @param path 判定対象のパス
+/// @param ext 拡張子 (例: ".wav", "wav")
+/// @return 指定した拡張子であればtrue
 static bool HasExtInsensitive(const char *path, const char *ext) {
   if (!path || !ext)
     return false;
@@ -35,6 +39,9 @@ static bool HasExtInsensitive(const char *path, const char *ext) {
   return s.rfind(e) == s.size() - e.size();
 }
 
+/// @brief UTF-8文字列をWide文字列(UTF-16)に変換する
+/// @param utf8 UTF-8文字列
+/// @return Wide文字列
 static std::wstring ToWideFromUTF8(const char *utf8) {
   if (!utf8)
     return L"";
@@ -114,6 +121,7 @@ SoundData SoundLoadWave(const char *filename) {
 // =========================
 // Media Foundation 初期化
 // =========================
+/// @brief Media Foundationを初期化する（初回呼び出し時のみ実行）
 static void EnsureMediaFoundationStartup() {
   static bool initialized = false;
   if (!initialized) {
@@ -126,6 +134,9 @@ static void EnsureMediaFoundationStartup() {
 // =========================
 // MF を使った汎用オーディオ読み込み（MP3→PCM）
 // =========================
+/// @brief Media Foundationを使用してオーディオファイルをロードする（MP3等をPCMにデコード）
+/// @param wpath Wide文字列のファイルパス
+/// @return ロードされた音声データ
 static SoundData SoundLoadWithMediaFoundation(const wchar_t *wpath) {
   EnsureMediaFoundationStartup();
 

@@ -10,135 +10,134 @@
 #include <vector>
 #include <filesystem>
 
+/// @brief 入力レイアウトの事前定義タイプ
 enum class InputLayoutType {
-  Object3D,
-  Sprite,
-  Particle,
-  Primitive3D,
-  None, // InputLayout無し（SV_VertexID 等）
+  Object3D,    ///< 標準的な3Dオブジェクト (Pos, Normal, UV)
+  Sprite,      ///< 2Dスプライト (Pos, UV, Color)
+  Particle,    ///< パーティクル (Pos, Scale, Color)
+  Primitive3D, ///< 3Dプリミティブ (Pos, Color)
+  None,        ///< 入力レイアウトなし（SV_VertexID 等を使用する場合）
 };
 
-/// <summary>
-/// パイプライン作成に必要な情報をまとめる
-/// </summary>
+/// @brief パイプライン作成に必要な情報をまとめる構造体
 struct PipelineDesc {
   // Shader files
-  std::wstring vsPath;
-  std::wstring psPath;
+  std::wstring vsPath; ///< 頂点シェーダーのファイルパス
+  std::wstring psPath; ///< ピクセルシェーダーのファイルパス
 
   // Compile settings
-  std::wstring vsEntry = L"main";
-  std::wstring psEntry = L"main";
-  std::wstring vsTarget = L"vs_6_0";
-  std::wstring psTarget = L"ps_6_0";
-  bool optimize = true;
-  bool debugInfo = false;
+  std::wstring vsEntry = L"main"; ///< 頂点シェーダーのエントリポイント
+  std::wstring psEntry = L"main"; ///< ピクセルシェーダーのエントリポイント
+  std::wstring vsTarget = L"vs_6_0"; ///< 頂点シェーダーのターゲットプロファイル
+  std::wstring psTarget = L"ps_6_0"; ///< ピクセルシェーダーのターゲットプロファイル
+  bool optimize = true;  ///< 最適化を有効にするか
+  bool debugInfo = false; ///< デバッグ情報を付与するか
 
-  // InputLayout（寿命問題を避けるため実体保持）
-  std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout;
+  // InputLayout
+  std::vector<D3D12_INPUT_ELEMENT_DESC> inputLayout; ///< 入力レイアウト定義（実体保持）
 
   // Root/Blend/Depth/Raster など
-  GPipelineOptions opt{};
+  GPipelineOptions opt{}; ///< パイプラインの詳細設定
 };
 
-/// <summary>
-/// GraphicsPipeline を登録・取得・再ビルドする
-/// </summary>
+/// @brief GraphicsPipeline の生成・登録・管理・再構築を行うマネージャクラス
+/// シェーダーのコンパイル結果やPSOのキャッシュ管理も担当します。
 class PipelineManager {
 public:
-  /// <summary>
-  /// PipelineManager を初期化する
-  /// </summary>
+  /// @brief 初期化
+  /// @param device DirectX12デバイス
+  /// @param rtvFmt デフォルトのレンダーターゲットフォーマット
+  /// @param dsvFmt デフォルトの深度ステンシルフォーマット
   void Init(ID3D12Device *device, DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt);
 
-  /// <summary>
-  /// PipelineManager を終了する
-  /// </summary>
+  /// @brief 終了処理
   void Term();
 
-  /// <summary>
-  /// 指定キーでパイプラインを作成して登録する
-  /// </summary>
+  /// @brief 指定したキー名でパイプラインを作成・登録する
+  /// @param key 登録名
+  /// @param desc パイプライン設定
+  /// @return 生成されたGraphicsPipelineへのポインタ
   GraphicsPipeline *Create(const std::string &key, const PipelineDesc &desc);
 
-  /// <summary>
-  /// ファイル指定でパイプラインを作成して登録する
-  /// </summary>
+  /// @brief 簡易的なファイル指定によるパイプラインの作成・登録
+  /// @param key 登録名
+  /// @param vsPath 頂点シェーダーパス
+  /// @param psPath ピクセルシェーダーパス
+  /// @param layoutType 事前定義の入力レイアウトタイプ
+  /// @param opt パイプライン設定
+  /// @return 生成されたGraphicsPipelineへのポインタ
   GraphicsPipeline *CreateFromFiles(const std::string &key,
                                     const std::wstring &vsPath,
                                     const std::wstring &psPath,
                                     InputLayoutType layoutType,
                                     const GPipelineOptions &opt);
 
-  /// <summary>
-  /// 指定キーのパイプラインを取得する
-  /// </summary>
+  /// @brief 登録済みのパイプラインを取得
+  /// @param key 登録名
+  /// @return 見つかった場合はGraphicsPipelineへのポインタ、なければnullptr
   GraphicsPipeline *Get(const std::string &key);
 
-  /// <summary>
-  /// 指定キーのパイプラインを再ビルドする
-  /// </summary>
+  /// @brief 指定したパイプラインを再ビルドする（シェーダーのホットリロード等）
+  /// @param key 登録名
+  /// @return 成功すればtrue
   bool Rebuild(const std::string &key);
 
-  /// <summary>
-  /// 登録済みのパイプラインをすべて再ビルドする
-  /// </summary>
+  /// @brief 登録済みのすべてのパイプラインを再ビルドする
   void RebuildAll();
 
-  /// <summary>
-  /// 既定のパイプライン群を登録する
-  /// </summary>
+  /// @brief エンジン既定のパイプライン群を一括登録する
   void RegisterDefaultPipelines();
 
-  /// <summary>
-  /// キャッシュファイルをロードする
-  /// </summary>
+  /// @brief パイプラインキャッシュファイルをロードする
+  /// @param filePath キャッシュファイルのパス
   void LoadCache(const std::string &filePath);
 
-  /// <summary>
-  /// キャッシュファイルを保存する
-  /// </summary>
+  /// @brief パイプラインキャッシュファイルを保存する
+  /// @param filePath キャッシュファイルのパス
   void SaveCache(const std::string &filePath);
 
-  /// <summary>
-  /// prefix + ブレンドモードからキーを作成する
-  /// </summary>
+  /// @brief 接頭辞とブレンドモードを組み合わせて一意なキーを生成するヘルパー関数
+  /// @param prefix 接頭辞 (例: "Object3D")
+  /// @param mode ブレンドモード
+  /// @return 合成されたキー文字列
   static std::string MakeKey(std::string_view prefix, BlendMode mode);
 
 private:
+  /// @brief 入力レイアウト定義を生成する内部関数
   static std::vector<D3D12_INPUT_ELEMENT_DESC>
   MakeInputLayout(InputLayoutType type);
 
+  /// @brief バイナリデータからパイプラインを構築する内部関数
   GraphicsPipeline *createFromBlobs_(const std::string &key,
                                      const PipelineDesc &desc, IDxcBlob *vs,
                                      IDxcBlob *ps,
                                      const D3D12_CACHED_PIPELINE_STATE &cachedPSO);
 
+  /// @brief PSOおよびシェーダーのキャッシュ情報
   struct PsoCache {
-    std::vector<uint8_t> psoData;
-    std::vector<uint8_t> vsData;
-    std::vector<uint8_t> psData;
-    int64_t vsTime = 0; // VSファイルの最終更新日時
-    int64_t psTime = 0; // PSファイルの最終更新日時
+    std::vector<uint8_t> psoData; ///< PSOキャッシュバイナリ
+    std::vector<uint8_t> vsData;  ///< VSバイナリ
+    std::vector<uint8_t> psData;  ///< PSバイナリ
+    int64_t vsTime = 0; ///< VSファイルの最終更新日時
+    int64_t psTime = 0; ///< PSファイルの最終更新日時
   };
 
-  /// <summary>
-  /// パイプライン設定から一意なキャッシュキーを生成する
-  /// </summary>
+  /// @brief パイプライン設定から一意なキャッシュキーを生成する
   static std::string makePsoCacheKey_(const std::string &key, const PipelineDesc &desc);
 
 private:
+  /// @brief 登録済みパイプラインのエントリ
   struct Entry {
-    PipelineDesc desc;
-    std::unique_ptr<GraphicsPipeline> pipeline;
+    PipelineDesc desc; ///< 作成時の設定
+    std::unique_ptr<GraphicsPipeline> pipeline; ///< パイプライン本体
   };
 
-  ID3D12Device *device_ = nullptr; // 非所有
-  DXGI_FORMAT rtvFmt_{DXGI_FORMAT_R8G8B8A8_UNORM_SRGB};
-  DXGI_FORMAT dsvFmt_{DXGI_FORMAT_D24_UNORM_S8_UINT};
+  ID3D12Device *device_ = nullptr; ///< デバイス（非所有）
+  DXGI_FORMAT rtvFmt_{DXGI_FORMAT_R8G8B8A8_UNORM_SRGB}; ///< デフォルトRTVフォーマット
+  DXGI_FORMAT dsvFmt_{DXGI_FORMAT_D24_UNORM_S8_UINT};   ///< デフォルトDSVフォーマット
 
-  ShaderCompiler compiler_;
-  std::unordered_map<std::string, Entry> pipelines_;
-  std::unordered_map<std::string, PsoCache> psoCache_;
-  bool cacheUpdated_ = false;
+  ShaderCompiler compiler_; ///< シェーダーコンパイラ
+  std::unordered_map<std::string, Entry> pipelines_; ///< 登録済みパイプラインマップ
+  std::unordered_map<std::string, PsoCache> psoCache_; ///< PSOキャッシュマップ
+  bool cacheUpdated_ = false; ///< キャッシュが更新されたかどうかのフラグ
 };

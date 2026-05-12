@@ -1,28 +1,31 @@
 #pragma once
 
+/// @file RC.h
+/// @brief エンジンの主要な機能を一括でインクルードするためのマスターヘッダー
+
 #include "EngineConfig.h"
 
-// 描画関連の共通ヘッダ
+// --- 描画・レンダリング ---
 #include "RenderCommon.h"
 
-// サウンド関連の共通ヘッダ
+// --- オーディオ ---
 #include "Audio/Sound.h"
 
-// カメラ制御関連の共通ヘッダ
+// --- カメラ ---
 #include "Camera/CameraController.h"
 #include "CameraMath.h"
 
-// 数学関連の共通ヘッダ(Vector , Matrix等)
+// --- 数学 ---
 #include "Math/MathTypes.h"
-
 #include "Math/MathUtils.h"
 
+// --- ライト ---
 #include "Light/Directional/DirectionalLightSource.h"
 #include "Light/Spot/SpotLightSource.h"
 #include "Light/Point/PointLightSource.h"
 #include "Light/Area/AreaLightSource.h"
 
-
+// --- パーティクル ---
 #include "Particle.h"
 #include "Fire/FireParticle.h"
 #include "Rain/RainParticle.h"
