@@ -91,6 +91,13 @@ void RingParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
 
 void RingParticle::UpdateOneParticle(ParticleData &p, float dt) {
   p.currentTime += dt;
+
+  // 経過時間の割合を計算 (0.0 ～ 1.0)
+  float t = std::clamp(p.currentTime / p.lifeTime, 0.0f, 1.0f);
+
+  // 初期スケール(0.6f)から expansionSpeed_ の分だけ時間経過とともに拡大する
+  float scale = 0.6f + expansionSpeed_ * t;
+  p.transform.scale = {scale, scale, scale};
 }
 
 float RingParticle::ComputeAlpha(const ParticleData &p) const {
