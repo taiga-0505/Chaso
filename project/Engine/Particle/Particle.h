@@ -206,6 +206,10 @@ private:
   std::mt19937 randomEngine{seedGenerator()}; ///< 乱数エンジン
 
   BlendMode blendMode_ = kBlendModeAdd; ///< 合成モード
+<<<<<<< HEAD
+=======
+};
+>>>>>>> 1b3b911 (コメントの追加とparticleの追加)
 };
 
 } // namespace RC
