@@ -74,15 +74,7 @@ protected:
   void UpdateOneParticle(ParticleData &p, float dt) override;
 
   /// @brief パーティクルのワールド行列構築（スタイルに応じたストレッチ処理を含む）
-<<<<<<< HEAD
-<<<<<<< HEAD
   Matrix4x4 BuildWorldMatrix(const ParticleData &p,
-=======
-  void BuildWorldMatrix(const ParticleData &p,
->>>>>>> 1b3b911 (コメントの追加とparticleの追加)
-=======
-  Matrix4x4 BuildWorldMatrix(const ParticleData &p,
->>>>>>> 1eb78fc (particle更新)
                              const Matrix4x4 &billboardMatrix) const override;
 
   /// @brief フェード用アルファ計算
