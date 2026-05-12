@@ -52,7 +52,7 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
 
   RC::EffectPreset hitEffect;
   hitEffect.name = "Hit";
-  hitEffect.AddEmitter("Flash", 12, 1.0f);
+  hitEffect.AddEmitter("Flash", 5, 1.0f);
   hitEffect.AddEmitter("Ring", 1, 1.0f);
   pm.RegisterPreset(hitEffect);
 

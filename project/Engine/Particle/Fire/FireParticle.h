@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 
 namespace RC {
@@ -8,7 +8,7 @@ namespace RC {
 //  - 上方向にふわっと上がりながら小さくなって、色がオレンジ→赤暗く変化
 class FireParticle : public Particle {
 public:
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   // エミッタの周期が来たときの挙動を炎用に差し替え
   std::vector<ParticleData> Emit(const Emitter &emitter,

@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 
 namespace RC {
 
 class WindParticle : public Particle {
 public:
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   void SetWind(const Vector3 &origin, const Vector3 &force, float range,
                float radius, bool active);

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 
 namespace RC {
@@ -9,7 +9,7 @@ namespace RC {
 class RainParticle : public Particle {
 public:
   // 初期化
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
 protected:
   // 雨用テクスチャ

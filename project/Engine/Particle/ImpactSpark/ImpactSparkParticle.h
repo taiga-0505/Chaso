@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 #include <random>
 
@@ -18,7 +18,7 @@ struct ImpactEmitDesc {
 
 class ImpactSparkParticle : public Particle {
 public:
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   // その場で count 個スポーン
   void Burst(const Vector3 &pos, const Vector3 &normal, int count = 10);

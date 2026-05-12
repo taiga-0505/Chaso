@@ -38,7 +38,7 @@ public:
 class Particle {
 public:
   // 初期化 / 終了
-  void Initialize(SceneContext &ctx);
+  virtual void Initialize(SceneContext &ctx);
   void InitializeWithModel(SceneContext &ctx, const ModelData &model);
   void Finalize();
   ~Particle() { Finalize(); }
@@ -126,6 +126,9 @@ protected:
 
   Emitter &EmitterRef() { return emitter_; }
   const Emitter &EmitterRef() const { return emitter_; }
+
+  // ビルボードの有効/無効を設定（Ring等の3Dメッシュ用）
+  void SetUseBillboard(bool b) { useBillboard_ = b; }
 
   std::vector<ParticleData> particles;
 

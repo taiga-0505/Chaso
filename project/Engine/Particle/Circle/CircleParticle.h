@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 
 namespace RC {
@@ -8,7 +8,7 @@ namespace RC {
 //  - 火力に応じて数・明るさ・色が変わる（A/D で操作）
 class CircleParticle : public Particle {
 public:
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   // ==================
   // A / D で火力をいじりながら Update したいとき用

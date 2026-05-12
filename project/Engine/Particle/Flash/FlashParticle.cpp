@@ -15,7 +15,10 @@ void FlashParticle::Initialize(SceneContext &ctx) {
   e.globalColor = {1.0f, 1.0f, 1.0f, 1.0f};
   e.timeScale = 1.0f;
 
-  SetEmitterAutoSpawn(true);
+  SetEmitterAutoSpawn(false);
+
+  // CommonInit_ で生成された初期パーティクルをクリア
+  particles.clear();
 }
 
 void FlashParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
