@@ -52,10 +52,12 @@ void ParticleScene::OnEnter(SceneContext &ctx) {
   initSys("Ring", std::make_unique<RC::RingParticle>());
   initSys("Cylinder", std::make_unique<RC::CylinderParticle>());
 
+
   RC::EffectPreset hitEffect;
   hitEffect.name = "Hit";
   hitEffect.AddEmitter("Flash", 5, 1.0f);
   hitEffect.AddEmitter("Ring", 1, 1.0f);
+  hitEffect.AddEmitter("Cylinder", 1, 1.0f);
   pm.RegisterPreset(hitEffect);
 
   impactDesc_.countPerTick = 6;
@@ -201,8 +203,10 @@ void ParticleScene::Update(SceneManager &sm, SceneContext &ctx) {
       pm.PlayEffect("Hit", hitPos);
     }
     ImGui::End();
+    if(auto* s = pm.GetSystem("HitSparks")) s->Update(view_, proj_);
     if(auto* s = pm.GetSystem("Flash")) s->Update(view_, proj_);
     if(auto* s = pm.GetSystem("Ring")) s->Update(view_, proj_);
+    if(auto* s = pm.GetSystem("Cylinder")) s->Update(view_, proj_);
   }
 
   auto* laserSys = dynamic_cast<RC::LaserParticle*>(pm.GetSystem("Laser"));
@@ -268,8 +272,10 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   }
   
   if (isHitEffect) {
+    if(auto* s = pm.GetSystem("HitSparks")) s->Render(ctx, cl);
     if(auto* s = pm.GetSystem("Flash")) s->Render(ctx, cl);
     if(auto* s = pm.GetSystem("Ring")) s->Render(ctx, cl);
+    if(auto* s = pm.GetSystem("Cylinder")) s->Render(ctx, cl);
   }
 
   RC::PreDraw2D(ctx, cl);
