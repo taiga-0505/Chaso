@@ -14,7 +14,6 @@ void CylinderParticle::Initialize(SceneContext &ctx) {
   // ビルボードを無効化（シリンダーそのものの形を見せるため）
   SetUseBillboard(false);
   SetUseAccelerationField(false);
-  SetEmitterAutoSpawn(true); // テスト用に自動スポーンを有効化
 
   // メッシュの生成
   float topRadius = 1.0f;
