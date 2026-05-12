@@ -209,7 +209,10 @@ private:
 <<<<<<< HEAD
 =======
 };
+<<<<<<< HEAD
 >>>>>>> 1b3b911 (コメントの追加とparticleの追加)
 };
+=======
+>>>>>>> 1eb78fc (particle更新)
 
 } // namespace RC

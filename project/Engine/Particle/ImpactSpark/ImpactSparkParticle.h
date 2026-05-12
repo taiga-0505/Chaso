@@ -132,10 +132,14 @@ protected:
 
   /// @brief 火花を移動方向に伸ばすための行列構築
 <<<<<<< HEAD
+<<<<<<< HEAD
   Matrix4x4 BuildWorldMatrix(const ParticleData &p,
 =======
   void BuildWorldMatrix(const ParticleData &p,
 >>>>>>> 1b3b911 (コメントの追加とparticleの追加)
+=======
+  Matrix4x4 BuildWorldMatrix(const ParticleData &p,
+>>>>>>> 1eb78fc (particle更新)
                              const Matrix4x4 &billboardMatrix) const override;
 
   /// @brief フェード用アルファ計算
