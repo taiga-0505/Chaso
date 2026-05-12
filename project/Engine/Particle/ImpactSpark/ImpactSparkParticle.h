@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Particle.h"
 #include <random>
 
@@ -10,125 +10,174 @@ namespace RC {
 //  - 板ポリを「速度方向」に伸ばして火花っぽくする
 // ==================
 
+/// @struct ImpactEmitDesc
+/// @brief 着弾スパークの放出設定を保持する構造体
 struct ImpactEmitDesc {
-  float interval = 0.03f; // 何秒ごとに出すか（0以下なら毎フレ）
-  int countPerTick = 6;   // 1回で出す粒数
-  int burstOnStart = 24;  // 開始時にドカッと（0なら無し）
+  float interval = 0.03f; ///< 放出間隔（秒）。0以下の場合は毎フレーム放出。
+  int countPerTick = 6;   ///< 1回の放出タイミングで生成するパーティクル数
+  int burstOnStart = 24;  ///< 放出開始時に一斉に生成するパーティクル数
 };
 
+/// @class ImpactSparkParticle
+/// @brief レーザーの着弾や衝突時に発生する火花を制御するクラス
+/// @details 板ポリを移動方向に引き延ばす「ストレッチ」表現を行い、火花らしい見た目を実現します。
+/// 法線に基づいた円錐状（コーン状）の飛散、重力による落下、速度減衰などの物理挙動を設定可能です。
 class ImpactSparkParticle : public Particle {
 public:
+  /// @brief 初期化
+  /// @param ctx シーンコンテキスト
   void Initialize(SceneContext &ctx) override;
 
-  // その場で count 個スポーン
+  /// @brief 指定した位置に一斉にパーティクルを生成する
+  /// @param pos 生成位置
+  /// @param normal 飛散方向の基準となる法線
+  /// @param count 生成する数
   void Burst(const Vector3 &pos, const Vector3 &normal, int count = 10);
 
-  // Laserみたいに「startend渡すだけ」で着弾スパークを出す
+  /// @brief ビームの始点と終点から、自動的に終点（着弾点）へスパークを設定する
+  /// @param start ビーム始点
+  /// @param end ビーム終点（着弾点）
+  /// @param desc 放出設定
   void SetImpactFromBeam(const Vector3 &start, const Vector3 &end,
                          const ImpactEmitDesc &desc = ImpactEmitDesc{});
 
-  // すでに hitNormal が取れてるならこっち（計算すら不要）
+  /// @brief 着弾点と法線が既知の場合に、直接スパークを設定する
+  /// @param hitPos 着弾座標
+  /// @param hitNormal 着弾面の法線
+  /// @param desc 放出設定
   void SetImpact(const Vector3 &hitPos, const Vector3 &hitNormal,
                  const ImpactEmitDesc &desc = ImpactEmitDesc{});
 
-  // レーザー止まった時に呼ぶ（開始バースト判定やタイマーをリセット）
+  /// @brief スパークの放出を停止し、内部タイマーをリセットする
   void StopImpact();
 
-  // 幅付き（レーザーの幅からスポーン位置を散らす）
+  /// @brief ビームの幅を考慮して、着弾点周囲に散らしながらスパークを設定する
+  /// @param start ビーム始点
+  /// @param end ビーム終点
+  /// @param beamWidth ビームの半径
+  /// @param desc 放出設定
   void SetImpactFromBeam(const Vector3 &start, const Vector3 &end,
                          float beamWidth,
                          const ImpactEmitDesc &desc = ImpactEmitDesc{});
 
-  // 調整用：幅に対してどれくらい散らすか（0.35〜0.5おすすめ）
+  /// @brief ビーム幅に対してどの程度散らすかの係数を設定する
+  /// @param f 散らし係数（推奨: 0.35 ～ 0.5）
   void SetImpactRadiusFactor(float f) { impactRadiusFactor_ = f; }
 
-  // めり込み/チラつき防止で法線方向に少し浮かせる
+  /// @brief 地面へのめり込みを防ぐためのオフセット（法線方向への浮かせ）を設定する
+  /// @param b バイアス値
   void SetSurfaceBias(float b) { surfaceBias_ = b; }
 
-  // 調整用（好きにいじってOK）
+  /// @brief 飛散する円錐の広がり角度を設定する
+  /// @param deg 角度（度数法）
   void SetConeAngleDeg(float deg) { coneAngleDeg_ = deg; }
+
+  /// @brief パーティクルの初速度範囲を設定する
+  /// @param minV 最小速度
+  /// @param maxV 最大速度
   void SetSpeedRange(float minV, float maxV) {
     speedMin_ = minV;
     speedMax_ = maxV;
   }
+
+  /// @brief パーティクルの寿命範囲を設定する
+  /// @param minL 最小寿命（秒）
+  /// @param maxL 最大寿命（秒）
   void SetLifeRange(float minL, float maxL) {
     lifeMin_ = minL;
     lifeMax_ = maxL;
   }
+
+  /// @brief 火花の長さの範囲を設定する
+  /// @param minLen 最小長
+  /// @param maxLen 最大長
   void SetStreakRange(float minLen, float maxLen) {
     streakMin_ = minLen;
     streakMax_ = maxLen;
   }
+
+  /// @brief 火花の太さを設定する
+  /// @param t 太さ
   void SetThickness(float t) { thickness_ = t; }
+
+  /// @brief 下向きの重力加速度を設定する
+  /// @param g 重力値（大きいほど早く落ちる）
   void SetGravity(float g) { gravity_ = g; }
+
+  /// @brief 速度の減衰率を設定する
+  /// @param d 減衰率（1.0 に近いほど長く飛ぶ）
   void SetDamping(float d) { damping_ = d; }
+
+  /// @brief パーティクルの開始色と終了色を設定する
+  /// @param start 開始カラー
+  /// @param end 終了カラー（消滅直前の色）
   void SetColors(Vector4 start, Vector4 end) {
     startColor_ = start;
     endColor_ = end;
   }
 
 protected:
+  /// @brief 使用するテクスチャパスを取得する
+  /// @return テクスチャパス
   const char *GetTexturePath() const override {
-    // もっと火花っぽいテクスチャがあるなら差し替えるとさらに良い
     return "Resources/Particle/circle.png";
   }
 
-  // 1粒の初期化
+  /// @brief 個々のパーティクルの初期化
   void InitParticleCore(ParticleData &p, std::mt19937 &rng,
                         const Vector3 &emitterPos) override;
 
-  // 1フレームの更新
+  /// @brief 個々のパーティクルの更新
   void UpdateOneParticle(ParticleData &p, float dt) override;
 
-  // パーティクルのワールド行列構築
-  Matrix4x4 BuildWorldMatrix(const ParticleData &p,
+  /// @brief 火花を移動方向に伸ばすための行列構築
+  void BuildWorldMatrix(const ParticleData &p,
                              const Matrix4x4 &billboardMatrix) const override;
 
-  // フェード用アルファ計算
+  /// @brief フェード用アルファ計算
   float ComputeAlpha(const ParticleData &p) const override;
 
 private:
-  // 最大数を超えた粒子の破棄
+  /// @brief 最大数を超えたパーティクルを古い順に破棄する
   void TrimToMax_();
 
+private:
   // ===== 放出制御 =====
-  ImpactEmitDesc emitDesc_{};
-  float emitTimer_ = 0.0f;
-  bool emitting_ = false;
+  ImpactEmitDesc emitDesc_{}; ///< 放出設定
+  float emitTimer_ = 0.0f;   ///< 放出タイマー
+  bool emitting_ = false;    ///< 放出中フラグ
 
-  // Burst のときに一時的に使う「今回の法線」
-  Vector3 burstNormal_ = {0.0f, 1.0f, 0.0f};
+  Vector3 burstNormal_ = {0.0f, 1.0f, 0.0f}; ///< バースト放出時の法線基準
 
   // ===== 見た目調整パラメータ =====
-  float coneAngleDeg_ = 70.0f; // 法線中心にこの角度の円錐内に飛ぶ
-  float speedMin_ = 0.03f;     // 1フレーム当たり移動量（今のParticle基準）
-  float speedMax_ = 0.10f;
+  float coneAngleDeg_ = 70.0f; ///< 飛散角度
+  float speedMin_ = 0.03f;     ///< 最小速度
+  float speedMax_ = 0.10f;     ///< 最大速度
 
-  float lifeMin_ = 0.15f; // 秒
-  float lifeMax_ = 0.35f;
+  float lifeMin_ = 0.15f; ///< 最小寿命
+  float lifeMax_ = 0.35f; ///< 最大寿命
 
-  float streakMin_ = 0.10f; // 火花の長さ（ワールド）
-  float streakMax_ = 0.35f;
+  float streakMin_ = 0.10f; ///< 火花の最小長
+  float streakMax_ = 0.35f; ///< 火花の最大長
 
-  float thickness_ = 0.05f; // 火花の太さ
-  float gravity_ = 0.45f;   // 下向き加速度（大きいほど落ちる）
-  float damping_ = 0.985f;  // 速度減衰（1に近いほど長く飛ぶ）
+  float thickness_ = 0.05f; ///< 火花の太さ
+  float gravity_ = 0.45f;   ///< 重力の影響度
+  float damping_ = 0.985f;  ///< 速度減衰率
 
   // ===== レーザー幅に応じた散らし =====
-  Vector3 impactAxis_ = {0.0f, 1.0f, 0.0f}; // 円盤の法線（基本はレーザー方向）
-  float impactRadius_ = 0.0f;               // 円盤半径（ワールド）
-  float impactRadiusFactor_ = 0.45f;        // beamWidth * 0.45 くらいが見た目良い
-  float surfaceBias_ = 0.01f;               // 法線方向にちょい押し出す
+  Vector3 impactAxis_ = {0.0f, 1.0f, 0.0f}; ///< 着弾面の法線
+  float impactRadius_ = 0.0f;               ///< 散布半径
+  float impactRadiusFactor_ = 0.45f;        ///< 半径係数
+  float surfaceBias_ = 0.01f;               ///< 法線バイアス
 
   // ===== 色 =====
-  Vector4 startColor_ = {1.0f, 1.0f, 1.0f, 1.0f}; // 白っぽい火花
-  Vector4 endColor_ = {1.0f, 0.6f, 0.1f, 1.0f};   // オレンジ寄り
+  Vector4 startColor_ = {1.0f, 1.0f, 1.0f, 1.0f}; ///< 開始色
+  Vector4 endColor_ = {1.0f, 0.6f, 0.1f, 1.0f};   ///< 終了色
 
-  int maxParticles_ = 100;
+  int maxParticles_ = 100; ///< 最大パーティクル保持数
 
-  // Burst用RNG（baseのrandomEngineはprivateなので自前）
-  std::random_device rd_;
-  std::mt19937 rng_{rd_()};
+  std::random_device rd_; ///< 乱数デバイス
+  std::mt19937 rng_{rd_()}; ///< 乱数生成エンジン
 };
 
 } // namespace RC

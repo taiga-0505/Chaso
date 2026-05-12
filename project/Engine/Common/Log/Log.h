@@ -3,31 +3,43 @@
 #include <fstream>
 #include <string>
 
+/// @brief ログ出力および文字列変換を管理するクラス
 class Log {
-
 public:
+  /// @brief 初期化処理。ログファイルのオープンなどを行う。
   static void Initialize();
 
+  /// @brief 終了処理。ログファイルのクローズなどを行う。
   static void Finalize();
 
+  /// @brief 指定した出力ストリームにメッセージを書き込む
+  /// @param os 出力先のストリーム (std::cout や std::ofstream 等)
+  /// @param message 書き込むメッセージ
   void WriteLog(std::ostream &os, const std::string &message);
 
+  /// @brief 既定のログ出力先にメッセージを書き込む
+  /// @param message 書き込むメッセージ
   void WriteLog(const std::string &message);
 
-  // ログ出力（静的メソッド）
+  /// @brief 標準出力およびログファイルにメッセージを出力する
+  /// @param message 出力するメッセージ
   static void Print(const std::string &message);
 
-  // stringをwstringに変換する関数
+  /// @brief マルチバイト文字列(string)をワイド文字列(wstring)に変換する
+  /// @param str 変換元の文字列
+  /// @return 変換後のワイド文字列
   std::wstring ConvertString(const std::string &str);
 
-  // wstringをstringに変換する関数
+  /// @brief ワイド文字列(wstring)をマルチバイト文字列(string)に変換する
+  /// @param wstr 変換元のワイド文字列
+  /// @return 変換後のマルチバイト文字列
   std::string ConvertString(const std::wstring &wstr);
 
-  /// <summary>
-  /// パスの区切り文字を '/' に統一する
-  /// </summary>
+  /// @brief パスの区切り文字を '/' に統一する
+  /// @param path 変換前のパス文字列
+  /// @return 正規化されたパス文字列
   static std::string NormalizePath(const std::string &path);
 
 private:
-  static std::ofstream sLogFile_;
+  static std::ofstream sLogFile_; ///< ログ出力用ファイルストリーム
 };

@@ -7,59 +7,73 @@
 // 前方宣言
 class Dx12Core;
 
+/// @class RenderTexture
+/// @brief オフスクリーン描画に使用するレンダーテクスチャを管理するクラス
+/// @details RenderTargetView (RTV) として描画先になり、ShaderResourceView (SRV) としてテクスチャ入力に利用できます。
+/// リソースバリアによる状態遷移（Transition）をカプセル化しています。
 class RenderTexture {
 public:
   RenderTexture() = default;
   ~RenderTexture() = default;
 
-  /// <summary>
-  /// RenderTexture を初期化します
-  /// </summary>
+  /// @brief RenderTexture を初期化する
+  /// @param dxCore DirectX12コアシステムへのポインタ
+  /// @param width テクスチャの幅
+  /// @param height テクスチャの高さ
+  /// @param format テクスチャフォーマット
   void Initialize(Dx12Core *dxCore, uint32_t width, uint32_t height,
                   DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
 
-  /// <summary>
-  /// 任意の状態にリソースを遷移させます（汎用）
-  /// </summary>
+  /// @brief 任意の状態にリソースを遷移させる（汎用リソースバリア）
+  /// @param cmdList コマンドリスト
+  /// @param nextState 遷移先の状態
   void Transition(ID3D12GraphicsCommandList *cmdList,
                   D3D12_RESOURCE_STATES nextState);
 
-  /// <summary>
-  /// 描画先として使用するための状態(RenderTarget)に遷移させます
-  /// </summary>
+  /// @brief 描画先として使用するための状態 (RenderTarget) に遷移させる
+  /// @param cmdList コマンドリスト
   void TransitionToRenderTarget(ID3D12GraphicsCommandList *cmdList);
 
-  /// <summary>
-  /// テクスチャとして読み込む状態(ShaderResource)に遷移させます
-  /// </summary>
+  /// @brief テクスチャとして読み込む状態 (ShaderResource) に遷移させる
+  /// @param cmdList コマンドリスト
   void TransitionToShaderResource(ID3D12GraphicsCommandList *cmdList);
 
-  /// <summary>
-  /// リソースを明示的に解放します
-  /// </summary>
+  /// @brief リソースを明示的に解放する
   void Release() { resource_.Reset(); }
 
   // 各種ゲッター
+
+  /// @brief D3D12リソースを取得する
+  /// @return ID3D12Resource への ComPtr
   Microsoft::WRL::ComPtr<ID3D12Resource> GetResource() const {
     return resource_;
   }
+
+  /// @brief RenderTargetView (RTV) の CPU ハンドルを取得する
+  /// @return RTV ハンドル
   D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return rtvHandle_; }
+
+  /// @brief ShaderResourceView (SRV) の CPU ハンドルを取得する
+  /// @return SRV CPU ハンドル
   D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const { return srvHandleCPU_; }
+
+  /// @brief ShaderResourceView (SRV) の GPU ハンドルを取得する
+  /// @return SRV GPU ハンドル
   D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPU() const { return srvHandleGPU_; }
 
 private:
+  /// @brief 描画用テクスチャリソースを作成する内部ヘルパー
   Microsoft::WRL::ComPtr<ID3D12Resource>
   CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device,
                               UINT width, UINT height, DXGI_FORMAT format,
                               const RC::Vector4 &clearColor);
 
 private:
-  Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_{};
+  Microsoft::WRL::ComPtr<ID3D12Resource> resource_; ///< 実体となる D3D12 リソース
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_{};        ///< RTV 用記述子ハンドル
 
-  D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_{};
-  D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_{};
+  D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_{};     ///< SRV 用 CPU 記述子ハンドル
+  D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_{};     ///< SRV 用 GPU 記述子ハンドル
 
-  // 生成される前は COMMON (特別な意味を持たない未初期化状態) としておく
-  D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_COMMON;
+  D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_COMMON; ///< 現在のリソース状態
 };

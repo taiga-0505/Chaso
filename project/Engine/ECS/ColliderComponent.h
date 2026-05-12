@@ -1,37 +1,33 @@
 #pragma once
-
-// ============================================================================
-// ColliderComponent
-// ----------------------------------------------------------------------------
-// 当たり判定コンポーネント（将来拡張の準備）。
-// Shape の種類と AABB / Sphere パラメータを保持する。
-// ============================================================================
-
 #include "IComponent.h"
 #include "Math/MathTypes.h"
 #include "struct.h" // AABB
 
+/// @brief 当たり判定（衝突）情報を保持するコンポーネント
+/// 形状の種類（AABB, Sphere, Capsule）やそのパラメータ、衝突レイヤー等を管理します。
 class ColliderComponent : public IComponent {
 public:
-  /// コライダーの形状
+  /// @brief コライダーの形状定義
   enum class Shape {
-    AABB,
-    Sphere,
-    Capsule,
+    AABB,    ///< 軸平行境界ボックス
+    Sphere,  ///< 球体
+    Capsule, ///< カプセル
   };
 
-  Shape shape = Shape::AABB;
+  Shape shape = Shape::AABB; ///< 現在のコライダー形状
 
-  /// AABB パラメータ
+  /// @brief AABBパラメータ
   AABB aabb;
 
-  /// Sphere パラメータ
-  RC::Vector3 center = {0.0f, 0.0f, 0.0f};
-  float radius = 1.0f;
+  /// @brief Sphereパラメータ
+  RC::Vector3 center = {0.0f, 0.0f, 0.0f}; ///< 中心座標（ローカル）
+  float radius = 1.0f;                      ///< 半径
 
-  /// 衝突レイヤー（ビットマスク）
+  /// @brief 衝突レイヤー（ビットマスク）
+  /// どのレイヤーと衝突するかを判定するために使用します。
   uint32_t layer = 0xFFFFFFFF;
 
-  /// トリガーモード（true: 物理応答なし、イベントのみ）
+  /// @brief トリガーモード設定
+  /// true の場合、物理的な衝突応答（押し出し等）を行わず、接触イベントの通知のみを行います。
   bool isTrigger = false;
 };

@@ -576,7 +576,7 @@ void PipelineManager::RegisterDefaultPipelines() {
 
   // particle：深度ON、書き込みOFF（積む用）
   regSet("particle", ptlVs, ptlPs, InputLayoutType::Particle,
-         RootSignatureType::Particle, true, false, D3D12_CULL_MODE_BACK);
+         RootSignatureType::Particle, true, false, D3D12_CULL_MODE_NONE);
 
   // 汎用2D：基本は画面オーバーレイ想定
   regSet("primitive2d", primVs, primPs, InputLayoutType::Sprite,

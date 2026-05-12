@@ -139,6 +139,9 @@
     <Filter Include="Particle\Ring">
       <UniqueIdentifier>{a1b2c3d4-e5f6-7890-abcd-ef1234567800}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Particle\Cylinder">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-7890-abcd-ef1234567801}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Render">
       <UniqueIdentifier>{5e520da5-341f-2fec-6d3b-bfe7ef357922}</UniqueIdentifier>
     </Filter>
@@ -362,6 +365,9 @@
     </ClCompile>
     <ClCompile Include="..\Engine\Particle\Ring\RingParticle.cpp">
       <Filter>Particle\Ring</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Particle\Cylinder\CylinderParticle.cpp">
+      <Filter>Particle\Cylinder</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Render\Light\Area\AreaLightManager.cpp">
       <Filter>Render\Light\Area</Filter>
@@ -619,6 +625,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Particle\Ring\RingParticle.h">
       <Filter>Particle\Ring</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Particle\Cylinder\CylinderParticle.h">
+      <Filter>Particle\Cylinder</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\Light\Area\AreaLightManager.h">
       <Filter>Render\Light\Area</Filter>

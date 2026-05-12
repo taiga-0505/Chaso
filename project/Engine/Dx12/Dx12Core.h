@@ -12,151 +12,125 @@
 #include <dxgi1_6.h>
 #include <memory>
 
-/// <summary>
-/// DX12 のデバイス/コマンド/スワップチェーン管理を統括する
-/// </summary>
+/// @brief DirectX12の主要コンポーネント（デバイス、コマンド、スワップチェーン、記述子ヒープ等）を統括管理するクラス
 class Dx12Core {
 public:
-  /// <summary>
-  /// Dx12Core 初期化に使用する設定を保持する
-  /// </summary>
+  /// @brief 初期化用設定構造体
   struct Desc {
-    UINT width = 1280;
-    UINT height = 720;
-    DXGI_FORMAT rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    DXGI_FORMAT dsvFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    UINT frameCount = 2;
-    bool debug = true;
-    bool gpuValidation = false;
-    UINT srvHeapCapacity = 256;
-    bool allowTearingIfSupported = true;
+    UINT width = 1280;          ///< 解像度（幅）
+    UINT height = 720;          ///< 解像度（高さ）
+    DXGI_FORMAT rtvFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB; ///< レンダーターゲットフォーマット
+    DXGI_FORMAT dsvFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;   ///< 深度ステンシルフォーマット
+    UINT frameCount = 2;        ///< スワップチェーンのバッファ数
+    bool debug = true;          ///< デバッグレイヤーを有効にするか
+    bool gpuValidation = false; ///< GPUバリデーションを有効にするか
+    UINT srvHeapCapacity = 256; ///< SRV用ヒープの最大容量
+    bool allowTearingIfSupported = true; ///< 可変リフレッシュレート(Tearing)を許可するか
   };
 
-  /// <summary>
-  /// DX12 コアを初期化する
-  /// </summary>
+  /// @brief 初期化
+  /// @param hwnd ウィンドウハンドル
+  /// @param d 初期化設定
   void Init(HWND hwnd, const Desc &d);
 
-  /// <summary>
-  /// DX12 コアを終了する
-  /// </summary>
+  /// @brief 終了処理
   void Term();
 
-  /// <summary>
-  /// FPS 固定の有効/無効を切り替える
-  /// </summary>
+  /// @brief FPS固定機能の有効/無効切り替え
+  /// @param enable 有効にするならtrue
   void EnableFixFps(bool enable = true);
 
-  /// <summary>
-  /// フレーム開始処理を行う
-  /// </summary>
-  void BeginFrame(); // フレーム開始（allocator/list reset を内包）
+  /// @brief フレーム開始処理
+  /// コマンドアロケータやリストのリセット、バックバッファの取得を行います。
+  void BeginFrame();
 
-  /// <summary>
-  /// フレーム終了処理を行う
-  /// </summary>
-  void EndFrame();   // Close→Execute→Present（Fence発行まで）
+  /// @brief フレーム終了処理
+  /// コマンドのクローズ、実行、Present、およびGPU同期（フェンス発行）を行います。
+  void EndFrame();
 
-  /// <summary>
-  /// GPU の完了を待機する
-  /// </summary>
-  void WaitForGPU(); // Flush（終了時など）
+  /// @brief GPUの処理完了を待機する (Flush)
+  void WaitForGPU();
 
-  /// <summary>
-  /// 現在のバックバッファインデックスを取得する
-  /// </summary>
+  /// @brief 現在のバックバッファインデックスを取得
+  /// @return 0 ~ (frameCount-1)
   UINT BackBufferIndex() const { return backIndex_; }
 
-  /// <summary>
-  /// D3D12 デバイスを取得する
-  /// </summary>
+  /// @brief D3D12デバイスを取得
+  /// @return ID3D12Deviceへのポインタ
   ID3D12Device *GetDevice() const { return device_.GetDevice(); }
 
-  /// <summary>
-  /// コマンドリストを取得する
-  /// </summary>
+  /// @brief 現在のフレームのグラフィックスコマンドリストを取得
+  /// @return ID3D12GraphicsCommandListへのポインタ
   ID3D12GraphicsCommandList *CL() const { return cmd_.List(); }
 
-  /// <summary>
-  /// コマンドキューを取得する
-  /// </summary>
+  /// @brief グラフィックスコマンドキューを取得
+  /// @return ID3D12CommandQueueへのポインタ
   ID3D12CommandQueue *Queue() const { return cmd_.Queue(); }
 
-  /// <summary>
-  /// SRV 用ディスクリプタヒープを取得する
-  /// </summary>
+  /// @brief SRV用デスクリプタヒープを取得
+  /// @return DescriptorHeapへの参照
   DescriptorHeap &SRV() { return srv_; }
 
-  /// <summary>
-  /// RTV 用ディスクリプタヒープを取得する
-  /// </summary>
+  /// @brief RTV用デスクリプタヒープを取得
+  /// @return DescriptorHeapへの参照
   DescriptorHeap &RTV() { return rtv_; }
 
-  /// <summary>
-  /// DSV 用ディスクリプタヒープを取得する
-  /// </summary>
+  /// @brief DSV用デスクリプタヒープを取得
+  /// @return DescriptorHeapへの参照
   DescriptorHeap &DSV() { return dsv_; }
 
-  /// <summary>
-  /// 構造化バッファ管理を取得する
-  /// </summary>
+  /// @brief 構造化バッファ管理クラスを取得
+  /// @return StructuredBufferManagerへの参照
   StructuredBufferManager &StructuredBuffers() { return sbMgr_; }
 
-  /// <summary>
-  /// 現在の RT の CPU ハンドルを取得する
-  /// </summary>
+  /// @brief 現在のレンダーターゲットのCPUハンドルを取得
+  /// @return D3D12_CPU_DESCRIPTOR_HANDLE
   D3D12_CPU_DESCRIPTOR_HANDLE CurrentRTV() const {
     return swap_.RtvAt(backIndex_);
   }
 
-  /// <summary>
-  /// 深度ステンシルの CPU ハンドルを取得する
-  /// </summary>
+  /// @brief 深度ステンシルバッファのCPUハンドルを取得
+  /// @return D3D12_CPU_DESCRIPTOR_HANDLE
   D3D12_CPU_DESCRIPTOR_HANDLE Dsv() const { return depth_.Dsv(); }
 
-  /// <summary>
-  /// SRV 管理を取得する
-  /// </summary>
+  /// @brief SRV管理クラスを取得
+  /// @return SRVManagerへの参照
   SRVManager &SRVMan() { return srvMgr_; }
 
-  /// <summary>
-  /// SRV 管理を取得する（const）
-  /// </summary>
+  /// @brief SRV管理クラスを取得 (const)
+  /// @return SRVManagerへのconst参照
   const SRVManager &SRVMan() const { return srvMgr_; }
 
-  /// <summary>
-  /// 画面をクリアする
-  /// </summary>
+  /// @brief 画面をクリアする
+  /// @param r 赤
+  /// @param g 緑
+  /// @param b 青
+  /// @param a アルファ
   void Clear(float r = 0.1f, float g = 0.25f, float b = 0.5f, float a = 1.0f);
 
-  /// <summary>
-  /// フレーム数を取得する
-  /// </summary>
+  /// @brief フレームバッファ数を取得
+  /// @return バックバッファの数
   UINT FrameCount() const { return swap_.FrameCount(); }
 
-  /// <summary>
-  /// ビューポートを設定する
-  /// </summary>
+  /// @brief ビューポートを設定
+  /// @param vp ビューポート設定
   void SetViewport(const D3D12_VIEWPORT &vp) { viewport_ = vp; }
 
-  /// <summary>
-  /// シザー矩形を設定する
-  /// </summary>
+  /// @brief シザー矩形を設定
+  /// @param rc 矩形設定
   void SetScissor(const D3D12_RECT &rc) { scissor_ = rc; }
 
-  /// <summary>
-  /// ビューポートを取得する
-  /// </summary>
+  /// @brief 現在のビューポートを取得
+  /// @return D3D12_VIEWPORTへの参照
   const D3D12_VIEWPORT &Viewport() const { return viewport_; }
 
-  /// <summary>
-  /// シザー矩形を取得する
-  /// </summary>
+  /// @brief 現在のシザー矩形を取得
+  /// @return D3D12_RECTへの参照
   const D3D12_RECT &Scissor() const { return scissor_; }
 
-  /// <summary>
-  /// バックバッファサイズに合わせてビューポートとシザーをリセットする
-  /// </summary>
+  /// @brief ビューポートとシザーを現在のバックバッファサイズに合わせてリセットする
+  /// @param width 幅
+  /// @param height 高さ
   void ResetViewportScissorToBackbuffer(UINT width, UINT height) {
     viewport_.TopLeftX = 0.0f;
     viewport_.TopLeftY = 0.0f;
@@ -172,18 +146,18 @@ public:
   }
 
 private:
-  Desc desc_{};
-  Device device_;
-  CommandContext cmd_;
-  SwapChain swap_;
-  DescriptorHeap rtv_, dsv_, srv_;
-  SRVManager srvMgr_;
-  DepthStencil depth_;
-  UINT backIndex_ = 0;
-  bool allowTearing_ = false;
-  D3D12_VIEWPORT viewport_{};
-  D3D12_RECT scissor_{};
-  std::unique_ptr<FixFps> fixFps_;
-  bool fixFpsEnabled_ = true;
-  StructuredBufferManager sbMgr_;
+  Desc desc_{};              ///< 初期化設定の保持
+  Device device_;            ///< デバイス管理
+  CommandContext cmd_;       ///< コマンド管理
+  SwapChain swap_;           ///< スワップチェーン管理
+  DescriptorHeap rtv_, dsv_, srv_; ///< 各種デスクリプタヒープ
+  SRVManager srvMgr_;        ///< SRV管理
+  DepthStencil depth_;       ///< 深度ステンシルバッファ
+  UINT backIndex_ = 0;       ///< 現在のバックバッファインデックス
+  bool allowTearing_ = false; ///< テアリング許可フラグ
+  D3D12_VIEWPORT viewport_{}; ///< 現在のビューポート
+  D3D12_RECT scissor_{};      ///< 現在のシザー矩形
+  std::unique_ptr<FixFps> fixFps_; ///< FPS固定管理
+  bool fixFpsEnabled_ = true;      ///< FPS固定有効フラグ
+  StructuredBufferManager sbMgr_;  ///< 構造化バッファ管理
 };

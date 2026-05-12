@@ -2,10 +2,15 @@
 #include "DescriptorHeap.h"
 #include <d3d12.h>
 
-// ========== RTV / DSV / SRV を「1行」で作る小ヘルパ ==========
+/// @file DescriptorHelpers.h
+/// @brief デスクリプタの作成を簡略化するヘルパー関数群
 
-// RTV（2D）: UNORMのバッファにSRGBで作りたい時は
-// fmt=DXGI_FORMAT_R8G8B8A8_UNORM_SRGB などを指定
+/// @brief 2Dレンダータゲットビュー (RTV) を作成する
+/// @param device DirectX12デバイス
+/// @param rtvHeap RTVを配置するデスクリプタヒープ
+/// @param res 対象のリソース
+/// @param fmt ビューのフォーマット
+/// @return 作成されたデスクリプタのCPUハンドル
 inline D3D12_CPU_DESCRIPTOR_HANDLE
 CreateRTV2D(ID3D12Device *device, DescriptorHeap &rtvHeap, ID3D12Resource *res,
             DXGI_FORMAT fmt = DXGI_FORMAT_R8G8B8A8_UNORM) {
@@ -19,7 +24,12 @@ CreateRTV2D(ID3D12Device *device, DescriptorHeap &rtvHeap, ID3D12Resource *res,
   return h;
 }
 
-// DSV（2D）
+/// @brief 2D深度ステンシルビュー (DSV) を作成する
+/// @param device DirectX12デバイス
+/// @param dsvHeap DSVを配置するデスクリプタヒープ
+/// @param res 対象のリソース
+/// @param fmt ビューのフォーマット
+/// @return 作成されたデスクリプタのCPUハンドル
 inline D3D12_CPU_DESCRIPTOR_HANDLE
 CreateDSV2D(ID3D12Device *device, DescriptorHeap &dsvHeap, ID3D12Resource *res,
             DXGI_FORMAT fmt = DXGI_FORMAT_D24_UNORM_S8_UINT) {
@@ -31,7 +41,14 @@ CreateDSV2D(ID3D12Device *device, DescriptorHeap &dsvHeap, ID3D12Resource *res,
   return h;
 }
 
-// SRV（2D）: mipLevels は DirectXTex の metadata.mipLevels を渡すと便利
+/// @brief 2Dシェーダーリソースビュー (SRV) を作成する
+/// @param device DirectX12デバイス
+/// @param srvHeap SRVを配置するデスクリプタヒープ
+/// @param res 対象のリソース
+/// @param fmt ビューのフォーマット
+/// @param mipLevels ミップマップレベル数
+/// @param mostDetailedMip 最も詳細なミップレベル (デフォルト 0)
+/// @return 作成されたデスクリプタのCPUハンドル
 inline D3D12_CPU_DESCRIPTOR_HANDLE
 CreateSRV2D(ID3D12Device *device, DescriptorHeap &srvHeap, ID3D12Resource *res,
             DXGI_FORMAT fmt, UINT mipLevels, UINT mostDetailedMip = 0) {
@@ -47,7 +64,12 @@ CreateSRV2D(ID3D12Device *device, DescriptorHeap &srvHeap, ID3D12Resource *res,
   return h;
 }
 
-// （おまけ）CBV: size は 256B アライン必須
+/// @brief 定数バッファビュー (CBV) を作成する
+/// @param device DirectX12デバイス
+/// @param srvHeap CBVを配置するデスクリプタヒープ (通常はCBV/SRV/UAVヒープ)
+/// @param bufferLocation バッファのGPU仮想アドレス
+/// @param sizeBytes バッファのサイズ（バイト）。内部で256バイト境界にアラインされます。
+/// @return 作成されたデスクリプタのCPUハンドル
 inline D3D12_CPU_DESCRIPTOR_HANDLE
 CreateCBV(ID3D12Device *device, DescriptorHeap &srvHeap,
           D3D12_GPU_VIRTUAL_ADDRESS bufferLocation, UINT sizeBytes) {

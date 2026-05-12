@@ -338,6 +338,79 @@ ModelData MeshGenerator::GenerateCylinder(float radius, float height, uint32_t s
   return data;
 }
 
+ModelData MeshGenerator::GenerateEffectCylinder(
+    float topRadius, float bottomRadius, float height,
+    uint32_t segments, float startAngle, float endAngle,
+    bool isVerticalUV, bool flipV) {
+  ModelData data;
+
+  float startRad = startAngle * M_PI / 180.0f;
+  float endRad = endAngle * M_PI / 180.0f;
+  float rangeRad = endRad - startRad;
+
+  for (uint32_t i = 0; i < segments; ++i) {
+    float ratio = (float)i / segments;
+    float nextRatio = (float)(i + 1) / segments;
+
+    float rad = startRad + ratio * rangeRad;
+    float nextRad = startRad + nextRatio * rangeRad;
+
+    float s = std::sin(rad);
+    float c = std::cos(rad);
+    float sNext = std::sin(nextRad);
+    float cNext = std::cos(nextRad);
+
+    float utL = isVerticalUV ? 1.0f : ratio;
+    float vtL = isVerticalUV ? ratio : 0.02f;
+    float utR = isVerticalUV ? 1.0f : nextRatio;
+    float vtR = isVerticalUV ? nextRatio : 0.02f;
+    
+    float ubL = isVerticalUV ? 0.0f : ratio;
+    float vbL = isVerticalUV ? ratio : 0.98f;
+    float ubR = isVerticalUV ? 0.0f : nextRatio;
+    float vbR = isVerticalUV ? nextRatio : 0.98f;
+
+    if (flipV) {
+      vtL = 1.0f - vtL;
+      vtR = 1.0f - vtR;
+      vbL = 1.0f - vbL;
+      vbR = 1.0f - vbR;
+    }
+
+    VertexData vTL;
+    vTL.position = {-s * topRadius, height, c * topRadius, 1.0f};
+    vTL.texcoord = {utL, vtL};
+    vTL.normal = {-s, 0.0f, c};
+
+    VertexData vTR;
+    vTR.position = {-sNext * topRadius, height, cNext * topRadius, 1.0f};
+    vTR.texcoord = {utR, vtR};
+    vTR.normal = {-sNext, 0.0f, cNext};
+
+    VertexData vBL;
+    vBL.position = {-s * bottomRadius, 0.0f, c * bottomRadius, 1.0f};
+    vBL.texcoord = {ubL, vbL};
+    vBL.normal = {-s, 0.0f, c};
+
+    VertexData vBR;
+    vBR.position = {-sNext * bottomRadius, 0.0f, cNext * bottomRadius, 1.0f};
+    vBR.texcoord = {ubR, vbR};
+    vBR.normal = {-sNext, 0.0f, cNext};
+
+    // インデックスバッファ不使用（Particle描画用）
+    data.vertices.push_back(vTL);
+    data.vertices.push_back(vTR);
+    data.vertices.push_back(vBL);
+
+    data.vertices.push_back(vBL);
+    data.vertices.push_back(vTR);
+    data.vertices.push_back(vBR);
+  }
+
+  data.rootNode.name = "EffectCylinder";
+  return data;
+}
+
 ModelData MeshGenerator::GenerateCone(float radius, float height, uint32_t segments) {
   ModelData data;
   float h2 = height * 0.5f;

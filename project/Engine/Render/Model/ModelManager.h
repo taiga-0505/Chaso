@@ -26,90 +26,99 @@ class TextureManager; // 前方宣言
 
 namespace RC {
 
+/// @brief モデルリソースと描画オブジェクトを一括管理するマネージャクラス
+/// モデルをハンドル(int)で管理し、同一ファイルのメッシュ共有や非同期ロードをサポートします。
 class ModelManager {
 public:
-  /// <summary>
-  /// 初期化（device/texman を注入）
-  /// </summary>
+  /// @brief 初期化処理
+  /// @param device DirectX12デバイス
+  /// @param texman テクスチャマネージャ（マテリアル用テクスチャのロードに使用）
   void Init(ID3D12Device *device, TextureManager *texman);
 
+  /// @brief デストラクタ
   ~ModelManager();
 
-  /// <summary>
-  /// 終了（管理しているモデルと Mesh キャッシュを解放）
-  /// </summary>
+  /// @brief 終了処理。管理している全モデルとメッシュキャッシュを解放します。
   void Term();
 
-  /// <summary>
-  /// モデルをロードしてハンドルを返す（Mesh は共有キャッシュ）
-  /// </summary>
+  /// @brief モデルファイルをロードしてハンドルを返す
+  /// すでにロード済みのメッシュがある場合はキャッシュを再利用します。
+  /// @param path モデルファイルのパス (.obj など)
+  /// @return モデルハンドル（失敗時は -1）
   int Load(const std::string &path);
 
-  /// <summary>
-  /// モデルを解放（ハンドルは無効化）
-  /// </summary>
+  /// @brief 指定したハンドルに対応するモデルを解放する
+  /// @param handle モデルハンドル
   void Unload(int handle);
 
-  /// <summary>
-  /// 有効ハンドルか？
-  /// </summary>
+  /// @brief 有効なハンドルか確認する
+  /// @param handle モデルハンドル
+  /// @return 有効なら true
   bool IsValid(int handle) const;
 
-  /// <summary>
-  /// モデル実体を取得（無効なら nullptr）
-  /// </summary>
+  /// @brief ハンドルからモデルオブジェクトの実体を取得する
+  /// @param handle モデルハンドル
+  /// @return ModelObjectへのポインタ。無効なハンドルの場合は nullptr
   ::ModelObject *Get(int handle);
+  
+  /// @brief ハンドルからモデルオブジェクトの実体を取得する (const)
+  /// @param handle モデルハンドル
+  /// @return ModelObjectへのconstポインタ
   const ::ModelObject *Get(int handle) const;
 
-  /// <summary>
-  /// Transform ポインタ取得
-  /// </summary>
+  /// @brief ハンドルからモデルのトランスフォーム情報ポインタを取得する
+  /// @param handle モデルハンドル
+  /// @return Transform構造体へのポインタ
   Transform *GetTransformPtr(int handle);
 
-  /// <summary>
-  /// 乗算カラー設定
-  /// </summary>
+  /// @brief モデルの乗算カラーを設定する
+  /// @param handle モデルハンドル
+  /// @param color 乗算するRGBAカラー
   void SetColor(int handle, const Vector4 &color);
 
-  /// <summary>
-  /// ライティングモード設定
-  /// </summary>
+  /// @brief モデルのライティングモードを設定する
+  /// @param handle モデルハンドル
+  /// @param m ライティングモード (Phong, Lambert, なし等)
   void SetLightingMode(int handle, LightingMode m);
 
-  /// <summary>
-  /// Mesh 差し替え（同じ .obj は共有）
-  /// </summary>
+  /// @brief 指定したモデルハンドルのメッシュを別のファイルで差し替える
+  /// @param handle モデルハンドル
+  /// @param path 新しいモデルファイルのパス
   void SetMesh(int handle, const std::string &path);
 
-  /// <summary>
-  /// DrawModelBatch の内部カーソルをリセット
-  /// </summary>
+  /// @brief バッチ描画用の内部カーソルをリセットする
+  /// 同一モデルを複数箇所で描画する際のインスタンスカウント管理に使用します。
+  /// @param handle モデルハンドル
   void ResetCursor(int handle);
 
-  /// <summary>
-  /// 全モデルのバッチカーソルを毎フレームリセット（PreDraw3D から呼ぶ想定）
-  /// </summary>
+  /// @brief 管理している全モデルのバッチカーソルをリセットする
+  /// 毎フレームの描画開始前に呼び出すことを想定しています。
   void ResetAllBatchCursors();
 
 private:
+  /// @brief モデルオブジェクト保持用スロット
   struct Slot {
-    std::unique_ptr<::ModelObject> ptr;
-    bool inUse = false;
+    std::unique_ptr<::ModelObject> ptr; ///< モデルオブジェクト実体
+    bool inUse = false;                ///< 使用中フラグ
   };
 
+  /// @brief 未使用スロットを検索・確保する
   int AllocSlot_();
 
+  /// @brief メッシュをキャッシュから取得するか、新規にロードする
+  /// @param path メッシュファイルのパス
+  /// @return 共有メッシュオブジェクト
   std::shared_ptr<::ModelMesh> GetOrLoadMesh_(const std::string &path);
 
 private:
-  ID3D12Device *device_ = nullptr;
-  TextureManager *texman_ = nullptr;
+  ID3D12Device *device_ = nullptr;     ///< デバイス
+  TextureManager *texman_ = nullptr;   ///< テクスチャマネージャ
 
-  std::vector<Slot> models_;
-  std::unordered_map<std::string, std::weak_ptr<::ModelMesh>> meshCache_;
+  std::vector<Slot> models_;           ///< モデルオブジェクトのリスト
+  std::unordered_map<std::string, std::weak_ptr<::ModelMesh>> meshCache_; ///< メッシュの共有キャッシュ
 
-  mutable std::recursive_mutex mtx_;
-  std::unordered_map<std::string, std::shared_future<void>> loadingTasks_;
+  mutable std::recursive_mutex mtx_;   ///< 排他制御用ミューテックス
+  std::unordered_map<std::string, std::shared_future<void>> loadingTasks_; ///< ロードタスクの管理
 };
 
 } // namespace RC

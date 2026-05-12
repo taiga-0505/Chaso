@@ -1,3 +1,6 @@
+/// @file InputCommon.h
+/// @brief 入力システム全体で使用する共通のヘッダー、マクロ、ライブラリリンクを定義するヘッダー
+
 #pragma once
 
 #ifndef DIRECTINPUT_VERSION

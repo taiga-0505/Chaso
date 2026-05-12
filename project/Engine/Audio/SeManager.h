@@ -12,19 +12,23 @@
 using Microsoft::WRL::ComPtr;
 #pragma comment(lib, "xaudio2.lib")
 
-// 必要に応じて増減してOK（使い方はBgmGroupと同じ感覚）
+/// @brief 効果音(SE)の識別子
 enum class SeId {
-  Cursor = 0,
-  Decide = 1,
-  Cancel = 2,
-  Hit = 3,
-  Damage = 4,
-  Clear = 5,
-  Count
+  Cursor = 0,  ///< カーソル移動音
+  Decide = 1,  ///< 決定音
+  Cancel = 2,  ///< キャンセル音
+  Hit = 3,     ///< ヒット音
+  Damage = 4,  ///< ダメージ音
+  Clear = 5,   ///< クリア音
+  Count        ///< 要素数
 };
 
+/// @brief 効果音(SE)を管理するクラス
+/// XAudio2を使用して複数のSEを並列再生・管理する
 class SeManager {
 public:
+  /// @brief 初期化
+  /// @param defaultVolume デフォルトの音量 (0.0 ~ 1.0)
   void Init(float defaultVolume = 1.0f) {
     HRESULT hr = XAudio2Create(&xaudio_, 0, XAUDIO2_DEFAULT_PROCESSOR);
     assert(SUCCEEDED(hr));
@@ -37,6 +41,7 @@ public:
     volume_ = defaultVolume;
   }
 
+  /// @brief 終了処理。再生中のSEを停止し、ロード済みのリソースを解放する。
   void Term() {
     StopAll();
     // キャッシュ解放
@@ -50,7 +55,9 @@ public:
     xaudio_.Reset();
   }
 
-  // パス登録（あとから差し替えOK）
+  /// @brief SEのファイルパスを登録する。あとから差し替えも可能。
+  /// @param id 登録するSEの識別子
+  /// @param path ファイルパス
   void SetPath(SeId id, const char *path) {
     const int k = (int)id;
     auto &e = entries_[k];
@@ -63,7 +70,9 @@ public:
     e.loaded = false;
   }
 
-  // その場で鳴らす（volScaleは個別音量の倍率）
+  /// @brief 指定したIDのSEを再生する。
+  /// @param id 再生するSEの識別子
+  /// @param volScale 個別音量の倍率 (デフォルト1.0)
   void Play(SeId id, float volScale = 1.0f) {
     const int k = (int)id;
     auto it = entries_.find(k);
@@ -102,7 +111,7 @@ public:
     actives_.push_back(std::move(av));
   }
 
-  // 鳴り終わったVoiceを掃除（毎フレ呼ぶ）
+  /// @brief 鳴り終わったVoiceの破棄など、毎フレームの更新処理。
   void Update() {
     // 後ろから消す
     for (int i = (int)actives_.size() - 1; i >= 0; --i) {
@@ -115,7 +124,8 @@ public:
     }
   }
 
-  // マスター音量（0.0〜1.0想定）
+  /// @brief マスター音量を設定する。再生中のSEにも即座に反映される。
+  /// @param v 音量 (0.0 ~ 1.0)
   void SetMasterVolume(float v) {
     volume_ = (std::max)(0.0f, v);
     // 再生中にも反映
@@ -124,12 +134,16 @@ public:
         av.v->SetVolume(volume_ * av.volScale);
     }
   }
+
+  /// @brief 現在のマスター音量を取得する。
+  /// @return マスター音量
   float MasterVolume() const { return volume_; }
 
-  // 全停止（シーン切替時などに）
+  /// @brief 全てのSE再生を停止する。
   void StopAll() { actives_.clear(); }
 
 private:
+  /// @brief SourceVoiceのカスタムデリータ
   struct SourceVoiceDeleter {
     void operator()(IXAudio2SourceVoice *v) const noexcept {
       if (v) {
@@ -138,6 +152,7 @@ private:
       }
     }
   };
+  /// @brief MasterVoiceのカスタムデリータ
   struct MasterVoiceDeleter {
     void operator()(IXAudio2MasteringVoice *v) const noexcept {
       if (v) {
@@ -150,21 +165,23 @@ private:
   using MasterVoicePtr =
       std::unique_ptr<IXAudio2MasteringVoice, MasterVoiceDeleter>;
 
+  /// @brief SEリソースの管理用エントリ
   struct Entry {
-    std::string path;
-    SoundData data{}; // PCM
-    bool loaded = false;
+    std::string path;    ///< ファイルパス
+    SoundData data{};    ///< PCMデータ本体
+    bool loaded = false; ///< ロード済みフラグ
   };
+  /// @brief 現在再生中のVoice情報
   struct ActiveVoice {
-    SourceVoicePtr v{};
-    int slot = -1;
-    float volScale = 1.0f;
+    SourceVoicePtr v{};    ///< SourceVoice本体
+    int slot = -1;         ///< SE識別子
+    float volScale = 1.0f; ///< 再生時の個別音量倍率
   };
 
-  ComPtr<IXAudio2> xaudio_;
-  MasterVoicePtr master_{};
+  ComPtr<IXAudio2> xaudio_; ///< XAudio2インターフェース
+  MasterVoicePtr master_{};  ///< マスタリングボイス
 
-  std::unordered_map<int, Entry> entries_;
-  std::vector<ActiveVoice> actives_;
-  float volume_ = 1.0f;
+  std::unordered_map<int, Entry> entries_; ///< IDごとのSEリソース管理
+  std::vector<ActiveVoice> actives_;       ///< 現在再生中のVoiceリスト
+  float volume_ = 1.0f;                    ///< マスター音量
 };

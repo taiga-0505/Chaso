@@ -181,6 +181,7 @@
     <ClCompile Include="..\Engine\Particle\Snow\SnowParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\wind\WindParticle.cpp" />
     <ClCompile Include="..\Engine\Particle\Ring\RingParticle.cpp" />
+    <ClCompile Include="..\Engine\Particle\Cylinder\CylinderParticle.cpp" />
     <!-- Render -->
     <ClCompile Include="..\Engine\Render\Light\Area\AreaLightManager.cpp" />
     <ClCompile Include="..\Engine\Render\Light\Directional\DirectionalLightManager.cpp" />
@@ -278,6 +279,7 @@
     <ClInclude Include="..\Engine\Particle\Snow\SnowParticle.h" />
     <ClInclude Include="..\Engine\Particle\wind\WindParticle.h" />
     <ClInclude Include="..\Engine\Particle\Ring\RingParticle.h" />
+    <ClInclude Include="..\Engine\Particle\Cylinder\CylinderParticle.h" />
     <!-- Render -->
     <ClInclude Include="..\Engine\Render\Light\Area\AreaLightManager.h" />
     <ClInclude Include="..\Engine\Render\Light\Directional\DirectionalLightManager.h" />
