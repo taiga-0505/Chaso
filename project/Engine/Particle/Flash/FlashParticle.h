@@ -10,7 +10,7 @@ namespace RC {
 /// </summary>
 class FlashParticle : public Particle {
 public:
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   // 一括制御用の便利メソッド
   void SetGlobalColor(const Vector4 &color) { EmitterRef().globalColor = color; }
@@ -30,13 +30,13 @@ protected:
   void UpdateOneParticle(ParticleData &p, float dt) override;
 
 private:
-  float speedMin_ = 0.05f;
-  float speedMax_ = 0.2f;
-  float lifeMin_ = 0.2f;
-  float lifeMax_ = 0.5f;
+  float speedMin_ = 0.0f;
+  float speedMax_ = 0.0f;
+  float lifeMin_ = 0.8f;
+  float lifeMax_ = 1.0f;
 
-  float scaleYMin_ = 0.4f;
-  float scaleYMax_ = 1.5f;
+  float scaleYMin_ = 0.8f;
+  float scaleYMax_ = 2.5f;
 };
 
 } // namespace RC

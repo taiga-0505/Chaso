@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Particle.h"
 #include <random>
 
@@ -8,7 +8,7 @@ class LaserParticle : public Particle {
 public:
   enum class Style { Segment, Streak };
 
-  void Initialize(SceneContext &ctx);
+  void Initialize(SceneContext &ctx) override;
 
   void SetBeam(const Vector3 &start, const Vector3 &end, float width = 0.2f,
                float life = 0.05f, Vector4 color = {0.2f, 0.9f, 1.0f, 1.0f});
