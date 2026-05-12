@@ -30,6 +30,7 @@ DirectX 12ベースの自作ゲームエンジンです。
   - スプライト描画、2Dプリミティブ描画（線、矩形、球体デバッグ表示等）。
 - **パーティクルシステム**:
   - インスタンス描画による大量のパーティクル制御（爆発、花火、雨、雪など）。
+  - 高精細なマルチレイヤーエフェクト（CenterGlow, Flash, Ring, Debris, Shockwave等）を組み合わせたリッチなHitEffectなどの表現。
 - **ライティング**:
   - 平行光源 (Directional Light)、点光源 (Point Light)、スポットライト (Spot Light)、面光源 (Area Light) の制御。
 - **ポストプロセッシング (Post-Processing)**:
@@ -102,11 +103,25 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 ## ビルド方法 (Build)
 
+### Visual Studio を使用する場合
+
 1. `project/chaso.sln` を Visual Studio 2026 で開きます。
 2. 構成を `Debug`, `Release`, または `Development` に設定します。
 3. プラットフォームを `x64` に設定します。
 4. `Ctrl + Shift + B` でソリューションをビルドします。
    - `ChasoEngine` が先にビルドされ、`ChasoApp` がそれをリンクします。
+
+### VS Code / CLI を使用する場合
+
+本プロジェクトにはCLIビルド＆実行環境が用意されています。VS Codeの場合は `Ctrl + Shift + B` からタスク（`🚀 Run Debug` など）を選択するだけで、ビルドからアプリの起動までが一括で行われます。
+手動で実行する場合は、プロジェクトルートから以下のPowerShellスクリプトを使用します。
+
+```powershell
+# Debug構成でビルド＆実行
+powershell -ExecutionPolicy Bypass -File "scripts/build/build_and_run.ps1" -Configuration Debug
+```
+
+詳細は `scripts/使い方.md` を参照してください。
 
 ## 使用ライブラリ (Libraries)
 
