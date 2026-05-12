@@ -207,6 +207,5 @@ private:
 
   BlendMode blendMode_ = kBlendModeAdd; ///< 合成モード
 };
-};
 
 } // namespace RC

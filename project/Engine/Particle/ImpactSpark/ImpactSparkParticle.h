@@ -131,7 +131,7 @@ protected:
   void UpdateOneParticle(ParticleData &p, float dt) override;
 
   /// @brief 火花を移動方向に伸ばすための行列構築
-  void BuildWorldMatrix(const ParticleData &p,
+  Matrix4x4 BuildWorldMatrix(const ParticleData &p,
                              const Matrix4x4 &billboardMatrix) const override;
 
   /// @brief フェード用アルファ計算
