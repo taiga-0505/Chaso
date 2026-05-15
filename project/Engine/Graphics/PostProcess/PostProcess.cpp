@@ -16,6 +16,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::Vignette:  return "Vignette";
   case PostEffectType::BoxFilter: return "BoxFilter";
   case PostEffectType::DepthBasedOutline: return "DepthBasedOutline";
+  case PostEffectType::RadialBlur: return "RadialBlur";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -62,6 +63,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineDepthBasedOutline_ = pipelineManager_->Get("depthbasedoutline.none");
   assert(pipelineDepthBasedOutline_ && "Failed to get depthbasedoutline pipeline");
+
+  pipelineRadialBlur_ = pipelineManager_->Get("radialblur.none");
+  assert(pipelineRadialBlur_ && "Failed to get radialblur pipeline");
 
   // CBuffer 初期化
   D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
@@ -189,6 +193,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineBoxFilter_;
   case PostEffectType::DepthBasedOutline:
     return pipelineDepthBasedOutline_;
+  case PostEffectType::RadialBlur:
+    return pipelineRadialBlur_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -238,6 +244,11 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
 
   if (effectType == PostEffectType::BoxFilter) {
     constants.param0 = static_cast<uint32_t>(boxFilterK_);
+  } else if (effectType == PostEffectType::RadialBlur) {
+    constants.param0 = *(uint32_t *)&radialBlurCenter_.x;
+    constants.param1 = *(uint32_t *)&radialBlurCenter_.y;
+    constants.param2 = *(uint32_t *)&radialBlurWidth_;
+    constants.param3 = static_cast<uint32_t>(radialBlurSamples_);
   }
 
   cmdList->SetGraphicsRoot32BitConstants(1, 4, &constants, 0);
@@ -408,6 +419,23 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
         SetOutlineThickness(outlineThickness_);
         SetOutlineMode(outlineMode_);
       }
+      ImGui::Unindent();
+    }
+
+    bool radialBlur = HasEffect(PostEffectType::RadialBlur);
+    if (ImGui::Checkbox("RadialBlur", &radialBlur)) {
+      if (radialBlur) {
+        AddEffect(PostEffectType::RadialBlur);
+      } else {
+        RemoveEffect(PostEffectType::RadialBlur);
+      }
+    }
+
+    if (radialBlur) {
+      ImGui::Indent();
+      ImGui::SliderFloat2("Center", &radialBlurCenter_.x, 0.0f, 1.0f);
+      ImGui::SliderFloat("BlurWidth", &radialBlurWidth_, -0.1f, 0.1f);
+      ImGui::SliderInt("Samples", &radialBlurSamples_, 1, 50);
       ImGui::Unindent();
     }
 
