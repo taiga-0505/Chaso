@@ -19,6 +19,7 @@ enum class PostEffectType {
   Vignette,   ///< ビネット（周辺減光）
   BoxFilter,  ///< ボックスフィルタ（平滑化）
   DepthBasedOutline, ///< 深度ベースアウトライン
+  RadialBlur, ///< ラジアルブラー
 };
 
 /// @class PostProcess
@@ -135,6 +136,7 @@ private:
   GraphicsPipeline *pipelineVignette_ = nullptr;
   GraphicsPipeline *pipelineBoxFilter_ = nullptr;
   GraphicsPipeline *pipelineDepthBasedOutline_ = nullptr;
+  GraphicsPipeline *pipelineRadialBlur_ = nullptr;
 
   std::vector<PostEffectType> activeEffects_; ///< アクティブなエフェクトスタック（適用順）
 
@@ -162,4 +164,12 @@ private:
   bool pingPongInitialized_ = false;
 
   int boxFilterK_ = 1; ///< BoxFilter のカーネル半径（1 = 3x3, 2 = 5x5, ...）
+
+  // RadialBlur パラメータ
+  struct {
+    float x = 0.5f;
+    float y = 0.5f;
+  } radialBlurCenter_;
+  float radialBlurWidth_ = 0.01f;
+  int radialBlurSamples_ = 10;
 };

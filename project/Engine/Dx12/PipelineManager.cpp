@@ -891,6 +891,21 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // radialblur：ラジアルブラー
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("radialblur.none",
+                    fullscreenVs,
+                    L"Resources/Shader/RadialBlur/RadialBlur.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   Log::Print(std::format("[PipelineManager] デフォルトパイプライン登録完了 (Total: {})", pipelines_.size()));
 
   // キャッシュ保存

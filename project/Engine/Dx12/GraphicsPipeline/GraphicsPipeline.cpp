@@ -215,12 +215,14 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
 
   // キャッシュ付きで失敗した場合：キャッシュを破棄してリトライ
   if (FAILED(hr) && cachedPSO.pCachedBlob != nullptr) {
-    Log::Print(
-        "[PipelineManager] PSOキャッシュ不一致を検出 → キャッシュを破棄して再構築します");
-    Log::Print(
-        "  ※ ルートシグネチャやシェーダーを変更した場合に発生します");
-    Log::Print(
-        "  ※ 次回終了時に新しいキャッシュが自動保存されます");
+    static bool sAlreadyLogged = false;
+    if (!sAlreadyLogged) {
+      Log::Print(
+          "[PipelineManager] PSOキャッシュ不一致を検出 → キャッシュを破棄して再構築します");
+      Log::Print(
+          "  ※ ルートシグネチャやシェーダーを変更した場合に発生します。以降の不一致ログは省略します。");
+      sAlreadyLogged = true;
+    }
 
     d.CachedPSO = {}; // キャッシュなし
     pso_.Reset();
@@ -497,7 +499,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   // ====================
   // Static Sampler
   // ====================
-  D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
+  D3D12_STATIC_SAMPLER_DESC samplers[3] = {};
   
   // s0: Linear
   samplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -517,6 +519,15 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   samplers[1].ShaderRegister = 1;
   samplers[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+  // s2: Linear Clamp
+  samplers[2].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+  samplers[2].AddressU = samplers[2].AddressV = samplers[2].AddressW =
+      D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+  samplers[2].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+  samplers[2].MaxLOD = D3D12_FLOAT32_MAX;
+  samplers[2].ShaderRegister = 2;
+  samplers[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
   // ====================
   // Serialize
   // ====================
@@ -526,7 +537,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   desc.pParameters = params;
   desc.NumParameters = paramCount;
   desc.pStaticSamplers = samplers;
-  desc.NumStaticSamplers = 2;
+  desc.NumStaticSamplers = 3;
 
   Microsoft::WRL::ComPtr<ID3DBlob> sig;
   Microsoft::WRL::ComPtr<ID3DBlob> err;
