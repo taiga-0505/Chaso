@@ -237,22 +237,10 @@ void ParticleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   auto& pm = RC::ParticleManager::GetInstance();
 
-  if (isParticle) if(auto* s = pm.GetSystem("Particle")) s->Render(ctx, cl);
-  if (isFire) if(auto* s = pm.GetSystem("Fire")) s->Render(ctx, cl);
-  if (isRain) if(auto* s = pm.GetSystem("Rain")) s->Render(ctx, cl);
-  if (isSnow) if(auto* s = pm.GetSystem("Snow")) s->Render(ctx, cl);
-  if (isCircle) if(auto* s = pm.GetSystem("Circle")) s->Render(ctx, cl);
-  if (isExplosion) if(auto* s = pm.GetSystem("Explosion")) s->Render(ctx, cl);
-  if (isWind) if(auto* s = pm.GetSystem("Wind")) s->Render(ctx, cl);
-  
-  if (isLaser) {
-    if(auto* s = pm.GetSystem("Laser")) s->Render(ctx, cl);
-    if(auto* s = pm.GetSystem("ImpactSpark")) s->Render(ctx, cl);
-  }
-  
-  if (isHitEffect) {
-    if(auto* s = pm.GetSystem("Flash")) s->Render(ctx, cl);
-    if(auto* s = pm.GetSystem("Ring")) s->Render(ctx, cl);
+  for (const auto& sysName : activeSystems_) {
+    if (auto* s = pm.GetSystem(sysName)) {
+      s->Render(ctx, cl);
+    }
   }
 
   RC::PreDraw2D(ctx, cl);
