@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <format>
 #include <string>
+#include <iostream>
 
 // 静的メンバの定義
 std::ofstream Log::sLogFile_;
@@ -64,6 +65,9 @@ void Log::Print(const std::string &message) {
   if (msg.empty() || msg.back() != '\n') {
     msg += "\n";
   }
+  
+  // 標準出力にも出力する（親コンソールにアタッチしている場合）
+  std::cout << msg << std::flush;
   
   // UTF-8 から wstring に変換して出力（日本語対応）
   Log logger;

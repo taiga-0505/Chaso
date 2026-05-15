@@ -176,10 +176,10 @@ Write-Host ""
 # Launch with working directory = project/ (matches VS debugger behavior)
 $process = Start-Process -FilePath $ExePath `
                          -WorkingDirectory $WorkingDir `
-                         -PassThru
+                         -NoNewWindow -PassThru -Wait
 
 Write-OK "ChasoApp launched (PID: $($process.Id))"
-Write-Info "Close the window or press Ctrl+C to exit."
+Write-Info "Process will run inline. Press Ctrl+C to force exit if stuck."
 
 # Wait for the process to exit
 $process.WaitForExit()

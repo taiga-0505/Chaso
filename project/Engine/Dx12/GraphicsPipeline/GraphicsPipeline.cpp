@@ -211,6 +211,8 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
     infoQueue->PopStorageFilter();
   }
 
+  isCacheFallback_ = false;
+
   // キャッシュ付きで失敗した場合：キャッシュを破棄してリトライ
   if (FAILED(hr) && cachedPSO.pCachedBlob != nullptr) {
     Log::Print(
@@ -223,6 +225,7 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
     d.CachedPSO = {}; // キャッシュなし
     pso_.Reset();
     hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
+    isCacheFallback_ = true;
   }
 
   assert(SUCCEEDED(hr));

@@ -100,6 +100,16 @@ void Device::Init(bool enableDebug, bool gpuValidation) {
 }
 
 
+// ============================================================================
+// D3D12 デバッグログの表示設定
+// ここで true / false を切り替えるだけで、各レベルのログ出力を制御できます
+// ============================================================================
+namespace {
+  constexpr bool kShowD3D12Info    = false; // INFO: PSOキャッシュなどの情報
+  constexpr bool kShowD3D12Warning = true;  // WARNING: リソース解放忘れなどの警告
+  constexpr bool kShowD3D12Error   = true;  // ERROR/CORRUPTION: 重大なエラー
+}
+
 void Device::SetupInfoQueue(bool breakOnError, bool muteInfo) {
 #ifdef _DEBUG
   if (!device_)
@@ -118,6 +128,31 @@ void Device::SetupInfoQueue(bool breakOnError, bool muteInfo) {
       iq->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
       iq->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, FALSE);
     }
+  }
+
+  ComPtr<ID3D12InfoQueue1> iq1;
+  if (SUCCEEDED(device_->QueryInterface(IID_PPV_ARGS(&iq1)))) {
+    DWORD callbackCookie = 0;
+    auto callback = [](D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity,
+                       D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext) {
+      
+      // 設定によるフィルタリング
+      if (Severity == D3D12_MESSAGE_SEVERITY_INFO && !kShowD3D12Info) return;
+      if (Severity == D3D12_MESSAGE_SEVERITY_WARNING && !kShowD3D12Warning) return;
+      if ((Severity == D3D12_MESSAGE_SEVERITY_ERROR || Severity == D3D12_MESSAGE_SEVERITY_CORRUPTION) && !kShowD3D12Error) return;
+
+      std::string sevStr;
+      switch (Severity) {
+      case D3D12_MESSAGE_SEVERITY_CORRUPTION: sevStr = "CORRUPTION"; break;
+      case D3D12_MESSAGE_SEVERITY_ERROR:      sevStr = "ERROR"; break;
+      case D3D12_MESSAGE_SEVERITY_WARNING:    sevStr = "WARNING"; break;
+      case D3D12_MESSAGE_SEVERITY_INFO:       sevStr = "INFO"; break;
+      case D3D12_MESSAGE_SEVERITY_MESSAGE:    sevStr = "MESSAGE"; break;
+      default:                                sevStr = "UNKNOWN"; break;
+      }
+      Log::Print(std::format("D3D12 {}: {}", sevStr, pDescription));
+    };
+    iq1->RegisterMessageCallback(callback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &callbackCookie);
   }
 #endif
 }

@@ -98,6 +98,10 @@ void RenderContext::Term() {
   prim2D_.reset();
   prim3D_.reset();
 
+  for (uint32_t i = 0; i < FrameResource::kFrameCount; ++i) {
+    frameResources_[i].Term();
+  }
+
   if (cameraCB_) {
     if (cameraCBMapped_) {
       cameraCB_->Unmap(0, nullptr);
