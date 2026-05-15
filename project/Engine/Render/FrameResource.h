@@ -38,6 +38,9 @@ public:
   /// @param frameIndex フレームインデックス（デバッグ名用）
   void Init(ID3D12Device *device, uint32_t frameIndex);
 
+  /// @brief リソースの解放
+  void Term();
+
   /// @brief フレーム開始時に呼び出し、書き込みカーソルを先頭にリセットする
   void Reset();
 

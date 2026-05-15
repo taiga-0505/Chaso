@@ -80,12 +80,12 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
                           psBC, rtvFmt_, dsvFmt_, e.desc.opt, cachedPSO);
 
       // キャッシュ不一致でフォールバックした場合に備え、新しい PSO をキャッシュに反映
-      if (auto blob = e.pipeline->GetSerializedBlob()) {
-        auto &cache = psoCache_[cacheKey];
-        std::vector<uint8_t> newData(
-            (uint8_t *)blob->GetBufferPointer(),
-            (uint8_t *)blob->GetBufferPointer() + blob->GetBufferSize());
-        if (newData != cache.psoData) {
+      if (e.pipeline->IsCacheFallback()) {
+        if (auto blob = e.pipeline->GetSerializedBlob()) {
+          auto &cache = psoCache_[cacheKey];
+          std::vector<uint8_t> newData(
+              (uint8_t *)blob->GetBufferPointer(),
+              (uint8_t *)blob->GetBufferPointer() + blob->GetBufferSize());
           cache.psoData = std::move(newData);
           cacheUpdated_ = true;
         }

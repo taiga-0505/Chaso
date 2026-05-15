@@ -103,6 +103,9 @@ public:
   /// @return ID3D12PipelineState
   ID3D12PipelineState *PSO() const { return pso_.Get(); }
 
+  /// @brief キャッシュの不一致などで再構築（フォールバック）が発生したか
+  bool IsCacheFallback() const { return isCacheFallback_; }
+
 private:
   /// @brief ルートシグネチャを構築する内部関数
   void
@@ -118,4 +121,5 @@ private:
   Microsoft::WRL::ComPtr<ID3D12Device> device_;      ///< デバイス
   Microsoft::WRL::ComPtr<ID3D12RootSignature> root_; ///< ルートシグネチャ
   Microsoft::WRL::ComPtr<ID3D12PipelineState> pso_;  ///< パイプラインステートオブジェクト
+  bool isCacheFallback_ = false;                     ///< キャッシュフォールバック発生フラグ
 };

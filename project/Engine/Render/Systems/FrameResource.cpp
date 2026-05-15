@@ -30,6 +30,22 @@ void FrameResource::Init(ID3D12Device *device, uint32_t frameIndex) {
                          frameIndex, cbCapacity_ / 1024, srvCapacity_ / 1024));
 }
 
+void FrameResource::Term() {
+  if (cbMapped_) {
+    cbHeap_->Unmap(0, nullptr);
+    cbMapped_ = nullptr;
+  }
+  cbHeap_.Reset();
+
+  if (srvMapped_) {
+    srvHeap_->Unmap(0, nullptr);
+    srvMapped_ = nullptr;
+  }
+  srvHeap_.Reset();
+
+  device_.Reset();
+}
+
 void FrameResource::Reset() {
   cbOffset_ = 0;
   srvOffset_ = 0;
