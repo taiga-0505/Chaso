@@ -206,6 +206,7 @@
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
     <ClCompile Include="Dx12\Dx12Core.cpp" />
+    <ClCompile Include="Dx12\Utility\ScreenCapture.cpp" />
     <ClCompile Include="Input\Controller\Controller.cpp" />
     <ClCompile Include="Input\Keyboard\Keyboard.cpp" />
     <ClCompile Include="Input\Mouse\Mouse.cpp" />
@@ -233,6 +234,7 @@
     <ClInclude Include="..\Engine\Dx12\DescriptorHeap\DescriptorHelpers.h" />
     <ClInclude Include="..\Engine\Dx12\Device\Device.h" />
     <ClInclude Include="..\Engine\Dx12\Dx12Core.h" />
+    <ClInclude Include="..\Engine\Dx12\Utility\ScreenCapture.h" />
     <ClInclude Include="..\Engine\Dx12\FixFps\FixFps.h" />
     <ClInclude Include="..\Engine\Dx12\GraphicsPipeline\GraphicsPipeline.h" />
     <ClInclude Include="..\Engine\Dx12\PipelineManager.h" />

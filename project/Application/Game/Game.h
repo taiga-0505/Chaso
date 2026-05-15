@@ -30,7 +30,7 @@ public:
   void Term();
 
   /// @brief デバッグ用（ImGui）シーン切替 UI を表示する
-  void DrawDebugUI();
+  void DrawDebugUI(SceneContext &ctx);
 
   /// @brief 外部からシーン遷移を要求する
   /// @param name 遷移先のシーン名
