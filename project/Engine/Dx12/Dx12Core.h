@@ -116,6 +116,9 @@ public:
   /// @return バックバッファの数
   UINT FrameCount() const { return swap_.FrameCount(); }
 
+  /// @brief スクリーンショット撮影をリクエストする
+  void RequestScreenshot() { requestScreenshot_ = true; }
+
   /// @brief ビューポートを設定
   /// @param vp ビューポート設定
   void SetViewport(const D3D12_VIEWPORT &vp) { viewport_ = vp; }
@@ -164,4 +167,5 @@ private:
   std::unique_ptr<FixFps> fixFps_; ///< FPS固定管理
   bool fixFpsEnabled_ = true;      ///< FPS固定有効フラグ
   StructuredBufferManager sbMgr_;  ///< 構造化バッファ管理
+  bool requestScreenshot_ = false; ///< スクリーンショット撮影要求フラグ
 };

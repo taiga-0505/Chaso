@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "imgui/imgui.h"
+#include "Dx12/Dx12Core.h"
 
 // === 各シーン ===
 #include "GameOverScene/GameOverScene.h"
@@ -64,7 +65,7 @@ const std::string &Game::CurrentSceneName() const {
   return sceneMgr_.CurrentName();
 }
 
-void Game::DrawDebugUI() {
+void Game::DrawDebugUI(SceneContext &ctx) {
 #if RC_ENABLE_IMGUI
 
 
@@ -103,6 +104,13 @@ void Game::DrawDebugUI() {
     const float fps = io.Framerate;
     ImGui::Text("FPS: %.1f", fps);
     ImGui::Text("Frame: %.3f ms", 1000.0f / (fps > 0.0f ? fps : 1.0f));
+
+    ImGui::Separator();
+    if (ImGui::Button("Capture Screenshot")) {
+      if (ctx.core) {
+        ctx.core->RequestScreenshot();
+      }
+    }
   }
   ImGui::End();
 

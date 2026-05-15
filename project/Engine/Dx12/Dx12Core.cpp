@@ -5,6 +5,7 @@
 #include "Common/Log/Log.h"
 #include "Dx12Core.h"
 #include "RC.h"
+#include "Utility/ScreenCapture.h"
 
 using Microsoft::WRL::ComPtr;
 // ---------- Debug helpers ----------
@@ -196,8 +197,16 @@ void Dx12Core::EndFrame() {
   // ====================
   // Present
   // ====================
-  // Close→Execute→Present
+  // Close→Execute
   cmd_.EndFrame();
+  
+  // スクリーンショット撮影要求があれば実行
+  if (requestScreenshot_) {
+    ScreenCapture::SaveScreenshot(device_.GetDevice(), cmd_.Queue(),
+                                  swap_.BackBuffer(backIndex_));
+    requestScreenshot_ = false;
+  }
+
   // vsync=1, tearingなら 0 でもOK（好みで）
   swap_.Present(1, 0);
   cmd_.WaitForFrame(backIndex_);

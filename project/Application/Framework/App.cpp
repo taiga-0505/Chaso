@@ -188,7 +188,7 @@ void App::Update() {
   // Debug UI
   // ====================
   // デバッグUI描画
-  game_.DrawDebugUI();
+  game_.DrawDebugUI(sceneCtx_);
 #endif
 
   // ====================
