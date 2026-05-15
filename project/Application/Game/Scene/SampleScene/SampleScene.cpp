@@ -183,6 +183,7 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   RC::SetCamera(view_, proj_, camera_.GetWorldPos());
 
+
   // === 天球回転 ===
   skydomeT_->rotation.y += 0.001f;
 }

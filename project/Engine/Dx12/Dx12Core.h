@@ -93,6 +93,10 @@ public:
   /// @return D3D12_CPU_DESCRIPTOR_HANDLE
   D3D12_CPU_DESCRIPTOR_HANDLE Dsv() const { return depth_.Dsv(); }
 
+  /// @brief 深度ステンシルリソースを取得
+  /// @return ID3D12Resourceへのポインタ
+  ID3D12Resource* GetDepthResource() const { return depth_.Resource(); }
+
   /// @brief SRV管理クラスを取得
   /// @return SRVManagerへの参照
   SRVManager &SRVMan() { return srvMgr_; }

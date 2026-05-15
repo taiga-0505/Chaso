@@ -5,6 +5,11 @@
 namespace RC {
 
 void CylinderParticle::Initialize(SceneContext &ctx) {
+  CylinderParam defaultParam;
+  Initialize(ctx, defaultParam);
+}
+
+void CylinderParticle::Initialize(SceneContext &ctx, const CylinderParam &param) {
   Particle::Initialize(ctx);
 
   // AutoSpawnを無効化（スクリプト・演出側から手動で放出するため）
@@ -16,13 +21,9 @@ void CylinderParticle::Initialize(SceneContext &ctx) {
   SetUseAccelerationField(false);
 
   // メッシュの生成
-  float topRadius = 1.0f;
-  float bottomRadius = 1.0f;
-  float height = 1.5f;
-  uint32_t segments = 32;
-
   ModelData md = MeshGenerator::GenerateEffectCylinder(
-      topRadius, bottomRadius, height, segments, 0.0f, 360.0f, false, true);
+      param.topRadius, param.bottomRadius, param.height, param.segments,
+      param.startAngle, param.endAngle, param.isVerticalUV, param.flipV);
 
   md.material.textureFilePath = GetTexturePath();
   InitializeWithModel(ctx, md);
@@ -32,6 +33,11 @@ void CylinderParticle::Initialize(SceneContext &ctx) {
 
   // CommonInit_ で生成された初期パーティクルをクリア
   particles.clear();
+}
+
+void CylinderParticle::Trigger(const Vector3 &pos) {
+  SetEmitterTranslation(pos);
+  AddParticlesFromEmitter();
 }
 
 void CylinderParticle::InitParticleCore(ParticleData &p, std::mt19937 &rng,
@@ -60,7 +66,7 @@ void CylinderParticle::UpdateOneParticle(ParticleData &p, float dt) {
   p.currentTime += dt;
 
   // Y軸回転
-  p.transform.rotation.y += dt * 2.0f;
+  p.transform.rotation.y += dt * rotationSpeedY_;
 }
 
 float CylinderParticle::ComputeAlpha(const ParticleData &p) const {

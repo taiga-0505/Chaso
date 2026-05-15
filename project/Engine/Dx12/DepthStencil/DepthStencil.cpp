@@ -61,7 +61,7 @@ void DepthStencil::createResource() {
   desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
   D3D12_CLEAR_VALUE clear{};
-  clear.Format = texFormat_;
+  clear.Format = dsvFormat_;
   clear.DepthStencil = {1.0f, 0};
 
   D3D12_HEAP_PROPERTIES heapProps{D3D12_HEAP_TYPE_DEFAULT};

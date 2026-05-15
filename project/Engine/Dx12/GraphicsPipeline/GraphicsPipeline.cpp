@@ -1,6 +1,7 @@
 #include "GraphicsPipeline.h"
 #include "Common/Log/Log.h"
 #include <dxcapi.h>
+#include <d3d12sdklayers.h>
 
 void GraphicsPipeline::Term() {
   // ====================
@@ -187,7 +188,28 @@ void GraphicsPipeline::BuildEx(const D3D12_INPUT_ELEMENT_DESC *inputElems,
   // キャッシュPSO設定
   d.CachedPSO = cachedPSO;
 
+  // -------------------------------------------------------------
+  // D3D12 Debug Layer のエラーブレークを一時的に無効化する
+  // (キャッシュ不一致による強制終了を回避してフォールバックさせるため)
+  // -------------------------------------------------------------
+  Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
+  bool pushedFilter = false;
+  if (SUCCEEDED(device_->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
+    D3D12_MESSAGE_ID denyIds[] = {D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH};
+    D3D12_INFO_QUEUE_FILTER filter{};
+    filter.DenyList.NumIDs = 1;
+    filter.DenyList.pIDList = denyIds;
+    if (SUCCEEDED(infoQueue->PushStorageFilter(&filter))) {
+      pushedFilter = true;
+    }
+  }
+
   HRESULT hr = device_->CreateGraphicsPipelineState(&d, IID_PPV_ARGS(&pso_));
+
+  // フィルター解除
+  if (pushedFilter && infoQueue) {
+    infoQueue->PopStorageFilter();
+  }
 
   // キャッシュ付きで失敗した場合：キャッシュを破棄してリトライ
   if (FAILED(hr) && cachedPSO.pCachedBlob != nullptr) {
@@ -222,7 +244,7 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   root_.Reset();
 
   D3D12_ROOT_PARAMETER params[9] = {};
-  D3D12_DESCRIPTOR_RANGE ranges[3] = {}; // t0(Tex), t1(EnvMap), Particle用
+  D3D12_DESCRIPTOR_RANGE ranges[4] = {}; // t0(Tex), t1(EnvMap), t1(Depth)等
   UINT paramCount = 0;
 
   switch (type) {
@@ -448,22 +470,49 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[1].Constants.RegisterSpace = 0;
     params[1].Constants.Num32BitValues = 4;
 
-    paramCount = 2;
+    // 2: SRV table t1 (PS) Depth Texture
+    ranges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[3].BaseShaderRegister = 1; // t1
+    ranges[3].NumDescriptors = 1;
+    ranges[3].OffsetInDescriptorsFromTableStart =
+        D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[2].DescriptorTable.NumDescriptorRanges = 1;
+    params[2].DescriptorTable.pDescriptorRanges = &ranges[3];
+
+    // 3: CBV b1 (PS) ProjectionInverse / Material
+    params[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[3].Descriptor.ShaderRegister = 1; // b1
+
+    paramCount = 4;
     break;
   }
 
   // ====================
   // Static Sampler
   // ====================
-  // 共通サンプラ設定
-  D3D12_STATIC_SAMPLER_DESC samp{};
-  samp.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-  samp.AddressU = samp.AddressV = samp.AddressW =
+  D3D12_STATIC_SAMPLER_DESC samplers[2] = {};
+  
+  // s0: Linear
+  samplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+  samplers[0].AddressU = samplers[0].AddressV = samplers[0].AddressW =
       D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-  samp.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-  samp.MaxLOD = D3D12_FLOAT32_MAX;
-  samp.ShaderRegister = 0;
-  samp.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+  samplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+  samplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+  samplers[0].ShaderRegister = 0;
+  samplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+  // s1: Point (for depth sampling etc)
+  samplers[1].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+  samplers[1].AddressU = samplers[1].AddressV = samplers[1].AddressW =
+      D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+  samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+  samplers[1].MaxLOD = D3D12_FLOAT32_MAX;
+  samplers[1].ShaderRegister = 1;
+  samplers[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
   // ====================
   // Serialize
@@ -473,8 +522,8 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
   desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
   desc.pParameters = params;
   desc.NumParameters = paramCount;
-  desc.pStaticSamplers = &samp;
-  desc.NumStaticSamplers = 1;
+  desc.pStaticSamplers = samplers;
+  desc.NumStaticSamplers = 2;
 
   Microsoft::WRL::ComPtr<ID3DBlob> sig;
   Microsoft::WRL::ComPtr<ID3DBlob> err;

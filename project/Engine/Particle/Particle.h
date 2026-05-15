@@ -124,6 +124,9 @@ public:
   /// @brief エミッタのグローバルスケールを設定する
   void SetEmitterScale(const Vector3 &s) { emitter_.globalScale = s; }
 
+  /// @brief デルタタイムを設定する
+  void SetDeltaTime(float dt) { deltaTime_ = dt; }
+
 protected:
   /// @brief 使用するテクスチャパスを取得する（派生クラスでオーバーライド）
   virtual const char *GetTexturePath() const;
@@ -141,7 +144,7 @@ protected:
   virtual float ComputeAlpha(const ParticleData &p) const;
 
   /// @brief 固定デルタタイムを取得する
-  float GetDeltaTime() const { return deltaTime; }
+  float GetDeltaTime() const { return deltaTime_; }
 
   /// @brief 個々のパーティクルの更新ロジック（派生クラスでオーバーライド）
   virtual void UpdateOneParticle(ParticleData &particle, float deltaTime);
@@ -200,7 +203,7 @@ private:
   RC::Vector2 uvTranslate_{0.0f, 0.0f}; ///< UV オフセット
   float uvRotate_ = 0.0f;               ///< UV 回転
 
-  float deltaTime = 1.0f / 60.0f; ///< 固定タイムステップ
+  float deltaTime_ = 1.0f / 60.0f; ///< タイムステップ
 
   std::random_device seedGenerator;           ///< 乱数シード
   std::mt19937 randomEngine{seedGenerator()}; ///< 乱数エンジン

@@ -37,16 +37,8 @@ private:
   float windRange_ = 6.0f;
   float windRadius_ = 0.4f;
 
-  bool isParticle = true;
-  bool isFire = false;
-  bool isRain = false;
-  bool isSnow = false;
-  bool isCircle = false;
-  bool isExplosion = false;
-  bool isLaser = false;
-  bool isWind = false;
-  bool isHitEffect = false;
-  bool isCylinder = false;
+  std::string currentMode_ = "Particle";
+  std::vector<std::string> activeSystems_ = {"Particle"};
 
   int guide;
 };

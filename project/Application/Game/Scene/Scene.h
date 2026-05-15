@@ -28,6 +28,7 @@ struct SceneContext {
   PostProcess *postProcess = nullptr;     ///< ポストプロセス管理
   BgmManager *bgmManager = nullptr;      ///< BGM 管理
   SeManager *seManager = nullptr;        ///< SE 管理
+  float deltaTime = 1.0f / 60.0f;        ///< 前フレームからの経過時間 (秒)
 };
 
 /// @class Scene

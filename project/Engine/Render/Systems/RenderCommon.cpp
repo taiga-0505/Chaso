@@ -168,6 +168,24 @@ bool HasPostEffect(::PostEffectType type) {
   return false;
 }
 
+void SetPostProcessOutlineColor(const float color[4]) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetOutlineColor(color);
+  }
+}
+
+void SetPostProcessOutlineWeight(float weight) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetOutlineWeight(weight);
+  }
+}
+
+void SetPostProcessOutlineThickness(float thickness) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetOutlineThickness(thickness);
+  }
+}
+
 #if RC_ENABLE_IMGUI
 void DrawPostEffectImGui(const char *label) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {

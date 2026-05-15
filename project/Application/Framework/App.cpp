@@ -83,7 +83,7 @@ bool App::Init() {
   pm_.RegisterDefaultPipelines();
 
   now = std::chrono::high_resolution_clock::now();
-  Log::Print(std::format("[App] PipelineManager 初期化完了 (Time: {:.3f}ms)", std::chrono::duration<float, std::milli>(now - stepStart).count()));
+  Log::Print(std::format("[App] PipelineManager 初期化完了(Time: {:.3f}ms)", std::chrono::duration<float, std::milli>(now - stepStart).count()));
   stepStart = now;
 
   // PostProcess
@@ -121,12 +121,19 @@ int App::Run() {
   // ====================
   // Main Loop
   // ====================
+  auto prevTime = std::chrono::high_resolution_clock::now();
+
   // メッセージループ
   while (msg_.message != WM_QUIT) {
     if (PeekMessage(&msg_, nullptr, 0, 0, PM_REMOVE)) {
       TranslateMessage(&msg_);
       DispatchMessage(&msg_);
     } else {
+      auto currentTime = std::chrono::high_resolution_clock::now();
+      sceneCtx_.deltaTime = std::chrono::duration<float>(currentTime - prevTime).count();
+      if (sceneCtx_.deltaTime > 0.1f) sceneCtx_.deltaTime = 0.1f; // clamp delta time
+      prevTime = currentTime;
+
 #if RC_ENABLE_IMGUI
       // ImGui フレーム開始
       imgui_.NewFrame();
