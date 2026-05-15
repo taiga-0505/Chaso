@@ -113,6 +113,14 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
 
   CompiledShader vs = compiler_.Compile(vsDesc);
   CompiledShader ps = compiler_.Compile(psDesc);
+  if (!vs.HasBlob()) {
+      Log::Print("[ERROR] VS Compile Failed!");
+      Log::Print(vs.Log());
+  }
+  if (!ps.HasBlob()) {
+      Log::Print("[ERROR] PS Compile Failed!");
+      Log::Print(ps.Log());
+  }
   assert(vs.HasBlob() && ps.HasBlob());
 
   return createFromBlobs_(key, desc, vs.Blob(), ps.Blob(), cachedPSO);
@@ -574,7 +582,7 @@ void PipelineManager::RegisterDefaultPipelines() {
   regSet("sprite", sprVs, sprPs, InputLayoutType::Sprite,
          RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_BACK);
 
-  // particle：深度ON、書き込みOFF（積む用）
+  // particle：深度ON、書き込みOFF
   regSet("particle", ptlVs, ptlPs, InputLayoutType::Particle,
          RootSignatureType::Particle, true, false, D3D12_CULL_MODE_NONE);
 
@@ -865,6 +873,21 @@ void PipelineManager::RegisterDefaultPipelines() {
     CreateFromFiles("boxfilter.none",
                     fullscreenVs,
                     L"Resources/Shader/BoxFilter/BoxFilter.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // depthbasedoutline：深度ベースアウトライン
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("depthbasedoutline.none",
+                    fullscreenVs,
+                    L"Resources/Shader/DepthBasedOutline/DepthBasedOutline.PS.hlsl",
                     InputLayoutType::None, opt);
   }
 

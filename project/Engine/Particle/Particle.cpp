@@ -188,7 +188,7 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
   }
 
   if (enableUpdate_ && useEmitterAutoSpawn_) {
-    emitter_.frequencyTime += deltaTime * emitter_.timeScale;
+    emitter_.frequencyTime += deltaTime_ * emitter_.timeScale;
     if (emitter_.frequencyTime >= emitter_.frequency) {
       // 周期が来たらパーティクルを追加
       std::vector<ParticleData> newBatch = Emit(emitter_, randomEngine);
@@ -221,7 +221,7 @@ void Particle::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
     }
 
     if (enableUpdate_) {
-      UpdateOneParticle(p, deltaTime * emitter_.timeScale);
+      UpdateOneParticle(p, deltaTime_ * emitter_.timeScale);
     }
 
     // numInstance が上限でも更新自体は行う
@@ -262,7 +262,7 @@ void Particle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
     return;
   }
 
-  if (!vbResource_ || instanceSrv_.ptr == 0 || vertexCount_ == 0) {
+  if (!vbResource_ || instanceSrv_.ptr == 0 || vertexCount_ == 0 || textureSrv_.ptr == 0) {
     return;
   }
 

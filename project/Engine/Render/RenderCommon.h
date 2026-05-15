@@ -905,10 +905,22 @@ void RemovePostEffect(::PostEffectType type);
 /// @brief エフェクトスタックを全クリアする
 void ClearPostEffects();
 
-/// @brief 指定エフェクトがスタックに含まれているか
-/// @param type ポストエフェクトタイプ
-/// @return 含まれていれば true
+/// @brief 指定したエフェクトが有効か確認する
+/// @param type エフェクトタイプ
+/// @return 有効なら true
 bool HasPostEffect(::PostEffectType type);
+
+/// @brief ポストプロセスのアウトライン色を設定する
+/// @param color 色（RGBA）
+void SetPostProcessOutlineColor(const float color[4]);
+
+/// @brief ポストプロセスのアウトライン検出の重みを設定する
+/// @param weight 重み
+void SetPostProcessOutlineWeight(float weight);
+
+/// @brief ポストプロセスのアウトラインのピクセル幅（太さ）を設定する
+/// @param thickness 太さ
+void SetPostProcessOutlineThickness(float thickness);
 
 /// @brief ポストエフェクトの ImGui 表示を行う
 /// @param label ラベル名

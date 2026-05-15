@@ -100,6 +100,10 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
     }
   }
 
+  if (alreadyExists) {
+    return id; // 既にロード中またはロード済みの場合はタスクを追加しない
+  }
+
   // 実際のロード処理（非同期タスクとして実行）
   auto task = std::async(std::launch::async, [this, npath, srgb] {
     try {

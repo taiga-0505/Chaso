@@ -6,6 +6,7 @@
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
 #include "Scene.h"
+#include "Graphics/PostProcess/PostProcess.h"
 #include <algorithm>
 #include <format>
 
@@ -135,6 +136,11 @@ void RenderContext::SetCamera(const Matrix4x4 &view, const Matrix4x4 &proj,
   if (cameraCBMapped_) {
     cameraCBMapped_->worldPos = camWorldPos;
     cameraCBMapped_->_pad = 0.0f;
+  }
+
+  if (postProcess_) {
+    Matrix4x4 projInv = Inverse(proj);
+    postProcess_->SetProjectionInverse(&projInv.m[0][0]);
   }
 }
 

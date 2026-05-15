@@ -78,7 +78,11 @@ void Dx12Core::Init(HWND hwnd, const Desc &d) {
   // Depth
   // ====================
   // 深度バッファ初期化
-  depth_.Init(dev, d.width, d.height, dsv_, d.dsvFormat, d.dsvFormat);
+  DXGI_FORMAT typelessFormat = DXGI_FORMAT_R24G8_TYPELESS;
+  if (d.dsvFormat == DXGI_FORMAT_D32_FLOAT) {
+      typelessFormat = DXGI_FORMAT_R32_TYPELESS;
+  }
+  depth_.Init(dev, d.width, d.height, dsv_, typelessFormat, d.dsvFormat);
 
   // ビューポート/シザー設定
   ResetViewportScissorToBackbuffer(d.width, d.height);

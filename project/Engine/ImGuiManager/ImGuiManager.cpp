@@ -1,5 +1,7 @@
 #include "ImGuiManager.h"
+#include "Log/Log.h"
 #include <cassert>
+#include <string>
 
 void ImGuiManager::reserveSrvSlotForImGui_(Dx12Core &core) {
   core.SRV().AllocateCPU(

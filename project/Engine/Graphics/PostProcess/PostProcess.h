@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <wrl/client.h>
+#include "Dx12/SRVManager/SRVManager.h"
 
 class Dx12Core;
 class PipelineManager;
@@ -17,6 +18,7 @@ enum class PostEffectType {
   Sepia,      ///< セピア調
   Vignette,   ///< ビネット（周辺減光）
   BoxFilter,  ///< ボックスフィルタ（平滑化）
+  DepthBasedOutline, ///< 深度ベースアウトライン
 };
 
 /// @class PostProcess
@@ -41,9 +43,24 @@ public:
   void Draw(ID3D12GraphicsCommandList *cmdList,
             const RenderTexture &renderTexture);
 
+  /// @brief プロジェクション逆行列を設定する (DepthBasedOutline等で使用)
+  void SetProjectionInverse(const float* projInv16);
+
   // ===========================
   // 単体エフェクト（後方互換）
   // ===========================
+
+  /// @brief アウトラインの色を設定する
+  void SetOutlineColor(const float color[4]);
+
+  /// @brief アウトラインの太さ（検出の重み）を設定する
+  void SetOutlineWeight(float weight);
+
+  /// @brief アウトラインのピクセル幅（太さ）を設定する
+  void SetOutlineThickness(float thickness);
+
+  /// @brief アウトラインの描画モード（0:両側, 1:外側, 2:内側）を設定する
+  void SetOutlineMode(int mode);
 
   /// @brief ポストエフェクトを1つだけ設定する
   /// @details 既存のエフェクトスタックをクリアして、指定されたエフェクトのみを設定します。
@@ -117,8 +134,27 @@ private:
   GraphicsPipeline *pipelineSepia_ = nullptr;
   GraphicsPipeline *pipelineVignette_ = nullptr;
   GraphicsPipeline *pipelineBoxFilter_ = nullptr;
+  GraphicsPipeline *pipelineDepthBasedOutline_ = nullptr;
 
   std::vector<PostEffectType> activeEffects_; ///< アクティブなエフェクトスタック（適用順）
+
+  // CBuffer (DepthBasedOutline等で使用)
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbufferMaterial_;
+  struct MaterialData {
+    float projectionInverse[16];
+    float outlineColor[4];
+    float outlineWeight;
+    float outlineThickness;
+    int outlineMode;
+    float padding;
+  };
+  MaterialData* mappedMaterial_ = nullptr;
+  SRVManager::Handle depthSrv_{};
+
+  float outlineColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+  float outlineWeight_ = 1.0f;
+  float outlineThickness_ = 1.0f;
+  int outlineMode_ = 0;
 
   // マルチパス用ピンポンテクスチャ
   std::unique_ptr<RenderTexture> pingPongA_;

@@ -15,6 +15,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::Sepia:     return "Sepia";
   case PostEffectType::Vignette:  return "Vignette";
   case PostEffectType::BoxFilter: return "BoxFilter";
+  case PostEffectType::DepthBasedOutline: return "DepthBasedOutline";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -58,6 +59,70 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineBoxFilter_ = pipelineManager_->Get("boxfilter.none");
   assert(pipelineBoxFilter_ && "Failed to get boxfilter pipeline");
+
+  pipelineDepthBasedOutline_ = pipelineManager_->Get("depthbasedoutline.none");
+  assert(pipelineDepthBasedOutline_ && "Failed to get depthbasedoutline pipeline");
+
+  // CBuffer 初期化
+  D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+  D3D12_RESOURCE_DESC cbDesc{};
+  cbDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+  cbDesc.Width = (sizeof(MaterialData) + 255) & ~255;
+  cbDesc.Height = 1;
+  cbDesc.DepthOrArraySize = 1;
+  cbDesc.MipLevels = 1;
+  cbDesc.Format = DXGI_FORMAT_UNKNOWN;
+  cbDesc.SampleDesc.Count = 1;
+  cbDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+  cbDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+  HRESULT hr = dxCore_->GetDevice()->CreateCommittedResource(
+      &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDesc,
+      D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+      IID_PPV_ARGS(&cbufferMaterial_));
+  assert(SUCCEEDED(hr));
+  cbufferMaterial_->Map(0, nullptr, reinterpret_cast<void **>(&mappedMaterial_));
+  
+  if (mappedMaterial_) {
+    memcpy(mappedMaterial_->outlineColor, outlineColor_, sizeof(float) * 4);
+    mappedMaterial_->outlineWeight = outlineWeight_;
+    mappedMaterial_->outlineThickness = outlineThickness_;
+    mappedMaterial_->outlineMode = outlineMode_;
+  }
+}
+
+void PostProcess::SetProjectionInverse(const float* projInv16) {
+  if (mappedMaterial_) {
+    memcpy(mappedMaterial_->projectionInverse, projInv16, sizeof(float) * 16);
+  }
+}
+
+void PostProcess::SetOutlineColor(const float color[4]) {
+  memcpy(outlineColor_, color, sizeof(float) * 4);
+  if (mappedMaterial_) {
+    memcpy(mappedMaterial_->outlineColor, color, sizeof(float) * 4);
+  }
+}
+
+void PostProcess::SetOutlineWeight(float weight) {
+  outlineWeight_ = weight;
+  if (mappedMaterial_) {
+    mappedMaterial_->outlineWeight = weight;
+  }
+}
+
+void PostProcess::SetOutlineThickness(float thickness) {
+  outlineThickness_ = thickness;
+  if (mappedMaterial_) {
+    mappedMaterial_->outlineThickness = thickness;
+  }
+}
+
+void PostProcess::SetOutlineMode(int mode) {
+  outlineMode_ = mode;
+  if (mappedMaterial_) {
+    mappedMaterial_->outlineMode = mode;
+  }
 }
 
 // ============================================================================
@@ -122,6 +187,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineVignette_;
   case PostEffectType::BoxFilter:
     return pipelineBoxFilter_;
+  case PostEffectType::DepthBasedOutline:
+    return pipelineDepthBasedOutline_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -174,6 +241,17 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
   }
 
   cmdList->SetGraphicsRoot32BitConstants(1, 4, &constants, 0);
+
+  if (effectType == PostEffectType::DepthBasedOutline) {
+    if (!depthSrv_.IsValid()) {
+      depthSrv_ = dxCore_->SRVMan().CreateTexture2D(
+          dxCore_->GetDepthResource(), DXGI_FORMAT_R24_UNORM_X8_TYPELESS, 1);
+    }
+    // params[2]: t1
+    cmdList->SetGraphicsRootDescriptorTable(2, depthSrv_.gpu);
+    // params[3]: b1
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferMaterial_->GetGPUVirtualAddress());
+  }
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
   cmdList->DrawInstanced(3, 1, 0, 0);
@@ -302,6 +380,34 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
     if (boxFilter) {
       ImGui::Indent();
       ImGui::SliderInt("K", &boxFilterK_, 1, 10);
+      ImGui::Unindent();
+    }
+
+    bool depthBasedOutline = HasEffect(PostEffectType::DepthBasedOutline);
+    if (ImGui::Checkbox("DepthBasedOutline", &depthBasedOutline)) {
+      if (depthBasedOutline) {
+        AddEffect(PostEffectType::DepthBasedOutline);
+      } else {
+        RemoveEffect(PostEffectType::DepthBasedOutline);
+      }
+    }
+
+    if (depthBasedOutline) {
+      ImGui::Indent();
+      bool changed = false;
+      if (ImGui::ColorEdit4("Outline Color", outlineColor_)) changed = true;
+      if (ImGui::SliderFloat("Outline Weight", &outlineWeight_, 0.0f, 20.0f)) changed = true;
+      if (ImGui::SliderFloat("Outline Thickness", &outlineThickness_, 0.1f, 10.0f)) changed = true;
+      
+      const char* modes[] = { "Both (両側)", "Outside (外側)", "Inside (内側)" };
+      if (ImGui::Combo("Outline Mode", &outlineMode_, modes, 3)) changed = true;
+
+      if (changed) {
+        SetOutlineColor(outlineColor_);
+        SetOutlineWeight(outlineWeight_);
+        SetOutlineThickness(outlineThickness_);
+        SetOutlineMode(outlineMode_);
+      }
       ImGui::Unindent();
     }
 
