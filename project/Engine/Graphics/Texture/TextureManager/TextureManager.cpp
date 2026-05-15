@@ -155,6 +155,27 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
   return id;
 }
 
+void TextureManager::Unload(TextureID id) {
+  std::lock_guard lock(mtx_);
+  auto it = idToPath_.find(id);
+  if (it == idToPath_.end())
+    return;
+
+  std::string path = it->second;
+  auto itTex = cache_.find(path);
+  if (itTex != cache_.end()) {
+    itTex->second.Term(srv_);
+    cache_.erase(itTex);
+  }
+
+  pathToId_.erase(path);
+  idToPath_.erase(it);
+
+  // ログ履歴からも消しておく（再度ロードした時にログが出るように）
+  loggedPaths_.erase(path);
+  Log::Print(std::format("[Texture] 破棄完了: {}", path));
+}
+
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrv(TextureID id) const {
   std::lock_guard lock(mtx_);
   static D3D12_GPU_DESCRIPTOR_HANDLE nullHandle{}; // 失敗時用

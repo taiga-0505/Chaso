@@ -119,6 +119,11 @@ public:
   /// @brief スクリーンショット撮影をリクエストする
   void RequestScreenshot() { requestScreenshot_ = true; }
 
+  /// @brief 最新のスクリーンショットのパスを取得
+  const std::string &GetLatestScreenshotPath() const { return latestScreenshotPath_; }
+  /// @brief スクリーンショットのパスをクリア
+  void ClearLatestScreenshotPath() { latestScreenshotPath_.clear(); }
+
   /// @brief ビューポートを設定
   /// @param vp ビューポート設定
   void SetViewport(const D3D12_VIEWPORT &vp) { viewport_ = vp; }
@@ -168,4 +173,5 @@ private:
   bool fixFpsEnabled_ = true;      ///< FPS固定有効フラグ
   StructuredBufferManager sbMgr_;  ///< 構造化バッファ管理
   bool requestScreenshot_ = false; ///< スクリーンショット撮影要求フラグ
+  std::string latestScreenshotPath_; ///< 最新のスクリーンショットパス
 };

@@ -51,6 +51,10 @@ public:
   /// @return テクスチャ ID
   TextureID LoadID(const std::string &path, bool srgb = true);
 
+  /// @brief ID 指定でテクスチャを解放する
+  /// @param id 解放するテクスチャ ID
+  void Unload(TextureID id);
+
   /// @brief ID から GPU 上の SRV ハンドルを取得する
   /// @param id テクスチャ ID
   /// @return GPU 記述子ハンドル

@@ -1,6 +1,10 @@
 #include "Game.h"
 #include "imgui/imgui.h"
 #include "Dx12/Dx12Core.h"
+#include "Dx12/Utility/ScreenCapture.h"
+#include "Render/RenderContext.h"
+#include <shellapi.h>
+#include <filesystem>
 
 // === 各シーン ===
 #include "GameOverScene/GameOverScene.h"
@@ -68,7 +72,6 @@ const std::string &Game::CurrentSceneName() const {
 void Game::DrawDebugUI(SceneContext &ctx) {
 #if RC_ENABLE_IMGUI
 
-
 #ifdef _DEBUG
   ImGui::Begin("Scene");
   const char *sceneNames[] = {"Title",    "Select", "Game",     "Result",
@@ -114,7 +117,9 @@ void Game::DrawDebugUI(SceneContext &ctx) {
   }
   ImGui::End();
 
-#endif
+  // === Screenshot Pop-out ===
+  ScreenCapture::DrawImGui(ctx.deltaTime, ctx.core);
 
+#endif
 #endif
 }
