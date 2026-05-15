@@ -4,11 +4,19 @@
 #include <format>
 #include <chrono>
 #include "Common/Log/Log.h"
+#include "imgui/imgui.h"
+#include "Render/RenderContext.h"
+#include "Dx12/Dx12Core.h"
+#include <shellapi.h>
 
 using namespace Microsoft::WRL;
 
-bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* queue, ID3D12Resource* backBuffer) {
-    if (!device || !queue || !backBuffer) return false;
+using namespace Microsoft::WRL;
+
+ScreenCapture::NotifyData ScreenCapture::notify_;
+
+std::string ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* queue, ID3D12Resource* backBuffer) {
+    if (!device || !queue || !backBuffer) return "";
 
     // 1. リソース情報の取得
     D3D12_RESOURCE_DESC desc = backBuffer->GetDesc();
@@ -44,7 +52,7 @@ bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* que
 
     if (FAILED(hr)) {
         Log::Print("[ScreenCapture] Failed to create readback resource.");
-        return false;
+        return "";
     }
 
     // 3. コピー用コマンドの作成と実行
@@ -54,7 +62,6 @@ bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* que
     device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, allocator.Get(), nullptr, IID_PPV_ARGS(&cl));
 
     // バリア: PRESENT (または現在の状態) -> COPY_SOURCE
-    // ※ 呼び出し元が EndFrame の直後であれば PRESENT 状態のはず
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = backBuffer;
@@ -101,7 +108,7 @@ bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* que
     hr = readbackResource->Map(0, nullptr, &mappedData);
     if (FAILED(hr)) {
         Log::Print("[ScreenCapture] Failed to map readback resource.");
-        return false;
+        return "";
     }
 
     DirectX::Image image;
@@ -113,11 +120,9 @@ bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* que
     image.pixels = reinterpret_cast<uint8_t*>(mappedData);
 
     CreateScreenshotDirectory();
-    std::string fileName = "screenshots/" + GenerateTimestampFileName() + ".png";
+    std::string fileName = "../screenshots/" + GenerateTimestampFileName() + ".png";
     
     // WIC保存用にフォーマット調整
-    // バックバッファが UNORM でも、中身は sRGB (gamma) 空間のデータであるため、
-    // SaveToWICFile に sRGB であることを伝えて二重ガンマ補正を防ぐ。
     if (image.format == DXGI_FORMAT_R8G8B8A8_UNORM) {
         image.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     }
@@ -131,16 +136,95 @@ bool ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQueue* que
 
     if (FAILED(hr)) {
         Log::Print(std::format("[ScreenCapture] Failed to save screenshot. HRESULT={:08X}", (uint32_t)hr));
-        return false;
+        return "";
     }
 
     Log::Print(std::format("[ScreenCapture] Screenshot saved: {}", fileName));
-    return true;
+    return fileName;
+}
+
+void ScreenCapture::DrawImGui(float deltaTime, Dx12Core* core) {
+    if (!core) return;
+
+    // === 前フレームで破棄予約されたテクスチャを実際に解放 ===
+    if (notify_.pendingUnloadHandle >= 0) {
+        RC::GetRenderContext().Textures().Unload(notify_.pendingUnloadHandle);
+        notify_.pendingUnloadHandle = -1;
+    }
+
+    // === 新しいスクリーンショットを検知 ===
+    const std::string& capturePath = core->GetLatestScreenshotPath();
+    if (!capturePath.empty()) {
+        notify_.path = capturePath;
+        // テクスチャとしてロード (RC経由)
+        notify_.texHandle = RC::GetRenderContext().Textures().LoadID(capturePath, true);
+        notify_.timer = kNotifyDisplayTime;
+        notify_.active = true;
+        core->ClearLatestScreenshotPath();
+    }
+
+    if (notify_.active) {
+        notify_.timer -= deltaTime;
+        if (notify_.timer <= 0.0f) {
+            notify_.active = false;
+            // 表示が終わったら次フレームで破棄するように予約
+            if (notify_.texHandle >= 0) {
+                notify_.pendingUnloadHandle = notify_.texHandle;
+                notify_.texHandle = -1;
+            }
+        }
+
+        // ポップアウト表示 (左下)
+        float alpha = 1.0f;
+        if (notify_.timer < 1.0f) {
+            alpha = notify_.timer; // 残り1秒でフェードアウト
+        }
+
+        ImGui::SetNextWindowPos(ImVec2(10, ImGui::GetIO().DisplaySize.y - 160), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(220, 0)); // 自動高さ
+        ImGui::SetNextWindowBgAlpha(alpha * 0.7f);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+
+        ImGuiWindowFlags notifyFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+                                      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+                                      ImGuiWindowFlags_NoNav;
+
+        if (ImGui::Begin("ScreenshotNotify", nullptr, notifyFlags)) {
+            ImGui::Text("Screenshot Saved!");
+            if (notify_.texHandle >= 0) {
+                D3D12_GPU_DESCRIPTOR_HANDLE srv = RC::GetRenderContext().Textures().GetSrv(notify_.texHandle);
+                if (srv.ptr != 0) {
+                    if (ImGui::ImageButton("##ScreenshotThumb", (ImTextureID)srv.ptr, ImVec2(200, 112))) {
+                        // クリックでファイルを開く
+                        std::filesystem::path p(notify_.path);
+                        std::wstring absPath = std::filesystem::absolute(p).wstring();
+                        ShellExecuteW(NULL, NULL, absPath.c_str(), NULL, NULL, SW_SHOW);
+
+                        notify_.active = false;
+                        // クリックされたら次フレームで破棄するように予約
+                        if (notify_.texHandle >= 0) {
+                            notify_.pendingUnloadHandle = notify_.texHandle;
+                            notify_.texHandle = -1;
+                        }
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Click to open file");
+                    }
+                } else {
+                    // ロード中はプレースホルダを表示
+                    ImGui::Dummy(ImVec2(200, 112));
+                    ImGui::Text("Loading...");
+                }
+            }
+        }
+        ImGui::End();
+        ImGui::PopStyleVar();
+    }
 }
 
 void ScreenCapture::CreateScreenshotDirectory() {
-    if (!std::filesystem::exists("screenshots")) {
-        std::filesystem::create_directory("screenshots");
+    if (!std::filesystem::exists("../screenshots")) {
+        std::filesystem::create_directory("../screenshots");
     }
 }
 

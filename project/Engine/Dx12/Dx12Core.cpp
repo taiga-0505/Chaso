@@ -202,7 +202,7 @@ void Dx12Core::EndFrame() {
   
   // スクリーンショット撮影要求があれば実行
   if (requestScreenshot_) {
-    ScreenCapture::SaveScreenshot(device_.GetDevice(), cmd_.Queue(),
+    latestScreenshotPath_ = ScreenCapture::SaveScreenshot(device_.GetDevice(), cmd_.Queue(),
                                   swap_.BackBuffer(backIndex_));
     requestScreenshot_ = false;
   }
