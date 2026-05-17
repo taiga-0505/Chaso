@@ -1,10 +1,13 @@
 #include "ScreenCapture.h"
+#include "Common/EngineConfig.h"
 #include "DirectXTex/DirectXTex.h"
 #include <filesystem>
 #include <format>
 #include <chrono>
 #include "Common/Log/Log.h"
+#if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
+#endif
 #include "Render/RenderContext.h"
 #include "Dx12/Dx12Core.h"
 #include <shellapi.h>
@@ -144,6 +147,7 @@ std::string ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQue
 }
 
 void ScreenCapture::DrawImGui(float deltaTime, Dx12Core* core) {
+#if RC_ENABLE_IMGUI
     if (!core) return;
 
     // === 前フレームで破棄予約されたテクスチャを実際に解放 ===
@@ -220,6 +224,7 @@ void ScreenCapture::DrawImGui(float deltaTime, Dx12Core* core) {
         ImGui::End();
         ImGui::PopStyleVar();
     }
+#endif
 }
 
 void ScreenCapture::CreateScreenshotDirectory() {

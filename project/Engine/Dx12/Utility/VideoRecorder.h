@@ -37,7 +37,19 @@ public:
     const std::string& GetLatestRecordPath() const { return latestPath_; }
     void ClearLatestRecordPath() { latestPath_.clear(); }
 
+    /// @brief 通知UIの表示時間（秒）
+    static constexpr float kNotifyDisplayTime = 3.0f;
+
+    /// @brief ImGuiの描画（録画ボタンや通知UI等）
+    void DrawImGui(float deltaTime, class Dx12Core* core);
+
 private:
+    struct NotifyData {
+        std::string path;
+        float timer = 0.0f;
+        bool active = false;
+    };
+    NotifyData notify_;
     bool InitializeMF();
     void TerminateMF();
     bool SetupSinkWriter(const std::wstring& path, UINT width, UINT height, UINT fps);
