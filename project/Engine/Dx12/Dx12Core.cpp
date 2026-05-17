@@ -207,6 +207,11 @@ void Dx12Core::EndFrame() {
     requestScreenshot_ = false;
   }
 
+  // ビデオ録画の更新
+  if (videoRecorder_.IsRecording()) {
+    videoRecorder_.Update(swap_.BackBuffer(backIndex_));
+  }
+
   // vsync=1, tearingなら 0 でもOK（好みで）
   swap_.Present(1, 0);
   cmd_.WaitForFrame(backIndex_);
@@ -273,5 +278,17 @@ void Dx12Core::EnableFixFps(bool enable) {
     }
   } else {
     fixFps_.reset();
+  }
+}
+
+void Dx12Core::StartRecording() {
+  if (!videoRecorder_.IsRecording()) {
+    videoRecorder_.Start(device_.GetDevice(), cmd_.Queue(), desc_.width, desc_.height, 60, desc_.rtvFormat);
+  }
+}
+
+void Dx12Core::StopRecording() {
+  if (videoRecorder_.IsRecording()) {
+    videoRecorder_.Stop();
   }
 }

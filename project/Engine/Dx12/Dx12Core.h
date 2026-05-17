@@ -8,6 +8,7 @@
 #include "SRVManager/SRVManager.h"
 #include "StructuredBufferManager/StructuredBufferManager.h"
 #include "SwapChain/SwapChain.h"
+#include "Utility/VideoRecorder.h"
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <memory>
@@ -124,6 +125,13 @@ public:
   /// @brief スクリーンショットのパスをクリア
   void ClearLatestScreenshotPath() { latestScreenshotPath_.clear(); }
 
+  /// @brief ビデオ録画を開始する
+  void StartRecording();
+  /// @brief ビデオ録画を停止する
+  void StopRecording();
+  /// @brief VideoRecorder のインスタンスを取得する
+  VideoRecorder& GetVideoRecorder() { return videoRecorder_; }
+
   /// @brief ビューポートを設定
   /// @param vp ビューポート設定
   void SetViewport(const D3D12_VIEWPORT &vp) { viewport_ = vp; }
@@ -174,4 +182,5 @@ private:
   StructuredBufferManager sbMgr_;  ///< 構造化バッファ管理
   bool requestScreenshot_ = false; ///< スクリーンショット撮影要求フラグ
   std::string latestScreenshotPath_; ///< 最新のスクリーンショットパス
+  VideoRecorder videoRecorder_;    ///< ビデオ録画管理
 };

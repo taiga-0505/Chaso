@@ -114,6 +114,20 @@ void Game::DrawDebugUI(SceneContext &ctx) {
         ctx.core->RequestScreenshot();
       }
     }
+
+    if (ctx.core) {
+      bool isRecording = ctx.core->GetVideoRecorder().IsRecording();
+      if (isRecording) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Recording...");
+        if (ImGui::Button("Stop Recording")) {
+          ctx.core->StopRecording();
+        }
+      } else {
+        if (ImGui::Button("Start Recording")) {
+          ctx.core->StartRecording();
+        }
+      }
+    }
   }
   ImGui::End();
 

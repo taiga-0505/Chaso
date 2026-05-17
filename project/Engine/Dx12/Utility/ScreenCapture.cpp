@@ -120,7 +120,7 @@ std::string ScreenCapture::SaveScreenshot(ID3D12Device* device, ID3D12CommandQue
     image.pixels = reinterpret_cast<uint8_t*>(mappedData);
 
     CreateScreenshotDirectory();
-    std::string fileName = "../screenshots/" + GenerateTimestampFileName() + ".png";
+    std::string fileName = "../media/screenshots/" + GenerateTimestampFileName() + ".png";
     
     // WIC保存用にフォーマット調整
     if (image.format == DXGI_FORMAT_R8G8B8A8_UNORM) {
@@ -223,8 +223,11 @@ void ScreenCapture::DrawImGui(float deltaTime, Dx12Core* core) {
 }
 
 void ScreenCapture::CreateScreenshotDirectory() {
-    if (!std::filesystem::exists("../screenshots")) {
-        std::filesystem::create_directory("../screenshots");
+    if (!std::filesystem::exists("../media")) {
+        std::filesystem::create_directory("../media");
+    }
+    if (!std::filesystem::exists("../media/screenshots")) {
+        std::filesystem::create_directory("../media/screenshots");
     }
 }
 
