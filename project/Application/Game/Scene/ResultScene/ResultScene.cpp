@@ -31,7 +31,7 @@ void ResultScene::OnEnter(SceneContext &ctx) {
 
   // ======= ポストエフェクト =======
   if (ctx.postProcess) {
-    //ctx.postProcess->AddEffect(PostEffectType::Sepia);
+    ctx.postProcess->AddEffect(PostEffectType::Sepia);
   }
 }
 
