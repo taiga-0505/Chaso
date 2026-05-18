@@ -2,6 +2,7 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+#include "Graphics/PostProcess/PostProcess.h"
 
 GameOverScene::~GameOverScene() {
   SceneContext dummy{};
@@ -27,9 +28,18 @@ void GameOverScene::OnEnter(SceneContext &ctx) {
   gameOverSprite = RC::LoadSprite("Resources/UI/GameOver.png", ctx);
 
   RC::SetSpriteScreenSize(gameOverSprite, 1280, 720);
+
+  // ======= ポストエフェクト =======
+  if (ctx.postProcess) {
+    ctx.postProcess->AddEffect(PostEffectType::Grayscale);
+  }
 }
 
-void GameOverScene::OnExit(SceneContext &ctx) {}
+void GameOverScene::OnExit(SceneContext &ctx) {
+  if (ctx.postProcess) {
+    ctx.postProcess->ClearEffects();
+  }
+}
 
 void GameOverScene::Update(SceneManager &sm, SceneContext &ctx) {
 

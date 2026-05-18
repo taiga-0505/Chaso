@@ -2,6 +2,7 @@
 #include "RenderCommon.h"
 #include "SceneManager.h"
 #include "StageSelection/StageSelection.h"
+#include "Graphics/PostProcess/PostProcess.h"
 
 GameScene::~GameScene() {
   SceneContext dummy{};
@@ -140,9 +141,19 @@ void GameScene::OnEnter(SceneContext &ctx) {
 
   keyGuideSprite_ = RC::LoadSprite("Resources/UI/key.png", ctx);
   RC::SetSpriteScreenSize(keyGuideSprite_, 1280, 720);
+
+  // ======= ポストエフェクト初期設定 =======
+  if (ctx.postProcess) {
+    ctx.postProcess->AddEffect(PostEffectType::Vignette);
+    ctx.postProcess->AddEffect(PostEffectType::DepthBasedOutline);
+  }
 }
 
-void GameScene::OnExit(SceneContext &) {
+void GameScene::OnExit(SceneContext &ctx) {
+  if (ctx.postProcess) {
+    ctx.postProcess->ClearEffects();
+  }
+
   RC::UnloadModel(playerModel);
   playerModel = -1;
   RC::UnloadModel(blockModel);
@@ -191,9 +202,15 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
     if (isPaused_) {
       // 黒い半透明を貼る
       pauseOverlay_.Start(Fade::Status::kOverlay, 0.0f, pauseOverlayAlpha_);
+      if (ctx.postProcess) {
+        ctx.postProcess->AddEffect(PostEffectType::BoxFilter);
+      }
     } else {
       // 解除（描画しないので Stop は必須じゃないけど、気持ちよく）
       pauseOverlay_.Stop();
+      if (ctx.postProcess) {
+        ctx.postProcess->RemoveEffect(PostEffectType::BoxFilter);
+      }
     }
   }
 
@@ -305,6 +322,9 @@ void GameScene::Update(SceneManager &sm, SceneContext &ctx) {
 
       if (dx < 0.6f && dy < 0.6f) {
         reachedGoal_ = true;
+        if (ctx.postProcess) {
+          ctx.postProcess->AddEffect(PostEffectType::RadialBlur);
+        }
         g->Reach();
         sm.RequestChange("Result");
         break;

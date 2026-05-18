@@ -2,6 +2,7 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "SceneManager.h"
+#include "Graphics/PostProcess/PostProcess.h"
 
 ResultScene::~ResultScene() {
   SceneContext dummy{};
@@ -27,9 +28,18 @@ void ResultScene::OnEnter(SceneContext &ctx) {
   clearSprite = RC::LoadSprite("Resources/UI/Clear.png", ctx);
 
   RC::SetSpriteScreenSize(clearSprite, 1280, 720);
+
+  // ======= ポストエフェクト =======
+  if (ctx.postProcess) {
+    //ctx.postProcess->AddEffect(PostEffectType::Sepia);
+  }
 }
 
-void ResultScene::OnExit(SceneContext &ctx) {}
+void ResultScene::OnExit(SceneContext &ctx) {
+  if (ctx.postProcess) {
+    ctx.postProcess->ClearEffects();
+  }
+}
 
 void ResultScene::Update(SceneManager &sm, SceneContext &ctx) {
 
