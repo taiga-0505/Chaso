@@ -87,7 +87,8 @@ bool App::Init() {
   stepStart = now;
 
   // PostProcess
-  renderTexture_.Initialize(&core_, appConfig_.width, appConfig_.height);
+  // オフスクリーンレンダリング用のテクスチャを初期化（PSOと同じRTVフォーマットを使用）
+  renderTexture_.Initialize(&core_, appConfig_.width, appConfig_.height, coreDesc_.rtvFormat);
   postProcess_ = std::make_unique<PostProcess>();
   postProcess_->Initialize(&core_, &pm_, appConfig_.width, appConfig_.height);
 

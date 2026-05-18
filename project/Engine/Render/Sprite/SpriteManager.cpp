@@ -41,7 +41,12 @@ Sprite2D *SpriteManager::Get(int handle) {
   if (!IsValid(handle)) {
     return nullptr;
   }
-  return sprites_[handle].ptr.get();
+  auto& s = sprites_[handle];
+  // 非同期ロード完了後にSRVハンドルを遅延取得する
+  if (s.ptr->GetTexture().ptr == 0 && s.texHandle >= 0 && texman_) {
+    s.ptr->SetTexture(texman_->GetSrv(s.texHandle));
+  }
+  return s.ptr.get();
 }
 
 const Sprite2D *SpriteManager::Get(int handle) const {
@@ -133,6 +138,11 @@ void SpriteManager::DrawRect(int handle, float srcX, float srcY, float srcW,
   auto *sp = Get(handle);
   if (!sp) {
     return;
+  }
+
+  // 非同期ロード完了後にSRVハンドルを遅延取得する
+  if (sp->GetTexture().ptr == 0 && sprites_[handle].texHandle >= 0 && texman_) {
+    sp->SetTexture(texman_->GetSrv(sprites_[handle].texHandle));
   }
 
   // 入力が壊れている場合は安全に無視
