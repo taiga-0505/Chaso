@@ -220,7 +220,7 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   // ===========================================
   RC::PreDraw2D(ctx, cl);
 
-  // RC::DrawSprite(sprite);
+  RC::DrawSprite(sprite);
 
   // RC::SetFogOverlayColor(fogColor_); // ちょい青
   // if (isFogEnabled_) {

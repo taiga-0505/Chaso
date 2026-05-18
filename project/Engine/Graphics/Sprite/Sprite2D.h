@@ -43,6 +43,10 @@ public:
   /// @param srv テクスチャの GPU ハンドル
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srv) { srv_ = srv; }
 
+  /// @brief 使用するテクスチャ（SRV）を取得する
+  /// @return テクスチャの GPU ハンドル
+  const D3D12_GPU_DESCRIPTOR_HANDLE &GetTexture() const { return srv_; }
+
   /// @brief 画面サイズを更新する
   /// @param w 幅
   /// @param h 高さ
