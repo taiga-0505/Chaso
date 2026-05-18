@@ -25,9 +25,17 @@ void GameOverScene::OnEnter(SceneContext &ctx) {
   skydomeT_ = RC::GetSkydomeTransformPtr(skydomeModel);
   RC::SetSkydomeColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
 
-  gameOverSprite = RC::LoadSprite("Resources/UI/GameOver.png", ctx);
-
-  RC::SetSpriteScreenSize(gameOverSprite, 1280, 720);
+  gameOverModel = RC::LoadModel("Resources/UI/GameOver.obj");
+  gameOverModelT_ = RC::GetModelTransformPtr(gameOverModel);
+  tx_white = RC::LoadTex("Resources/white1x1.png");
+  RC::SetModelColor(gameOverModel, {1.0f, 0.2f, 0.2f, 1.0f}); // 少し赤っぽくしておく
+  // カメラ位置(0, 5, -20)に対して、正面の距離に配置する
+  if (gameOverModelT_) {
+    gameOverModelT_->translation = {0.0f, 5.0f, -10.0f};
+    gameOverModelT_->scale = {1.0f, 1.0f, 1.0f};
+    gameOverModelT_->rotation.y = 3.14159f;
+    gameOverModelT_->rotation.x = 1.5708f;
+  }
 
   // ======= ポストエフェクト =======
   if (ctx.postProcess) {
@@ -39,6 +47,8 @@ void GameOverScene::OnExit(SceneContext &ctx) {
   if (ctx.postProcess) {
     ctx.postProcess->ClearEffects();
   }
+  
+  RC::UnloadModel(gameOverModel);
 }
 
 void GameOverScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -72,8 +82,8 @@ void GameOverScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::PreDraw3D(ctx, cl);
 
   RC::DrawSkydome(skydomeModel);
+  
+  RC::DrawModel(gameOverModel, tx_white);
 
   RC::PreDraw2D(ctx, cl);
-
-  RC::DrawSprite(gameOverSprite);
 }

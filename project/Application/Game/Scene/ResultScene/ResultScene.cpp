@@ -25,9 +25,17 @@ void ResultScene::OnEnter(SceneContext &ctx) {
   skydomeT_ = RC::GetSkydomeTransformPtr(skydomeModel);
   RC::SetSkydomeColor(skydomeModel, {0.6f, 1.0f, 1.0f, 1.0f});
 
-  clearSprite = RC::LoadSprite("Resources/UI/Clear.png", ctx);
-
-  RC::SetSpriteScreenSize(clearSprite, 1280, 720);
+  clearModel = RC::LoadModel("Resources/UI/Clear.obj");
+  clearModelT_ = RC::GetModelTransformPtr(clearModel);
+  tx_white = RC::LoadTex("Resources/white1x1.png");
+  RC::SetModelColor(clearModel, {1.0f, 1.0f, 1.0f, 1.0f}); // 白色
+  // カメラ位置(0, 5, -20)に対して、正面の距離に配置する
+  if (clearModelT_) {
+    clearModelT_->translation = {0.0f, 5.0f, -10.0f};
+    clearModelT_->scale = {1.0f, 1.0f, 1.0f};
+    clearModelT_->rotation.y = 3.14159f;
+    clearModelT_->rotation.x = 1.5708f;
+  }
 
   // ======= ポストエフェクト =======
   if (ctx.postProcess) {
@@ -39,6 +47,8 @@ void ResultScene::OnExit(SceneContext &ctx) {
   if (ctx.postProcess) {
     ctx.postProcess->ClearEffects();
   }
+  
+  RC::UnloadModel(clearModel);
 }
 
 void ResultScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -73,8 +83,7 @@ void ResultScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
   RC::DrawSkydome(skydomeModel);
 
+  RC::DrawModel(clearModel, tx_white);
+
   RC::PreDraw2D(ctx, cl);
-
-  RC::DrawSprite(clearSprite);
-
 }

@@ -30,5 +30,7 @@ private:
   // ======= トランスフォーム参照 =======
   Transform *skydomeT_ = nullptr;
 
-  int clearSprite = -1;
+  int clearModel = -1;
+  Transform *clearModelT_ = nullptr;
+  int tx_white = -1;
 };
