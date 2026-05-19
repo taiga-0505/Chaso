@@ -33,4 +33,6 @@ private:
   int gameOverModel = -1;
   Transform *gameOverModelT_ = nullptr;
   int tx_white = -1;
+  
+  float noiseIntensity_ = 0.0f;
 };

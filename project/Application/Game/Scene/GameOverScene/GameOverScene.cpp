@@ -40,7 +40,12 @@ void GameOverScene::OnEnter(SceneContext &ctx) {
   // ======= ポストエフェクト =======
   if (ctx.postProcess) {
     ctx.postProcess->AddEffect(PostEffectType::Grayscale);
+    ctx.postProcess->AddEffect(PostEffectType::RandomNoise);
   }
+
+  noiseIntensity_ = 0.0f;
+  RC::SetRandomNoiseIntensity(noiseIntensity_);
+  RC::SetRandomNoiseColor(1.0f, 1.0f, 1.0f); // 初期は白ノイズ
 }
 
 void GameOverScene::OnExit(SceneContext &ctx) {
@@ -57,6 +62,11 @@ void GameOverScene::Update(SceneManager &sm, SceneContext &ctx) {
   // 固定デルタタイム
   const float dt = 1.0f / 60.0f;
   camera_.Update(dt);
+
+  // 徐々にノイズを強くする演出
+  noiseIntensity_ += dt * 0.2f; // 約5秒で強度が最大(1.0)になるペース
+  if (noiseIntensity_ > 0.85f) noiseIntensity_ = 0.85f; // 最大でも0.85に抑える（少し元絵を残す）
+  RC::SetRandomNoiseIntensity(noiseIntensity_);
 
   // ======= ビュー・プロジェクション更新 =======
   view_ = camera_.GetView();
