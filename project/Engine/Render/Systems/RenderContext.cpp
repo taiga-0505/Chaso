@@ -74,6 +74,11 @@ void RenderContext::Init(SceneContext &ctx) {
   frameIndex_ = 0;
 
   initialized_ = true;
+
+  // Dissolve ノイズテクスチャ初期化 (TextureManager が有効な状態で行う)
+  if (postProcess_) {
+    postProcess_->InitDissolveNoiseTextures();
+  }
 }
 
 void RenderContext::Term() {

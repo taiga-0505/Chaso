@@ -3,8 +3,10 @@
 #include "Dx12/GraphicsPipeline/GraphicsPipeline.h"
 #include "Dx12/PipelineManager.h"
 #include "Graphics/Texture/RenderTexture/RenderTexture.h"
+#include "Render/RenderContext.h"
 #include "Common/Log/Log.h"
 
+#include <filesystem>
 #include <algorithm>
 #include <format>
 
@@ -17,6 +19,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::BoxFilter: return "BoxFilter";
   case PostEffectType::DepthBasedOutline: return "DepthBasedOutline";
   case PostEffectType::RadialBlur: return "RadialBlur";
+  case PostEffectType::Dissolve:   return "Dissolve";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -67,6 +70,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
   pipelineRadialBlur_ = pipelineManager_->Get("radialblur.none");
   assert(pipelineRadialBlur_ && "Failed to get radialblur pipeline");
 
+  pipelineDissolve_ = pipelineManager_->Get("dissolve.none");
+  assert(pipelineDissolve_ && "Failed to get dissolve pipeline");
+
   // CBuffer 初期化
   D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
   D3D12_RESOURCE_DESC cbDesc{};
@@ -93,6 +99,38 @@ void PostProcess::Initialize(Dx12Core *dxCore,
     mappedMaterial_->outlineThickness = outlineThickness_;
     mappedMaterial_->outlineMode = outlineMode_;
   }
+
+  // Dissolve CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescDissolve{};
+    cbDescDissolve.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescDissolve.Width = (sizeof(DissolveData) + 255) & ~255;
+    cbDescDissolve.Height = 1;
+    cbDescDissolve.DepthOrArraySize = 1;
+    cbDescDissolve.MipLevels = 1;
+    cbDescDissolve.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescDissolve.SampleDesc.Count = 1;
+    cbDescDissolve.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescDissolve.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescDissolve,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferDissolve_));
+    assert(SUCCEEDED(hr));
+    cbufferDissolve_->Map(0, nullptr, reinterpret_cast<void **>(&mappedDissolve_));
+
+    if (mappedDissolve_) {
+      mappedDissolve_->edgeColor[0] = dissolveEdgeColor_[0];
+      mappedDissolve_->edgeColor[1] = dissolveEdgeColor_[1];
+      mappedDissolve_->edgeColor[2] = dissolveEdgeColor_[2];
+      mappedDissolve_->edgeColor[3] = 1.0f;
+      mappedDissolve_->threshold = dissolveThreshold_;
+      mappedDissolve_->edgeRange = dissolveEdgeRange_;
+    }
+  }
+  // ノイズテクスチャはRC::Init後に遅延初期化される (InitDissolveNoiseTextures)
 }
 
 void PostProcess::SetProjectionInverse(const float* projInv16) {
@@ -126,6 +164,71 @@ void PostProcess::SetOutlineMode(int mode) {
   outlineMode_ = mode;
   if (mappedMaterial_) {
     mappedMaterial_->outlineMode = mode;
+  }
+}
+
+// ============================================================================
+// Dissolve パラメータ
+// ============================================================================
+
+void PostProcess::SetDissolveThreshold(float threshold) {
+  dissolveThreshold_ = threshold;
+  if (mappedDissolve_) {
+    mappedDissolve_->threshold = threshold;
+  }
+}
+
+void PostProcess::SetDissolveEdgeColor(float r, float g, float b) {
+  dissolveEdgeColor_[0] = r;
+  dissolveEdgeColor_[1] = g;
+  dissolveEdgeColor_[2] = b;
+  if (mappedDissolve_) {
+    mappedDissolve_->edgeColor[0] = r;
+    mappedDissolve_->edgeColor[1] = g;
+    mappedDissolve_->edgeColor[2] = b;
+  }
+}
+
+void PostProcess::SetDissolveEdgeRange(float range) {
+  dissolveEdgeRange_ = range;
+  if (mappedDissolve_) {
+    mappedDissolve_->edgeRange = range;
+  }
+}
+
+void PostProcess::SetDissolveNoiseIndex(int index) {
+  if (!dissolveNoiseTextures_.empty()) {
+    dissolveNoiseIndex_ = index % static_cast<int>(dissolveNoiseTextures_.size());
+  }
+}
+
+void PostProcess::InitDissolveNoiseTextures() {
+  if (dissolveNoiseInitialized_) return;
+  dissolveNoiseInitialized_ = true;
+
+  // Resources/noise/ フォルダからPNGをリストアップ
+  const std::string noiseDir = "Resources/noise";
+  if (!std::filesystem::exists(noiseDir)) return;
+
+  auto& rc = RC::RenderContext::GetInstance();
+  auto& texMan = rc.Textures();
+
+  for (const auto& entry : std::filesystem::directory_iterator(noiseDir)) {
+    if (!entry.is_regular_file()) continue;
+    const auto ext = entry.path().extension().string();
+    if (ext != ".png" && ext != ".PNG") continue;
+
+    NoiseEntry ne;
+    ne.path = entry.path().string();
+    ne.name = entry.path().stem().string();
+    // srgb=false: マスクはリニア値として扱う
+    ne.srv = texMan.Load(ne.path, false);
+    dissolveNoiseTextures_.push_back(ne);
+    Log::Print(std::format("[PostProcess] Dissolve noise loaded: {}", ne.name));
+  }
+
+  if (dissolveNoiseTextures_.empty()) {
+    Log::Print("[PostProcess] Warning: No noise textures found in Resources/noise/");
   }
 }
 
@@ -195,6 +298,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineDepthBasedOutline_;
   case PostEffectType::RadialBlur:
     return pipelineRadialBlur_;
+  case PostEffectType::Dissolve:
+    return pipelineDissolve_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -262,6 +367,16 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
     cmdList->SetGraphicsRootDescriptorTable(2, depthSrv_.gpu);
     // params[3]: b1
     cmdList->SetGraphicsRootConstantBufferView(3, cbufferMaterial_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::Dissolve) {
+    // params[2]: t1 (ノイズマスクテクスチャ)
+    if (!dissolveNoiseTextures_.empty()) {
+      int idx = dissolveNoiseIndex_ % static_cast<int>(dissolveNoiseTextures_.size());
+      cmdList->SetGraphicsRootDescriptorTable(2, dissolveNoiseTextures_[idx].srv);
+    }
+    // params[3]: b1 (DissolveParams CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferDissolve_->GetGPUVirtualAddress());
   }
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
@@ -436,6 +551,47 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       ImGui::SliderFloat2("Center", &radialBlurCenter_.x, 0.0f, 1.0f);
       ImGui::SliderFloat("BlurWidth", &radialBlurWidth_, -0.1f, 0.1f);
       ImGui::SliderInt("Samples", &radialBlurSamples_, 1, 50);
+      ImGui::Unindent();
+    }
+
+    bool dissolve = HasEffect(PostEffectType::Dissolve);
+    if (ImGui::Checkbox("Dissolve", &dissolve)) {
+      if (dissolve) {
+        AddEffect(PostEffectType::Dissolve);
+      } else {
+        RemoveEffect(PostEffectType::Dissolve);
+      }
+    }
+
+    if (dissolve) {
+      ImGui::Indent();
+      bool changed = false;
+      if (ImGui::ColorEdit3("EdgeColor", dissolveEdgeColor_)) changed = true;
+      if (ImGui::SliderFloat("Threshold", &dissolveThreshold_, 0.0f, 1.0f)) changed = true;
+      if (ImGui::SliderFloat("EdgeRange", &dissolveEdgeRange_, 0.001f, 0.2f)) changed = true;
+
+      if (changed) {
+        SetDissolveEdgeColor(dissolveEdgeColor_[0], dissolveEdgeColor_[1], dissolveEdgeColor_[2]);
+        SetDissolveThreshold(dissolveThreshold_);
+        SetDissolveEdgeRange(dissolveEdgeRange_);
+      }
+
+      // ノイズ選択コンボボックス
+      if (!dissolveNoiseTextures_.empty()) {
+        const char* currentName = dissolveNoiseTextures_[dissolveNoiseIndex_].name.c_str();
+        if (ImGui::BeginCombo("Noise", currentName)) {
+          for (int i = 0; i < static_cast<int>(dissolveNoiseTextures_.size()); ++i) {
+            bool selected = (i == dissolveNoiseIndex_);
+            if (ImGui::Selectable(dissolveNoiseTextures_[i].name.c_str(), selected)) {
+              dissolveNoiseIndex_ = i;
+            }
+            if (selected) {
+              ImGui::SetItemDefaultFocus();
+            }
+          }
+          ImGui::EndCombo();
+        }
+      }
       ImGui::Unindent();
     }
 
