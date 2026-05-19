@@ -54,4 +54,9 @@ struct Aabb2D {
   float top = 0;    ///< 上端座標
 };
 
+/// @brief クォータニオン (四元数)
+struct Quaternion {
+  float x, y, z, w; ///< x, y, z, w 成分
+};
+
 } // namespace RC

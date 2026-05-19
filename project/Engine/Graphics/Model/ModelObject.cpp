@@ -349,3 +349,35 @@ void ModelObject::DrawImGui(const char *name, bool showLightingUi) {
 
 #endif
 }
+
+// ============================================================================
+// アニメーション関連
+// ============================================================================
+
+void ModelObject::AttachAnimation() {
+    AttachAnimation(filePath_);
+}
+
+void ModelObject::AttachAnimation(const std::string& filePath) {
+    if (filePath.empty()) return;
+    animation_ = RC::LoadAnimationFile(filePath);
+    isAnimated_ = (animation_.duration > 0.0f && !animation_.nodeAnimations.empty());
+    animationTime_ = 0.0f;
+}
+
+void ModelObject::UpdateAnimation(float dt) {
+    if (!isAnimated_) return;
+    
+    animationTime_ += dt;
+    animationTime_ = std::fmod(animationTime_, animation_.duration);
+
+    auto it = animation_.nodeAnimations.begin();
+    if (it != animation_.nodeAnimations.end()) {
+        RC::NodeAnimation& rootNodeAnim = it->second;
+
+        transform_.translation = CalculateValue(rootNodeAnim.translate, animationTime_);
+        transform_.rotation = QuaternionToEuler(CalculateValue(rootNodeAnim.rotate, animationTime_));
+        transform_.scale = CalculateValue(rootNodeAnim.scale, animationTime_);
+    }
+}
+

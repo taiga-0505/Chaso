@@ -45,6 +45,9 @@ private:
   int terrain = -1;
   Transform *terrainT_ = nullptr;
 
+  // ===== AnimatedCube =====
+  int animatedCube_ = -1;
+
   // ===== 天球 (Skydome) =====
   int skydome = -1;
   int tx_Skydome_ = -1;

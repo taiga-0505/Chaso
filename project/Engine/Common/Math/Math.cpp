@@ -486,6 +486,50 @@ Matrix4x4 MakeScaleMatrix(const Vector3 &scale) {
 }
 
 //==================================
+// 補間関数
+//==================================
+
+Vector3 Lerp(const Vector3 &v1, const Vector3 &v2, float t) {
+  Vector3 result;
+  result.x = v1.x + (v2.x - v1.x) * t;
+  result.y = v1.y + (v2.y - v1.y) * t;
+  result.z = v1.z + (v2.z - v1.z) * t;
+  return result;
+}
+
+Quaternion Slerp(const Quaternion &q1, const Quaternion &q2, float t) {
+  float dot = q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
+  Quaternion tempQ2 = q2;
+
+  if (dot < 0.0f) {
+    dot = -dot;
+    tempQ2.x = -tempQ2.x;
+    tempQ2.y = -tempQ2.y;
+    tempQ2.z = -tempQ2.z;
+    tempQ2.w = -tempQ2.w;
+  }
+
+  float scale0, scale1;
+
+  if ((1.0f - dot) > 0.0001f) {
+    float theta = std::acosf(dot);
+    float sinTheta = std::sinf(theta);
+    scale0 = std::sinf((1.0f - t) * theta) / sinTheta;
+    scale1 = std::sinf(t * theta) / sinTheta;
+  } else {
+    scale0 = 1.0f - t;
+    scale1 = t;
+  }
+
+  Quaternion result;
+  result.x = q1.x * scale0 + tempQ2.x * scale1;
+  result.y = q1.y * scale0 + tempQ2.y * scale1;
+  result.z = q1.z * scale0 + tempQ2.z * scale1;
+  result.w = q1.w * scale0 + tempQ2.w * scale1;
+  return result;
+}
+
+//==================================
 // Affine関数
 //==================================
 Matrix4x4 MakeAffineMatrix(const Vector3 &scale, const Vector3 &rotate,
@@ -509,6 +553,62 @@ Matrix4x4 MakeAffineMatrix(const Vector3 &scale, const Vector3 &rotate,
       resultScaleMatrix, Multiply(resultRotateMatrix, resultTranslateMatrix));
 
   return result;
+}
+
+Matrix4x4 MakeRotateMatrix(const Quaternion& q) {
+  Matrix4x4 result = MakeIdentity4x4();
+  float xx = q.x * q.x;
+  float yy = q.y * q.y;
+  float zz = q.z * q.z;
+  float xy = q.x * q.y;
+  float xz = q.x * q.z;
+  float yz = q.y * q.z;
+  float wx = q.w * q.x;
+  float wy = q.w * q.y;
+  float wz = q.w * q.z;
+
+  result.m[0][0] = 1.0f - 2.0f * (yy + zz);
+  result.m[0][1] = 2.0f * (xy + wz);
+  result.m[0][2] = 2.0f * (xz - wy);
+
+  result.m[1][0] = 2.0f * (xy - wz);
+  result.m[1][1] = 1.0f - 2.0f * (xx + zz);
+  result.m[1][2] = 2.0f * (yz + wx);
+
+  result.m[2][0] = 2.0f * (xz + wy);
+  result.m[2][1] = 2.0f * (yz - wx);
+  result.m[2][2] = 1.0f - 2.0f * (xx + yy);
+
+  return result;
+}
+
+Vector3 QuaternionToEuler(const Quaternion& q) {
+    Vector3 euler;
+    // Roll (x-axis rotation)
+    float sinr_cosp = 2.0f * (q.w * q.x + q.y * q.z);
+    float cosr_cosp = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
+    euler.x = std::atan2(sinr_cosp, cosr_cosp);
+
+    // Pitch (y-axis rotation)
+    float sinp = 2.0f * (q.w * q.y - q.z * q.x);
+    if (std::abs(sinp) >= 1.0f)
+        euler.y = std::copysign(3.14159265358979323846f / 2.0f, sinp); // use 90 degrees if out of range
+    else
+        euler.y = std::asin(sinp);
+
+    // Yaw (z-axis rotation)
+    float siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
+    float cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
+    euler.z = std::atan2(siny_cosp, cosy_cosp);
+
+    return euler;
+}
+
+Matrix4x4 MakeAffineMatrix(const Vector3 &scale, const Quaternion &rotate, const Vector3 &translate) {
+  Matrix4x4 resultScaleMatrix = MakeScaleMatrix(scale);
+  Matrix4x4 resultRotateMatrix = MakeRotateMatrix(rotate);
+  Matrix4x4 resultTranslateMatrix = MakeTranslateMatrix(translate);
+  return Multiply(resultScaleMatrix, Multiply(resultRotateMatrix, resultTranslateMatrix));
 }
 
 //==================================

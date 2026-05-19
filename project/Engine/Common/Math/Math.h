@@ -129,6 +129,24 @@ RC::Matrix4x4 MakeTranslateMatrix(const RC::Vector3 &translate);
 RC::Matrix4x4 MakeScaleMatrix(const RC::Vector3 &scale);
 
 //==================================
+// 補間関数
+//==================================
+
+/// @brief Vector3の線形補間
+/// @param v1 開始値
+/// @param v2 終了値
+/// @param t 補間係数 (0.0~1.0)
+/// @return 補間されたベクトル
+RC::Vector3 Lerp(const RC::Vector3 &v1, const RC::Vector3 &v2, float t);
+
+/// @brief Quaternionの球面線形補間
+/// @param q1 開始値
+/// @param q2 終了値
+/// @param t 補間係数 (0.0~1.0)
+/// @return 補間されたクォータニオン
+RC::Quaternion Slerp(const RC::Quaternion &q1, const RC::Quaternion &q2, float t);
+
+//==================================
 // Affine関数
 //==================================
 
@@ -138,6 +156,24 @@ RC::Matrix4x4 MakeScaleMatrix(const RC::Vector3 &scale);
 /// @param translate 平行移動
 /// @return アフィン変換行列
 RC::Matrix4x4 MakeAffineMatrix(const RC::Vector3 &scale, const RC::Vector3 &rotate,
+                           const RC::Vector3 &translate);
+
+/// @brief クォータニオンから回転行列を生成
+/// @param q クォータニオン
+/// @return 回転行列
+RC::Matrix4x4 MakeRotateMatrix(const RC::Quaternion& q);
+
+/// @brief クォータニオンからオイラー角(ラジアン)に変換
+/// @param q クォータニオン
+/// @return オイラー角(x:Roll, y:Pitch, z:Yaw)
+RC::Vector3 QuaternionToEuler(const RC::Quaternion& q);
+
+/// @brief アフィン変換行列を生成 (Scale -> Rotate(Quaternion) -> Translate)
+/// @param scale 拡大率
+/// @param rotate 回転 (クォータニオン)
+/// @param translate 平行移動
+/// @return アフィン変換行列
+RC::Matrix4x4 MakeAffineMatrix(const RC::Vector3 &scale, const RC::Quaternion &rotate,
                            const RC::Vector3 &translate);
 
 //==================================

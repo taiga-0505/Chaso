@@ -149,6 +149,7 @@
     <ClCompile Include="..\Engine\Graphics\Light\Directional\DirectionalLightSource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Light\Point\PointLightSource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Light\Spot\SpotLightSource.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Model\Animation.cpp" />
     <ClCompile Include="..\Engine\Graphics\Model\ModelMesh.cpp" />
     <ClCompile Include="..\Engine\Graphics\Model\ModelObject.cpp" />
     <ClCompile Include="..\Engine\Graphics\Model\ModelResource.cpp" />
@@ -249,6 +250,7 @@
     <ClInclude Include="..\Engine\Graphics\Light\Directional\DirectionalLightSource.h" />
     <ClInclude Include="..\Engine\Graphics\Light\Point\PointLightSource.h" />
     <ClInclude Include="..\Engine\Graphics\Light\Spot\SpotLightSource.h" />
+    <ClInclude Include="..\Engine\Graphics\Model\Animation.h" />
     <ClInclude Include="..\Engine\Graphics\Model\ModelMesh.h" />
     <ClInclude Include="..\Engine\Graphics\Model\ModelObject.h" />
     <ClInclude Include="..\Engine\Graphics\Model\ModelResource.h" />

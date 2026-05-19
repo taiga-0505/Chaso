@@ -99,6 +99,10 @@ void SampleScene::OnEnter(SceneContext &ctx) {
 
   RC::SetSpriteTransform(sprite, spriteTransform_);
   RC::SetSpriteScreenSize(sprite, spriteSize_.x, spriteSize_.y);
+
+  // ===== AnimatedCube =====
+  animatedCube_ = RC::LoadModel("Resources/model/AnimatedCube/AnimatedCube.gltf");
+  RC::AttachModelAnimation(animatedCube_);
 }
 
 void SampleScene::OnExit(SceneContext &) {
@@ -150,6 +154,11 @@ void SampleScene::OnExit(SceneContext &) {
   spotLight = -1;
   RC::DestroySpotLight(spotLight2);
   spotLight2 = -1;
+
+  if (animatedCube_ != -1) {
+    RC::UnloadModel(animatedCube_);
+    animatedCube_ = -1;
+  }
 }
 
 void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
@@ -186,6 +195,9 @@ void SampleScene::Update(SceneManager &sm, SceneContext &ctx) {
 
   // === 天球回転 ===
   skydomeT_->rotation.y += 0.001f;
+
+  // === AnimatedCube ===
+  RC::UpdateModelAnimation(animatedCube_);
 }
 
 void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
@@ -212,6 +224,10 @@ void SampleScene::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RC::DrawModel(model, tx_model);
 
   RC::DrawModel(terrain);
+
+  if (animatedCube_ != -1) {
+      RC::DrawModel(animatedCube_);
+  }
 
   RC::DrawModelGlassTwoPass(blockModel);
 
@@ -257,6 +273,10 @@ void SampleScene::DrawImGui() {
       RC::DrawImGui3D(model, "model");
 
       RC::DrawSkydomeImGui(skydome, "skyDome");
+
+      if (animatedCube_ != -1) {
+          RC::DrawImGui3D(animatedCube_, "AnimatedCube");
+      }
 
       RC::DrawImGui3D(blockModel, "blockModel");
       // 色変更用

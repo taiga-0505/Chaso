@@ -91,6 +91,20 @@ public:
   /// @param handle モデルハンドル
   void ResetCursor(int handle);
 
+  /// @brief アニメーションをアタッチする（モデルに紐づけられたファイルパスを使用）
+  /// @param handle モデルハンドル
+  void AttachAnimation(int handle);
+
+  /// @brief アニメーションを別ファイルからアタッチする
+  /// @param handle モデルハンドル
+  /// @param filePath アニメーションファイルのパス
+  void AttachAnimation(int handle, const std::string& filePath);
+
+  /// @brief モデルのアニメーション状態を更新する
+  /// @param handle モデルハンドル
+  /// @param dt 経過時間
+  void UpdateAnimation(int handle, float dt);
+
   /// @brief 管理している全モデルのバッチカーソルをリセットする
   /// 毎フレームの描画開始前に呼び出すことを想定しています。
   void ResetAllBatchCursors();
