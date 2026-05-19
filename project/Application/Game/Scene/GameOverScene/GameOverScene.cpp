@@ -14,7 +14,7 @@ void GameOverScene::OnEnter(SceneContext &ctx) {
   // ======= カメラ初期化 =======
   // 視錐台パラメータ
   const float kNearZ = 0.1f;
-  const float kFarZ = 100.0f;
+  const float kFarZ = 1000.0f;
   camera_.Initialize(ctx.input, {0, 5, -20}, {0, 0, 0}, 0.45f,
                      float(ctx.app->width) / ctx.app->height, kNearZ, kFarZ);
 
