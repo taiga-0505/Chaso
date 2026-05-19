@@ -262,7 +262,23 @@ void PostProcess::SetDissolveNoiseIndex(int index) {
   }
 }
 
+void PostProcess::SetRandomNoiseIntensity(float intensity) {
+  randomIntensity_ = intensity;
+  if (mappedRandom_) mappedRandom_->intensity = intensity;
+}
 
+void PostProcess::SetRandomNoiseColor(float r, float g, float b) {
+  randomColor_[0] = r;
+  randomColor_[1] = g;
+  randomColor_[2] = b;
+  if (mappedRandom_) {
+    mappedRandom_->color[0] = r;
+    mappedRandom_->color[1] = g;
+    mappedRandom_->color[2] = b;
+  }
+}
+
+// ============================================================================
 void PostProcess::InitDissolveNoiseTextures() {
   if (dissolveNoiseInitialized_) return;
   dissolveNoiseInitialized_ = true;

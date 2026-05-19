@@ -222,6 +222,18 @@ void InitDissolveNoiseTextures() {
   }
 }
 
+void SetRandomNoiseIntensity(float intensity) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetRandomNoiseIntensity(intensity);
+  }
+}
+
+void SetRandomNoiseColor(float r, float g, float b) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetRandomNoiseColor(r, g, b);
+  }
+}
+
 #if RC_ENABLE_IMGUI
 void DrawPostEffectImGui(const char *label) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
