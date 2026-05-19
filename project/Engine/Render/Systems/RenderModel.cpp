@@ -739,4 +739,23 @@ void SetModelEnvironmentCoefficient(int modelHandle, float coeff) {
   m->SetEnvironmentCoefficient(coeff);
 }
 
+void AttachModelAnimation(int modelHandle) {
+  GetRenderContext().Models().AttachAnimation(modelHandle);
+}
+
+void AttachModelAnimation(int modelHandle, const std::string& filePath) {
+  GetRenderContext().Models().AttachAnimation(modelHandle, filePath);
+}
+
+void UpdateModelAnimation(int modelHandle, float dt) {
+  if (dt < 0.0f) {
+    if (auto* ctx = GetRenderContext().Ctx()) {
+      dt = ctx->deltaTime;
+    } else {
+      dt = 1.0f / 60.0f; // fallback
+    }
+  }
+  GetRenderContext().Models().UpdateAnimation(modelHandle, dt);
+}
+
 } // namespace RC

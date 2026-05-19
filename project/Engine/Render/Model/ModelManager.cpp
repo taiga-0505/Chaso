@@ -214,10 +214,28 @@ void ModelManager::SetMesh(int handle, const std::string &path) {
 }
 
 void ModelManager::ResetCursor(int handle) {
-  if (!IsValid(handle)) {
+  std::lock_guard<std::recursive_mutex> lock(mtx_);
+  if (!IsValid(handle))
     return;
-  }
   models_[handle].ptr->ResetBatchCursor();
+}
+
+void ModelManager::AttachAnimation(int handle) {
+  std::lock_guard<std::recursive_mutex> lock(mtx_);
+  if (!IsValid(handle)) return;
+  models_[handle].ptr->AttachAnimation();
+}
+
+void ModelManager::AttachAnimation(int handle, const std::string& filePath) {
+  std::lock_guard<std::recursive_mutex> lock(mtx_);
+  if (!IsValid(handle)) return;
+  models_[handle].ptr->AttachAnimation(filePath);
+}
+
+void ModelManager::UpdateAnimation(int handle, float dt) {
+  std::lock_guard<std::recursive_mutex> lock(mtx_);
+  if (!IsValid(handle)) return;
+  models_[handle].ptr->UpdateAnimation(dt);
 }
 
 void ModelManager::ResetAllBatchCursors() {

@@ -18,6 +18,7 @@
 // --- 数学 ---
 #include "Math/MathTypes.h"
 #include "Math/MathUtils.h"
+#include "Math/Math.h"
 
 // --- ライト ---
 #include "Light/Directional/DirectionalLightSource.h"

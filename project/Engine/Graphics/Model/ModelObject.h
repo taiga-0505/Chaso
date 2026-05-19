@@ -3,6 +3,7 @@
 #include "Math/MathTypes.h"
 #include "ModelMesh.h"
 #include "ModelResource.h"
+#include "Animation.h"
 #include "function/function.h"
 #include "struct.h"
 #include <array>
@@ -247,4 +248,22 @@ private:
   float lastEnvCoeff_ = 0.5f;    ///< ImGui用：環境マップトグル時の係数保存用
 
   std::string filePath_; ///< モデルのアセットパス
+
+  // === アニメーション関連 ===
+public:
+  /// @brief 自身のファイルパスを使ってアニメーションをロード・アタッチする
+  void AttachAnimation();
+  
+  /// @brief 指定したファイルからアニメーションをロード・アタッチする
+  /// @param filePath アニメーションファイル(.gltf等)のパス
+  void AttachAnimation(const std::string& filePath);
+
+  /// @brief アニメーションを更新し、自身のTransformに適用する
+  /// @param dt 経過時間
+  void UpdateAnimation(float dt);
+
+private:
+  RC::Animation animation_;   ///< ロードしたアニメーションデータ
+  float animationTime_ = 0.0f;///< アニメーション再生時間
+  bool isAnimated_ = false;   ///< アニメーションが有効かどうか
 };

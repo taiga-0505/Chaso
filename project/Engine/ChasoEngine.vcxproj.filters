@@ -279,6 +279,9 @@
     <ClCompile Include="..\Engine\Graphics\Light\Spot\SpotLightSource.cpp">
       <Filter>Graphics\Light\Spot</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Model\Animation.cpp">
+      <Filter>Graphics\Model</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Model\ModelMesh.cpp">
       <Filter>Graphics\Model</Filter>
     </ClCompile>
@@ -532,6 +535,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Light\Spot\SpotLightSource.h">
       <Filter>Graphics\Light\Spot</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Model\Animation.h">
+      <Filter>Graphics\Model</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Model\ModelMesh.h">
       <Filter>Graphics\Model</Filter>

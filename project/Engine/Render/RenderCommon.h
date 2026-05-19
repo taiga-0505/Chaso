@@ -372,6 +372,20 @@ Transform *GetModelTransformPtr(int modelHandle);
 /// @param color 色（RGBA）
 void SetModelColor(int modelHandle, const Vector4 &color);
 
+/// @brief アニメーションをアタッチする（モデルに紐づけられたファイルパスを使用）
+/// @param modelHandle モデルハンドル
+void AttachModelAnimation(int modelHandle);
+
+/// @brief アニメーションを別ファイルからアタッチする
+/// @param modelHandle モデルハンドル
+/// @param filePath アニメーションファイルのパス
+void AttachModelAnimation(int modelHandle, const std::string& filePath);
+
+/// @brief モデルのアニメーション状態を更新する
+/// @param modelHandle モデルハンドル
+/// @param dt 経過時間 (負の値ならエンジンの deltaTime を自動使用)
+void UpdateModelAnimation(int modelHandle, float dt = -1.0f);
+
 /// @brief モデルのライティングモードを設定する
 /// @param modelHandle モデルハンドル
 /// @param m ライティングモード
