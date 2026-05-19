@@ -2,6 +2,7 @@
 #include <cassert>
 #include <d3d12.h>
 #include <memory>
+#include <string>
 #include <vector>
 #include <wrl/client.h>
 #include "Dx12/SRVManager/SRVManager.h"
@@ -20,6 +21,7 @@ enum class PostEffectType {
   BoxFilter,  ///< ボックスフィルタ（平滑化）
   DepthBasedOutline, ///< 深度ベースアウトライン
   RadialBlur, ///< ラジアルブラー
+  Dissolve,   ///< ディゾルブ（ノイズマスクによる消失演出）
 };
 
 /// @class PostProcess
@@ -62,6 +64,25 @@ public:
 
   /// @brief アウトラインの描画モード（0:両側, 1:外側, 2:内側）を設定する
   void SetOutlineMode(int mode);
+
+  // ===========================
+  // Dissolve パラメータ
+  // ===========================
+
+  /// @brief Dissolve の閾値を設定する (0.0 ~ 1.0)
+  void SetDissolveThreshold(float threshold);
+
+  /// @brief Dissolve の Edge 色を設定する (RGB)
+  void SetDissolveEdgeColor(float r, float g, float b);
+
+  /// @brief Dissolve の Edge 検出幅を設定する
+  void SetDissolveEdgeRange(float range);
+
+  /// @brief Dissolve のノイズテクスチャインデックスを設定する
+  void SetDissolveNoiseIndex(int index);
+
+  /// @brief Dissolve のノイズテクスチャリストを初期化する
+  void InitDissolveNoiseTextures();
 
   /// @brief ポストエフェクトを1つだけ設定する
   /// @details 既存のエフェクトスタックをクリアして、指定されたエフェクトのみを設定します。
@@ -137,6 +158,7 @@ private:
   GraphicsPipeline *pipelineBoxFilter_ = nullptr;
   GraphicsPipeline *pipelineDepthBasedOutline_ = nullptr;
   GraphicsPipeline *pipelineRadialBlur_ = nullptr;
+  GraphicsPipeline *pipelineDissolve_ = nullptr;
 
   std::vector<PostEffectType> activeEffects_; ///< アクティブなエフェクトスタック（適用順）
 
@@ -172,4 +194,27 @@ private:
   } radialBlurCenter_;
   float radialBlurWidth_ = 0.01f;
   int radialBlurSamples_ = 10;
+
+  // Dissolve パラメータ
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbufferDissolve_;
+  struct DissolveData {
+    float edgeColor[4] = {1.0f, 0.4f, 0.3f, 1.0f}; // Edge発光色
+    float threshold = 0.0f;                          // 閾値
+    float edgeRange = 0.03f;                         // Edge検出幅
+    float padding[2] = {0.0f, 0.0f};
+  };
+  DissolveData *mappedDissolve_ = nullptr;
+  float dissolveEdgeColor_[3] = {1.0f, 0.4f, 0.3f};
+  float dissolveThreshold_ = 0.0f;
+  float dissolveEdgeRange_ = 0.03f;
+
+  // ノイズテクスチャ管理
+  struct NoiseEntry {
+    std::string path;
+    std::string name;
+    D3D12_GPU_DESCRIPTOR_HANDLE srv{};
+  };
+  std::vector<NoiseEntry> dissolveNoiseTextures_;
+  int dissolveNoiseIndex_ = 0;
+  bool dissolveNoiseInitialized_ = false;
 };

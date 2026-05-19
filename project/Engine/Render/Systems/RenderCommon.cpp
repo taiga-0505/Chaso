@@ -186,6 +186,36 @@ void SetPostProcessOutlineThickness(float thickness) {
   }
 }
 
+void SetDissolveThreshold(float threshold) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetDissolveThreshold(threshold);
+  }
+}
+
+void SetDissolveEdgeColor(float r, float g, float b) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetDissolveEdgeColor(r, g, b);
+  }
+}
+
+void SetDissolveEdgeRange(float range) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetDissolveEdgeRange(range);
+  }
+}
+
+void SetDissolveNoiseIndex(int index) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetDissolveNoiseIndex(index);
+  }
+}
+
+void InitDissolveNoiseTextures() {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->InitDissolveNoiseTextures();
+  }
+}
+
 #if RC_ENABLE_IMGUI
 void DrawPostEffectImGui(const char *label) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {

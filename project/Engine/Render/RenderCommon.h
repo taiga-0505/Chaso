@@ -922,6 +922,30 @@ void SetPostProcessOutlineWeight(float weight);
 /// @param thickness 太さ
 void SetPostProcessOutlineThickness(float thickness);
 
+// ── Dissolve ポストエフェクト ────────────────────────
+
+/// @brief Dissolve の閾値を設定する (0.0 ~ 1.0)
+/// @param threshold 0.0で全表示、1.0で全消失
+void SetDissolveThreshold(float threshold);
+
+/// @brief Dissolve の Edge 発光色を設定する
+/// @param r 赤 (0.0 ~ 1.0)
+/// @param g 緑 (0.0 ~ 1.0)
+/// @param b 青 (0.0 ~ 1.0)
+void SetDissolveEdgeColor(float r, float g, float b);
+
+/// @brief Dissolve の Edge 検出幅を設定する
+/// @param range Edge幅 (default: 0.03)
+void SetDissolveEdgeRange(float range);
+
+/// @brief Dissolve のノイズテクスチャを切り替える
+/// @param index ノイズテクスチャのインデックス
+void SetDissolveNoiseIndex(int index);
+
+/// @brief Dissolve のノイズテクスチャリストを初期化する
+/// @note RC::Init 完了後に呼び出してください
+void InitDissolveNoiseTextures();
+
 /// @brief ポストエフェクトの ImGui 表示を行う
 /// @param label ラベル名
 void DrawPostEffectImGui(const char *label = "PostEffect");
