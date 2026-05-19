@@ -126,6 +126,10 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedDissolve_->edgeColor[1] = dissolveEdgeColor_[1];
       mappedDissolve_->edgeColor[2] = dissolveEdgeColor_[2];
       mappedDissolve_->edgeColor[3] = 1.0f;
+      mappedDissolve_->baseColor[0] = dissolveBaseColor_[0];
+      mappedDissolve_->baseColor[1] = dissolveBaseColor_[1];
+      mappedDissolve_->baseColor[2] = dissolveBaseColor_[2];
+      mappedDissolve_->baseColor[3] = dissolveBaseColor_[3];
       mappedDissolve_->threshold = dissolveThreshold_;
       mappedDissolve_->edgeRange = dissolveEdgeRange_;
     }
@@ -186,6 +190,19 @@ void PostProcess::SetDissolveEdgeColor(float r, float g, float b) {
     mappedDissolve_->edgeColor[0] = r;
     mappedDissolve_->edgeColor[1] = g;
     mappedDissolve_->edgeColor[2] = b;
+  }
+}
+
+void PostProcess::SetDissolveBaseColor(float r, float g, float b, float a) {
+  dissolveBaseColor_[0] = r;
+  dissolveBaseColor_[1] = g;
+  dissolveBaseColor_[2] = b;
+  dissolveBaseColor_[3] = a;
+  if (mappedDissolve_) {
+    mappedDissolve_->baseColor[0] = r;
+    mappedDissolve_->baseColor[1] = g;
+    mappedDissolve_->baseColor[2] = b;
+    mappedDissolve_->baseColor[3] = a;
   }
 }
 
@@ -567,11 +584,13 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       ImGui::Indent();
       bool changed = false;
       if (ImGui::ColorEdit3("EdgeColor", dissolveEdgeColor_)) changed = true;
+      if (ImGui::ColorEdit4("BaseColor", dissolveBaseColor_)) changed = true;
       if (ImGui::SliderFloat("Threshold", &dissolveThreshold_, 0.0f, 1.0f)) changed = true;
       if (ImGui::SliderFloat("EdgeRange", &dissolveEdgeRange_, 0.001f, 0.2f)) changed = true;
 
       if (changed) {
         SetDissolveEdgeColor(dissolveEdgeColor_[0], dissolveEdgeColor_[1], dissolveEdgeColor_[2]);
+        SetDissolveBaseColor(dissolveBaseColor_[0], dissolveBaseColor_[1], dissolveBaseColor_[2], dissolveBaseColor_[3]);
         SetDissolveThreshold(dissolveThreshold_);
         SetDissolveEdgeRange(dissolveEdgeRange_);
       }

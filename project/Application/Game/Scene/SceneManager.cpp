@@ -11,6 +11,9 @@ class FadeInState;
 class NormalState;
 class LoadingState;
 
+// For PostEffectType
+#include "Graphics/PostProcess/PostProcess.h"
+
 // =================================================================
 // 状態インタフェース
 // =================================================================
@@ -38,6 +41,8 @@ public:
   void Update(Scene::SceneManager &sm, SceneContext &ctx) override;
   void Render(Scene::SceneManager &sm, SceneContext &ctx,
               ID3D12GraphicsCommandList *cl) override;
+private:
+  float counter_ = 0.0f;
 };
 
 class LoadingState : public ISceneState {
@@ -54,6 +59,8 @@ public:
   void Update(Scene::SceneManager &sm, SceneContext &ctx) override;
   void Render(Scene::SceneManager &sm, SceneContext &ctx,
               ID3D12GraphicsCommandList *cl) override;
+private:
+  float counter_ = 0.0f;
 };
 
 // =================================================================
@@ -67,7 +74,12 @@ void NormalState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
 
   if (!sm.requested_.empty()) {
     Log::Print("[SceneState] NormalState -> FadeOutState (requested: " + sm.requested_ + ")");
-    sm.fade_->Start(Fade::Status::FadeOut, sm.kFadeTime);
+    
+    // Dissolveエフェクトを開始
+    RC::AddPostEffect(PostEffectType::Dissolve);
+    RC::SetDissolveThreshold(0.0f);
+    RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
+    
     sm.ChangeState(std::make_unique<FadeOutState>());
   }
 }
@@ -82,12 +94,18 @@ void NormalState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // FadeOutState 実装
 // =================================================================
 void FadeOutState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  counter_ += 1.0f / 60.0f;
+  if (counter_ > sm.kFadeTime) counter_ = sm.kFadeTime;
+
+  float threshold = counter_ / sm.kFadeTime;
+  RC::SetDissolveThreshold(threshold);
+
   // フェードアウト中は旧シーンの Update も継続
-  if (sm.current_ && !sm.fade_->IsFinished()) {
+  if (sm.current_ && counter_ < sm.kFadeTime) {
     sm.current_->Update(sm, ctx);
   }
 
-  if (sm.fade_->IsFinished()) {
+  if (counter_ >= sm.kFadeTime) {
     Log::Print("[SceneState] FadeOutState -> LoadingState");
     sm.ChangeState(std::make_unique<LoadingState>());
   }
@@ -100,8 +118,6 @@ void FadeOutState::Render(Scene::SceneManager &sm, SceneContext &ctx,
   } else {
     Log::Print("[SceneState] FadeOutState::Render - current_ is null!");
   }
-  // フェード幕を最前面に描画（徐々に黒くなる）
-  sm.fade_->Draw(cl);
 }
 
 // =================================================================
@@ -111,12 +127,16 @@ void FadeOutState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // =================================================================
 void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
   if (!loaded_) {
-    // 画面が真っ黒な状態でシーン切り替え
+    // 画面が真っ黒（完全にDissolveされた状態）でシーン切り替え
     sm.ChangeImmediately(sm.requested_, ctx);
     loaded_ = true;
 
-    // フェードインを開始（黒画面から徐々に明るくなる）
-    sm.fade_->Start(Fade::Status::FadeIn, sm.kFadeTime);
+    // ChangeImmediately内でClearPostEffectsが呼ばれるため、再度Dissolveを適用
+    RC::AddPostEffect(PostEffectType::Dissolve);
+    RC::SetDissolveThreshold(1.0f);
+    RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
+
+    // フェードインを開始（Dissolveから復帰）
     sm.ChangeState(std::make_unique<FadeInState>());
 
     // 新シーンの初回 Update
@@ -127,24 +147,28 @@ void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
 }
 void LoadingState::Render(Scene::SceneManager &sm, SceneContext &ctx,
                           ID3D12GraphicsCommandList *cl) {
-  // 画面は完全に黒い状態（alpha=1.0）
-  // 3D/2D パイプラインを空で流してフェード幕を描画
+  // 画面は完全にDissolveされた状態
   RC::PreDraw3D(ctx, cl);
   RC::PreDraw2D(ctx, cl);
-  sm.fade_->Draw(cl);
 }
 
 // =================================================================
 // FadeInState 実装
 // =================================================================
 void FadeInState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  counter_ += 1.0f / 60.0f;
+  if (counter_ > sm.kFadeTime) counter_ = sm.kFadeTime;
+
+  float threshold = 1.0f - (counter_ / sm.kFadeTime);
+  RC::SetDissolveThreshold(threshold);
+
   // 新シーンの Update
   if (sm.current_) {
     sm.current_->Update(sm, ctx);
   }
 
-  if (sm.fade_->IsFinished()) {
-    sm.fade_->Stop();
+  if (counter_ >= sm.kFadeTime) {
+    RC::RemovePostEffect(PostEffectType::Dissolve);
     sm.ChangeState(std::make_unique<NormalState>());
   }
 }
@@ -156,8 +180,6 @@ void FadeInState::Render(Scene::SceneManager &sm, SceneContext &ctx,
   } else {
     Log::Print("[SceneState] FadeInState::Render - current_ is null!");
   }
-  // フェード幕を描画（黒から徐々に透明になる）
-  sm.fade_->Draw(cl);
 }
 
 // =================================================================

@@ -934,6 +934,13 @@ void SetDissolveThreshold(float threshold);
 /// @param b 青 (0.0 ~ 1.0)
 void SetDissolveEdgeColor(float r, float g, float b);
 
+/// @brief Dissolve の ベースカラー（抜けた部分の背景色）を設定する
+/// @param r 赤 (0.0 ~ 1.0)
+/// @param g 緑 (0.0 ~ 1.0)
+/// @param b 青 (0.0 ~ 1.0)
+/// @param a アルファ (0.0 ~ 1.0)
+void SetDissolveBaseColor(float r, float g, float b, float a);
+
 /// @brief Dissolve の Edge 検出幅を設定する
 /// @param range Edge幅 (default: 0.03)
 void SetDissolveEdgeRange(float range);
