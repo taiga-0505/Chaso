@@ -954,6 +954,12 @@ void SetDissolveNoiseIndex(int index);
 /// @note RC::Init 完了後に呼び出してください
 void InitDissolveNoiseTextures();
 
+/// @brief RandomNoise の強度を設定する (0.0 ~ 1.0)
+void SetRandomNoiseIntensity(float intensity);
+
+/// @brief RandomNoise の色を設定する (RGB)
+void SetRandomNoiseColor(float r, float g, float b);
+
 /// @brief ポストエフェクトの ImGui 表示を行う
 /// @param label ラベル名
 void DrawPostEffectImGui(const char *label = "PostEffect");

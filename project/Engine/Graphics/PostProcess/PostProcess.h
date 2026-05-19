@@ -89,10 +89,18 @@ public:
   /// @brief Dissolve のノイズテクスチャインデックスを設定する
   void SetDissolveNoiseIndex(int index);
 
-
-
   /// @brief Dissolve のノイズテクスチャリストを初期化する
   void InitDissolveNoiseTextures();
+
+  // ===========================
+  // RandomNoise パラメータ
+  // ===========================
+
+  /// @brief RandomNoise の強度を設定する (0.0 ~ 1.0)
+  void SetRandomNoiseIntensity(float intensity);
+
+  /// @brief RandomNoise の色を設定する (RGB)
+  void SetRandomNoiseColor(float r, float g, float b);
 
   /// @brief ポストエフェクトを1つだけ設定する
   /// @details 既存のエフェクトスタックをクリアして、指定されたエフェクトのみを設定します。
