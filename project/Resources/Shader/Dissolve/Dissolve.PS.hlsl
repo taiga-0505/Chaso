@@ -10,6 +10,7 @@ Texture2D<float32_t> gMaskTexture : register(t1);
 // b1: Dissolveパラメータ
 cbuffer DissolveParams : register(b1) {
     float4 edgeColor;    // Edge発光色 (RGB + alpha)
+    float4 baseColor;    // 抜けた部分の背景色 (RGB + alpha)
     float threshold;     // 閾値 (0.0 ~ 1.0)
     float edgeRange;     // Edge検出幅 (default: 0.03)
     float2 _padding;
@@ -25,9 +26,10 @@ PixelShaderOutPut main(VertexShaderOutput input) {
     // マスクテクスチャからノイズ値をサンプリング
     float32_t mask = gMaskTexture.Sample(gSampler, input.texcoord);
 
-    // マスク値が閾値以下の場合はdiscardして抜く
+    // マスク値が閾値以下の場合はベースカラーを出力
     if (mask <= threshold) {
-        discard;
+        output.color = baseColor;
+        return output;
     }
 
     // シーンテクスチャをサンプリング

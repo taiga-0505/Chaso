@@ -198,6 +198,12 @@ void SetDissolveEdgeColor(float r, float g, float b) {
   }
 }
 
+void SetDissolveBaseColor(float r, float g, float b, float a) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetDissolveBaseColor(r, g, b, a);
+  }
+}
+
 void SetDissolveEdgeRange(float range) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
     pp->SetDissolveEdgeRange(range);

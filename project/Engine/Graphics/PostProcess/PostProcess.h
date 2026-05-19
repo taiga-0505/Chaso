@@ -75,6 +75,9 @@ public:
   /// @brief Dissolve の Edge 色を設定する (RGB)
   void SetDissolveEdgeColor(float r, float g, float b);
 
+  /// @brief Dissolve のベースカラー（抜けた部分の色）を設定する (RGBA)
+  void SetDissolveBaseColor(float r, float g, float b, float a);
+
   /// @brief Dissolve の Edge 検出幅を設定する
   void SetDissolveEdgeRange(float range);
 
@@ -199,12 +202,14 @@ private:
   Microsoft::WRL::ComPtr<ID3D12Resource> cbufferDissolve_;
   struct DissolveData {
     float edgeColor[4] = {1.0f, 0.4f, 0.3f, 1.0f}; // Edge発光色
+    float baseColor[4] = {0.0f, 0.0f, 0.0f, 1.0f}; // 抜けた部分の背景色
     float threshold = 0.0f;                          // 閾値
     float edgeRange = 0.03f;                         // Edge検出幅
     float padding[2] = {0.0f, 0.0f};
   };
   DissolveData *mappedDissolve_ = nullptr;
   float dissolveEdgeColor_[3] = {1.0f, 0.4f, 0.3f};
+  float dissolveBaseColor_[4] = {0.0f, 0.0f, 0.0f, 1.0f};
   float dissolveThreshold_ = 0.0f;
   float dissolveEdgeRange_ = 0.03f;
 
