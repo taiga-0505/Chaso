@@ -5,6 +5,7 @@
 #include "Fade/Fade.h"
 #include <chrono>
 #include <format>
+#include <cstdlib>
 
 class FadeOutState;
 class FadeInState;
@@ -77,6 +78,10 @@ void NormalState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     
     // Dissolveエフェクトを開始
     RC::AddPostEffect(PostEffectType::Dissolve);
+    
+    // 固定ノイズ (インデックス0) を使用する
+    RC::SetDissolveNoiseIndex(0);
+
     RC::SetDissolveThreshold(0.0f);
     RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
     
