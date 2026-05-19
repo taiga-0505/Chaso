@@ -142,6 +142,11 @@ int App::Run() {
       // 更新
       Update();
 
+      // ポストプロセスの時間更新
+      if (postProcess_) {
+        postProcess_->UpdateTime(sceneCtx_.deltaTime);
+      }
+
       // 描画
       core_.BeginFrame();
 

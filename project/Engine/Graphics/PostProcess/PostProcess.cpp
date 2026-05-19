@@ -20,6 +20,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::DepthBasedOutline: return "DepthBasedOutline";
   case PostEffectType::RadialBlur: return "RadialBlur";
   case PostEffectType::Dissolve:   return "Dissolve";
+  case PostEffectType::RandomNoise:return "RandomNoise";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -72,6 +73,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineDissolve_ = pipelineManager_->Get("dissolve.none");
   assert(pipelineDissolve_ && "Failed to get dissolve pipeline");
+
+  pipelineRandom_ = pipelineManager_->Get("random.none");
+  assert(pipelineRandom_ && "Failed to get random pipeline");
 
   // CBuffer 初期化
   D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
@@ -134,7 +138,46 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedDissolve_->edgeRange = dissolveEdgeRange_;
     }
   }
+
   // ノイズテクスチャはRC::Init後に遅延初期化される (InitDissolveNoiseTextures)
+
+  // RandomNoise CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescRandom{};
+    cbDescRandom.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescRandom.Width = (sizeof(RandomNoiseData) + 255) & ~255;
+    cbDescRandom.Height = 1;
+    cbDescRandom.DepthOrArraySize = 1;
+    cbDescRandom.MipLevels = 1;
+    cbDescRandom.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescRandom.SampleDesc.Count = 1;
+    cbDescRandom.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescRandom.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescRandom,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferRandom_));
+    assert(SUCCEEDED(hr));
+    cbufferRandom_->Map(0, nullptr, reinterpret_cast<void **>(&mappedRandom_));
+
+    if (mappedRandom_) {
+      mappedRandom_->color[0] = randomColor_[0];
+      mappedRandom_->color[1] = randomColor_[1];
+      mappedRandom_->color[2] = randomColor_[2];
+      mappedRandom_->color[3] = 1.0f;
+      mappedRandom_->time = randomTime_;
+      mappedRandom_->intensity = randomIntensity_;
+    }
+  }
+}
+
+void PostProcess::UpdateTime(float deltaTime) {
+  randomTime_ += deltaTime;
+  if (mappedRandom_) {
+    mappedRandom_->time = randomTime_;
+  }
 }
 
 void PostProcess::SetProjectionInverse(const float* projInv16) {
@@ -218,6 +261,7 @@ void PostProcess::SetDissolveNoiseIndex(int index) {
     dissolveNoiseIndex_ = index % static_cast<int>(dissolveNoiseTextures_.size());
   }
 }
+
 
 void PostProcess::InitDissolveNoiseTextures() {
   if (dissolveNoiseInitialized_) return;
@@ -317,6 +361,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineRadialBlur_;
   case PostEffectType::Dissolve:
     return pipelineDissolve_;
+  case PostEffectType::RandomNoise:
+    return pipelineRandom_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -394,6 +440,11 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
     }
     // params[3]: b1 (DissolveParams CBuffer)
     cmdList->SetGraphicsRootConstantBufferView(3, cbufferDissolve_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::RandomNoise) {
+    // params[3]: b1 (RandomNoise CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferRandom_->GetGPUVirtualAddress());
   }
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
@@ -609,6 +660,30 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
             }
           }
           ImGui::EndCombo();
+        }
+      }
+      ImGui::Unindent();
+    }
+
+    bool randomNoise = HasEffect(PostEffectType::RandomNoise);
+    if (ImGui::Checkbox("RandomNoise", &randomNoise)) {
+      if (randomNoise) {
+        AddEffect(PostEffectType::RandomNoise);
+      } else {
+        RemoveEffect(PostEffectType::RandomNoise);
+      }
+    }
+    if (randomNoise) {
+      ImGui::Indent();
+      ImGui::Text("Time: %.3f", randomTime_);
+      if (ImGui::SliderFloat("Intensity", &randomIntensity_, 0.0f, 1.0f)) {
+        if (mappedRandom_) mappedRandom_->intensity = randomIntensity_;
+      }
+      if (ImGui::ColorEdit3("Noise Color", randomColor_)) {
+        if (mappedRandom_) {
+          mappedRandom_->color[0] = randomColor_[0];
+          mappedRandom_->color[1] = randomColor_[1];
+          mappedRandom_->color[2] = randomColor_[2];
         }
       }
       ImGui::Unindent();

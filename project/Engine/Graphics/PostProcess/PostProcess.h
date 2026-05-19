@@ -22,6 +22,7 @@ enum class PostEffectType {
   DepthBasedOutline, ///< 深度ベースアウトライン
   RadialBlur, ///< ラジアルブラー
   Dissolve,   ///< ディゾルブ（ノイズマスクによる消失演出）
+  RandomNoise,///< ランダムノイズ（時間経過によるプロシージャルノイズ）
 };
 
 /// @class PostProcess
@@ -39,6 +40,10 @@ public:
   /// @param height 画面解像度（高さ）
   void Initialize(Dx12Core *dxCore, PipelineManager *pipelineManager,
                   uint32_t width, uint32_t height);
+
+  /// @brief 内部時間を更新する（毎フレーム呼び出す）
+  /// @param deltaTime 経過時間
+  void UpdateTime(float deltaTime);
 
   /// @brief 描画実行（スタックされた全エフェクトを適用）
   /// @param cmdList コマンドリスト
@@ -83,6 +88,8 @@ public:
 
   /// @brief Dissolve のノイズテクスチャインデックスを設定する
   void SetDissolveNoiseIndex(int index);
+
+
 
   /// @brief Dissolve のノイズテクスチャリストを初期化する
   void InitDissolveNoiseTextures();
@@ -162,6 +169,7 @@ private:
   GraphicsPipeline *pipelineDepthBasedOutline_ = nullptr;
   GraphicsPipeline *pipelineRadialBlur_ = nullptr;
   GraphicsPipeline *pipelineDissolve_ = nullptr;
+  GraphicsPipeline *pipelineRandom_ = nullptr;
 
   std::vector<PostEffectType> activeEffects_; ///< アクティブなエフェクトスタック（適用順）
 
@@ -222,4 +230,17 @@ private:
   std::vector<NoiseEntry> dissolveNoiseTextures_;
   int dissolveNoiseIndex_ = 0;
   bool dissolveNoiseInitialized_ = false;
+
+  // RandomNoise パラメータ
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbufferRandom_;
+  struct RandomNoiseData {
+    float color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    float time = 0.0f;
+    float intensity = 1.0f;
+    float padding[2] = {0.0f, 0.0f};
+  };
+  RandomNoiseData *mappedRandom_ = nullptr;
+  float randomTime_ = 0.0f;
+  float randomIntensity_ = 1.0f;
+  float randomColor_[3] = {1.0f, 1.0f, 1.0f};
 };

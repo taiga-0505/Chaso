@@ -949,6 +949,7 @@ void SetDissolveEdgeRange(float range);
 /// @param index ノイズテクスチャのインデックス
 void SetDissolveNoiseIndex(int index);
 
+
 /// @brief Dissolve のノイズテクスチャリストを初期化する
 /// @note RC::Init 完了後に呼び出してください
 void InitDissolveNoiseTextures();
