@@ -758,4 +758,11 @@ void UpdateModelAnimation(int modelHandle, float dt) {
   GetRenderContext().Models().UpdateAnimation(modelHandle, dt);
 }
 
+void DrawModelSkeleton(int modelHandle) {
+  auto &ctx = GetRenderContext();
+  auto *m = ctx.Models().Get(modelHandle);
+  if (!m) return;
+  m->DrawSkeleton();
+}
+
 } // namespace RC

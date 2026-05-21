@@ -13,7 +13,7 @@ Animation LoadAnimationFile(const std::string& filePath) {
 
     const aiScene* scene = importer.ReadFile(filePath.c_str(), 0);
     if (!scene || scene->mNumAnimations == 0) {
-        assert(false && "Animation not found or failed to load");
+        // アニメーションが無い場合は空のAnimationを返す（assertで落とさない）
         return animation;
     }
 

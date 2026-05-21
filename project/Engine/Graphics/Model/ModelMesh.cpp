@@ -125,6 +125,9 @@ bool ModelMesh::LoadAssimp_(const std::string &filePath) {
   drawItems_.clear();
   BuildDrawItems_(rootNode_, MakeIdentity4x4());
 
+  Log::Print(std::format("[ModelMesh] DrawItems: {}, Vertices: {}, Submeshes: {}, Materials: {}, Path: {}",
+      drawItems_.size(), verts.size(), submeshes_.size(), materials_.size(), filePath));
+
   start = std::chrono::high_resolution_clock::now();
   // VBアップロード
   UploadVB_(verts);
@@ -222,14 +225,13 @@ Node ModelMesh::ReadNode_(const aiNode *node) const {
   Node result{};
   if (!node) {
     result.localMatrix = MakeIdentity4x4();
+    result.transform = {{1,1,1}, {0,0,0,1}, {0,0,0}};
     return result;
   }
 
   // ---------------------------------------------------------
-  // assimpの行列は列ベクトル系の並びで来ることがあるので、
-  // 資料の通り Transpose() してから取り込む。
-  // さらに、頂点側で X反転して左手化しているので、
-  // Node行列も C*M*C（C=diag(-1,1,1,1)）で同じ座標系に揃える。
+  // 1. localMatrix: 旧方式（Transpose + ConvertNodeMatrixRHtoLH_）
+  //    既存のモデル描画（terrain, AnimatedCube等）を壊さないために維持。
   // ---------------------------------------------------------
   aiMatrix4x4 a = node->mTransformation;
   a.Transpose();
@@ -241,8 +243,20 @@ Node ModelMesh::ReadNode_(const aiNode *node) const {
     }
   }
   m = ConvertNodeMatrixRHtoLH_(m);
-
   result.localMatrix = m;
+
+  // ---------------------------------------------------------
+  // 2. transform: Decompose → 右手系→左手系変換
+  //    Skeleton用のSRTデータ。Animation.cpp と同じ変換ルール。
+  // ---------------------------------------------------------
+  aiVector3D aiScale, aiTranslate;
+  aiQuaternion aiRotate;
+  node->mTransformation.Decompose(aiScale, aiRotate, aiTranslate);
+
+  result.transform.scale     = { aiScale.x,      aiScale.y,      aiScale.z };
+  result.transform.rotate    = { aiRotate.x,    -aiRotate.y,    -aiRotate.z,  aiRotate.w };
+  result.transform.translate = {-aiTranslate.x,  aiTranslate.y,  aiTranslate.z };
+
   result.name = node->mName.C_Str();
 
   // このNodeが参照しているMeshのindex配列
