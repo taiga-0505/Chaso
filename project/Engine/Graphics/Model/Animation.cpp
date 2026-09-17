@@ -4,6 +4,8 @@
 #include <assimp/scene.h>
 #include <cassert>
 #include <filesystem>
+#include <map>
+#include <utility>
 
 namespace RC {
 
@@ -53,6 +55,14 @@ Animation ParseAnimation_(const aiScene* scene, int animIndex) {
 
     return animation;
 }
+
+/// @brief 解析済みアニメーションのキャッシュ
+/// @details assimp の ReadFile はファイル I/O とパースを伴うため、クリップを切り替えるたびに
+///          呼ぶとフレームが飛ぶ。同じ (パス, インデックス) は一度だけ解析して使い回す。
+std::map<std::pair<std::string, int>, Animation> g_animationCache;
+
+/// @brief アニメーション数のキャッシュ
+std::map<std::string, int> g_animationCountCache;
 } // namespace
 
 Animation LoadAnimationFile(const std::string& filePath) {
@@ -60,16 +70,37 @@ Animation LoadAnimationFile(const std::string& filePath) {
 }
 
 Animation LoadAnimationFile(const std::string& filePath, int animIndex) {
+    const auto key = std::make_pair(filePath, animIndex);
+    auto it = g_animationCache.find(key);
+    if (it != g_animationCache.end()) {
+        return it->second;
+    }
+
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(filePath.c_str(), aiProcess_MakeLeftHanded);
-    return ParseAnimation_(scene, animIndex);
+    Animation parsed = ParseAnimation_(scene, animIndex);
+
+    // 失敗（空の Animation）もキャッシュする。毎フレーム再パースを試みさせないため
+    g_animationCache.emplace(key, parsed);
+    return parsed;
 }
 
 int GetAnimationCount(const std::string& filePath) {
+    auto it = g_animationCountCache.find(filePath);
+    if (it != g_animationCountCache.end()) {
+        return it->second;
+    }
+
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(filePath.c_str(), aiProcess_MakeLeftHanded);
-    if (!scene) return 0;
-    return static_cast<int>(scene->mNumAnimations);
+    const int count = scene ? static_cast<int>(scene->mNumAnimations) : 0;
+    g_animationCountCache.emplace(filePath, count);
+    return count;
+}
+
+void ClearAnimationCache() {
+    g_animationCache.clear();
+    g_animationCountCache.clear();
 }
 
 Vector3 CalculateValue(const std::vector<KeyframeVector3>& keyframes, float time) {

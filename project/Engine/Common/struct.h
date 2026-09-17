@@ -224,7 +224,7 @@ struct GPUParticlePerFrame {
   // --- エミッタ形状パラメータ (16 bytes) ---
   float shapeRadius;     ///< Sphere/Cone の半径
   float coneAngle;       ///< Cone の半角 (ラジアン)
-  RC::Vector2 shapePad;  ///< パディング
+  RC::Vector2 shapePad;  ///< パディング（ParticleType::Electric だけ x=殻の丸み, y=殻のマージン として使う）
 
   // --- 開始色 (16 bytes) ---
   RC::Vector4 startColor;    ///< パーティクル開始色 (RGBA)
@@ -238,7 +238,7 @@ struct GPUParticlePerFrame {
 
   // --- Box形状サイズ (16 bytes) ---
   RC::Vector3 shapeBoxSize;  ///< Box 形状のサイズ (xyz)
-  float shapeBoxPad;         ///< パディング
+  float shapeBoxPad;         ///< パディング（ParticleType::Electric だけ 殻の Y 軸回転 (rad) として使う）
 };
 
 /// @brief 平行光源データ
@@ -246,6 +246,8 @@ struct DirectionalLight {
   RC::Vector4 color;     ///< 光の色 (RGBA)
   RC::Vector3 direction; ///< 光の方向
   float intensity;       ///< 光の強度
+  RC::Vector3 ambientColor; ///< 環境光の色。ライトが当たっていない面にも base * ambientColor * ambientIntensity が足される
+  float ambientIntensity;   ///< 環境光の強さ（0 でライトの当たった所以外は真っ暗）
 };
 
 /// @brief 点光源データ
@@ -255,7 +257,8 @@ struct PointLight {
   float intensity;      ///< 光の強度
   float radius;         ///< 影響半径
   float decay;          ///< 減衰率
-  float padding[2];     ///< パディング
+  int32_t shadowIndex = -1; ///< 影アトラスのタイル番号（-1 で影なし）。シーン側が毎フレーム割り当てる
+  float padding = 0.0f;     ///< パディング
 };
 
 /// @brief スポットライトデータ
@@ -267,7 +270,8 @@ struct SpotLight {
   float distance;        ///< 影響距離
   float decay;           ///< 減衰率
   float cosAngle;        ///< スポットライトの照射角のコサイン
-  float padding[2];      ///< パディング
+  int32_t shadowIndex = -1; ///< スポット影アトラスのタイル番号（-1 で影なし）。シーン側が毎フレーム割り当てる
+  float padding = 0.0f;  ///< パディング
 };
 
 /// @brief 面光源 (Area Light) データ
@@ -285,29 +289,42 @@ struct AreaLight {
   float range;       ///< 影響距離
   float decay;       ///< 減衰指数
   uint32_t twoSided; ///< 1なら両面発光、0なら片面
-  uint32_t padding;  ///< パディング
+  int32_t shadowIndex = -1; ///< 影アトラスのタイル番号（-1 で影なし）。シーン側が毎フレーム割り当てる
 };
+
+/// @brief 同時に GPU へ送れるライトの最大数
+/// @details それぞれ HLSL 側の MAX_POINT_LIGHTS / MAX_SPOT_LIGHTS / MAX_AREA_LIGHTS と一致させる。
+///          シェーダのループは count で break するので、上限を上げても点灯数が少なければ描画コストは増えない。
+///          増えるのは定数バッファのサイズだけ（下の static_assert で 64KB 制限を監視）。
+inline constexpr uint32_t kMaxPointLights = 256; ///< 点光源の最大数
+inline constexpr uint32_t kMaxSpotLights = 256;  ///< スポットライトの最大数
+inline constexpr uint32_t kMaxAreaLights = 256;  ///< 面光源の最大数
 
 /// @brief 点光源群の定数バッファ構造体 (b3番)
 struct PointLightsCB {
-  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ 4)
+  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ kMaxPointLights)
   float padding0[3] = {0.0f, 0.0f, 0.0f}; ///< 16byte境界合わせ用
-  PointLight lights[4]{};                ///< 点光源の配列
+  PointLight lights[kMaxPointLights]{};   ///< 点光源の配列（シェーダーの MAX_POINT_LIGHTS と一致させる）
 };
 
 /// @brief スポットライト群の定数バッファ構造体 (b4番)
 struct SpotLightsCB {
-  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ 4)
+  uint32_t count = 0;                     ///< 有効なライト数 (0 ~ kMaxSpotLights)
   float padding0[3] = {0.0f, 0.0f, 0.0f}; ///< 16byte境界合わせ用
-  SpotLight lights[4]{};                 ///< スポットライトの配列
+  SpotLight lights[kMaxSpotLights]{};     ///< スポットライトの配列（シェーダーの MAX_SPOT_LIGHTS と一致させる）
 };
 
 /// @brief 面光源群の定数バッファ構造体
 struct AreaLightsCB {
-  uint32_t count = 0;            ///< 有効なライト数 (0 ~ 4)
+  uint32_t count = 0;            ///< 有効なライト数 (0 ~ kMaxAreaLights)
   float padding0[3] = {0, 0, 0}; ///< 16byte境界合わせ用
-  AreaLight lights[4]{};        ///< 面光源の配列
+  AreaLight lights[kMaxAreaLights]{}; ///< 面光源の配列（シェーダーの MAX_AREA_LIGHTS と一致させる）
 };
+
+// 定数バッファ 1 本の上限は 64KB（D3D12）。上限数を上げるときはここで引っかかる
+static_assert(sizeof(PointLightsCB) <= 65536, "PointLightsCB exceeds the 64KB constant buffer limit");
+static_assert(sizeof(SpotLightsCB) <= 65536, "SpotLightsCB exceeds the 64KB constant buffer limit");
+static_assert(sizeof(AreaLightsCB) <= 65536, "AreaLightsCB exceeds the 64KB constant buffer limit");
 
 /// @brief シャドウマップ用のパラメータ (b6番)
 struct ShadowParams {
@@ -318,6 +335,49 @@ struct ShadowParams {
   uint32_t shadowMapEnabled;         ///< シャドウマップが有効か (0:無効, 1:有効)
   RC::Vector2 shadowMapTexelSize = {1.0f / 2048.0f, 1.0f / 2048.0f}; ///< 1テクセルのUVサイズ (RenderContext が実サイズで上書きする)
   float pcfRadius = 1.0f;            ///< PCFのタップ間隔 (テクセル単位。0以下で1タップ＝PCF無効)
+};
+
+/// @brief 同時に影を落とせるスポットライトの最大数（シェーダーの MAX_SPOT_SHADOWS と一致させる）
+/// @details アトラスは kSpotShadowTilesX × kSpotShadowTilesY のタイルに分割され、
+///          タイル 1 枚が 1 灯分の深度マップになる。
+/// @note ライトの上限数（kMaxSpotLights など）とは別枠。影は 1 灯につき毎フレーム 1 パス描画する上に
+///       アトラスの VRAM も灯数に比例するため、ライト本体よりかなり低めに抑えている。
+///       ここを増やすときは kSpotShadowTilesX/Y も合わせて増やすこと（アトラス = タイル数 × kSpotShadowTileSize px）。
+inline constexpr uint32_t kMaxSpotShadows = 32;
+inline constexpr uint32_t kSpotShadowTilesX = 8;   ///< アトラスの横タイル数
+inline constexpr uint32_t kSpotShadowTilesY = 4;   ///< アトラスの縦タイル数
+inline constexpr uint32_t kSpotShadowTileSize = 512; ///< タイル 1 枚の解像度 (px)
+static_assert(kSpotShadowTilesX * kSpotShadowTilesY >= kMaxSpotShadows,
+              "spot shadow atlas has fewer tiles than kMaxSpotShadows");
+
+/// @brief ライト 1 灯分の影情報
+/// @details スポットライトは照射方向の透視投影をそのまま使う。
+///          点光源・面光源は「ライト位置から真下を向いた広角の透視投影」を 1 枚だけ焼き、
+///          遮蔽物（壁）が垂直であることを利用して水平方向の遮蔽もこの 1 枚で判定する
+///          （シェーダの SampleOmniShadowDown を参照）。
+struct SpotShadowEntry {
+  RC::Matrix4x4 lightViewProjection; ///< ライト視点の ViewProjection 行列
+  float nearZ = 0.1f;                ///< ライト視点の near（線形深度への復元用）
+  float farZ = 1.0f;                 ///< ライト視点の far（= ライトの到達距離）
+  float tanHalfFov = 1.0f;           ///< 照射半角の tan（距離に応じたテクセルのワールドサイズ算出用）
+  float padding = 0.0f;              ///< パディング
+  RC::Vector3 lightPosition;         ///< ライトのワールド座標（真下向きモードのサンプル位置補正に使う）
+  float padding2 = 0.0f;             ///< パディング
+};
+
+/// @brief スポットライト影の定数バッファ (b7番)
+/// @details SpotLight::shadowIndex がこの配列 / アトラスのタイル番号を指す。
+struct SpotShadowCB {
+  SpotShadowEntry entries[kMaxSpotShadows]{}; ///< 灯ごとの影情報
+  uint32_t count = 0;                  ///< 有効なエントリ数
+  uint32_t tilesX = kSpotShadowTilesX; ///< アトラスの横タイル数
+  uint32_t tilesY = kSpotShadowTilesY; ///< アトラスの縦タイル数
+  float tileSizePx = float(kSpotShadowTileSize); ///< タイル 1 枚の解像度 (px)。RenderContext が実サイズで上書きする
+  RC::Vector2 atlasTexelSize = {1.0f / 2048.0f, 1.0f / 2048.0f}; ///< アトラス 1 テクセルの UV サイズ。RenderContext が実サイズで上書きする
+  float bias = 0.03f;                  ///< 定数バイアス（ワールド単位の線形距離）。シャドウアクネ対策
+  float slopeBias = 1.5f;              ///< 斜面バイアス（テクセルのワールドサイズ × tanθ に掛ける係数）
+  float pcfRadius = 1.0f;              ///< PCF のタップ間隔（テクセル単位。0以下で1タップ）
+  float padding[3] = {0.0f, 0.0f, 0.0f}; ///< 16byte 境界合わせ
 };
 
 /// @brief ライティングの計算方式
@@ -341,4 +401,18 @@ enum class ViewShadingMode {
 enum kFillMode {
   kFill = 0, ///< 塗りつぶしあり
   kWire = 1, ///< 枠線のみ（塗りつぶしなし）
+};
+
+/// @brief 文字列描画の水平揃え（DrawString 用）
+enum class TextAlign {
+  Left = 0,   ///< pos.x を左端とする
+  Center = 1, ///< pos.x を中央とする
+  Right = 2,  ///< pos.x を右端とする
+};
+
+/// @brief 文字列描画の頂点（Font パイプライン用）
+struct FontVertex {
+  RC::Vector4 position; ///< スクリーン座標（ピクセル、z=0, w=1）
+  RC::Vector2 texcoord; ///< アトラス UV
+  RC::Vector4 color;    ///< 頂点カラー（RGBA）
 };

@@ -103,6 +103,11 @@ void ImGuiManager::Render(ID3D12GraphicsCommandList *cmdList) {
 #if RC_ENABLE_IMGUI
   if (!initialized_)
     return;
+  // テキスト入力欄上で OS の I ビームカーソルに切り替わると暗い UI 上で見えなくなるため、
+  // 通常の矢印カーソルのまま維持する（リサイズ用カーソル等はそのまま）
+  if (ImGui::GetMouseCursor() == ImGuiMouseCursor_TextInput) {
+    ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
+  }
   ImGui::Render();
   ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList);
 #endif

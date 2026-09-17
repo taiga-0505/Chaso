@@ -42,10 +42,7 @@ Sprite2D *SpriteManager::Get(int handle) {
     return nullptr;
   }
   auto& s = sprites_[handle];
-  // 非同期ロード完了後にSRVハンドルを遅延取得する
-  if (s.ptr->GetTexture().ptr == 0 && s.texHandle >= 0 && texman_) {
-    s.ptr->SetTexture(texman_->GetSrv(s.texHandle));
-  }
+  ResolveTexture_(s);
   return s.ptr.get();
 }
 
@@ -54,6 +51,24 @@ const Sprite2D *SpriteManager::Get(int handle) const {
     return nullptr;
   }
   return sprites_[handle].ptr.get();
+}
+
+void SpriteManager::ResolveTexture_(Slot &s) {
+  if (s.texResolved || !s.ptr || s.texHandle < 0 || !texman_) {
+    return;
+  }
+  // TextureManager は非同期ロード中、GetSrv() で white1x1 のプレースホルダ SRV を返す。
+  // ptr==0 判定ではプレースホルダのまま固定されてしまうため、実テクスチャの完了を見て差し替える。
+  // Upload 中は resource_ が先に立ち SRV が後から入るため、SRV も揃ったことを確認する
+  if (Texture2D *tex = texman_->GetTexture(s.texHandle);
+      tex && tex->IsLoaded() && tex->GpuSrv().ptr != 0) {
+    s.ptr->SetTexture(tex->GpuSrv());
+    s.texResolved = true;
+    return;
+  }
+  if (s.ptr->GetTexture().ptr == 0) {
+    s.ptr->SetTexture(texman_->GetSrv(s.texHandle)); // 仮（white1x1）
+  }
 }
 
 int SpriteManager::Load(const std::string &path, float screenW, float screenH,
@@ -87,7 +102,8 @@ int SpriteManager::Load(const std::string &path, float screenW, float screenH,
 
   // 初期化
   s.ptr->Initialize(device_, quad, screenW, screenH);
-  s.ptr->SetTexture(texman_->GetSrv(texHandle));
+  s.texHandle = texHandle;
+  ResolveTexture_(s); // ロード済みなら実 SRV、未完了なら white1x1 を仮バインド
   s.ptr->SetFilePath(npath);
   Log::Print("[Sprite] ロード完了: " + npath);
 
@@ -113,6 +129,7 @@ void SpriteManager::Unload(int handle) {
   s.ptr.reset();
   s.inUse = false;
   s.texHandle = -1;
+  s.texResolved = false;
 }
 
 void SpriteManager::Draw(int handle, ID3D12GraphicsCommandList *cl) {
@@ -142,11 +159,6 @@ void SpriteManager::DrawRect(int handle, float srcX, float srcY, float srcW,
   auto *sp = Get(handle);
   if (!sp) {
     return;
-  }
-
-  // 非同期ロード完了後にSRVハンドルを遅延取得する
-  if (sp->GetTexture().ptr == 0 && sprites_[handle].texHandle >= 0 && texman_) {
-    sp->SetTexture(texman_->GetSrv(sprites_[handle].texHandle));
   }
 
   // 入力が壊れている場合は安全に無視
@@ -235,6 +247,23 @@ void SpriteManager::SetSize(int handle, float w, float h) {
     return;
   }
   sp->SetSize(w, h);
+}
+
+void SpriteManager::SetWorldSpace(int handle, bool enable) {
+  auto *sp = Get(handle);
+  if (!sp) {
+    return;
+  }
+  sp->SetWorldSpace(enable);
+}
+
+void SpriteManager::SetCamera(int handle, const Matrix4x4 &view,
+                              const Matrix4x4 &proj) {
+  auto *sp = Get(handle);
+  if (!sp) {
+    return;
+  }
+  sp->SetCamera(view, proj);
 }
 
 void SpriteManager::DrawImGui(int handle, const char *name) {

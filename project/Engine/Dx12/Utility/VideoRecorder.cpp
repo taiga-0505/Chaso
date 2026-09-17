@@ -59,10 +59,10 @@ bool VideoRecorder::Start(ID3D12Device* device, ID3D12CommandQueue* queue, UINT 
     auto time_t = std::chrono::system_clock::to_time_t(now);
     std::tm tm;
     localtime_s(&tm, &time_t);
-    std::string filename = std::format("../media/video/{:04}{:02}{:02}_{:02}{:02}{:02}.mp4", 
-        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, 
+    std::string filename = std::format("../media/video/{:04}{:02}{:02}_{:02}{:02}{:02}.mp4",
+        tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
         tm.tm_hour, tm.tm_min, tm.tm_sec);
-    
+
     Log logger;
     std::wstring wFilename = logger.ConvertString(filename);
 
@@ -98,7 +98,7 @@ bool VideoRecorder::Start(ID3D12Device* device, ID3D12CommandQueue* queue, UINT 
     UINT64 rowSizeInBytes;
     UINT64 totalBytes;
     device_->GetCopyableFootprints(&texDesc, 0, 1, 0, &footprint_, &numRows, &rowSizeInBytes, &totalBytes);
-    
+
     desc.Width = totalBytes;
 
     D3D12_HEAP_PROPERTIES heapProps = {};
@@ -121,10 +121,17 @@ bool VideoRecorder::Start(ID3D12Device* device, ID3D12CommandQueue* queue, UINT 
         readbackBuffers_[i].fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
         readbackBuffers_[i].fenceValue = 0;
         readbackBuffers_[i].inUse = false;
+
+        // バッファごとに専用アロケータ。フェンス完了を待った後にのみ Reset するため、
+        // GPU 実行中のアロケータを Reset して D3D12 ERROR になることがない
+        hr = device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&readbackBuffers_[i].allocator));
+        if (FAILED(hr)) {
+            Log::Print("[VideoRecorder] Failed to create command allocator.");
+            return false;
+        }
     }
 
-    device_->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator_));
-    device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator_.Get(), nullptr, IID_PPV_ARGS(&commandList_));
+    device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, readbackBuffers_[0].allocator.Get(), nullptr, IID_PPV_ARGS(&commandList_));
     commandList_->Close();
 
     rtStart_ = 0;
@@ -159,7 +166,7 @@ bool VideoRecorder::SetupSinkWriter(const std::wstring& path, UINT width, UINT h
     MFSetAttributeSize(mediaTypeOut.Get(), MF_MT_FRAME_SIZE, width, height);
     MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_FRAME_RATE, fps, 1);
     MFSetAttributeRatio(mediaTypeOut.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
-    
+
     hr = sinkWriter_->AddStream(mediaTypeOut.Get(), &streamIndex_);
     if (FAILED(hr)) {
         Log::Print("[VideoRecorder] Failed to add H.264 stream.");
@@ -207,10 +214,10 @@ void VideoRecorder::Stop() {
             buf.fenceEvent = nullptr;
         }
     }
+    // FlushBuffers で全フェンス待機済み → アロケータ含め安全に破棄できる
+    commandList_.Reset();
     readbackBuffers_.clear();
 
-    commandList_.Reset();
-    commandAllocator_.Reset();
     device_.Reset();
     queue_.Reset();
 
@@ -285,8 +292,9 @@ void VideoRecorder::Update(ID3D12Resource* backBuffer) {
     }
 
     // Record copy command
-    commandAllocator_->Reset();
-    commandList_->Reset(commandAllocator_.Get(), nullptr);
+    // currentBuf のフェンスは上で待機済みなので、このアロケータの前回実行は完了している
+    currentBuf.allocator->Reset();
+    commandList_->Reset(currentBuf.allocator.Get(), nullptr);
 
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -342,20 +350,20 @@ void VideoRecorder::ProcessReadbackBuffer(ReadbackBuffer& buf) {
 void VideoRecorder::WriteFrame(const void* data, UINT rowPitch) {
     const LONG cbWidth = 4 * videoWidth_;
     const DWORD cbBuffer = cbWidth * videoHeight_;
-    
+
     Microsoft::WRL::ComPtr<IMFSample> sample;
     Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
-    
+
     HRESULT hr = MFCreateSample(&sample);
     if (FAILED(hr)) return;
-    
+
     hr = MFCreateMemoryBuffer(cbBuffer, &buffer);
     if (FAILED(hr)) return;
-    
+
     BYTE* pData = nullptr;
     DWORD cbMaxLength = 0;
     DWORD cbCurrentLength = 0;
-    
+
     hr = buffer->Lock(&pData, &cbMaxLength, &cbCurrentLength);
     if (SUCCEEDED(hr)) {
         const BYTE* pSrc = static_cast<const BYTE*>(data);
@@ -374,17 +382,17 @@ void VideoRecorder::WriteFrame(const void* data, UINT rowPitch) {
                 memcpy(pData + y * cbWidth, pSrc + y * rowPitch, cbWidth);
             }
         }
-        
+
         buffer->Unlock();
     }
-    
+
     hr = buffer->SetCurrentLength(cbBuffer);
     hr = sample->AddBuffer(buffer.Get());
-    
+
     LONGLONG rtTimestamp = (LONGLONG)frameCount_ * 10 * 1000 * 1000 / videoFps_; // 100ns units
     sample->SetSampleTime(rtTimestamp);
     sample->SetSampleDuration(10 * 1000 * 1000 / videoFps_);
-    
+
     hr = sinkWriter_->WriteSample(streamIndex_, sample.Get());
     if (FAILED(hr)) {
         Log::Print(std::format("[VideoRecorder] WriteSample failed. HR: {:08X}", (uint32_t)hr));

@@ -12,7 +12,7 @@ class PrimitiveMesh {
 public:
   /// @brief デフォルトコンストラクタ
   PrimitiveMesh() = default;
-  
+
   /// @brief デストラクタ
   ~PrimitiveMesh();
 
@@ -56,15 +56,35 @@ public:
   /// @brief トランスフォーム情報への参照を取得
   /// @return Transform構造体への参照
   Transform &T() { return transform_; }
-  
+
   /// @brief マテリアルデータへのポインタを取得（直接編集可能）
   /// @return マテリアル構造体へのポインタ
   Material *Mat() { return cbMat_.mapped; }
-  
+
+  /// @brief ライティングモードを個別に固定する
+  /// @param m 設定する LightingMode
+  /// @note 呼び出し以降、このメッシュはシーンの DirectionalLight の
+  ///       LightingMode に追従しなくなる。追従に戻すには
+  ///       ClearLightingModeOverride() を呼ぶ。
+  void SetLightingMode(LightingMode m) {
+    lightingModeOverride_ = static_cast<int>(m);
+    if (cbMat_.mapped) {
+      cbMat_.mapped->lightingMode = lightingModeOverride_;
+    }
+  }
+
+  /// @brief ライティングモードの個別固定を解除し、
+  ///        シーンの DirectionalLight のモードに追従させる
+  void ClearLightingModeOverride() { lightingModeOverride_ = -1; }
+
+  /// @brief ライティングモードのオーバーライド値を取得する
+  /// @return -1: DirectionalLight に追従 / 0以上: 固定された LightingMode
+  int GetLightingModeOverride() const { return lightingModeOverride_; }
+
   /// @brief 可視状態を設定
   /// @param v trueで表示
   void SetVisible(bool v) { visible_ = v; }
-  
+
   /// @brief 可視状態を取得
   /// @return 表示中なら true
   bool Visible() const { return visible_; }
@@ -72,7 +92,7 @@ public:
 private:
   /// @brief 頂点バッファのアップロード
   void UploadVB_(const std::vector<VertexData> &vertices);
-  
+
   /// @brief インデックスバッファのアップロード
   void UploadIB_(const std::vector<uint32_t> &indices);
 
@@ -82,20 +102,20 @@ private:
     D3D12_VERTEX_BUFFER_VIEW view{};
     uint32_t vertexCount = 0;
   };
-  
+
   /// @brief インデックスバッファ保持用構造体
   struct IB {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     D3D12_INDEX_BUFFER_VIEW view{};
     uint32_t indexCount = 0;
   };
-  
+
   /// @brief WVP用定数バッファ保持用構造体
   struct CB_WVP {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
     TransformationMatrix *mapped = nullptr;
   };
-  
+
   /// @brief マテリアル用定数バッファ保持用構造体
   struct CB_Material {
     Microsoft::WRL::ComPtr<ID3D12Resource> resource;
@@ -115,4 +135,6 @@ private:
 
   Transform transform_{{1, 1, 1}, {0, 0, 0}, {0, 0, 0}}; ///< ローカルトランスフォーム
   bool visible_ = true; ///< 可視フラグ
+
+  int lightingModeOverride_ = -1; ///< -1: DirectionalLight に追従 / 0以上: 固定 LightingMode
 };

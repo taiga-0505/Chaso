@@ -88,7 +88,7 @@ void CameraController::Update(float dt) {
           isDraggingCamera_ = true;
         }
     }
-    
+
     // 右・中のボタンが離されたらドラッグ終了
     if (!input_->IsMousePressed(1) && !input_->IsMousePressed(2)) {
       isDraggingCamera_ = false;
@@ -96,7 +96,7 @@ void CameraController::Update(float dt) {
 
     // マウスがViewport上にあるか、カメラをドラッグ中ならマウスをカメラに渡す
     bool captureMouse = ImGui::GetIO().WantCaptureMouse && !(input_->IsViewportHovered() || isDraggingCamera_);
-    
+
     // Viewport上にあるかドラッグ中なら、キーボード（WASD等）もカメラに渡す
     bool captureKeyboard = ImGui::GetIO().WantCaptureKeyboard && !(input_->IsViewportHovered() || isDraggingCamera_);
 
@@ -104,7 +104,7 @@ void CameraController::Update(float dt) {
 #else
 if (true) {
 #endif
-      debug_.Update();
+      debug_.Update(dt);
     }
   } else {
     // メインカメラ：ターゲットが設定されてたら追従を内部で更新
@@ -277,13 +277,20 @@ void CameraController::DrawImGui() {
 
   // 操作ガイド
   if (showGuide_) {
-    ImGui::Begin("操作方法", &showGuide_, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text(" WASD : 前後左右移動");
-    ImGui::Text(" QE : 上下移動");
-    ImGui::Text(" 十字キー : カメラの回転");
-    ImGui::Text(" マウスホイール : 前後移動");
-    ImGui::Text(" 右クリックしながらドラッグ : 回転");
-    ImGui::Text(" マウスホイール押しながらドラッグ : 上下左右移動");
+    ImGui::Begin("操作方法 (Blender操作)", &showGuide_, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Text("【マウス操作 (Blender準拠)】");
+    ImGui::Text(" 中ドラッグ             : 視点回転");
+    ImGui::Text(" Shift + 中ドラッグ     : 平行移動 (パン)");
+    ImGui::Text(" Ctrl + 中ドラッグ      : ズーム (前後移動)");
+    ImGui::Text(" マウスホイール         : ズーム (前後移動)");
+    ImGui::Text(" 右ドラッグ             : 視点回転");
+    ImGui::Separator();
+    ImGui::Text("【キーボード操作】");
+    ImGui::Text(" WASD                   : 前後左右移動");
+    ImGui::Text(" E / Q                  : 上昇 / 下降");
+    ImGui::Text(" Shift (長押し)         : 移動速度加速 (ブースト)");
+    ImGui::Text(" Ctrl (長押し)          : 精密移動 (減速)");
+    ImGui::Text(" 十字キー               : カメラ回転");
     ImGui::End();
   }
 

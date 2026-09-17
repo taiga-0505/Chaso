@@ -54,7 +54,7 @@ public:
   /// @param handle スプライトハンドル
   /// @return Sprite2Dへのポインタ。無効なハンドルの場合は nullptr
   Sprite2D *Get(int handle);
-  
+
   /// @brief ハンドルからスプライトの実体を取得する (const)
   /// @param handle スプライトハンドル
   /// @return Sprite2Dへのconstポインタ
@@ -105,6 +105,17 @@ public:
   /// @param h 高さ（ピクセル）
   void SetSize(int handle, float w, float h);
 
+  /// @brief ワールド空間（3D）モードを切り替える
+  /// @param handle スプライトハンドル
+  /// @param enable true でワールド空間モード
+  void SetWorldSpace(int handle, bool enable);
+
+  /// @brief ワールド空間モードで使うカメラ行列を設定する
+  /// @param handle スプライトハンドル
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
+  void SetCamera(int handle, const Matrix4x4 &view, const Matrix4x4 &proj);
+
   /// @brief ImGuiによるパラメータ編集UIを表示
   /// @param handle スプライトハンドル
   /// @param name UIに表示するラベル
@@ -138,10 +149,14 @@ private:
     std::unique_ptr<Sprite2D> ptr; ///< スプライト実体
     bool inUse = false;           ///< 使用中フラグ
     int texHandle = -1;           ///< テクスチャハンドル
+    bool texResolved = false;     ///< 実テクスチャの SRV を Sprite2D に反映済みか（非同期ロード対応）
   };
 
   /// @brief 共有Quadメッシュを確保する
   std::shared_ptr<SpriteMesh2D> EnsureQuad_();
+
+  /// @brief 非同期ロード完了後の実テクスチャ SRV を Sprite2D に反映する（未完了なら仮 SRV）
+  void ResolveTexture_(Slot &s);
 
 private:
   ID3D12Device *device_ = nullptr;     ///< デバイス

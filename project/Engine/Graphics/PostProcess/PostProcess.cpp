@@ -8,6 +8,7 @@
 
 #include <filesystem>
 #include <algorithm>
+#include <cmath>
 #include <format>
 #include <utility> // std::swap (MoveEffect)
 
@@ -23,10 +24,16 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::RadialBlur: return "RadialBlur";
   case PostEffectType::Dissolve:   return "Dissolve";
   case PostEffectType::RandomNoise:return "RandomNoise";
+  case PostEffectType::MaskOutline:return "MaskOutline";
+  case PostEffectType::Ssao:      return "Ssao";
+  case PostEffectType::Bloom:     return "Bloom";
+  case PostEffectType::ColorGrade:return "ColorGrade";
+  case PostEffectType::Fxaa:      return "Fxaa";
   case PostEffectType::Underwater: return "Underwater";
   case PostEffectType::Caustics:  return "Caustics";
   case PostEffectType::LightShaft:return "LightShaft";
   case PostEffectType::ScreenDroplets:return "ScreenDroplets";
+  case PostEffectType::BloodOverlay:return "BloodOverlay";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -86,6 +93,21 @@ void PostProcess::Initialize(Dx12Core *dxCore,
   pipelineRandom_ = pipelineManager_->Get("random.none");
   assert(pipelineRandom_ && "Failed to get random pipeline");
 
+  pipelineMaskOutline_ = pipelineManager_->Get("maskoutline.none");
+  assert(pipelineMaskOutline_ && "Failed to get maskoutline pipeline");
+
+  pipelineSsao_ = pipelineManager_->Get("ssao.none");
+  assert(pipelineSsao_ && "Failed to get ssao pipeline");
+
+  pipelineBloom_ = pipelineManager_->Get("bloom.none");
+  assert(pipelineBloom_ && "Failed to get bloom pipeline");
+
+  pipelineColorGrade_ = pipelineManager_->Get("colorgrade.none");
+  assert(pipelineColorGrade_ && "Failed to get colorgrade pipeline");
+
+  pipelineFxaa_ = pipelineManager_->Get("fxaa.none");
+  assert(pipelineFxaa_ && "Failed to get fxaa pipeline");
+
   pipelineUnderwater_ = pipelineManager_->Get("underwater.none");
   assert(pipelineUnderwater_ && "Failed to get underwater pipeline");
 
@@ -97,6 +119,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineScreenDroplets_ = pipelineManager_->Get("screendroplets.none");
   assert(pipelineScreenDroplets_ && "Failed to get screendroplets pipeline");
+
+  pipelineBloodOverlay_ = pipelineManager_->Get("bloodoverlay.none");
+  assert(pipelineBloodOverlay_ && "Failed to get bloodoverlay pipeline");
 
   // CBuffer 初期化
   D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
@@ -117,12 +142,13 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       IID_PPV_ARGS(&cbufferMaterial_));
   assert(SUCCEEDED(hr));
   cbufferMaterial_->Map(0, nullptr, reinterpret_cast<void **>(&mappedMaterial_));
-  
+
   if (mappedMaterial_) {
     memcpy(mappedMaterial_->outlineColor, outlineColor_, sizeof(float) * 4);
     mappedMaterial_->outlineWeight = outlineWeight_;
     mappedMaterial_->outlineThickness = outlineThickness_;
     mappedMaterial_->outlineMode = outlineMode_;
+    mappedMaterial_->excludeCount = 0; // 除外矩形は毎フレーム UI 側から申告される
   }
 
   // Dissolve CBuffer 初期化
@@ -190,6 +216,107 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedRandom_->color[3] = 1.0f;
       mappedRandom_->time = randomTime_;
       mappedRandom_->intensity = randomIntensity_;
+    }
+  }
+
+  // MaskOutline CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescMask{};
+    cbDescMask.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescMask.Width = (sizeof(MaskOutlineData) + 255) & ~255;
+    cbDescMask.Height = 1;
+    cbDescMask.DepthOrArraySize = 1;
+    cbDescMask.MipLevels = 1;
+    cbDescMask.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescMask.SampleDesc.Count = 1;
+    cbDescMask.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescMask.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescMask,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferMaskOutline_));
+    assert(SUCCEEDED(hr));
+    cbufferMaskOutline_->Map(0, nullptr, reinterpret_cast<void **>(&mappedMaskOutline_));
+
+    if (mappedMaskOutline_) {
+      mappedMaskOutline_->color[0] = maskOutlineColor_[0];
+      mappedMaskOutline_->color[1] = maskOutlineColor_[1];
+      mappedMaskOutline_->color[2] = maskOutlineColor_[2];
+      mappedMaskOutline_->color[3] = maskOutlineColor_[3];
+      mappedMaskOutline_->thickness = maskOutlineThickness_;
+      mappedMaskOutline_->strength = maskOutlineStrength_;
+      mappedMaskOutline_->excludeCount = 0; // 除外矩形は毎フレーム UI 側から申告される
+    }
+  }
+
+  // SSAO CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescSsao{};
+    cbDescSsao.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescSsao.Width = (sizeof(SsaoData) + 255) & ~255;
+    cbDescSsao.Height = 1;
+    cbDescSsao.DepthOrArraySize = 1;
+    cbDescSsao.MipLevels = 1;
+    cbDescSsao.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescSsao.SampleDesc.Count = 1;
+    cbDescSsao.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescSsao.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescSsao,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferSsao_));
+    assert(SUCCEEDED(hr));
+    cbufferSsao_->Map(0, nullptr, reinterpret_cast<void **>(&mappedSsao_));
+
+    if (mappedSsao_) {
+      // 行列は SetProjectionInverse が来るまで単位行列にしておく
+      // （ゼロ行列だと w = 0 で除算して NaN になる）
+      const float identity[16] = {1.0f, 0.0f, 0.0f, 0.0f,
+                                  0.0f, 1.0f, 0.0f, 0.0f,
+                                  0.0f, 0.0f, 1.0f, 0.0f,
+                                  0.0f, 0.0f, 0.0f, 1.0f};
+      memcpy(mappedSsao_->projectionInverse, identity, sizeof(identity));
+
+      mappedSsao_->radius = ssaoRadius_;
+      mappedSsao_->intensity = ssaoIntensity_;
+      mappedSsao_->bias = ssaoBias_;
+      mappedSsao_->power = ssaoPower_;
+    }
+  }
+
+  // ColorGrade CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescGrade{};
+    cbDescGrade.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescGrade.Width = (sizeof(ColorGradeData) + 255) & ~255;
+    cbDescGrade.Height = 1;
+    cbDescGrade.DepthOrArraySize = 1;
+    cbDescGrade.MipLevels = 1;
+    cbDescGrade.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescGrade.SampleDesc.Count = 1;
+    cbDescGrade.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescGrade.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescGrade,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferColorGrade_));
+    assert(SUCCEEDED(hr));
+    cbufferColorGrade_->Map(0, nullptr, reinterpret_cast<void **>(&mappedColorGrade_));
+
+    if (mappedColorGrade_) {
+      memcpy(mappedColorGrade_->colorFilter, gradeColorFilter_, sizeof(float) * 4);
+      mappedColorGrade_->exposure = gradeExposure_;
+      mappedColorGrade_->contrast = gradeContrast_;
+      mappedColorGrade_->saturation = gradeSaturation_;
+      mappedColorGrade_->temperature = gradeTemperature_;
+      mappedColorGrade_->tint = gradeTint_;
+      mappedColorGrade_->lerpFactor = gradeLerpFactor_;
     }
   }
 
@@ -364,6 +491,48 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedScreenDroplets_->padding[1] = 0.0f;
     }
   }
+
+  // BloodOverlay CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescBlood{};
+    cbDescBlood.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescBlood.Width = (sizeof(BloodOverlayData) + 255) & ~255;
+    cbDescBlood.Height = 1;
+    cbDescBlood.DepthOrArraySize = 1;
+    cbDescBlood.MipLevels = 1;
+    cbDescBlood.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescBlood.SampleDesc.Count = 1;
+    cbDescBlood.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescBlood.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescBlood,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferBloodOverlay_));
+    assert(SUCCEEDED(hr));
+    cbufferBloodOverlay_->Map(0, nullptr, reinterpret_cast<void **>(&mappedBloodOverlay_));
+
+    if (mappedBloodOverlay_) {
+      mappedBloodOverlay_->time = 0.0f;
+      mappedBloodOverlay_->hitFlash = bloodHitFlash_;
+      mappedBloodOverlay_->lowHealth = bloodLowHealth_;
+      mappedBloodOverlay_->pulseSpeed = bloodPulseSpeed_;
+      mappedBloodOverlay_->bloodColor[0] = bloodColor_[0];
+      mappedBloodOverlay_->bloodColor[1] = bloodColor_[1];
+      mappedBloodOverlay_->bloodColor[2] = bloodColor_[2];
+      mappedBloodOverlay_->bloodColor[3] = 1.0f;
+      mappedBloodOverlay_->coverage = bloodCoverage_;
+      mappedBloodOverlay_->splatterScale = bloodSplatterScale_;
+      mappedBloodOverlay_->desaturate = bloodDesaturate_;
+      mappedBloodOverlay_->aspectRatio =
+          (height_ > 0) ? (static_cast<float>(width_) / static_cast<float>(height_)) : 1.777f;
+      mappedBloodOverlay_->seed = bloodSeed_;
+      mappedBloodOverlay_->padding[0] = 0.0f;
+      mappedBloodOverlay_->padding[1] = 0.0f;
+      mappedBloodOverlay_->padding[2] = 0.0f;
+    }
+  }
 }
 
 void PostProcess::Resize(uint32_t width, uint32_t height) {
@@ -372,6 +541,10 @@ void PostProcess::Resize(uint32_t width, uint32_t height) {
   screenDropletsAspectRatio_ = (height_ > 0) ? (static_cast<float>(width_) / static_cast<float>(height_)) : 1.777f;
   if (mappedScreenDroplets_) {
     mappedScreenDroplets_->aspectRatio = screenDropletsAspectRatio_;
+  }
+  if (mappedBloodOverlay_) {
+    // 血の形が縦横に潰れないよう、こちらも同じアスペクト比を流す
+    mappedBloodOverlay_->aspectRatio = screenDropletsAspectRatio_;
   }
 
   // DepthStencil::Resize は深度リソース自体を作り直すため、
@@ -410,6 +583,10 @@ void PostProcess::UpdateTime(float deltaTime) {
     mappedScreenDroplets_->time = randomTime_;
     mappedScreenDroplets_->intensity = screenDropletsIntensity_;
   }
+  if (mappedBloodOverlay_) {
+    // time は心拍の位相にしか使わない（飛沫パターンは seed 固定でチラつかせない）
+    mappedBloodOverlay_->time = randomTime_;
+  }
 }
 
 void PostProcess::SetProjectionInverse(const float* projInv16) {
@@ -424,6 +601,9 @@ void PostProcess::SetProjectionInverse(const float* projInv16) {
   }
   if (mappedLightShaft_) {
     memcpy(mappedLightShaft_->projectionInverse, projInv16, sizeof(float) * 16);
+  }
+  if (mappedSsao_) {
+    memcpy(mappedSsao_->projectionInverse, projInv16, sizeof(float) * 16);
   }
 }
 
@@ -515,6 +695,122 @@ void PostProcess::SetDissolveNoiseIndex(int index) {
 void PostProcess::SetRandomNoiseIntensity(float intensity) {
   randomIntensity_ = intensity;
   if (mappedRandom_) mappedRandom_->intensity = intensity;
+}
+
+// ---- Bloom（b0 のルート定数で渡すので CBuffer は無い）----
+
+void PostProcess::SetBloomThreshold(float threshold) { bloomThreshold_ = threshold; }
+void PostProcess::SetBloomIntensity(float intensity) { bloomIntensity_ = intensity; }
+void PostProcess::SetBloomRadius(float radius) { bloomRadius_ = radius; }
+void PostProcess::SetBloomKnee(float knee) { bloomKnee_ = knee; }
+
+// ---- SSAO ----
+
+void PostProcess::SetSsaoRadius(float radius) {
+  ssaoRadius_ = radius;
+  if (mappedSsao_) mappedSsao_->radius = radius;
+}
+
+void PostProcess::SetSsaoIntensity(float intensity) {
+  ssaoIntensity_ = intensity;
+  if (mappedSsao_) mappedSsao_->intensity = intensity;
+}
+
+void PostProcess::SetSsaoBias(float bias) {
+  ssaoBias_ = bias;
+  if (mappedSsao_) mappedSsao_->bias = bias;
+}
+
+void PostProcess::SetSsaoPower(float power) {
+  ssaoPower_ = power;
+  if (mappedSsao_) mappedSsao_->power = power;
+}
+
+// ---- ColorGrade ----
+
+void PostProcess::SetGradeExposure(float ev) {
+  gradeExposure_ = ev;
+  if (mappedColorGrade_) mappedColorGrade_->exposure = ev;
+}
+
+void PostProcess::SetGradeContrast(float contrast) {
+  gradeContrast_ = contrast;
+  if (mappedColorGrade_) mappedColorGrade_->contrast = contrast;
+}
+
+void PostProcess::SetGradeSaturation(float saturation) {
+  gradeSaturation_ = saturation;
+  if (mappedColorGrade_) mappedColorGrade_->saturation = saturation;
+}
+
+void PostProcess::SetGradeTemperature(float temperature) {
+  gradeTemperature_ = temperature;
+  if (mappedColorGrade_) mappedColorGrade_->temperature = temperature;
+}
+
+void PostProcess::SetGradeTint(float tint) {
+  gradeTint_ = tint;
+  if (mappedColorGrade_) mappedColorGrade_->tint = tint;
+}
+
+void PostProcess::SetGradeColorFilter(float r, float g, float b) {
+  gradeColorFilter_[0] = r;
+  gradeColorFilter_[1] = g;
+  gradeColorFilter_[2] = b;
+  gradeColorFilter_[3] = 1.0f;
+  if (mappedColorGrade_) {
+    memcpy(mappedColorGrade_->colorFilter, gradeColorFilter_, sizeof(float) * 4);
+  }
+}
+
+void PostProcess::SetGradeLerpFactor(float lerpFactor) {
+  gradeLerpFactor_ = lerpFactor;
+  if (mappedColorGrade_) mappedColorGrade_->lerpFactor = lerpFactor;
+}
+
+void PostProcess::SetMaskOutlineColor(float r, float g, float b, float a) {
+  maskOutlineColor_[0] = r;
+  maskOutlineColor_[1] = g;
+  maskOutlineColor_[2] = b;
+  maskOutlineColor_[3] = a;
+  if (mappedMaskOutline_) {
+    mappedMaskOutline_->color[0] = r;
+    mappedMaskOutline_->color[1] = g;
+    mappedMaskOutline_->color[2] = b;
+    mappedMaskOutline_->color[3] = a;
+  }
+}
+
+void PostProcess::SetMaskOutlineThickness(float thickness) {
+  maskOutlineThickness_ = thickness;
+  if (mappedMaskOutline_) mappedMaskOutline_->thickness = thickness;
+}
+
+void PostProcess::SetOutlineExclusions(const float *rectsPixels, int count) {
+  // 画面ピクセル → UV。解像度が未確定（初期化前・リサイズ直後）なら除外しない。
+  int n = (rectsPixels == nullptr) ? 0 : std::clamp(count, 0, kMaxOutlineExclusions);
+  if (width_ == 0 || height_ == 0) n = 0;
+
+  if (mappedMaterial_) mappedMaterial_->excludeCount = n;
+  if (mappedMaskOutline_) mappedMaskOutline_->excludeCount = n;
+  if (n <= 0) return;
+
+  const float invW = 1.0f / static_cast<float>(width_);
+  const float invH = 1.0f / static_cast<float>(height_);
+
+  for (int i = 0; i < n; ++i) {
+    const float *r = rectsPixels + i * 4;
+    const float uv[4] = {r[0] * invW, r[1] * invH, r[2] * invW, r[3] * invH};
+    for (int c = 0; c < 4; ++c) {
+      if (mappedMaterial_) mappedMaterial_->excludeRects[i][c] = uv[c];
+      if (mappedMaskOutline_) mappedMaskOutline_->excludeRects[i][c] = uv[c];
+    }
+  }
+}
+
+void PostProcess::SetMaskOutlineStrength(float strength) {
+  maskOutlineStrength_ = strength;
+  if (mappedMaskOutline_) mappedMaskOutline_->strength = strength;
 }
 
 void PostProcess::SetRandomNoiseColor(float r, float g, float b) {
@@ -744,6 +1040,78 @@ void PostProcess::SetScreenDropletsScale(float scale) {
 }
 
 // ============================================================================
+// BloodOverlay パラメータ
+// ============================================================================
+
+void PostProcess::SetBloodOverlayHitFlash(float flash) {
+  bloodHitFlash_ = std::clamp(flash, 0.0f, 1.0f);
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->hitFlash = bloodHitFlash_;
+  }
+}
+
+void PostProcess::SetBloodOverlayLowHealth(float level) {
+  bloodLowHealth_ = std::clamp(level, 0.0f, 1.0f);
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->lowHealth = bloodLowHealth_;
+  }
+}
+
+void PostProcess::SetBloodOverlayColor(float r, float g, float b) {
+  bloodColor_[0] = r;
+  bloodColor_[1] = g;
+  bloodColor_[2] = b;
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->bloodColor[0] = r;
+    mappedBloodOverlay_->bloodColor[1] = g;
+    mappedBloodOverlay_->bloodColor[2] = b;
+    mappedBloodOverlay_->bloodColor[3] = 1.0f;
+  }
+}
+
+void PostProcess::SetBloodOverlayCoverage(float coverage) {
+  bloodCoverage_ = std::clamp(coverage, 0.0f, 1.0f);
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->coverage = bloodCoverage_;
+  }
+}
+
+void PostProcess::SetBloodOverlaySplatterScale(float scale) {
+  bloodSplatterScale_ = scale;
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->splatterScale = scale;
+  }
+}
+
+void PostProcess::SetBloodOverlayDesaturate(float desaturate) {
+  bloodDesaturate_ = std::clamp(desaturate, 0.0f, 1.0f);
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->desaturate = bloodDesaturate_;
+  }
+}
+
+void PostProcess::SetBloodOverlayPulseSpeed(float speed) {
+  bloodPulseSpeed_ = speed;
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->pulseSpeed = speed;
+  }
+}
+
+void PostProcess::SetBloodOverlaySeed(float seed) {
+  // [0, 1) に折り返す。大きな値を渡すとシェーダー側のハッシュの刻みが粗くなり、
+  // 飛沫パターンの種類が目に見えて減る。
+  bloodSeed_ = seed - std::floor(seed);
+  if (mappedBloodOverlay_) {
+    mappedBloodOverlay_->seed = bloodSeed_;
+  }
+}
+
+void PostProcess::RerollBloodOverlaySplatter() {
+  // 黄金比を足して小数部を取る（低食い違い列。連続で呼んでも似た値が並ばない）
+  SetBloodOverlaySeed(bloodSeed_ + 0.6180339887f);
+}
+
+// ============================================================================
 void PostProcess::InitDissolveNoiseTextures() {
   if (dissolveNoiseInitialized_) return;
   dissolveNoiseInitialized_ = true;
@@ -810,7 +1178,7 @@ void PostProcess::RemoveEffect(PostEffectType type) {
   }
 }
 
-void PostProcess::ClearEffects() { 
+void PostProcess::ClearEffects() {
   if (!activeEffects_.empty()) {
     activeEffects_.clear();
     Log::Print(std::format("[PostProcess] ClearEffects (Active: {})", ActiveEffectsToString(activeEffects_)));
@@ -860,6 +1228,17 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineDissolve_;
   case PostEffectType::RandomNoise:
     return pipelineRandom_;
+  case PostEffectType::MaskOutline:
+    // マスクがまだ描かれていないフレームは素通し（未初期化ディスクリプタを読ませない）
+    return (maskSrv_.ptr != 0) ? pipelineMaskOutline_ : pipelineCopy_;
+  case PostEffectType::Ssao:
+    return pipelineSsao_;
+  case PostEffectType::Bloom:
+    return pipelineBloom_;
+  case PostEffectType::ColorGrade:
+    return pipelineColorGrade_;
+  case PostEffectType::Fxaa:
+    return pipelineFxaa_;
   case PostEffectType::Underwater:
     return pipelineUnderwater_;
   case PostEffectType::Caustics:
@@ -868,6 +1247,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineLightShaft_;
   case PostEffectType::ScreenDroplets:
     return pipelineScreenDroplets_;
+  case PostEffectType::BloodOverlay:
+    return pipelineBloodOverlay_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -915,7 +1296,9 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
     uint32_t param3;
   } constants = { 0, 0, 0, 0 };
 
-  if (effectType == PostEffectType::BoxFilter) {
+  if (effectType == PostEffectType::Grayscale) {
+    constants.param0 = *(uint32_t *)&grayscaleLerpFactor_;
+  } else if (effectType == PostEffectType::BoxFilter) {
     constants.param0 = static_cast<uint32_t>(boxFilterK_);
   } else if (effectType == PostEffectType::GaussianFilter) {
     constants.param0 = static_cast<uint32_t>(gaussianFilterK_);
@@ -925,6 +1308,11 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
     constants.param1 = *(uint32_t *)&radialBlurCenter_.y;
     constants.param2 = *(uint32_t *)&radialBlurWidth_;
     constants.param3 = static_cast<uint32_t>(radialBlurSamples_);
+  } else if (effectType == PostEffectType::Bloom) {
+    constants.param0 = *(uint32_t *)&bloomThreshold_;
+    constants.param1 = *(uint32_t *)&bloomIntensity_;
+    constants.param2 = *(uint32_t *)&bloomRadius_;
+    constants.param3 = *(uint32_t *)&bloomKnee_;
   }
 
   cmdList->SetGraphicsRoot32BitConstants(1, 4, &constants, 0);
@@ -953,6 +1341,31 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
   if (effectType == PostEffectType::RandomNoise) {
     // params[3]: b1 (RandomNoise CBuffer)
     cmdList->SetGraphicsRootConstantBufferView(3, cbufferRandom_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::Ssao) {
+    if (!depthSrv_.IsValid()) {
+      depthSrv_ = dxCore_->SRVMan().CreateTexture2D(
+          dxCore_->GetDepthResource(), DXGI_FORMAT_R24_UNORM_X8_TYPELESS, 1);
+    }
+    // params[2]: t1 (Depth SRV)
+    cmdList->SetGraphicsRootDescriptorTable(2, depthSrv_.gpu);
+    // params[3]: b1 (SSAO CBuffer。projectionInverse を含む)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferSsao_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::ColorGrade) {
+    // params[3]: b1 (ColorGrade CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferColorGrade_->GetGPUVirtualAddress());
+  }
+
+  // Bloom と Fxaa は t0 と b0 だけで足りるので追加バインドは無い
+
+  if (effectType == PostEffectType::MaskOutline && maskSrv_.ptr != 0) {
+    // params[2]: t1 (マスクRT)
+    cmdList->SetGraphicsRootDescriptorTable(2, maskSrv_);
+    // params[3]: b1 (MaskOutline CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferMaskOutline_->GetGPUVirtualAddress());
   }
 
   if (effectType == PostEffectType::Underwater) {
@@ -991,6 +1404,11 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
   if (effectType == PostEffectType::ScreenDroplets) {
     // params[3]: b1 (ScreenDroplets CBuffer)
     cmdList->SetGraphicsRootConstantBufferView(3, cbufferScreenDroplets_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::BloodOverlay) {
+    // params[3]: b1 (BloodOverlay CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferBloodOverlay_->GetGPUVirtualAddress());
   }
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
@@ -1106,6 +1524,12 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       }
     }
 
+    if (grayscale) {
+      ImGui::Indent();
+      ImGui::SliderFloat("Grayscale Lerp Factor", &grayscaleLerpFactor_, 0.0f, 1.0f);
+      ImGui::Unindent();
+    }
+
     if (ImGui::Checkbox("Sepia", &sepia)) {
       if (sepia) {
         AddEffect(PostEffectType::Sepia);
@@ -1169,7 +1593,7 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       if (ImGui::ColorEdit4("Outline Color", outlineColor_)) changed = true;
       if (ImGui::SliderFloat("Outline Weight", &outlineWeight_, 0.0f, 20.0f)) changed = true;
       if (ImGui::SliderFloat("Outline Thickness", &outlineThickness_, 0.1f, 10.0f)) changed = true;
-      
+
       const char* modes[] = { "Both (両側)", "Outside (外側)", "Inside (内側)" };
       if (ImGui::Combo("Outline Mode", &outlineMode_, modes, 3)) changed = true;
 
@@ -1262,6 +1686,129 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
           mappedRandom_->color[1] = randomColor_[1];
           mappedRandom_->color[2] = randomColor_[2];
         }
+      }
+      ImGui::Unindent();
+    }
+
+    bool ssao = HasEffect(PostEffectType::Ssao);
+    if (ImGui::Checkbox("SSAO", &ssao)) {
+      if (ssao) {
+        AddEffect(PostEffectType::Ssao);
+      } else {
+        RemoveEffect(PostEffectType::Ssao);
+      }
+    }
+    if (ssao) {
+      ImGui::Indent();
+      ImGui::TextDisabled("積む順は前のほう（にじみや色調整より前）");
+      if (ImGui::SliderFloat("AO Radius", &ssaoRadius_, 0.05f, 3.0f, "%.2f m")) {
+        SetSsaoRadius(ssaoRadius_);
+      }
+      if (ImGui::SliderFloat("AO Intensity", &ssaoIntensity_, 0.0f, 2.0f)) {
+        SetSsaoIntensity(ssaoIntensity_);
+      }
+      if (ImGui::SliderFloat("AO Bias", &ssaoBias_, 0.0f, 0.2f, "%.3f m")) {
+        SetSsaoBias(ssaoBias_);
+      }
+      if (ImGui::SliderFloat("AO Power", &ssaoPower_, 0.1f, 4.0f)) {
+        SetSsaoPower(ssaoPower_);
+      }
+      ImGui::Unindent();
+    }
+
+    bool bloom = HasEffect(PostEffectType::Bloom);
+    if (ImGui::Checkbox("Bloom", &bloom)) {
+      if (bloom) {
+        AddEffect(PostEffectType::Bloom);
+      } else {
+        RemoveEffect(PostEffectType::Bloom);
+      }
+    }
+    if (bloom) {
+      ImGui::Indent();
+      if (ImGui::SliderFloat("Bloom Threshold", &bloomThreshold_, 0.0f, 1.0f)) {
+        SetBloomThreshold(bloomThreshold_);
+      }
+      if (ImGui::SliderFloat("Bloom Intensity", &bloomIntensity_, 0.0f, 3.0f)) {
+        SetBloomIntensity(bloomIntensity_);
+      }
+      if (ImGui::SliderFloat("Bloom Radius", &bloomRadius_, 1.0f, 16.0f, "%.1f px")) {
+        SetBloomRadius(bloomRadius_);
+      }
+      if (ImGui::SliderFloat("Bloom Knee", &bloomKnee_, 0.01f, 1.0f)) {
+        SetBloomKnee(bloomKnee_);
+      }
+      ImGui::Unindent();
+    }
+
+    bool colorGrade = HasEffect(PostEffectType::ColorGrade);
+    if (ImGui::Checkbox("ColorGrade", &colorGrade)) {
+      if (colorGrade) {
+        AddEffect(PostEffectType::ColorGrade);
+      } else {
+        RemoveEffect(PostEffectType::ColorGrade);
+      }
+    }
+    if (colorGrade) {
+      ImGui::Indent();
+      if (ImGui::SliderFloat("Exposure (EV)", &gradeExposure_, -3.0f, 3.0f)) {
+        SetGradeExposure(gradeExposure_);
+      }
+      if (ImGui::SliderFloat("Contrast", &gradeContrast_, 0.5f, 2.0f)) {
+        SetGradeContrast(gradeContrast_);
+      }
+      if (ImGui::SliderFloat("Saturation", &gradeSaturation_, 0.0f, 2.0f)) {
+        SetGradeSaturation(gradeSaturation_);
+      }
+      if (ImGui::SliderFloat("Temperature", &gradeTemperature_, -1.0f, 1.0f)) {
+        SetGradeTemperature(gradeTemperature_);
+      }
+      if (ImGui::SliderFloat("Tint", &gradeTint_, -1.0f, 1.0f)) {
+        SetGradeTint(gradeTint_);
+      }
+      if (ImGui::ColorEdit3("Color Filter", gradeColorFilter_)) {
+        SetGradeColorFilter(gradeColorFilter_[0], gradeColorFilter_[1], gradeColorFilter_[2]);
+      }
+      if (ImGui::SliderFloat("Grade Amount", &gradeLerpFactor_, 0.0f, 1.0f)) {
+        SetGradeLerpFactor(gradeLerpFactor_);
+      }
+      ImGui::Unindent();
+    }
+
+    bool fxaa = HasEffect(PostEffectType::Fxaa);
+    if (ImGui::Checkbox("FXAA", &fxaa)) {
+      if (fxaa) {
+        AddEffect(PostEffectType::Fxaa);
+      } else {
+        RemoveEffect(PostEffectType::Fxaa);
+      }
+    }
+    if (fxaa) {
+      ImGui::Indent();
+      ImGui::TextDisabled("パラメータなし。積む順は一番最後が正しい");
+      ImGui::Unindent();
+    }
+
+    bool maskOutline = HasEffect(PostEffectType::MaskOutline);
+    if (ImGui::Checkbox("MaskOutline", &maskOutline)) {
+      if (maskOutline) {
+        AddEffect(PostEffectType::MaskOutline);
+      } else {
+        RemoveEffect(PostEffectType::MaskOutline);
+      }
+    }
+    if (maskOutline) {
+      ImGui::Indent();
+      ImGui::TextDisabled(maskSrv_.ptr != 0 ? "Mask: ready" : "Mask: not drawn (pass-through)");
+      if (ImGui::ColorEdit4("Mask Outline Color", maskOutlineColor_)) {
+        SetMaskOutlineColor(maskOutlineColor_[0], maskOutlineColor_[1],
+                            maskOutlineColor_[2], maskOutlineColor_[3]);
+      }
+      if (ImGui::SliderFloat("Mask Outline Thickness", &maskOutlineThickness_, 1.0f, 4.0f)) {
+        SetMaskOutlineThickness(maskOutlineThickness_);
+      }
+      if (ImGui::SliderFloat("Mask Outline Strength", &maskOutlineStrength_, 0.0f, 1.0f)) {
+        SetMaskOutlineStrength(maskOutlineStrength_);
       }
       ImGui::Unindent();
     }
@@ -1475,6 +2022,65 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       }
       if (ImGui::SliderFloat("Scale (水滴の密度)", &screenDropletsScale_, 0.5f, 5.0f)) {
         SetScreenDropletsScale(screenDropletsScale_);
+      }
+      ImGui::Unindent();
+    }
+
+    bool bloodOverlay = HasEffect(PostEffectType::BloodOverlay);
+    if (ImGui::Checkbox("BloodOverlay (被弾の血)", &bloodOverlay)) {
+      if (bloodOverlay) {
+        AddEffect(PostEffectType::BloodOverlay);
+      } else {
+        RemoveEffect(PostEffectType::BloodOverlay);
+      }
+    }
+    if (bloodOverlay) {
+      ImGui::Indent();
+      ImGui::TextDisabled("ゲーム中は ScreenFx が毎フレーム上書きします");
+      ImGui::SameLine();
+      ImGui::TextDisabled("(?)");
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(
+            "Hit Flash / Low Health は Player の被弾処理から駆動される。\n"
+            "ここで動かして見た目を確認できるのは、ステージ外（ScreenFx が\n"
+            "触っていない場面）か、値を掴んで離すまでの一瞬だけ。\n"
+            "色・侵食量・飛沫密度は上書きされないので、調整はそちらで行うこと。");
+      }
+      if (ImGui::SliderFloat("Hit Flash (被弾フラッシュ)", &bloodHitFlash_, 0.0f, 1.0f)) {
+        SetBloodOverlayHitFlash(bloodHitFlash_);
+      }
+      if (ImGui::SliderFloat("Low Health (低HP持続)", &bloodLowHealth_, 0.0f, 1.0f)) {
+        SetBloodOverlayLowHealth(bloodLowHealth_);
+      }
+      if (ImGui::ColorEdit3("Blood Color (血の色)", bloodColor_)) {
+        SetBloodOverlayColor(bloodColor_[0], bloodColor_[1], bloodColor_[2]);
+      }
+      if (ImGui::SliderFloat("Coverage (侵食する割合)", &bloodCoverage_, 0.0f, 1.0f)) {
+        SetBloodOverlayCoverage(bloodCoverage_);
+      }
+      ImGui::SameLine();
+      ImGui::TextDisabled("(?)");
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(
+            "最大時に画面の何割まで血が内側へ入ってくるか。\n"
+            "0.8 を超えると視界が塞がってプレイに支障が出る。");
+      }
+      if (ImGui::SliderFloat("Splatter Scale (飛沫の密度)", &bloodSplatterScale_, 0.4f, 4.0f)) {
+        SetBloodOverlaySplatterScale(bloodSplatterScale_);
+      }
+      if (ImGui::SliderFloat("Desaturate (彩度の低下)", &bloodDesaturate_, 0.0f, 1.0f)) {
+        SetBloodOverlayDesaturate(bloodDesaturate_);
+      }
+      if (ImGui::SliderFloat("Pulse Speed (脈動の速さ)", &bloodPulseSpeed_, 0.3f, 3.0f)) {
+        SetBloodOverlayPulseSpeed(bloodPulseSpeed_);
+      }
+      ImGui::SameLine();
+      ImGui::TextDisabled("(?)");
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("1.0 で毎秒1拍。瀕死の焦りを出すなら 1.2〜1.6 あたり。");
+      }
+      if (ImGui::Button("Reroll Splatter (飛沫を振り直す)")) {
+        RerollBloodOverlaySplatter();
       }
       ImGui::Unindent();
     }

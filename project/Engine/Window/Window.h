@@ -17,10 +17,11 @@ public:
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam,
                                      LPARAM lparam);
 
-  void Initialize(const char *windowTitle = "No Title",
-                  const int32_t kClientWidth = kDefaultWidth,
-                  const int32_t kClientHeight = kDefaultHeight,
-                  bool fullscreen = false);
+  /// @brief ウィンドウを生成する
+  /// @param clientWidth [in/out] クライアント幅。fullscreen 時はモニターの実解像度で上書きされる
+  /// @param clientHeight [in/out] クライアント高さ。fullscreen 時はモニターの実解像度で上書きされる
+  void Initialize(const char *windowTitle, int &clientWidth,
+                  int &clientHeight, bool fullscreen = false);
 
   /// @brief ウィンドウのサイズとフルスクリーン設定を動的に変更する
   void Resize(int& outWidth, int& outHeight, bool fullscreen);

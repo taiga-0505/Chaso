@@ -179,17 +179,21 @@ void PointLightManager::EnsureCB_() {
   const UINT size = Align256_((UINT)sizeof(::PointLightsCB));
   cb_ = CreateBufferResource(device_.Get(), size, L"PointLightManager::cb_");
   cb_->Map(0, nullptr, reinterpret_cast<void **>(&mapped_));
+  if (mapped_) {
+    // アップロードヒープは 0 初期化されないので、一度だけ全体をクリアしておく。
+    // 以降の SyncCB_ は count と使用中エントリだけを書く（シェーダは count で break する）
+    *mapped_ = ::PointLightsCB{};
+  }
 }
 
 void PointLightManager::SyncCB_() {
   if (!mapped_)
     return;
 
-  ::PointLightsCB cb{};
   uint32_t outCount = 0;
   const uint32_t n = (uint32_t)(std::min)(activeCount_, kMaxActive);
 
-  // enabled なライトだけを詰める
+  // enabled なライトだけを詰める（使用中のエントリだけ書く。全 256 灯分の再構築はしない）
   for (uint32_t i = 0; i < n; ++i) {
     const int h = active_[i];
     if (!IsValid_(h))
@@ -199,19 +203,23 @@ void PointLightManager::SyncCB_() {
     if (!ls.IsEnabled())
       continue;
 
-    cb.lights[outCount] = ls.DataForGPU();
+    mapped_->lights[outCount] = ls.DataForGPU();
     ++outCount;
   }
-  cb.count = outCount;
+  mapped_->count = outCount;
+}
 
-  *mapped_ = cb;
+void PointLightManager::SyncCB() {
+  if (!initialized_)
+    return;
+  EnsureCB_();
+  SyncCB_();
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS PointLightManager::GetCBAddress() {
   if (!initialized_)
     return 0;
   EnsureCB_();
-  SyncCB_();
   return cb_ ? cb_->GetGPUVirtualAddress() : 0;
 }
 

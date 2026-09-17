@@ -11,7 +11,7 @@
 #include "function/function.h"
 #include "imgui/imgui.h"
 
-#include "SpriteMesh2D.h" 
+#include "SpriteMesh2D.h"
 
 /// @class Sprite2D
 /// @brief 2D スプライト（テクスチャ付き矩形）の描画と管理を行うクラス
@@ -55,7 +55,27 @@ public:
   /// @brief スプライトのサイズ（ピクセル）を設定する
   /// @param w 幅
   /// @param h 高さ
+  /// @note ワールド空間モード中は無視されます（大きさは Transform.scale で決まるため）
   void SetSize(float w, float h);
+
+  /// @brief ワールド空間（3D）モードの ON / OFF
+  /// @param v true でワールド空間モード
+  /// @details ON にすると、正射影ではなくカメラの view / proj を使って描画されます。
+  ///          クアッドは原点中心・1×1・Y上向きになり、Transform の
+  ///          translation / rotation / scale がそのままワールド座標として効きます。
+  void SetWorldSpace(bool v) { worldSpace_ = v; }
+
+  /// @brief ワールド空間モードか
+  /// @return ワールド空間モードなら true
+  bool IsWorldSpace() const { return worldSpace_; }
+
+  /// @brief ワールド空間モードで使うカメラ行列を設定する
+  /// @param view ビュー行列
+  /// @param proj プロジェクション行列
+  void SetCamera(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj) {
+    camView_ = view;
+    camProj_ = proj;
+  }
 
   /// @brief 可視状態を設定する
   /// @param v true で表示
@@ -132,6 +152,10 @@ private:
 
   RC::Matrix4x4 view_{};
   RC::Matrix4x4 proj_{};
+
+  bool worldSpace_ = false;   ///< true でワールド空間（3D）モード
+  RC::Matrix4x4 camView_{};   ///< ワールド空間モードで使うビュー行列
+  RC::Matrix4x4 camProj_{};   ///< ワールド空間モードで使うプロジェクション行列
 
   Transform transform_{{100, 100, 1}, {0, 0, 0}, {0, 0, 0}}; ///< スプライトの座標・回転・サイズ
 

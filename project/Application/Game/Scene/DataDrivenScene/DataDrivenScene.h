@@ -3,6 +3,7 @@
 #include "Application/Game/Framework/GameSession.h"
 #include "Common/Math/MathUtils.h"
 #include "Common/Math/Math.h"
+#include "Camera/CameraController.h" // ctx.camera->GetWorldPos()（Scene.h は前方宣言のみ）
 #include "RenderCommon.h"
 #include <string>
 #include <fstream>
@@ -16,16 +17,20 @@
 #include "ECS/TransformComponent.h"
 #include "ECS/ModelRendererComponent.h"
 #include "ECS/SpriteRendererComponent.h"
+#include "ECS/TextRendererComponent.h"
 #include "ECS/CameraComponent.h"
 #include "ECS/LightComponent.h"
 #include "ECS/ColliderComponent.h"
 #include "ECS/AnimationComponent.h"
+#include "ECS/BoneAttachmentComponent.h"
 #include "ECS/PrimitiveMeshComponent.h"
 #include "ECS/SkyboxComponent.h"
 #include "ECS/SkydomeComponent.h"
 #include "ECS/WaterComponent.h"
 #include "ECS/RigidbodyComponent.h"
 #include "ECS/NativeScriptComponent.h"
+#include "ECS/AudioSourceComponent.h"
+#include "ECS/AudioListenerComponent.h"
 // Light sources for Dereferencing
 #include "Graphics/Light/Directional/DirectionalLightSource.h"
 #include "Graphics/Light/Point/PointLightSource.h"
@@ -52,11 +57,18 @@ public:
 
   const char* Name() const override { return sceneName_.c_str(); }
 
+  /// @brief 静的コライダーエンティティ（マップの壁・穴など。レンダラーやライトを持たない）か判定
+  static bool IsStaticMapCollider(const Entity& e) {
+      return e.HasTag("is_wall") || e.HasTag("is_hole");
+  }
+
   /// @brief Load entities from JSON on scene enter
   void OnEnter(SceneContext& ctx) override {
     Load();
     resultTriggered_ = false;
+    resultChangeRequested_ = false;
     resultDelayTimer_ = 0.0f;
+    statsFinalized_ = false;
     waterTime_ = 0.0f;
 
     // GameMode / GameState をリトライ前提の初期状態へ戻す。
@@ -76,6 +88,10 @@ public:
     for (auto& e : entities_) {
         InitializeRuntimeResources(*e, ctx);
     }
+
+    // 新シーンのクリップをロードし終えた後に、どのシーンからも参照されなくなった
+    // 音声クリップを解放する。前のシーンと共有している BGM は参照が残るので消えない。
+    AudioEngine::Get().PurgeUnusedClips();
 
     // シーンに入った時点でメインカメラを反映しておく。
     // 通常は入場直後に Update が回るので同じ結果になるが、Update を挟まずに
@@ -120,31 +136,73 @@ public:
             nsc->SetSceneContext(&ctx);
         }
     }
-    
+
     // === AnimationComponent の更新（Transform同期より前に実行）===
     for (auto& e : entities_) {
-      if (!e->IsVisible()) continue;
+      if (!e->IsVisible() || IsStaticMapCollider(*e)) continue;
       auto* ren = e->GetComponent<ModelRendererComponent>();
       auto* anim = e->GetComponent<AnimationComponent>();
-      if (ren && anim && ren->HasModel()) {
-        if (!anim->attached_) {
-          if (anim->animationPath.empty())
-            RC::AttachModelAnimation(ren->modelHandle);
-          else
-            RC::AttachModelAnimation(ren->modelHandle, anim->animationPath);
-          anim->attached_ = true;
+      if (ren && anim && ren->HasModel() && RC::IsModelReady(ren->modelHandle)) {
+        // クリップを登録しているのに何も再生していなければ、既定クリップから始める
+        if (!anim->clips.empty() && anim->currentClip.empty() &&
+            !anim->defaultClip.empty() && !anim->pendingRequested_) {
+          anim->PlayClip(anim->defaultClip, 0.0f);
         }
-        float dt = (ctx.isPlaying() && anim->playing)
-            ? ctx.deltaTime * anim->speed : 0.0f;
+
+        if (anim->pendingRequested_) {
+          // --- 名前指定によるクリップ切り替え（スクリプトからの PlayClip）---
+          ApplyPendingClip(*anim, *ren);
+        } else if (anim->NeedsReattach()) {
+          // --- パス / クリップ番号の直接指定（Inspector での変更）---
+          if (anim->animationPath.empty() && anim->animIndex <= 0) {
+            // モデル内蔵の先頭アニメーション
+            RC::AttachModelAnimation(ren->modelHandle);
+          } else {
+            // 外部ファイル、または内蔵の 2 本目以降（glTF の複数クリップ）
+            const std::string& srcPath =
+                anim->animationPath.empty() ? ren->modelPath : anim->animationPath;
+            if (!srcPath.empty()) {
+              RC::AttachModelAnimation(ren->modelHandle, srcPath, anim->animIndex);
+            }
+          }
+          anim->MarkAttached();
+        }
+
+        // クリップ固有の速度・ループ設定を反映する
+        float clipSpeed = 1.0f;
+        bool clipLoop = true;
+        if (const AnimationClip* cur = anim->FindClip(anim->currentClip)) {
+          clipSpeed = cur->speed;
+          clipLoop = cur->loop;
+        }
+
+        const float dt = (ctx.isPlaying() && anim->playing)
+            ? ctx.deltaTime * anim->speed * clipSpeed : 0.0f;
         RC::UpdateModelAnimation(ren->modelHandle, dt);
+
+        // ワンショット（loop = false）の終了判定。
+        // エンジン側の再生は常にループする（ModelObject.cpp の fmod）ため、
+        // 尺を超えた時点でこちらから既定クリップへ戻す。
+        if (dt > 0.0f && !clipLoop) {
+          anim->clipElapsed_ += dt;
+          const float duration = RC::GetModelAnimationDuration(ren->modelHandle);
+          if (duration > 0.0f && anim->clipElapsed_ >= duration) {
+            if (!anim->defaultClip.empty() && anim->defaultClip != anim->currentClip) {
+              anim->PlayClip(anim->defaultClip);
+            } else {
+              anim->playing = false; // 戻り先が無い場合はその場で停止
+            }
+          }
+        }
       }
     }
 
     // TransformComponent の内容を各種対象に同期
     for (auto& e : entities_) {
+        if (IsStaticMapCollider(*e)) continue;
         if (auto* tr = e->GetComponent<TransformComponent>()) {
             if (auto* ren = e->GetComponent<ModelRendererComponent>()) {
-                if (ren->HasModel()) {
+                if (ren->HasModel() && RC::IsModelReady(ren->modelHandle)) {
                     if (auto* modelTr = RC::GetModelTransformPtr(ren->modelHandle)) {
                         auto* anim = e->GetComponent<AnimationComponent>();
                         if (anim && anim->attached_ && !RC::HasModelSkinData(ren->modelHandle) && !RC::HasModelSkeleton(ren->modelHandle) && !e->GetComponent<NativeScriptComponent>()) {
@@ -156,6 +214,10 @@ public:
                             // Skeletal animation or no animation: TransformComponent controls root transform.
                             *modelTr = tr->ToTransform();
                         }
+                    }
+                    // ライティングモードの個別設定 (-1 は DirectionalLight に追従)
+                    if (ren->lightingMode >= 0) {
+                        RC::SetModelLightingMode(ren->modelHandle, static_cast<LightingMode>(ren->lightingMode));
                     }
                     RC::SetModelColor(ren->modelHandle, ren->color);
                     RC::SetModelEnvironmentCoefficient(ren->modelHandle, ren->environmentCoeff);
@@ -179,6 +241,7 @@ public:
                     l->SetColor(dirLight->color);
                     l->SetDirection(dirLight->direction);
                     l->SetIntensity(dirLight->intensity);
+                    l->SetAmbient(dirLight->ambientColor, dirLight->ambientIntensity);
                     RC::SetDirectionalLightEnabled(dirLight->lightHandle, e->IsVisible() && dirLight->visible && dirLight->IsEnabled());
                 }
             }
@@ -192,6 +255,10 @@ public:
                     l->SetIntensity(ptLight->intensity);
                     l->SetRadius(ptLight->radius);
                     l->SetDecay(ptLight->decay);
+                    l->SetCastShadow(ptLight->castShadow);
+                    l->SetShadowNear(ptLight->shadowNear);
+                    l->SetShadowExcludeOwnerId(ptLight->shadowExcludeSelf ? e->GetId() : 0u);
+                    l->SetShadowPriority(ptLight->shadowPriority);
                     RC::SetPointLightEnabled(ptLight->lightHandle, e->IsVisible() && ptLight->visible && ptLight->IsEnabled());
                 }
             }
@@ -201,12 +268,16 @@ public:
                 }
                 if (auto* l = RC::GetSpotLightPtr(spLight->lightHandle)) {
                     l->SetColor(spLight->color);
-                    l->SetPosition(tr->position);
+                    l->SetPosition(spLight->ResolvePosition(tr->position, tr->rotation));
                     l->SetDirection(spLight->direction);
                     l->SetIntensity(spLight->intensity);
                     l->SetDistance(spLight->distance);
                     l->SetDecay(spLight->decay);
                     l->SetCosAngle(spLight->cosAngle);
+                    l->SetCastShadow(spLight->castShadow);
+                    l->SetShadowNear(spLight->shadowNear);
+                    l->SetShadowExcludeOwnerId(spLight->shadowExcludeSelf ? e->GetId() : 0u);
+                    l->SetShadowPriority(spLight->shadowPriority);
                     RC::SetSpotLightEnabled(spLight->lightHandle, e->IsVisible() && spLight->visible && spLight->IsEnabled());
                 }
             }
@@ -221,7 +292,12 @@ public:
                     l->SetRange(arLight->range);
                     l->SetDecay(arLight->decay);
                     l->SetHalfSize(arLight->halfWidth, arLight->halfHeight);
+                    l->SetBasis(arLight->right, arLight->up);
                     l->SetTwoSided(arLight->twoSided);
+                    l->SetCastShadow(arLight->castShadow);
+                    l->SetShadowNear(arLight->shadowNear);
+                    l->SetShadowExcludeOwnerId(arLight->shadowExcludeSelf ? e->GetId() : 0u);
+                    l->SetShadowPriority(arLight->shadowPriority);
                     RC::SetAreaLightEnabled(arLight->lightHandle, e->IsVisible() && arLight->visible && arLight->IsEnabled());
                 }
             }
@@ -230,12 +306,20 @@ public:
                     if (auto* sTr = RC::GetSkydomeTransformPtr(skydome->skydomeHandle)) {
                         *sTr = tr->ToTransform();
                     }
+                    // 乗算カラーを毎フレーム同期する。
+                    // Skydome 側のマテリアルは生成時に白で初期化されるため、
+                    // ここで押し込まないとシーンから復元した色（特に黒）が反映されない。
+                    RC::SetSkydomeColor(skydome->skydomeHandle, skydome->color);
                 }
             }
             if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
                 if (pm->HasMesh()) {
                     if (auto* pmTr = RC::GetPrimitiveMeshTransformPtr(pm->meshHandle)) {
                         *pmTr = tr->ToTransform();
+                    }
+                    // ライティングモードの個別設定 (-1 は DirectionalLight に追従)
+                    if (pm->lightingMode >= 0) {
+                        RC::SetPrimitiveMeshLightingMode(pm->meshHandle, static_cast<LightingMode>(pm->lightingMode));
                     }
                     RC::SetPrimitiveMeshEnvironmentCoefficient(pm->meshHandle, pm->environmentCoeff);
                     RC::SetPrimitiveMeshNormalMap(pm->meshHandle, pm->normalMapOverride);
@@ -259,8 +343,12 @@ public:
             }
             if (auto* spr = e->GetComponent<SpriteRendererComponent>()) {
                 if (spr->HasSprite()) {
+                    // モード切替に追従（World では Size ではなく scale が大きさになる）
+                    RC::SetSpriteWorldSpace(spr->spriteHandle, spr->IsWorldSpace());
                     RC::SetSpriteTransform(spr->spriteHandle, tr->ToTransform());
-                    RC::SetSpriteScreenSize(spr->spriteHandle, spr->size.x, spr->size.y);
+                    if (!spr->IsWorldSpace()) {
+                        RC::SetSpriteScreenSize(spr->spriteHandle, spr->size.x, spr->size.y);
+                    }
                     RC::SetSpriteColor(spr->spriteHandle, spr->color);
                 }
             }
@@ -273,7 +361,7 @@ public:
 
     // GPUParticle の更新
     for (auto& e : entities_) {
-        if (!e->IsVisible() || !e->IsActive()) continue;
+        if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue;
         if (auto* gpu = e->GetComponent<GPUParticleComponent>()) {
             if (gpu->isInitialized && gpu->particleSystem) {
                 if (auto* tr = e->GetComponent<TransformComponent>()) {
@@ -301,8 +389,12 @@ public:
     UpdateEntities(updateDt);
     ResolveCollisions();
 
+    // ※ AudioSource の更新（playOnAwake / BGM keep-alive）はここではなく UpdateAudio() で行う。
+    //    SceneManager が演出中も含めて毎フレーム呼ぶため、Update が止まっても BGM が切れない。
+
     // スクリプト更新および物理衝突解決後の最新座標・回転をモデルへ同期
     for (auto& e : entities_) {
+        if (IsStaticMapCollider(*e)) continue;
         if (auto* tr = e->GetComponent<TransformComponent>()) {
             if (auto* ren = e->GetComponent<ModelRendererComponent>()) {
                 if (ren->HasModel()) {
@@ -318,6 +410,11 @@ public:
             }
         }
     }
+
+    // === BoneAttachmentComponent（ボーン追従／ソケット）===
+    // アニメーション更新と Transform 同期の後に実行する必要がある。
+    // ここより前だと Joint 姿勢が 1 フレーム古くなり、剣が手から遅れて付いてくる。
+    UpdateBoneAttachments();
 
     // === ゲーム結果判定（プレイ中のみ） ===
     if (ctx.isPlaying() && !resultTriggered_) {
@@ -398,10 +495,14 @@ public:
                 }
             }
 
-            // 決着がついた時点の経過時間を確定させ、Result / GameOver へ引き渡す
-            if (resultTriggered_ && gameMode_ && gameMode_->GetGameState()) {
+            // 決着がついた時点の経過時間を確定させ、Result / GameOver へ引き渡す。
+            // 1 プレイにつき 1 回だけ（statsFinalized_）。決着後もリザルト遷移待ちの
+            // 2.5 秒のあいだ GameState は Tick し続けるため、毎フレーム上書きすると
+            // 表示される時間が伸びてしまう。
+            if (resultTriggered_ && !statsFinalized_ && gameMode_ && gameMode_->GetGameState()) {
                 GameSession::Get().SetElapsedTime(
                     gameMode_->GetGameState()->GetElapsedTime());
+                statsFinalized_ = true;
             }
         }
     }
@@ -412,9 +513,9 @@ public:
     // シーン遷移ディレイ処理
     if (resultTriggered_ && ctx.isPlaying()) {
         resultDelayTimer_ += ctx.deltaTime;
-        if (resultDelayTimer_ >= kResultDelay_) {
+        if (!resultChangeRequested_ && resultDelayTimer_ >= kResultDelay_) {
             sm.RequestChange(resultTarget_);
-            resultTriggered_ = false; // 二重リクエスト防止
+            resultChangeRequested_ = true; // 遷移要求を一度だけ送信（決着演出はフェードアウト中も描画継続！）
         }
     }
 
@@ -471,18 +572,138 @@ public:
   }
 
   void Render(SceneContext& ctx, ID3D12GraphicsCommandList* cl) override {
+    // スプライト描画（space でレイヤーを振り分ける）
+    // 遅延ロードも含むので、どのパスからも同じ処理を使う
+    auto drawSpriteLayer = [&](SpriteSpace layer) {
+        for (auto& e : entities_) {
+            if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue;
+            auto* spr = e->GetComponent<SpriteRendererComponent>();
+            if (!spr || spr->space != layer) continue;
+
+            // エディタで後からパスを設定/変更した場合の遅延ロード（差し替え）
+            if (!spr->spritePath.empty() && spr->spritePath != spr->loadedPath) {
+                if (spr->HasSprite()) { RC::UnloadSprite(spr->spriteHandle); spr->spriteHandle = -1; }
+                spr->loadedPath = spr->spritePath;
+                spr->spriteHandle = RC::LoadSprite(spr->spritePath, ctx);
+                if (spr->HasSprite()) {
+                    RC::SetSpriteWorldSpace(spr->spriteHandle, spr->IsWorldSpace());
+                    if (auto* tr = e->GetComponent<TransformComponent>()) {
+                        RC::SetSpriteTransform(spr->spriteHandle, tr->ToTransform());
+                    }
+                    if (!spr->IsWorldSpace()) {
+                        RC::SetSpriteScreenSize(spr->spriteHandle, spr->size.x, spr->size.y);
+                    }
+                    RC::SetSpriteColor(spr->spriteHandle, spr->color);
+                }
+            }
+            if (spr->HasSprite() && spr->visible && spr->IsEnabled()) {
+                if (layer == SpriteSpace::World) {
+                    RC::DrawSprite3D(spr->spriteHandle);
+                } else {
+                    RC::DrawSprite(spr->spriteHandle);
+                }
+            }
+        }
+    };
+
+    // ===========================================
+    // 背景2D描画（常にモデルより後ろ）
+    // ===========================================
+    // 3D のコマンドはキューに溜まり PreDraw2D でまとめて発行されるため、
+    // ここで積んだスプライトは必ず 3D より先に実行される＝モデルの奥に見える。
+    // 必ず PreDraw3D より前に行うこと。
+    bool hasBehindSprite = false;
+    for (auto& e : entities_) {
+        if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue;
+        if (auto* spr = e->GetComponent<SpriteRendererComponent>()) {
+            if (spr->space == SpriteSpace::ScreenBehind) { hasBehindSprite = true; break; }
+        }
+    }
+    if (hasBehindSprite) {
+        RC::PreDraw2DBackground(ctx, cl);
+        drawSpriteLayer(SpriteSpace::ScreenBehind);
+    }
+
     // ===========================================
     // シャドウパス
     // ===========================================
-    // TODO: ここでは最初のスポットライトのみ影を落とす暫定実装
+    // 1) 平行光源のシャドウマップ（シーン全体を暗くする従来の影）
+    // 2) スポットライトごとの影アトラス（灯ごとに深度マップを持ち、壁の向こう側へ光が漏れない）
+    //
+    // 影を落とす物（影キャスター）は両方のパスで共通。同じ描画を「影を落とすライトの数」だけ繰り返す。
+    // excludeEntityId: この識別子のエンティティだけ描かない（0 で全部描く）。
+    //                  ライトを持つ本体が自分の光を遮って足元が真っ暗になるのを防ぐ用。
+    //
+    // 影キャスターの一覧は毎フレーム 1 回だけ組み立てる。
+    // 以前はタイルごとに全エンティティを走査し直していた（タグの文字列ハッシュ 2 回＋
+    // コンポーネント検索 3 回 × 全エンティティ × 最大 kMaxSpotShadows+1 パス）。
+    // 判定結果はパスの途中で変わらないので、一度集めた配列を各パスで再生するだけにする。
+    struct ShadowCasterEntry {
+        uint32_t entityId = 0;
+        ModelRendererComponent* ren = nullptr;   ///< 描くモデル（無ければ nullptr）
+        PrimitiveMeshComponent* pm = nullptr;    ///< 描くプリミティブメッシュ（無ければ nullptr）
+        NativeScriptComponent* nsc = nullptr;    ///< OnShadowRender を持つスクリプト群（無ければ nullptr）
+    };
+    static std::vector<ShadowCasterEntry> s_shadowCasters; // 毎フレーム clear して使い回す（再確保しない）
+    s_shadowCasters.clear();
+    for (auto& e : entities_) {
+        if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue;
+        if (e->GetTagInt("cast_shadow", 1) == 0 || e->GetTagInt("no_shadow", 0) == 1) continue;
+
+        ShadowCasterEntry entry;
+        entry.entityId = e->GetId();
+
+        // 影を落とすオブジェクト群（モデルとプリミティブメッシュ）
+        if (auto* ren = e->GetComponent<ModelRendererComponent>()) {
+            if (ren->HasModel() && ren->visible && ren->IsEnabled()) {
+                entry.ren = ren;
+            }
+        }
+        if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
+            // 自己発光（アンリット lightingMode == 0：UI板ポリやエフェクト用）は影を落とさない
+            if (pm->lightingMode != 0 && pm->HasMesh() && pm->visible && pm->IsEnabled()) {
+                entry.pm = pm;
+            }
+        }
+        // スクリプトが自前で描いている 3D ジオメトリ（マップの壁・床、ドアなど）
+        if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+            if (!nsc->scripts.empty()) {
+                entry.nsc = nsc;
+            }
+        }
+
+        if (entry.ren || entry.pm || entry.nsc) {
+            s_shadowCasters.push_back(entry);
+        }
+    }
+
+    auto drawShadowCasters = [&](uint32_t excludeEntityId) {
+        for (const auto& c : s_shadowCasters) {
+            if (excludeEntityId != 0u && c.entityId == excludeEntityId) continue;
+
+            if (c.ren) {
+                RC::DrawModel(c.ren->modelHandle, c.ren->texOverride);
+            }
+            if (c.pm) {
+                RC::DrawPrimitiveMesh(c.pm->meshHandle, c.pm->texOverride);
+            }
+            if (c.nsc) {
+                for (auto& entry : c.nsc->scripts) {
+                    if (entry.instance) {
+                        entry.instance->OnShadowRender();
+                    }
+                }
+            }
+        }
+    };
+
+    // --- 1) 平行光源 ---
     RC::Matrix4x4 lightViewProj = MakeIdentity4x4();
     RC::Vector3 lightDir = {0, -1, 0};
     bool shadowEnabled = false;
 
     for (auto& e : entities_) {
         if (!e->IsVisible() || !e->IsActive()) continue;
-
-        // まず DirectionalLight を探す
         if (auto* dl = e->GetComponent<DirectionalLightComponent>()) {
             if (dl->IsEnabled() && dl->visible) {
                 // DirectionalLight用の広範囲の正射影
@@ -501,28 +722,6 @@ public:
                 break;
             }
         }
-        // なければ SpotLight を使う
-        if (auto* sl = e->GetComponent<SpotLightComponent>()) {
-            if (sl->IsEnabled() && sl->visible && !shadowEnabled) {
-                // Projection
-                float fov = std::acos(sl->cosAngle) * 2.0f;
-                RC::Matrix4x4 proj = MakePerspectiveFovMatrix(fov, 1.0f, 0.1f, sl->distance);
-                // View: SpotLight の position と direction からカメラ行列を構築
-                if (auto* tr = e->GetComponent<TransformComponent>()) {
-                    RC::Vector3 dir = Normalize(sl->direction);
-                    float pitch = std::asin(-dir.y);
-                    float yaw = std::atan2(dir.x, dir.z);
-                    RC::Vector3 rot = {pitch, yaw, 0.0f};
-                    RC::Matrix4x4 world = MakeAffineMatrix({1.0f, 1.0f, 1.0f}, rot, tr->position);
-                    RC::Matrix4x4 view = Inverse(world);
-                    lightViewProj = Multiply(view, proj);
-                    lightDir = sl->direction;
-                    shadowEnabled = true;
-                    // SpotLight は DirectionalLight が無ければ採用するが、
-                    // もし後から DirectionalLight が見つかったら上書きしたいのでブレイクしない
-                }
-            }
-        }
     }
 
     ShadowParams sParams;
@@ -537,30 +736,262 @@ public:
     // shadowMapTexelSize は RenderContext 側でシャドウマップの実解像度から設定される
     RC::UpdateShadowParams(sParams);
 
-    if (shadowEnabled) {
-        // RenderContext の準備（CommandListの設定など）は PreDraw3D で行われるため、先に PreDraw3D を呼ぶ
-        RC::PreDraw3D(ctx, cl);
-        RC::BeginShadowPass();
+    // --- 2) ライトごとの影：影を落とす灯を選ぶ ---
+    // 点灯中かつ castShadow なライトを集め、カメラに近い順に最大 kMaxSpotShadows 灯へ
+    // アトラスのタイルを割り当てる。残りは shadowIndex = -1（従来通り影なし）。
+    //
+    // スポットライトは照射方向の透視投影をそのまま焼く。
+    // 点光源・面光源は全方位に光るが、キューブマップを持つ代わりに
+    // 「ライト位置から真下を向いた広角の透視投影」を 1 枚だけ焼く。
+    // 遮蔽物（壁）が垂直なので、ある水平方向が遮られているかは高さに依らない。
+    // シェーダ側（SampleOmniShadowDown）が受光点を真下へずらしてからこの 1 枚を引く。
+    //
+    // 走査するのはエンジンが持っているアクティブなライト一覧で、コンポーネントに限らない。
+    // スクリプトが RC::CreateSpotLight() 等で直接作ったライトにも同じように影が付く。
+    // 位置・向き・角度は GPU へ転送される実ライトの値をそのまま使うのでライティングとずれない。
+    enum class ShadowLightKind { Spot, Point, Area };
+    struct ShadowCandidate {
+        ShadowLightKind kind = ShadowLightKind::Spot;
+        RC::SpotLightSource* spot = nullptr;
+        RC::PointLightSource* point = nullptr;
+        RC::AreaLightSource* area = nullptr;
+        uint32_t excludeEntityId = 0; ///< このライトの影を落とさないエンティティ（0 で無し）
+        int priority = 0;             ///< 小さいほど優先してタイルを割り当てる
+        RC::Vector3 position{};
+        RC::Vector3 direction{};     ///< スポットのみ
+        float range = 0.0f;          ///< 到達距離（far クリップ）
+        float halfAngle = 0.0f;      ///< 照射半角（ラジアン）
+        float shadowNear = 0.05f;
+        float distToCamera = 0.0f;
 
-        for (auto& e : entities_) {
-            if (!e->IsVisible() || !e->IsActive()) continue;
-            // 影を落とすオブジェクト群（モデルとプリミティブメッシュ）
-            if (auto* ren = e->GetComponent<ModelRendererComponent>()) {
-                if (ren->HasModel() && ren->visible && ren->IsEnabled()) {
-                    RC::DrawModel(ren->modelHandle, ren->texOverride);
-                }
+        void SetShadowIndex(int index) const {
+            switch (kind) {
+            case ShadowLightKind::Spot:  if (spot)  spot->SetShadowIndex(index);  break;
+            case ShadowLightKind::Point: if (point) point->SetShadowIndex(index); break;
+            case ShadowLightKind::Area:  if (area)  area->SetShadowIndex(index);  break;
             }
-            if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
-                if (pm->HasMesh() && pm->visible && pm->IsEnabled()) {
-                    RC::DrawPrimitiveMesh(pm->meshHandle, pm->texOverride);
+        }
+    };
+    static std::vector<ShadowCandidate> shadowCandidates; // 毎フレーム clear して使い回す（再確保しない）
+    shadowCandidates.clear();
+    const RC::Vector3 camPos = ctx.camera ? ctx.camera->GetWorldPos() : RC::Vector3{0.0f, 0.0f, 0.0f};
+
+    // 点光源・面光源が真下を照らす円錐の半角。広いほど遠くの床まで 1 枚でカバーできるが、
+    // タイルの解像度が中心に寄って端が粗くなる。75 度 = 全角 150 度
+    constexpr float kOmniShadowHalfAngle = 75.0f * (3.14159265358979323846f / 180.0f);
+    // 影を落とすライトは「カメラからこの距離＋そのライトの到達距離」までに限る。
+    // 1 灯につきシーン全体の影キャスターをもう一度描くので、画面外のライトに
+    // タイルを使わせない（画面に映らないので影が無くても分からない）
+    constexpr float kShadowMaxCameraDistance = 25.0f;
+
+    // --- スポットライト ---
+    const int activeSpotCount = RC::GetActiveSpotLightCount();
+    for (int i = 0; i < activeSpotCount; ++i) {
+        const int handle = RC::GetActiveSpotLightHandleAt(i);
+        if (handle < 0) continue;
+        auto* src = RC::GetSpotLightPtr(handle);
+        if (!src) continue;
+
+        const auto& d = src->Data();
+        if (!src->IsEnabled() || !src->IsCastShadow() || d.intensity <= 0.0f || d.distance <= 0.0f) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        const float distToCamera = RC::Length(RC::Sub(d.position, camPos));
+        if (distToCamera - d.distance > kShadowMaxCameraDistance) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        ShadowCandidate c;
+        c.kind = ShadowLightKind::Spot;
+        c.priority = src->GetShadowPriority();
+        c.spot = src;
+        c.excludeEntityId = src->GetShadowExcludeOwnerId();
+        c.position = d.position;
+        c.direction = d.direction;
+        c.range = d.distance;
+        // 真横まで開いた円錐は透視投影で表せないので少し内側で止める
+        c.halfAngle = std::acos(std::clamp(d.cosAngle, 0.0872f, 0.9999f)); // cos(85度) 〜 ほぼ 0度
+        c.shadowNear = src->GetShadowNear();
+        c.distToCamera = distToCamera;
+        shadowCandidates.push_back(c);
+    }
+
+    // --- 点光源 ---
+    const int activePointCount = RC::GetActivePointLightCount();
+    for (int i = 0; i < activePointCount; ++i) {
+        const int handle = RC::GetActivePointLightHandleAt(i);
+        if (handle < 0) continue;
+        auto* src = RC::GetPointLightPtr(handle);
+        if (!src) continue;
+
+        const auto& d = src->Data();
+        if (!src->IsEnabled() || !src->IsCastShadow() || d.intensity <= 0.0f || d.radius <= 0.0f) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        const float distToCamera = RC::Length(RC::Sub(d.position, camPos));
+        if (distToCamera - d.radius > kShadowMaxCameraDistance) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        ShadowCandidate c;
+        c.kind = ShadowLightKind::Point;
+        c.priority = src->GetShadowPriority();
+        c.point = src;
+        c.excludeEntityId = src->GetShadowExcludeOwnerId();
+        c.position = d.position;
+        c.direction = {0.0f, -1.0f, 0.0f}; // 真下向き固定
+        c.range = d.radius;
+        c.halfAngle = kOmniShadowHalfAngle;
+        c.shadowNear = src->GetShadowNear();
+        c.distToCamera = distToCamera;
+        shadowCandidates.push_back(c);
+    }
+
+    // --- 面光源（Tube 含む） ---
+    const int activeAreaCount = RC::GetActiveAreaLightCount();
+    for (int i = 0; i < activeAreaCount; ++i) {
+        const int handle = RC::GetActiveAreaLightHandleAt(i);
+        if (handle < 0) continue;
+        auto* src = RC::GetAreaLightPtr(handle);
+        if (!src) continue;
+
+        const auto& d = src->Data();
+        if (!src->IsEnabled() || !src->IsCastShadow() || d.intensity <= 0.0f || d.range <= 0.0f) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        const float distToCamera = RC::Length(RC::Sub(d.position, camPos));
+        if (distToCamera - d.range > kShadowMaxCameraDistance) {
+            src->SetShadowIndex(-1);
+            continue;
+        }
+
+        ShadowCandidate c;
+        c.kind = ShadowLightKind::Area;
+        c.priority = src->GetShadowPriority();
+        c.area = src;
+        c.excludeEntityId = src->GetShadowExcludeOwnerId();
+        c.position = d.position;
+        c.direction = {0.0f, -1.0f, 0.0f}; // 真下向き固定
+        // position は線分／矩形の中心なので、端まで届くぶんを到達距離に足しておく
+        // （足りないと far より遠い受光点が判定不能になり、その面光源だけ影が付かなくなる）
+        const float areaExtent = (d.halfHeight <= 0.0f)
+            ? d.halfWidth
+            : std::sqrt(d.halfWidth * d.halfWidth + d.halfHeight * d.halfHeight);
+        c.range = d.range + areaExtent;
+        c.halfAngle = kOmniShadowHalfAngle;
+        c.shadowNear = src->GetShadowNear();
+        c.distToCamera = distToCamera;
+        shadowCandidates.push_back(c);
+    }
+
+    // 優先度（小さいほど優先） → カメラに近い順。
+    // 敵が大量に湧いてもプレイヤーや紐のライトがタイルからあふれないようにする
+    std::stable_sort(shadowCandidates.begin(), shadowCandidates.end(),
+                     [](const ShadowCandidate& a, const ShadowCandidate& b) {
+                         if (a.priority != b.priority) return a.priority < b.priority;
+                         return a.distToCamera < b.distToCamera;
+                     });
+
+    SpotShadowCB spotShadowCB;
+    spotShadowCB.count = 0;
+    for (size_t i = 0; i < shadowCandidates.size(); ++i) {
+        auto& c = shadowCandidates[i];
+        if (i >= static_cast<size_t>(kMaxSpotShadows)) {
+            c.SetShadowIndex(-1);
+            continue;
+        }
+
+        // 円錐がぴったり収まるよう少しだけ余裕を持たせた正方形の視錐台
+        constexpr float kMaxShadowFov = 170.0f * (3.14159265358979323846f / 180.0f);
+        const float fov = (std::min)(c.halfAngle * 2.0f * 1.02f, kMaxShadowFov);
+        const float farZ = c.range;
+        const float nearZ = std::clamp(c.shadowNear, 0.01f, (std::max)(farZ * 0.5f, 0.01f));
+
+        // ライト視点の View：position と direction からカメラと同じ規約（X→Y 回転）で構築
+        const RC::Vector3 dir = (RC::Length(c.direction) > 1e-4f) ? Normalize(c.direction) : RC::Vector3{0.0f, -1.0f, 0.0f};
+        const float pitch = std::asin(std::clamp(-dir.y, -1.0f, 1.0f));
+        const float yaw = std::atan2(dir.x, dir.z);
+        const RC::Vector3 lightScale = {1.0f, 1.0f, 1.0f};
+        const RC::Vector3 lightRot = {pitch, yaw, 0.0f};
+        RC::Matrix4x4 lightWorld = MakeAffineMatrix(lightScale, lightRot, c.position);
+        RC::Matrix4x4 lightView = Inverse(lightWorld);
+        RC::Matrix4x4 lightProj = MakePerspectiveFovMatrix(fov, 1.0f, nearZ, farZ);
+
+        auto& entry = spotShadowCB.entries[i];
+        entry.lightViewProjection = Multiply(lightView, lightProj);
+        entry.nearZ = nearZ;
+        entry.farZ = farZ;
+        entry.tanHalfFov = std::tan(fov * 0.5f);
+        entry.lightPosition = c.position;
+
+        c.SetShadowIndex(static_cast<int>(i));
+        ++spotShadowCB.count;
+    }
+    // 影の調整値（ワールド単位。マップのタイルが 2m なので数 cm 程度）。
+    // シャドウパスは裏面を描く方式（second-depth）なので、光の当たっている面が
+    // 自分の深度で影になること（シャドウアクネ）が起きない。そのためバイアスは
+    // 「遮蔽物の裏側にどれだけ光が回り込むか」だけを決める＝小さめでよい。
+    spotShadowCB.bias = 0.005f;     // 定数バイアス
+    spotShadowCB.slopeBias = 0.5f;  // 斜面バイアス：光に対して斜めな面ほど強く効く
+    spotShadowCB.pcfRadius = 1.0f;  // 縁の柔らかさ（テクセル単位）
+
+    // RenderContext の準備（CommandList の設定・フレーム毎の一時 CB 確保）は PreDraw3D で行われるため先に呼ぶ
+    RC::PreDraw3D(ctx, cl);
+
+    // --- 2) スポットライト影：タイルごとに深度を描く ---
+    // UpdateSpotShadowParams は BeginSpotShadowAtlas に成功したときだけ呼ぶ。
+    // 失敗（＝アトラスが使えない）なら b7 は PreDraw3D が入れた count = 0 のままになり、
+    // シェーダ側は「遮蔽なし」として扱う（描いていないアトラスを参照しない）
+    if (spotShadowCB.count > 0 && RC::BeginSpotShadowAtlas()) {
+        RC::UpdateSpotShadowParams(spotShadowCB); // PreDraw3D の後に呼ぶこと
+        for (uint32_t i = 0; i < spotShadowCB.count; ++i) {
+            const auto& c = shadowCandidates[i];
+            RC::BeginSpotShadowTile(static_cast<int>(i));
+            drawShadowCasters(c.excludeEntityId);
+            RC::Execute3DCommands(); // このタイルへ深度を書く
+            RC::EndSpotShadowTile();
+        }
+        RC::EndSpotShadowAtlas();
+    }
+
+    // --- 1) 平行光源のシャドウパス ---
+    if (shadowEnabled) {
+        RC::BeginShadowPass();
+        drawShadowCasters(0u);
+        RC::Execute3DCommands(); // シャドウパスのコマンドを実行
+        RC::EndShadowPass();
+    }
+
+    // --- 2) マスクパス（インタラクトできる物などの輪郭強調用シルエット） ---
+    //
+    // 強調するかどうかは各スクリプトが OnMaskRender の中で判断する（強調中だけ描く）。
+    // ここでは毎フレーム必ずパスを回してマスクRTをクリアしておく。そうしないと
+    // 「強調が終わったのに前フレームのシルエットが残る」ことになる。
+    //
+    // ★ 置き場所はシャドウパスの直後で固定。Execute3DCommands は「その時点までに
+    //   積まれた全ての3Dコマンド」を流すので、メイン3Dの Draw を積む前でなければ
+    //   シーン全体がマスクとして描かれてしまう。
+    if (RC::BeginMaskPass()) {
+        for (auto& e : entities_) {
+            if (!e || e->IsPendingDestroy() || !e->IsVisible() || !e->IsActive()) continue;
+            if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+                for (auto& entry : nsc->scripts) {
+                    if (entry.instance) {
+                        entry.instance->OnMaskRender();
+                    }
                 }
             }
         }
-        RC::Execute3DCommands(); // シャドウパスのコマンドを実行
-        RC::EndShadowPass();
-    } else {
-        // シャドウパスが不要な場合も準備として呼ぶ
-        RC::PreDraw3D(ctx, cl);
+        RC::Execute3DCommands();
+        RC::EndMaskPass();
     }
 
     // ===========================================
@@ -569,7 +1000,7 @@ public:
 
     // Entityコンポーネントを持つモデル・スカイボックス・天球の描画
     for (auto& e : entities_) {
-        if (!e->IsVisible() || !e->IsActive()) continue; // Hierarchy の目アイコンで非表示、または非アクティブ時はスキップ
+        if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue; // 静的壁・穴、非表示、非アクティブ時はスキップ
 
         if (auto* skybox = e->GetComponent<SkyboxComponent>()) {
             if (skybox->HasSkybox() && skybox->visible && skybox->IsEnabled()) {
@@ -598,7 +1029,7 @@ public:
         }
         if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
             if (pm->HasMesh() && pm->visible && pm->IsEnabled()) {
-                std::string name = e->GetName();
+                const std::string& name = e->GetName(); // コピーしない（毎フレーム全エンティティ分の確保を避ける）
                 if (name == "PlayerBullet" || name == "EnemyBullet" || name == "Splash") {
                     RC::DrawPrimitiveMeshWater(pm->meshHandle, pm->texOverride);
                 } else if (name == "HeavySplash") {
@@ -613,7 +1044,14 @@ public:
                 RC::DrawWater(water->meshHandle, water->normalMapHandle);
             }
         }
+        // ※ スクリプトの OnRender() はここでは呼ばない。
+        //    2D パス（下の PreDraw2D 以降）で 1 フレームに 1 回だけ呼ぶ規約。
+        //    3D パスでも呼ぶと二重描画になる。
     }
+
+    // ワールド空間スプライト（深度テストありで 3D キューに積む）
+    // モデルと同じキューに入るので、任意のモデルとモデルの間に挟まる
+    drawSpriteLayer(SpriteSpace::World);
 
     // GPUParticle の描画
     for (auto& e : entities_) {
@@ -630,6 +1068,27 @@ public:
     DrawLightGizmos(selectedEntityId_);
     DrawCameraGizmos(selectedEntityId_, float(ctx.app->width) / ctx.app->height);
     DrawColliderGizmos(selectedEntityId_);
+
+    // スクリプト独自の当たり判定ギズモ（敵の感知範囲・視界など）。
+    // ColliderComponent のギズモと同じ条件（F3 / F4 / 選択中）で表示する。
+    if (showColliderGizmos_ || showAllGizmos_) {
+        for (auto& e : entities_) {
+            if (!e || e->IsPendingDestroy() || !e->IsActive()) continue;
+            if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+                for (auto& entry : nsc->scripts) {
+                    if (entry.instance) entry.instance->OnColliderDebugRender();
+                }
+            }
+        }
+    } else if (selectedEntityId_ != 0) {
+        if (auto e = FindEntityById(selectedEntityId_)) {
+            if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+                for (auto& entry : nsc->scripts) {
+                    if (entry.instance) entry.instance->OnColliderDebugRender();
+                }
+            }
+        }
+    }
 
     if (showAllGizmos_) {
         for (auto& e : entities_) {
@@ -657,13 +1116,22 @@ public:
     // ===========================================
     RC::PreDraw2D(ctx, cl);
 
-    // Entityコンポーネントのスプライト描画
+    // Entityコンポーネントのスプライト描画（前景：モデルより手前）
+    drawSpriteLayer(SpriteSpace::Screen);
+
+    // Entityコンポーネントの文字列描画（スプライトの上に重ねる）
     for (auto& e : entities_) {
-        if (!e->IsVisible() || !e->IsActive()) continue;
-        if (auto* spr = e->GetComponent<SpriteRendererComponent>()) {
-            if (spr->HasSprite() && spr->visible && spr->IsEnabled()) {
-                RC::DrawSprite(spr->spriteHandle);
+        if (!e->IsVisible() || !e->IsActive() || IsStaticMapCollider(*e)) continue;
+        if (auto* txt = e->GetComponent<TextRendererComponent>()) {
+            if (!txt->visible || !txt->IsEnabled()) continue;
+            EnsureTextFont(*txt); // エディタでフォント/サイズを変えた場合の再ロード
+            if (!txt->HasFont() || txt->text.empty()) continue;
+            RC::Vector2 pos{0.0f, 0.0f};
+            if (auto* tr = e->GetComponent<TransformComponent>()) {
+                pos = {tr->position.x, tr->position.y};
             }
+            RC::DrawString(txt->fontHandle, txt->text, pos, txt->color, txt->scale,
+                           txt->align, txt->lineSpacing);
         }
     }
 
@@ -696,10 +1164,11 @@ public:
     nlohmann::json entitiesJson = nlohmann::json::array();
     for (auto& e : entities_) {
       if (!e) continue;
-      // レベル JSON 由来のエンティティはシーン JSON へ書き出さない。
-      // 実体はレベル側にあるので、ここへ写すと保存のたびに複製が増えていく
-      // （MESH だけでなく A-05 で追加したライトとカメラも同様）。
-      if (e->HasTag(kLevelEntityTag)) continue;
+      // レベル JSON やマップローダー由来の動的エンティティはシーン JSON へ書き出さない。
+      // 実体はマップ／レベル側にあるので、ここへ写すと保存のたびに複製が増えてしまう。
+      if (e->HasTag(kLevelEntityTag) || e->HasTag("from_level")) continue;
+      if (e->HasTag("is_wall") || e->HasTag("is_hole") || e->HasTag("is_door") || e->HasTag("is_special_door")) continue;
+      if (e->HasTag("transient") || e->HasTag("no_save")) continue;
       entitiesJson.push_back(e->Serialize());
     }
     root["entities"] = entitiesJson;
@@ -786,7 +1255,7 @@ public:
         for (const auto& enemyData : enemySpawns) {
           std::string entName = enemyData.fileName.empty() ? "Enemy" : enemyData.fileName;
           auto enemy = std::make_shared<Entity>(entName);
-          
+
           auto& tr = enemy->AddComponent<TransformComponent>();
           tr.position = enemyData.translation;
           tr.rotation = enemyData.rotation;
@@ -849,12 +1318,14 @@ public:
           entity->Deserialize(ej);
           entities_.push_back(entity);
       }
-      
+
       for (auto& e : entities_) {
           InitializeRuntimeResources(*e, ctx);
       }
       resultTriggered_ = false;
+      resultChangeRequested_ = false;
       resultDelayTimer_ = 0.0f;
+      statsFinalized_ = false;
   }
 
   /// @brief 動的に生成したエンティティのランタイムリソースを初期化する
@@ -881,16 +1352,119 @@ private:
   nlohmann::json backupJson_; ///< メモリ上へのバックアップ用
 
   // ゲーム結果判定用
-  bool resultTriggered_ = false;      ///< 結果判定がトリガーされたか
-  float resultDelayTimer_ = 0.0f;     ///< 遷移までのディレイタイマー
+  bool resultTriggered_ = false;       ///< 結果判定がトリガーされたか
+  bool resultChangeRequested_ = false; ///< シーン遷移要求が送信されたか
+  bool statsFinalized_ = false;        ///< 決着時の記録を確定させたか（1 プレイ 1 回）
+  float resultDelayTimer_ = 0.0f;      ///< 遷移までのディレイタイマー
   std::string resultTarget_;          ///< 遷移先シーン名
   static constexpr float kResultDelay_ = 2.5f; ///< 結果確定からシーン遷移までの待機時間（秒）
+
+  /// @brief TextRendererComponent のフォントを設定に合わせてロード（変更があれば差し替え）
+  static void EnsureTextFont(TextRendererComponent& txt) {
+      if (!txt.NeedsReload()) return;
+      if (txt.fontHandle >= 0) {
+          RC::UnloadFont(txt.fontHandle);
+          txt.fontHandle = -1;
+      }
+      txt.loadedPath = txt.fontPath;
+      txt.loadedSize = txt.fontSize;
+      if (txt.fontPath.empty() || txt.fontSize <= 0.0f) return;
+      txt.fontHandle = RC::LoadFont(txt.fontPath, txt.fontSize, txt.atlasSize);
+      // 失敗しても loadedPath/Size を更新済みなので毎フレーム再試行はしない
+  }
+
+  /// @brief PlayClip() で要求されたクリップ切り替えを適用する
+  /// @param anim 対象の AnimationComponent
+  /// @param ren 同じエンティティの ModelRendererComponent（モデル未ロードでないこと）
+  /// @details パース結果は RC::LoadAnimationFile 側でキャッシュされるため、
+  ///          同じクリップへの再切り替えでファイル I/O は発生しない。
+  void ApplyPendingClip(AnimationComponent& anim, ModelRendererComponent& ren) {
+    const AnimationClip* clip = anim.FindClip(anim.pendingClip_);
+    if (!clip) {
+      // 未登録のクリップ名。要求だけ捨てて現在の再生を続ける
+      anim.pendingRequested_ = false;
+      return;
+    }
+
+    const std::string& src = clip->path.empty() ? ren.modelPath : clip->path;
+    if (src.empty()) {
+      anim.pendingRequested_ = false;
+      return;
+    }
+
+    if (anim.currentClip.empty() || anim.pendingBlend_ <= 0.0f) {
+      // 初回、またはブレンド無し指定
+      RC::AttachModelAnimation(ren.modelHandle, src, clip->index);
+    } else {
+      RC::CrossfadeModelAnimation(ren.modelHandle, src, clip->index, anim.pendingBlend_);
+    }
+
+    anim.currentClip = anim.pendingClip_;
+    anim.clipElapsed_ = 0.0f;
+    anim.playing = true;
+    anim.pendingRequested_ = false;
+
+    // Inspector 側の直接指定経路と食い違わないよう、適用内容を書き戻しておく。
+    // これを省くと次フレームに NeedsReattach() が真になり、クリップが上書きされる。
+    anim.animationPath = clip->path;
+    anim.animIndex = clip->index;
+    anim.MarkAttached();
+  }
+
+  /// @brief ボーン追従（ソケット）の更新
+  /// @details BoneAttachmentComponent を持つエンティティのモデルを、
+  ///          追従先エンティティのスケルトンの Joint に貼り付ける。
+  ///          描画行列を直接上書きするので、Transform 同期より後に呼ぶこと。
+  void UpdateBoneAttachments() {
+    for (auto& e : entities_) {
+      auto* ba = e->GetComponent<BoneAttachmentComponent>();
+      if (!ba) continue;
+      auto* ren = e->GetComponent<ModelRendererComponent>();
+      if (!ren || !ren->HasModel()) continue;
+
+      // 追従を止める条件。上書き中だった場合のみ解除して Transform 基準に戻す
+      auto releaseOverride = [&]() {
+        if (ba->overrideActive_) {
+          RC::ClearModelWorldOverride(ren->modelHandle);
+          ba->overrideActive_ = false;
+        }
+      };
+
+      if (!ba->IsEnabled() || ba->targetGuid == 0) { releaseOverride(); continue; }
+
+      auto target = FindEntityByGuid(ba->targetGuid);
+      if (!target) { releaseOverride(); continue; }
+      auto* tRen = target->GetComponent<ModelRendererComponent>();
+      auto* tTr = target->GetComponent<TransformComponent>();
+      if (!tRen || !tTr || !tRen->HasModel() || !RC::IsModelReady(tRen->modelHandle)) {
+        releaseOverride();
+        continue;
+      }
+
+      // Joint 姿勢（スケルトン空間＝追従先モデルのローカル）
+      RC::Matrix4x4 joint = MakeIdentity4x4();
+      if (!ba->jointName.empty()) {
+        // Joint 名が見つからない場合は単位行列のまま＝追従先の原点に付く
+        RC::GetModelJointMatrix(tRen->modelHandle, ba->jointName, joint);
+      }
+
+      // オフセット → Joint → 追従先ワールド の順に合成する（行ベクトル規約）
+      const RC::Matrix4x4 offset =
+          MakeAffineMatrix(ba->offsetScale, ba->offsetRotation, ba->offsetPosition);
+      const RC::Matrix4x4 world =
+          Multiply(offset, Multiply(joint, tTr->GetWorldMatrix()));
+
+      RC::SetModelWorldOverride(ren->modelHandle, world);
+      ba->overrideActive_ = true;
+    }
+  }
 
   /// @brief Register all components to ComponentFactory (called once)
   static void RegisterAllComponents() {
     Entity::ComponentFactory::Register<TransformComponent>("TransformComponent");
     Entity::ComponentFactory::Register<ModelRendererComponent>("ModelRendererComponent");
     Entity::ComponentFactory::Register<SpriteRendererComponent>("SpriteRendererComponent");
+    Entity::ComponentFactory::Register<TextRendererComponent>("TextRendererComponent");
     Entity::ComponentFactory::Register<CameraComponent>("CameraComponent");
     Entity::ComponentFactory::Register<DirectionalLightComponent>("DirectionalLightComponent");
     Entity::ComponentFactory::Register<PointLightComponent>("PointLightComponent");
@@ -898,6 +1472,7 @@ private:
     Entity::ComponentFactory::Register<AreaLightComponent>("AreaLightComponent");
     Entity::ComponentFactory::Register<ColliderComponent>("ColliderComponent");
     Entity::ComponentFactory::Register<AnimationComponent>("AnimationComponent");
+    Entity::ComponentFactory::Register<BoneAttachmentComponent>("BoneAttachmentComponent");
     Entity::ComponentFactory::Register<PrimitiveMeshComponent>("PrimitiveMeshComponent");
     Entity::ComponentFactory::Register<SkyboxComponent>("SkyboxComponent");
     Entity::ComponentFactory::Register<SkydomeComponent>("SkydomeComponent");
@@ -905,6 +1480,8 @@ private:
     Entity::ComponentFactory::Register<RigidbodyComponent>("RigidbodyComponent");
     Entity::ComponentFactory::Register<NativeScriptComponent>("NativeScriptComponent");
     Entity::ComponentFactory::Register<GPUParticleComponent>("GPUParticleComponent");
+    Entity::ComponentFactory::Register<AudioSourceComponent>("AudioSourceComponent");
+    Entity::ComponentFactory::Register<AudioListenerComponent>("AudioListenerComponent");
   }
 
   void InitializeRuntimeResources(Entity& e, SceneContext& ctx) {
@@ -930,7 +1507,10 @@ private:
           if (pm->meshHandle >= 0) {
               if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) {
                   mat->color = pm->color;
-                  mat->lightingMode = pm->lightingMode;
+                  // -1 は DirectionalLight 追従。マテリアルへは書かず描画時に解決する
+                  if (pm->lightingMode >= 0) {
+                      RC::SetPrimitiveMeshLightingMode(pm->meshHandle, static_cast<LightingMode>(pm->lightingMode));
+                  }
                   mat->shininess = pm->shininess;
                   mat->uvTransform = MakeIdentity4x4();
                   mat->uvTransform.m[0][0] = pm->uvTiling.x;
@@ -947,6 +1527,8 @@ private:
                   ptr->Data().color = dl->color;
                   ptr->Data().direction = dl->direction;
                   ptr->Data().intensity = dl->intensity;
+                  ptr->Data().ambientColor = dl->ambientColor;
+                  ptr->Data().ambientIntensity = dl->ambientIntensity;
               }
           }
       }
@@ -985,6 +1567,7 @@ private:
                   ptr->Data().twoSided = al->twoSided;
                   ptr->Data().halfWidth = al->halfWidth;
                   ptr->Data().halfHeight = al->halfHeight;
+                  ptr->SetBasis(al->right, al->up);
               }
           }
       }
@@ -997,9 +1580,15 @@ private:
           else if (!sd->skydomePath.empty()) initTex = RC::LoadTex(sd->skydomePath);
           sd->texOverride = initTex;
           sd->skydomeHandle = RC::GenerateSkydomeEx(initTex);
+          // 生成直後のマテリアルは白なので、復元した乗算カラーを反映しておく
+          RC::SetSkydomeColor(sd->skydomeHandle, sd->color);
       }
       if (auto* spr = e.GetComponent<SpriteRendererComponent>()) {
           if (!spr->spritePath.empty()) spr->spriteHandle = RC::LoadSprite(spr->spritePath, ctx);
+          spr->loadedPath = spr->spritePath;
+      }
+      if (auto* txt = e.GetComponent<TextRendererComponent>()) {
+          EnsureTextFont(*txt);
       }
       if (auto* water = e.GetComponent<WaterComponent>()) {
           int normalMap = -1;
@@ -1016,6 +1605,64 @@ private:
               gpu->particleSystem->Initialize(ctx);
               gpu->isInitialized = true;
           }
+      }
+      if (auto* audio = e.GetComponent<AudioSourceComponent>()) {
+          // クリップのロードのみ。playOnAwake の発火は UpdateAudio() が
+          // Playing 状態を見て行う（エディタの停止操作中に ctx.playState がまだ
+          // Playing のまま RestoreState → ここが呼ばれるため、ここで鳴らすと誤発火する）
+          audio->LoadClips();
+      }
+  }
+
+public:
+  /// @brief AudioSourceComponent の毎フレーム更新（SceneManager::Update から毎フレーム呼ばれる）
+  /// @details スクリプトから Play() された音の後始末、再生開始時の playOnAwake 発火、
+  ///          BGM の keep-alive、3D 音響のリスナー／音源位置の更新をまとめて行う。
+  ///          Update() の後に呼ばれるので、再生中に生成されたエンティティ（弾など）も同じフレームで拾える。
+  void UpdateAudio(SceneContext& ctx) override {
+      FlushPendingEntities(); // Update を挟まずに生成されたエンティティも拾う
+      const bool playing = (ctx.playState == PlayState::Playing);
+      const bool paused  = (ctx.playState == PlayState::Paused);
+      const float dt = ctx.deltaTime;
+
+      // リスナーは音源より先に更新する（このフレームに Play() される 3D 音の初期定位に使われる）
+      UpdateAudioListener(ctx, playing, dt);
+
+      for (auto& e : entities_) {
+          if (!e || e->IsPendingDestroy()) continue;
+          auto* audio = e->GetComponent<AudioSourceComponent>();
+          if (!audio) continue;
+          audio->LoadClips(); // Inspector でパスを差し替えた場合の遅延ロード
+          if (!e->IsActive() || !audio->IsEnabled()) {
+              audio->Silence();
+              continue;
+          }
+          audio->Tick(playing, paused, dt);
+      }
+  }
+
+private:
+  /// @brief 3D 音響のリスナー（聞き手）を更新する
+  /// @details 有効な AudioListenerComponent を持つアクティブなエンティティがあれば、最初に見つかった
+  ///          1 つを使う。無ければ描画中のカメラ（編集モードならエディタカメラ）が聞き手になる。
+  ///          編集モードでは速度を 0 にして、カメラを飛ばしてもドップラーがかからないようにする。
+  void UpdateAudioListener(SceneContext& ctx, bool playing, float dt) {
+      const RC::Matrix4x4* cameraView = ctx.camera ? &ctx.camera->GetView() : nullptr;
+      for (auto& e : entities_) {
+          if (!e || e->IsPendingDestroy() || !e->IsActive()) continue;
+          auto* listener = e->GetComponent<AudioListenerComponent>();
+          if (!listener) continue;
+          if (!listener->IsEnabled()) {
+              listener->ResetMotion();
+              continue;
+          }
+          auto* tr = e->GetComponent<TransformComponent>();
+          if (!tr) continue;
+          listener->Tick(*tr, cameraView, playing, dt);
+          return;
+      }
+      if (cameraView) {
+          AudioEngine::Get().SetListenerFromView(*cameraView, playing ? dt : 0.0f);
       }
   }
 
@@ -1055,6 +1702,12 @@ private:
       }
       if (auto* spr = e.GetComponent<SpriteRendererComponent>()) {
           if (spr->spriteHandle >= 0) { RC::UnloadSprite(spr->spriteHandle); spr->spriteHandle = -1; }
+          spr->loadedPath.clear();
+      }
+      if (auto* txt = e.GetComponent<TextRendererComponent>()) {
+          if (txt->fontHandle >= 0) { RC::UnloadFont(txt->fontHandle); txt->fontHandle = -1; }
+          txt->loadedPath.clear();
+          txt->loadedSize = 0.0f;
       }
       if (auto* water = e.GetComponent<WaterComponent>()) {
           if (water->meshHandle >= 0) { RC::UnloadWater(water->meshHandle); water->meshHandle = -1; }
@@ -1064,6 +1717,10 @@ private:
               gpu->particleSystem->Finalize();
           }
           gpu->isInitialized = false;
+      }
+      if (auto* audio = e.GetComponent<AudioSourceComponent>()) {
+          // SE は止め、BGM は keep-alive を外すだけ（次のシーンが同じ曲なら継続）
+          audio->ReleaseRuntime();
       }
   }
 };

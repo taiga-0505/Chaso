@@ -1,13 +1,13 @@
 #pragma once
 #include "Scene.h"
 #include "SceneManager.h"
-#include "Audio/BgmManager.h"
-#include "Audio/SeManager.h"
 #include <string>
 
 /// @class Game
 /// @brief アプリケーション全体のメインロジックを統括するクラス
-/// @details シーン遷移（SceneManager）やオーディオ（BgmManager, SeManager）の初期化と更新を管理します。
+/// @details シーン遷移（SceneManager）の初期化と更新を管理します。
+///          オーディオはエンジン側の AudioEngine（シングルトン）と、シーン内の
+///          AudioSourceComponent が担当するため、ここでは扱いません。
 class Game {
 public:
   Game() = default;
@@ -62,13 +62,8 @@ private:
   /// @brief 使用する全てのシーンを SceneManager に登録する
   void registerScenes_();
 
-  /// @brief BGM/SE のファイルパスを一括登録する
-  void registerAudioPaths_();
-
 private:
   Scene::SceneManager sceneMgr_; ///< シーンマネージャー
-  BgmManager bgm_;               ///< BGM マネージャー
-  SeManager se_;                 ///< SE マネージャー
 
   /// @brief Directory for data-driven scene JSON files
   static inline const std::string kSceneDir = "Resources/Scenes";

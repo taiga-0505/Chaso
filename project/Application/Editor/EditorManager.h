@@ -4,6 +4,8 @@
 #include <functional>
 #include <memory>
 #include <filesystem>
+#include <vector>
+#include <nlohmann/json.hpp>
 #include "Particle/GPUParticle.h"
 #include "Graphics/Texture/RenderTexture/RenderTexture.h"
 #include "Camera/CameraController.h"
@@ -59,7 +61,7 @@ public:
 
   /// @brief 現在の再生状態を取得する
   PlayState GetPlayState() const;
-  
+
   /// @brief 再生状態を設定する（外部からのリセット用）
   void SetPlayState(PlayState state);
 
@@ -91,6 +93,46 @@ private:
   /// @brief ツリーノードとしてエンティティを描画する（再帰）
   void DrawEntityNode(std::shared_ptr<Entity> e, Scene* currentScene, const std::unordered_map<uint64_t, std::vector<std::shared_ptr<Entity>>>& childrenMap);
 
+  /// @brief 空のオブジェクト（Transform のみ）を生成して選択状態にする
+  /// @param currentScene 現在のシーン
+  /// @param parentGuid 親エンティティの GUID（0 でルート）
+  /// @return 生成したエンティティ（シーンが無い場合は nullptr）
+  std::shared_ptr<Entity> CreateEmptyEntity(Scene* currentScene, uint64_t parentGuid = 0);
+
+  // ============================================================
+  // ショートカット / Undo・Redo / コピー＆ペースト
+  // ============================================================
+
+  /// @brief F2・Ctrl+C/V/Z/Y などのエディタショートカットを処理する
+  /// @param core Dx12Core（スクリーンショット要求用）
+  /// @param currentScene 現在のシーン
+  /// @details ImGui フレーム内（EditorManager::Update の先頭）で呼ぶこと
+  void HandleShortcuts(Dx12Core* core, Scene* currentScene);
+
+  /// @brief 前回コミット時からシーンが変化していれば Undo 履歴へ積む
+  /// @param currentScene 現在のシーン
+  /// @details ウィジェット操作中・ギズモ操作中は積まないため、
+  ///          1回のドラッグ操作が1ステップにまとまる。
+  void CommitHistoryIfChanged(Scene* currentScene);
+
+  /// @brief Undo 履歴を初期化する（シーン切り替え時など）
+  void ResetHistory(Scene* currentScene);
+
+  /// @brief 1ステップ戻す
+  void Undo(Scene* currentScene);
+
+  /// @brief 1ステップ進める
+  void Redo(Scene* currentScene);
+
+  /// @brief 選択中のエンティティ（と子孫）を内部クリップボードへコピーする
+  void CopySelectedEntity(Scene* currentScene);
+
+  /// @brief 内部クリップボードの内容を新しいエンティティとして貼り付ける
+  void PasteEntityClipboard(Scene* currentScene);
+
+  /// @brief スナップショットを適用し、GUID を頼りに選択状態を復元する
+  void ApplySnapshot(Scene* currentScene, const nlohmann::json& snapshot);
+
 private:
   bool firstLayout_ = true; ///< 初回レイアウト構築フラグ
   bool resetLayout_ = false; ///< レイアウトリセット要求フラグ
@@ -102,7 +144,7 @@ private:
   bool showPostEffectWindow_ = false; ///< Post Effect Settings ウィンドウの表示フラグ
   bool showVerifyWindow_ = false; ///< 実装確認 (Verify) ウィンドウの表示フラグ
   bool isViewportHovered_ = false; ///< Viewportウィンドウがホバーされているか
-  
+
   PlayState playState_; ///< エディタ上での現在の再生状態
   bool restartRequested_ = false; ///< リスタート要求フラグ
 
@@ -125,11 +167,41 @@ private:
   int fileFontTex_ = -1;
 
   std::weak_ptr<Entity> selectedEntity_; ///< Inspector表示用の選択エンティティ
+  bool dragging2D_ = false;      ///< Viewport 上で 2D 要素（Text/Sprite）をドラッグ中か
+  int drag2DMode_ = 0;           ///< 0=なし 1=移動 2=四隅ハンドルでサイズ変更
+  float drag2DAnchorX_ = 0.0f;   ///< サイズ変更時に固定する対角コーナー（ゲーム px）
+  float drag2DAnchorY_ = 0.0f;
+  float drag2DBaseW_ = 1.0f;     ///< サイズ変更開始時の矩形幅（ゲーム px）
+  float drag2DBaseH_ = 1.0f;     ///< サイズ変更開始時の矩形高さ（ゲーム px）
+  float drag2DBaseScale_ = 1.0f; ///< サイズ変更開始時の Text scale
+  float drag2DLastX_ = 0.0f;     ///< 2D ドラッグの前フレームマウス座標 X
+  float drag2DLastY_ = 0.0f;     ///< 2D ドラッグの前フレームマウス座標 Y
   uint32_t renamingEntityId_ = 0; ///< 名前変更中のエンティティID
   bool focusRename_ = false; ///< 名前変更用のフォーカスフラグ
+  uint64_t expandEntityGuid_ = 0; ///< 子を追加した直後に Hierarchy で展開する親の GUID（0 で無効）
   std::filesystem::path currentDirectory_ = "Resources"; ///< コンテンツブラウザの現在ディレクトリ
 
   ResizeRequest resizeRequest_; ///< ウィンドウリサイズ要求
+
+  // --- Undo / Redo（スナップショット方式） ---
+  bool historyEnabled_ = true;                ///< 履歴機能のオン/オフ（切り分け用）
+  static constexpr size_t kMaxHistory = 50;   ///< 履歴の最大数
+  static constexpr float kHistoryPollInterval = 0.15f; ///< 変更検知の間隔（秒）
+  std::vector<nlohmann::json> undoStack_;     ///< 変更前の状態（古い順）
+  std::vector<nlohmann::json> redoStack_;     ///< やり直し用の状態
+  nlohmann::json historyCurrent_;             ///< 直近にコミットした状態
+  size_t historyHash_ = 0;                    ///< historyCurrent_ のハッシュ
+  nlohmann::json historyPending_;             ///< 確定待ちの状態（変化が落ち着くまで保留）
+  size_t historyPendingHash_ = 0;             ///< historyPending_ のハッシュ（0 なら保留なし）
+  bool historyValid_ = false;                 ///< 履歴が初期化済みか
+  bool historyResync_ = false;                ///< 復元直後（次の差分は履歴に積まない）
+  bool historyErrorLogged_ = false;           ///< スナップショット失敗を一度だけログする
+  int historyBlockLogged_ = -1;               ///< 履歴が止まっている理由（重複ログ抑制用）
+  const void* historySceneKey_ = nullptr;     ///< 履歴の対象シーン（切り替え検知用）
+  float historyPollTimer_ = 0.0f;             ///< 変更検知のタイマー
+
+  // --- エンティティのコピー＆ペースト ---
+  nlohmann::json entityClipboard_; ///< コピーしたエンティティ群（先頭がルート）
 
   // --- Gizmo Settings ---
   int gizmoOperation_ = 7; // ImGuizmo::TRANSLATE

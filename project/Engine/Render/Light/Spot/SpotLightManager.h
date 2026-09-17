@@ -9,16 +9,17 @@
 namespace RC {
 
 /// @brief スポットライト(Spot Light)を管理するマネージャクラス
-/// 最大 4 つのアクティブなスポットライトを管理し、一括して GPU (b4スロット)へ転送します。
+/// 最大 kMaxSpotLights 個のアクティブなスポットライトを管理し、一括して GPU (b4スロット)へ転送します。
 class SpotLightManager {
 public:
   /// @brief 同時に有効化可能なスポットライトの最大数
-  static constexpr int kMaxActive = 4;
+  /// @details struct.h の kMaxSpotLights（= HLSL の MAX_SPOT_LIGHTS）と同じ値にする
+  static constexpr int kMaxActive = static_cast<int>(kMaxSpotLights);
 
   /// @brief 初期化処理
   /// @param device DirectX12デバイス。定数バッファの作成に使用します。
   void Init(ID3D12Device *device);
-  
+
   /// @brief 終了処理。確保した定数バッファなどのリソースを解放します。
   void Term();
 
@@ -80,8 +81,12 @@ public:
   const SpotLightSource *GetActive() const;
 
   /// @brief GPU転送用定数バッファ(SpotLightsCB / b4)のGPU仮想アドレスを取得
+  /// @details 同期（SyncCB）は行わない。描画パスごとに RenderContext が SyncCB() を 1 回呼ぶ。
   /// @return GPU上の仮想アドレス
   D3D12_GPU_VIRTUAL_ADDRESS GetCBAddress();
+
+  /// @brief CPU側のライト状態を GPU 定数バッファへ転送する（RenderContext が描画パスごとに 1 回呼ぶ）
+  void SyncCB();
 
   /// @brief ImGuiによるパラメータ編集UIを表示
   /// @param handle 対象のライトハンドル
@@ -97,16 +102,16 @@ private:
 
   /// @brief ハンドルの有効性をチェックする
   bool IsValid_(int handle) const;
-  
+
   /// @brief 未使用スロットを検索・確保する
   int AllocSlot_();
-  
+
   /// @brief アクティブがない場合の代替ハンドルを解決する
   int ResolveFallbackHandle_() const;
 
   /// @brief 定数バッファを確保する
   void EnsureCB_();
-  
+
   /// @brief CPU側のデータをGPU定数バッファに同期（コピー）する
   void SyncCB_();
 

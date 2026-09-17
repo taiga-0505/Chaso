@@ -119,9 +119,28 @@ public:
   /// @brief ライティングモードのみを更新する
   /// @param m 設定する LightingMode
   /// @return 自身への参照
+  /// @note 呼び出し以降、このモデルはシーンの DirectionalLight の
+  ///       LightingMode に追従しなくなる（個別オーバーライド扱い）。
+  ///       追従に戻すには ClearLightingModeOverride() を呼ぶ。
   ModelObject &SetLightingMode(LightingMode m) {
-    return SetLightingConfig(LightingConfig{m});
+    lightingModeOverride_ = static_cast<int>(m);
+    // ライトの色・方向・強度は維持し、モードだけを差し替える
+    LightingConfig cfg = initialLighting_;
+    cfg.mode = m;
+    return SetLightingConfig(cfg);
   }
+
+  /// @brief ライティングモードの個別オーバーライドを解除し、
+  ///        シーンの DirectionalLight のモードに追従させる
+  /// @return 自身への参照
+  ModelObject &ClearLightingModeOverride() {
+    lightingModeOverride_ = -1;
+    return *this;
+  }
+
+  /// @brief ライティングモードのオーバーライド値を取得する
+  /// @return -1: DirectionalLight に追従 / 0以上: 固定された LightingMode
+  int GetLightingModeOverride() const { return lightingModeOverride_; }
 
   /// @brief トランスフォーム情報を取得する（読み書き可能）
   /// @return Transform への参照
@@ -130,6 +149,7 @@ public:
   /// @brief マテリアル情報を取得する（読み書き可能）
   /// @return Material ポインタ
   Material *Mat() { return resource_.Mat(); }
+  const Material *Mat() const { return resource_.Mat(); }
 
   /// @brief オブジェクトのベースカラーを設定する
   /// @param color 設定するカラーベクトル
@@ -138,6 +158,25 @@ public:
   /// @brief ライト情報を取得する（読み書き可能）
   /// @return DirectionalLight ポインタ
   DirectionalLight *Light() { return resource_.Light(); }
+  const DirectionalLight *Light() const { return resource_.Light(); }
+
+  /// @brief 光沢度（Shininess）を設定する (0.0: 鏡面反射なし)
+  /// @param shininess 光沢度
+  void SetShininess(float shininess) {
+    initialShininess_ = shininess;
+    if (Material *mat = resource_.Mat()) {
+      mat->shininess = shininess;
+    }
+  }
+
+  /// @brief 光沢度（Shininess）を取得する
+  /// @return 光沢度
+  float GetShininess() const {
+    if (const Material *mat = resource_.Mat()) {
+      return mat->shininess;
+    }
+    return initialShininess_;
+  }
 
   /// @brief 環境マップ映り込み係数を設定する（非同期ロード対応）
   /// @param coeff 係数 (0.0: なし, 1.0: 最大)
@@ -201,8 +240,10 @@ public:
   /// @param cmdList グラフィックスコマンドリスト
   /// @param world 描画に使用するワールド行列
   /// @param frame フレームリソース（一時メモリ用）
+  /// @param worldOnly true なら World 行列だけを転送する（シャドウパス用。VS が World しか読まないため
+  ///        WVP / 逆転置行列の計算を省いても結果は変わらない）
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
-            RC::FrameResource &frame);
+            RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief 複数のインスタンス（Transformリスト）を一括描画する
   /// @param cmdList グラフィックスコマンドリスト
@@ -210,10 +251,11 @@ public:
   /// @param proj プロジェクション行列
   /// @param instances インスタンスごとの Transform 配列
   /// @param frame フレームリソース
+  /// @param worldOnly true なら World 行列だけを転送する（シャドウパス用）
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
-                 RC::FrameResource &frame);
+                 RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief インスタンス一括描画（単色オーバーライド付き）
   /// @param cmdList グラフィックスコマンドリスト
@@ -222,11 +264,12 @@ public:
   /// @param instances インスタンスごとの Transform 配列
   /// @param color 全インスタンスに適用するオーバーライドカラー
   /// @param frame フレームリソース
+  /// @param worldOnly true なら World 行列だけを転送する（シャドウパス用）
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
                  const RC::Vector4 &color,
-                 RC::FrameResource &frame);
+                 RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief ImGui を使用したデバッグ用 UI を表示する
   /// @param name 表示名
@@ -267,6 +310,9 @@ private:
 
   LightingConfig initialLighting_{}; ///< 初期化時または外部から設定されたライティング情報
 
+  int lightingModeOverride_ = -1; ///< -1: DirectionalLight に追従 / 0以上: 固定 LightingMode
+
+  float initialShininess_ = 32.0f; ///< 光沢度の初期設定値
   float initialEnvCoeff_ = 0.0f; ///< 環境マップ映り込み係数の初期設定値
   float lastEnvCoeff_ = 0.5f;    ///< ImGui用：環境マップトグル時の係数保存用
 
@@ -276,7 +322,7 @@ private:
 public:
   /// @brief 自身のファイルパスを使ってアニメーションをロード・アタッチする
   void AttachAnimation();
-  
+
   /// @brief 指定したファイルからアニメーションをロード・アタッチする
   /// @param filePath アニメーションファイル(.gltf等)のパス
   void AttachAnimation(const std::string& filePath);

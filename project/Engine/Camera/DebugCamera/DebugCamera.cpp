@@ -7,6 +7,8 @@
 
 using namespace RC;
 
+#include <algorithm>       // std::clamp
+
 void DebugCamera::Initialize(Input *input, float fovY, float aspect,
                              float nearZ, float farZ) {
   input_ = input;
@@ -14,64 +16,100 @@ void DebugCamera::Initialize(Input *input, float fovY, float aspect,
   proj_ = MakePerspectiveFovMatrix(fovY, aspect, nearZ, farZ);
 }
 
-void DebugCamera::Update() {
+void DebugCamera::Update(float dt) {
+  if (dt > 0.0f) {
+    deltaTime_ = dt;
+  }
 
-  // ── カメラの向きから Forward／Right を計算 ──
+  if (!input_) {
+    return;
+  }
+
+  // ── 修飾キー判定 (Shift, Ctrl) ──
+  bool isShift = input_->IsKeyPressed(DIK_LSHIFT) || input_->IsKeyPressed(DIK_RSHIFT);
+  bool isCtrl  = input_->IsKeyPressed(DIK_LCONTROL) || input_->IsKeyPressed(DIK_RCONTROL);
+
+  // ── カメラの向きから Forward／Right／Up を計算 ──
   float yaw = rotation_.y;   // Yaw（Y軸回転）
   float pitch = rotation_.x; // Pitch（X軸回転）
   Vector3 forward = {std::sinf(yaw) * std::cosf(pitch), std::sinf(pitch),
                      std::cosf(yaw) * std::cosf(pitch)};
   Vector3 right = {std::cosf(yaw), 0.0f, -std::sinf(yaw)};
-  Vector3 up = {0.0f, 1.0f, 0.0f};
+  // カメラのローカル上方向ベクトル（画面の上方向）
+  Vector3 camUp = {-std::sinf(yaw) * std::sinf(pitch), std::cosf(pitch),
+                   -std::cosf(yaw) * std::sinf(pitch)};
+  Vector3 worldUp = {0.0f, 1.0f, 0.0f};
 
-  // ── キー入力による相対移動 ──
+  // ── 移動速度計算 (SHIFTで加速 / CTRLで減速) ──
+  float currentMoveSpeed = moveSpeed_;
+  if (isShift) {
+    currentMoveSpeed *= boostMultiplier_;
+  } else if (isCtrl) {
+    currentMoveSpeed *= 0.25f; // Ctrl時は精密移動
+  }
+
+  // ── キー入力による相対移動 (Blender Walk/Fly Navigation) ──
+  // WASD: 前後左右
   if (input_->IsKeyPressed(DIK_W)) {
     translation_ =
-        Add(translation_, Multiply(forward, moveSpeed_ * deltaTime_));
+        Add(translation_, Multiply(forward, currentMoveSpeed * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_S)) {
     translation_ =
-        Subtract(translation_, Multiply(forward, moveSpeed_ * deltaTime_));
+        Subtract(translation_, Multiply(forward, currentMoveSpeed * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_A)) {
     translation_ =
-        Subtract(translation_, Multiply(right, moveSpeed_ * deltaTime_));
+        Subtract(translation_, Multiply(right, currentMoveSpeed * deltaTime_));
   }
   if (input_->IsKeyPressed(DIK_D)) {
-    translation_ = Add(translation_, Multiply(right, moveSpeed_ * deltaTime_));
+    translation_ =
+        Add(translation_, Multiply(right, currentMoveSpeed * deltaTime_));
+  }
+  // E / Q: 上下移動 (Blender Walk Navigation準拠: Eで上昇、Qで下降)
+  if (input_->IsKeyPressed(DIK_E)) {
+    translation_.y += currentMoveSpeed * deltaTime_;
   }
   if (input_->IsKeyPressed(DIK_Q)) {
-    translation_.y += moveSpeed_ * deltaTime_;
-  }
-  if (input_->IsKeyPressed(DIK_E)) {
-    translation_.y -= moveSpeed_ * deltaTime_;
+    translation_.y -= currentMoveSpeed * deltaTime_;
   }
 
-  // ── マウスホイールによる前後移動 ──
-  LONG wheel = input_->GetMouseZ();
+  // ── Blender マウス操作 ──
+  LONG mouseX = input_->GetMouseX();
+  LONG mouseY = input_->GetMouseY();
+  LONG wheel  = input_->GetMouseZ();
+
+  // マウス中ボタン(MMB: 2) または 右クリック(1) の操作
+  if (input_->IsMousePressed(2)) {
+    if (isShift) {
+      // Shift + 中クリックドラッグ : 平行移動 (Pan)
+      float panSpeed = mousePanSpeed_ * (isShift ? (boostMultiplier_ * 0.5f) : 1.0f);
+      // Xドラッグ: カメラを横方向に移動 (画面を掴んでドラッグ)
+      translation_ = Add(translation_, Multiply(right, -mouseX * panSpeed));
+      // Yドラッグ: カメラを上下方向に移動 (画面を掴んでドラッグ)
+      translation_ = Add(translation_, Multiply(camUp, mouseY * panSpeed));
+    } else if (isCtrl) {
+      // Ctrl + 中クリックドラッグ : ズーム (前後移動)
+      float zoomSpeed = mouseZoomSpeed_ * (isShift ? boostMultiplier_ : 1.0f);
+      translation_ = Add(translation_, Multiply(forward, -mouseY * zoomSpeed));
+    } else {
+      // 中クリックドラッグ単独 : 視点回転 (Orbit / Rotate)
+      rotation_.y += mouseX * mouseRotateSpeed_;
+      rotation_.x += mouseY * mouseRotateSpeed_;
+    }
+  } else if (input_->IsMousePressed(1)) {
+    // 右クリックドラッグ : 視点回転 (従来操作との互換性 & FPSルック)
+    rotation_.y += mouseX * mouseRotateSpeed_;
+    rotation_.x += mouseY * mouseRotateSpeed_;
+  }
+
+  // ── マウスホイールによる前後移動 (ズーム) ──
   if (wheel != 0) {
-    float wheelSpeed = 0.01f; // ホイール感度
-    translation_ = Add(translation_, Multiply(forward, wheel * wheelSpeed));
+    float wheelMultiplier = isShift ? boostMultiplier_ : 1.0f;
+    translation_ = Add(translation_, Multiply(forward, wheel * mouseWheelSpeed_ * wheelMultiplier));
   }
 
-  // ── 右クリックドラッグによる回転 ──
-  if (input_->IsMousePressed(1)) { // 1: 右クリック
-    float mouseRotateSpeed = 0.1f * deltaTime_; // マウス感度
-    rotation_.y += input_->GetMouseX() * mouseRotateSpeed;
-    rotation_.x += input_->GetMouseY() * mouseRotateSpeed;
-  }
-
-  // ── 中央ボタンドラッグによる平行移動 ──
-  if (input_->IsMousePressed(2)) {            // 2: 中央ボタン
-    float mouseMoveSpeed = 0.3f * deltaTime_; // 平行移動感度
-    // Xはright方向、Yはup方向
-    translation_ = Add(translation_,
-                       Multiply(right, input_->GetMouseX() * mouseMoveSpeed * -1));
-    translation_ =
-        Add(translation_, Multiply(up, -input_->GetMouseY() * mouseMoveSpeed * -1));
-  }
-
-  // ── キー入力による回転 ──
+  // ── 十字キーによる回転 ──
   if (input_->IsKeyPressed(DIK_UP))
     rotation_.x -= rotateSpeed_ * deltaTime_;
   if (input_->IsKeyPressed(DIK_DOWN))
@@ -81,10 +119,12 @@ void DebugCamera::Update() {
   if (input_->IsKeyPressed(DIK_RIGHT))
     rotation_.y += rotateSpeed_ * deltaTime_;
 
+  // ── Pitch角の制限 (反転・宙返り防止) ──
+  const float maxPitch = 89.0f * (3.14159265f / 180.0f); // 約1.55ラジアン (89度)
+  rotation_.x = std::clamp(rotation_.x, -maxPitch, maxPitch);
+
   // ── ビュー行列の再計算 ──
-  Matrix4x4 world = MakeAffineMatrix({1, 1, 1}, // スケール固定
-                                     rotation_, translation_);
-  view_ = Inverse(world);
+  RebuildView_();
 }
 
 void DebugCamera::Reset() {

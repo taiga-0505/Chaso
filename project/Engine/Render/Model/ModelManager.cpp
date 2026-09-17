@@ -113,7 +113,7 @@ std::shared_ptr<::ModelMesh> ModelManager::GetOrLoadMesh_(
     }
     meshCache_[key] = mesh;
   }
-  
+
   return mesh;
 }
 
@@ -134,7 +134,7 @@ int ModelManager::Load(const std::string &path) {
   obj->SetReady(false); // まだ準備中
   obj->SetFilePath(npath);
   obj->SetTextureManager(texman_);
-  
+
   // ポインタを先にセットしておく（Get で null を返さないように）
   models_[handle].ptr = std::move(obj);
 
@@ -211,11 +211,25 @@ void ModelManager::SetColor(int handle, const Vector4 &color) {
   models_[handle].ptr->SetColor(color);
 }
 
+void ModelManager::SetShininess(int handle, float shininess) {
+  if (!IsValid(handle)) {
+    return;
+  }
+  models_[handle].ptr->SetShininess(shininess);
+}
+
 void ModelManager::SetLightingMode(int handle, LightingMode m) {
   if (!IsValid(handle)) {
     return;
   }
   models_[handle].ptr->SetLightingMode(m);
+}
+
+void ModelManager::ClearLightingModeOverride(int handle) {
+  if (!IsValid(handle)) {
+    return;
+  }
+  models_[handle].ptr->ClearLightingModeOverride();
 }
 
 void ModelManager::SetMesh(int handle, const std::string &path) {

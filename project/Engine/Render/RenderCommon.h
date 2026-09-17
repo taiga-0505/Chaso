@@ -251,6 +251,65 @@ void BeginShadowPass();
 /// @brief シャドウパスを終了する（SRVへの遷移等）
 void EndShadowPass();
 
+// ----------------------------------------------------------------------------
+// Mask Pass（特定のオブジェクトだけ輪郭を強調するためのシルエット書き込み）
+// ----------------------------------------------------------------------------
+// 手順（PreDraw3D の後、メイン3Dの Draw を積む前。シャドウパスの直後が定位置）:
+//   BeginMaskPass();
+//   強調したい物だけ Draw（DrawModel 等をそのまま呼べる。PSO は自動で mask 系へ）
+//   Execute3DCommands();
+//   EndMaskPass();
+//
+// 書かれたマスクは PostProcessType::MaskOutline が t1 で受け取り、
+// 膨張させてシルエットの外側だけを塗る。
+
+/// @brief マスクパスを開始する（マスクRTを黒でクリアし、描画先に設定する）
+/// @return 開始できたか。false なら描画も EndMaskPass も行わないこと
+/// @note Execute3DCommands は「その時点までに積まれた全ての3Dコマンド」を流すため、
+///       マスクパスの中に他の描画を混ぜないこと。
+bool BeginMaskPass();
+
+/// @brief マスクパスを終了する（SRVへ遷移し、メイン描画の描画先へ戻す）
+void EndMaskPass();
+
+/// @brief マスクRTのSRV（GPUハンドル）を取得する。今フレームまだ描いていなければ ptr == 0
+D3D12_GPU_DESCRIPTOR_HANDLE GetMaskSRVGPU();
+
+// ----------------------------------------------------------------------------
+// Spot Light Shadow（スポットライトごとの影。壁を挟んだ向こう側へ光が漏れなくなる）
+// ----------------------------------------------------------------------------
+// 手順:
+//   1. PreDraw3D の【前】に、影を落とすスポットライトを選んで SetSpotLightShadowIndex(handle, i) で
+//      タイル番号を振る（影なしのライトは -1）。PreDraw3D がスポットライト定数バッファを
+//      GPU へ転送するため、それより後に振ると 1 フレーム古い割り当てが使われてしまう。
+//      同時に SpotShadowCB の entries[i] へライト視点の ViewProjection 等を用意しておく
+//   2. PreDraw3D
+//   3. UpdateSpotShadowParams(cb)（今フレーム用の CB は PreDraw3D で確保されるため、必ずその後）
+//   4. BeginSpotShadowAtlas(); for (i) { BeginSpotShadowTile(i); 影キャスター描画; Execute3DCommands(); EndSpotShadowTile(); } EndSpotShadowAtlas();
+
+/// @brief スポットライトに影アトラスのタイル番号を割り当てる
+/// @param spotLightHandle スポットライトハンドル
+/// @param shadowIndex タイル番号 (0 〜 kMaxSpotShadows-1)。-1 で影なし
+void SetSpotLightShadowIndex(int spotLightHandle, int shadowIndex);
+
+/// @brief スポットライト影の定数バッファ(b7)を更新する（PreDraw3D の後に呼ぶ）
+void UpdateSpotShadowParams(const SpotShadowCB &params);
+
+/// @brief スポット影アトラスへの描画を開始する（全面クリア）
+/// @return 開始できたら true。false のときはタイル描画を行わずに抜けること
+///         （false のまま描くと通常のバックバッファへ影キャスターを描いてしまう）
+bool BeginSpotShadowAtlas();
+
+/// @brief アトラス内の 1 タイル（1 灯分）への深度描画を開始する
+/// @param tileIndex タイル番号 (0 〜 kMaxSpotShadows-1)
+void BeginSpotShadowTile(int tileIndex);
+
+/// @brief タイルへの描画を終了する
+void EndSpotShadowTile();
+
+/// @brief アトラスへの描画を終了し、通常描画へ戻す（SRVへの遷移等）
+void EndSpotShadowAtlas();
+
 /// @brief 蓄積された3D描画コマンドを即時実行する
 void Execute3DCommands();
 
@@ -339,6 +398,11 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 /// @return モデルハンドル（失敗時は -1）
 int LoadModel(const std::string &path);
 
+/// @brief モデルリソースの非同期ロードが完了し描画可能か確認する
+/// @param modelHandle モデルハンドル
+/// @return 準備完了なら true
+bool IsModelReady(int modelHandle);
+
 /// @brief モデルを描画する（テクスチャ指定版）
 /// @param modelHandle モデルハンドル
 /// @param texHandle テクスチャハンドル（RC::LoadTex で取得）
@@ -388,6 +452,11 @@ Transform *GetModelTransformPtr(int modelHandle);
 /// @param modelHandle モデルハンドル
 /// @param color 色（RGBA）
 void SetModelColor(int modelHandle, const Vector4 &color);
+
+/// @brief モデルの光沢度（Shininess）を設定する
+/// @param modelHandle モデルハンドル
+/// @param shininess 光沢度 (0.0: 鏡面反射なし)
+void SetModelShininess(int modelHandle, float shininess);
 
 /// @brief アニメーションをアタッチする（モデルに紐づけられたファイルパスを使用）
 /// @param modelHandle モデルハンドル
@@ -474,7 +543,13 @@ void ClearModelWorldOverride(int modelHandle);
 /// @brief モデルのライティングモードを設定する
 /// @param modelHandle モデルハンドル
 /// @param m ライティングモード
+/// @note 設定以降、このモデルは DirectionalLight の LightingMode に追従しない。
+///       追従に戻すには ClearModelLightingModeOverride() を呼ぶ。
 void SetModelLightingMode(int modelHandle, LightingMode m);
+
+/// @brief ライティングモードの個別設定を解除し、DirectionalLight に追従させる
+/// @param modelHandle モデルハンドル
+void ClearModelLightingModeOverride(int modelHandle);
 
 /// @brief モデルが参照する Mesh を差し替える（内部キャッシュで共有）
 /// @param modelHandle モデルハンドル
@@ -543,6 +618,36 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
 /// @param cl このフレームで使うコマンドリスト
 /// @note この関数を呼んだ後に DrawSprite / DrawLine などを呼んでください。
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
+/// @brief 2D 描画のあとに積んだ 3D コマンドをその場で実行する（UI より手前に出すオーバーレイ用）
+/// @details 通常 3D コマンドは PreDraw2D で一括実行されるため、そのあとに DrawModel を
+///          呼んでも今フレームには出ない。この関数を呼ぶとその場で実行され、
+///          HUD などの 2D より手前に 3D モデルを重ねられる。
+/// @note PreDraw2D（＝2D 描画）が終わったあとに呼ぶこと。実行後は 2D 用のステートへ戻る。
+void ExecuteOverlay3D();
+
+/// @brief 背景2D描画の前処理（モデルより後ろに描くスプライト用）
+/// @param ctx SceneContext
+/// @param cl このフレームで使うコマンドリスト
+/// @note PreDraw3D を呼ぶ前に呼び、直後に DrawSprite を並べてください。
+///       このパスで積んだスプライトは 3D モデルより奥に表示されます。
+/// @warning Sprite 専用です。DrawString / DrawLine などは PreDraw2D 後に呼んでください。
+void PreDraw2DBackground(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
+/// @brief スプライトをワールド空間（3D）モードに切り替える
+/// @param spriteHandle スプライトハンドル
+/// @param enable true でワールド空間モード
+/// @details ON にすると Transform の translation / rotation / scale が
+///          ワールド座標として扱われます（scale がそのままクアッドの大きさ）。
+///          描画には DrawSprite3D を使ってください。
+void SetSpriteWorldSpace(int spriteHandle, bool enable);
+
+/// @brief ワールド空間スプライトを 3D パスに積む（深度テストあり）
+/// @param spriteHandle スプライトハンドル
+/// @note PreDraw3D ～ PreDraw2D の間で呼んでください。
+///       深度テスト・深度書き込みが有効なので、モデルとの前後関係が
+///       自動で解決され、任意のモデルとモデルの間に挟み込めます。
+void DrawSprite3D(int spriteHandle);
 
 /// @brief スプライト用テクスチャをロードし、Sprite2D を生成してハンドルを返す
 /// @param path 画像パス
@@ -613,6 +718,56 @@ void SetSpriteScreenSize(int spriteHandle, float w, float h);
 /// @param name 表示名
 void DrawImGui2D(int spriteHandle, const char *name);
 
+// ── 文字描画用 (Font) ─────────────────────────────
+
+/// @brief フォントファイルをロードしてハンドルを返す
+/// @param path フォントファイル（.ttf / .otf / .ttc）のパス
+/// @param sizePx フォントサイズ（ピクセル。em 高さ）
+/// @param atlasSize グリフアトラスの一辺（512 の倍数。日本語を多く出すなら 2048 推奨）
+/// @return フォントハンドル（失敗時は -1）
+/// @note DirectWrite でラスタライズするため ImGui には依存しません（Release でも使えます）。
+/// @note 1 ハンドル = 1 ファイル × 1 サイズ。同じ組み合わせを再ロードすると同じハンドルが返ります。
+///       別サイズが必要なら別ハンドルを作るか、DrawString の scale で拡縮してください。
+int LoadFont(const std::string &path, float sizePx, uint32_t atlasSize = 1024);
+
+/// @brief フォントを解放する
+/// @param fontHandle フォントハンドル
+/// @note シーン終了時など、GPU が参照を終えたタイミングで呼んでください。
+void UnloadFont(int fontHandle);
+
+/// @brief 文字列を描画する（UTF-8）
+/// @param fontHandle フォントハンドル
+/// @param utf8 描画する文字列（UTF-8。'\n' で改行）。ソースは /utf-8 でビルドされるので "日本語" と書けます
+/// @param pos 基準位置（ピクセル、左上原点）。y は 1 行目の上端
+/// @param color 色（RGBA）
+/// @param scale 拡大率（1.0 でロード時サイズ。大きく拡大するとぼやけます）
+/// @param align 水平揃え（Left: pos.x が左端 / Center: 中央 / Right: 右端）
+/// @param lineSpacing 行送り倍率（1.0 でフォント既定の行高）
+/// @note Sprite と異なり、同じハンドルを 1 フレームに何度でも位置・色を変えて描けます。
+/// @note 初めて出す文字はその場でアトラスへ登録・転送されます（以降はキャッシュ）。
+void DrawString(int fontHandle, const std::string &utf8, const Vector2 &pos,
+                const Vector4 &color = {1.0f, 1.0f, 1.0f, 1.0f},
+                float scale = 1.0f, TextAlign align = TextAlign::Left,
+                float lineSpacing = 1.0f);
+
+/// @brief 文字列を描画する（ワイド文字列版。L"..." リテラルをそのまま渡せます）
+void DrawString(int fontHandle, const std::wstring &text, const Vector2 &pos,
+                const Vector4 &color = {1.0f, 1.0f, 1.0f, 1.0f},
+                float scale = 1.0f, TextAlign align = TextAlign::Left,
+                float lineSpacing = 1.0f);
+
+/// @brief 文字列の描画サイズを計測する（UTF-8）
+/// @return x = 最長行の幅、y = 行数 × 行送り（ピクセル）
+Vector2 MeasureString(int fontHandle, const std::string &utf8,
+                      float scale = 1.0f, float lineSpacing = 1.0f);
+
+/// @brief 文字列の描画サイズを計測する（ワイド文字列版）
+Vector2 MeasureString(int fontHandle, const std::wstring &text,
+                      float scale = 1.0f, float lineSpacing = 1.0f);
+
+/// @brief フォントの行送り量（ピクセル）を取得する
+float GetFontLineHeight(int fontHandle, float scale = 1.0f);
+
 // ── 天球用 (Skydome) ──────────────────────────────
 
 /// @brief 天球を生成する（最小形：半径100.0, 32x32）
@@ -630,8 +785,11 @@ int GenerateSkydomeEx(int textureHandle = -1, float radius = 100.0f,
                       unsigned int sliceCount = 32, unsigned int stackCount = 32);
 
 /// @brief 天球を描画する
+/// @details Skybox と同じく「無限遠の背景」として描く。深度は常に最遠（書き込み無し）なので
+/// カメラの Far クリップや天球の半径に影響されず、カメラ位置に追従してカメラ中心に描かれる
+/// （Transform.translation はカメラからのオフセット。rotation / scale はそのまま有効）。
 /// @param skydomeHandle 天球ハンドル
-/// @param texHandle 一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ）
+/// @param texHandle 一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ。無ければ white1x1）
 void DrawSkydome(int skydomeHandle, int texHandle = -1);
 
 /// @brief 天球の ImGui 表示を行う
@@ -763,6 +921,56 @@ int GenerateTorus(float majorRadius = 1.0f, float minorRadius = 0.2f, int texHan
 /// @return メッシュハンドル
 int GenerateCapsule(float radius = 0.5f, float height = 2.0f, int texHandle = -1);
 
+/// @brief 円盤メッシュ（XZ平面）を生成
+/// @param radius 半径
+/// @param segments 円周の分割数
+/// @param texHandle テクスチャハンドル
+/// @return メッシュハンドル
+int GenerateCircle(float radius = 1.0f, uint32_t segments = 32, int texHandle = -1);
+
+/// @brief リング（ドーナツ状の平板）メッシュ（XZ平面）を生成
+/// @param innerRadius 内半径
+/// @param outerRadius 外半径
+/// @param segments 円周の分割数
+/// @param texHandle テクスチャハンドル
+/// @return メッシュハンドル
+/// @note UV は u = 円周方向 0..1、v = 内周側 1.0 / 外周側 0.0。
+///       床置きのエフェクトデカール（DrawPrimitiveMeshScanRing）向け。
+int GenerateRing(float innerRadius = 0.5f, float outerRadius = 1.0f,
+                 uint32_t segments = 32, int texHandle = -1);
+
+/// @brief 角度範囲・UV方向を指定できる拡張リングメッシュを生成
+/// @param innerRadius 内半径
+/// @param outerRadius 外半径
+/// @param segments 円周の分割数
+/// @param startAngle 開始角度（度）
+/// @param endAngle 終了角度（度）
+/// @param isVerticalUV UVを縦方向（半径→U / 角度→V）に生成するか
+/// @param isXY true なら XY 平面、false なら XZ 平面に生成
+/// @param texHandle テクスチャハンドル
+/// @return メッシュハンドル
+int GenerateRingEx(float innerRadius = 0.5f, float outerRadius = 1.0f,
+                   uint32_t segments = 32, float startAngle = 0.0f,
+                   float endAngle = 360.0f, bool isVerticalUV = false,
+                   bool isXY = false, int texHandle = -1);
+
+/// @brief エフェクト用の蓋なし円柱（円錐台）メッシュを生成
+/// @param topRadius 上面の半径
+/// @param bottomRadius 底面の半径
+/// @param height 高さ
+/// @param segments 円周の分割数
+/// @param startAngle 開始角度（度）
+/// @param endAngle 終了角度（度）
+/// @param isVerticalUV UVを縦方向に生成するか
+/// @param flipV V座標を反転させるか
+/// @param texHandle テクスチャハンドル
+/// @return メッシュハンドル
+int GenerateEffectCylinder(float topRadius = 1.0f, float bottomRadius = 1.0f,
+                           float height = 3.0f, uint32_t segments = 32,
+                           float startAngle = 0.0f, float endAngle = 360.0f,
+                           bool isVerticalUV = true, bool flipV = false,
+                           int texHandle = -1);
+
 /// @brief 汎用プリミティブメッシュを描画
 /// @param meshHandle メッシュハンドル
 /// @param texHandle 一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ）
@@ -773,6 +981,33 @@ void DrawPrimitiveMesh(int meshHandle, int texHandle = -1);
 /// @param texHandle 適用するテクスチャハンドル（-1でデフォルト）
 void DrawPrimitiveMeshWater(int meshHandle, int texHandle = -1);
 void DrawPrimitiveMeshWaterColumn(int meshHandle, int texHandle = -1);
+
+// ── エフェクト用プリミティブ描画（加算合成・非ライティング） ────────
+
+/// @brief リングメッシュを「場所指定ホログラム」シェーダーで描画する
+/// @param meshHandle メッシュハンドル（GenerateRing / GenerateRingEx で生成）
+/// @param texHandle 適用するテクスチャハンドル（-1でデフォルト。シェーダーは参照しない）
+/// @note 加算合成・深度書き込みOFF・両面描画。発光色や進捗は
+///       SetPrimitiveMeshEffectParams() で毎フレーム渡す。
+void DrawPrimitiveMeshScanRing(int meshHandle, int texHandle = -1);
+
+/// @brief 板メッシュを「接続ビーム」シェーダーで描画する
+/// @param meshHandle メッシュハンドル（GeneratePlane で生成した 1x1 の板）
+/// @param texHandle 適用するテクスチャハンドル（-1でデフォルト。シェーダーは参照しない）
+/// @note ローカル +Z をビームの進行方向、scale.z を全長、scale.x を幅として扱う。
+void DrawPrimitiveMeshScanBeam(int meshHandle, int texHandle = -1);
+
+/// @brief エフェクト用シェーダーへ渡すパラメータをまとめて設定する
+/// @param meshHandle メッシュハンドル
+/// @param color 発光色（RGB）と明度スケール（A）
+/// @param progress 進捗・伸長率 0.0〜1.0
+/// @param time 経過秒数（アニメーションの位相）
+/// @note DrawPrimitiveMeshScanRing / DrawPrimitiveMeshScanBeam 専用。
+///       Material の未使用スロット（shininess / environmentCoefficient）を
+///       progress / time として流用するため、これらのメッシュに対して
+///       SetPrimitiveMeshEnvironmentCoefficient() は使用しないこと。
+void SetPrimitiveMeshEffectParams(int meshHandle, const Vector4 &color,
+                                  float progress, float time);
 
 /// @brief 汎用プリミティブメッシュを解放
 /// @param meshHandle メッシュハンドル
@@ -807,6 +1042,17 @@ void SetPrimitiveMeshRoughnessMap(int meshHandle, int texHandle);
 /// @param meshHandle メッシュハンドル
 /// @return Material*（無効ハンドルなら nullptr）
 Material *GetPrimitiveMeshMaterialPtr(int meshHandle);
+
+/// @brief プリミティブメッシュのライティングモードを設定する
+/// @param meshHandle メッシュハンドル
+/// @param mode ライティングモード
+/// @note 設定以降、このメッシュは DirectionalLight の LightingMode に追従しない。
+///       追従に戻すには ClearPrimitiveMeshLightingModeOverride() を呼ぶ。
+void SetPrimitiveMeshLightingMode(int meshHandle, LightingMode mode);
+
+/// @brief ライティングモードの個別設定を解除し、DirectionalLight に追従させる
+/// @param meshHandle メッシュハンドル
+void ClearPrimitiveMeshLightingModeOverride(int meshHandle);
 
 // ── 水面描画 (Water) ──────────────────────────────
 
@@ -1263,6 +1509,44 @@ void SetRandomNoiseIntensity(float intensity);
 /// @brief RandomNoise の色を設定する (RGB)
 void SetRandomNoiseColor(float r, float g, float b);
 
+/// @brief Bloom のパラメータを設定する
+/// @param threshold 光として拾う輝度の閾値 (0.0 ~ 1.0)
+/// @param intensity 加算強度 (0.0 で無効)
+/// @param radius    にじみの広がり（ピクセル。1.0 ~ 16.0 目安）
+/// @param knee      閾値付近の柔らかさ (0.0 でスパッと切る)
+void SetBloomParams(float threshold, float intensity, float radius, float knee);
+
+/// @brief SSAO のパラメータを設定する
+/// @param radius    サンプリング半径（メートル）
+/// @param intensity 効きの強さ (0.0 で無効)
+/// @param bias      自己遮蔽対策の下駄（メートル）
+/// @param power     コントラスト（pow の指数）
+void SetSsaoParams(float radius, float intensity, float bias, float power);
+
+/// @brief カラーグレーディングのパラメータを設定する
+/// @param exposure    露出（EV）
+/// @param contrast    コントラスト (1.0 で素通し)
+/// @param saturation  彩度 (1.0 で素通し)
+/// @param temperature 色温度 (-1.0 寒色 ~ +1.0 暖色)
+/// @param tint        色偏り (-1.0 緑 ~ +1.0 マゼンタ)
+void SetColorGradeParams(float exposure, float contrast, float saturation,
+                         float temperature, float tint);
+
+/// @brief カラーグレーディングのカラーフィルタ (RGB) を設定する
+void SetColorGradeFilter(float r, float g, float b);
+
+/// @brief カラーグレーディングの適用率 (0.0 ~ 1.0) を設定する
+void SetColorGradeAmount(float amount);
+
+/// @brief MaskOutline の色を設定する (RGBA)
+void SetMaskOutlineColor(float r, float g, float b, float a = 1.0f);
+
+/// @brief MaskOutline の太さを設定する (1.0 ~ 4.0 ピクセル)
+void SetMaskOutlineThickness(float thickness);
+
+/// @brief MaskOutline の強さを設定する (0.0 ~ 1.0)
+void SetMaskOutlineStrength(float strength);
+
 /// @brief ScreenDroplets (レンズ水滴) の強度を設定する (0.0 ~ 1.0)
 void SetScreenDropletsIntensity(float intensity);
 
@@ -1274,6 +1558,27 @@ void SetScreenDropletsDistortion(float distortion);
 
 /// @brief ScreenDroplets (レンズ水滴) の密度（グリッドスケール）を設定する
 void SetScreenDropletsScale(float scale);
+
+/// @brief BloodOverlay (被弾の血) の強さを設定する
+/// @param hitFlash  被弾フラッシュ (0.0 ~ 1.0)。被弾の瞬間だけ跳ね上げる
+/// @param lowHealth 低HP持続 (0.0 ~ 1.0)。掛けている間ずっと心拍で脈動する
+/// @details 2つは強いほうが採用される。両方 0 なら完全に素通しになる。
+void SetBloodOverlayLevels(float hitFlash, float lowHealth);
+
+/// @brief BloodOverlay (被弾の血) の見た目を設定する
+/// @param r,g,b        血の色
+/// @param coverage     最大時に画面の何割まで侵食するか (0.0 ~ 1.0)
+/// @param splatterScale 飛沫の密度（大きいほど細かい粒）
+/// @param desaturate   血の下の彩度をどれだけ落とすか (0.0 ~ 1.0)
+void SetBloodOverlayLook(float r, float g, float b, float coverage,
+                         float splatterScale, float desaturate);
+
+/// @brief BloodOverlay (被弾の血) の脈動の速さを設定する（1.0 で毎秒1拍）
+void SetBloodOverlayPulseSpeed(float speed);
+
+/// @brief BloodOverlay (被弾の血) の飛沫パターンを次の種へ進める
+/// @details パターンは時間で変化しないので、被弾のたびに呼ばないと毎回同じ形が出る。
+void RerollBloodOverlaySplatter();
 
 /// @brief ポストエフェクトの ImGui 表示を行う
 /// @param label ラベル名

@@ -19,6 +19,8 @@ struct DirectionalLight
     float4 color;
     float3 direction; // 正規化済み想定
     float intensity;
+    float3 ambientColor;    // 環境光の色
+    float ambientIntensity; // 環境光の強さ（0 で環境光なし）
 };
 
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
@@ -37,10 +39,11 @@ struct PointLight
     float intensity;   // 強度
     float radius;      // 届く距離（0以下なら無効）
     float decay;       // 減衰（指数）
-    float2 padding;    // CBアラインメント調整
+    int shadowIndex;   // 影アトラスのタイル番号（-1 で影なし）
+    float padding;     // CBアラインメント調整
 };
 
-static const uint MAX_POINT_LIGHTS = 4;
+static const uint MAX_POINT_LIGHTS = 256;
 
 cbuffer PointLightsCB : register(b3)
 {
@@ -58,10 +61,11 @@ struct SpotLight
     float distance;
     float decay;
     float cosAngle;
-    float2 padding;
+    int shadowIndex;   // スポット影アトラスのタイル番号（-1 で影なし）
+    float padding;
 };
 
-static const uint MAX_SPOT_LIGHTS = 4;
+static const uint MAX_SPOT_LIGHTS = 256;
 
 cbuffer SpotLightsCB : register(b4)
 {
@@ -86,10 +90,10 @@ struct AreaLight
     float range;      // 影響距離（0以下なら無効）
     float decay;      // 減衰（指数）
     uint twoSided;    // 1なら両面
-    uint pad;
+    int shadowIndex;  // 影アトラスのタイル番号（-1 で影なし）
 };
 
-static const uint MAX_AREA_LIGHTS = 4;
+static const uint MAX_AREA_LIGHTS = 256;
 
 cbuffer AreaLightsCB : register(b5)
 {
@@ -140,12 +144,12 @@ PixelShaderOutput main(VertexShaderOutput input)
     // =========================
 
     float3 N = normalize(input.normal);
-    
+
     if (gMaterial.useNormalMap)
     {
         float4 normalMapCol = gNormalMap.Sample(gSampler, transformedUV);
         float3 normalTangentSpace = normalMapCol.xyz * 2.0f - 1.0f;
-        
+
         // TBN 行列を計算
         float3 dp1 = ddx(input.worldPosition);
         float3 dp2 = ddy(input.worldPosition);
@@ -155,7 +159,7 @@ PixelShaderOutput main(VertexShaderOutput input)
         float r = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x);
         float3 T = normalize((dp1 * duv2.y - dp2 * duv1.y) * r);
         float3 B = normalize((dp2 * duv1.x - dp1 * duv2.x) * r);
-        
+
         float3x3 TBN = float3x3(T, B, N);
         N = normalize(mul(normalTangentSpace, TBN));
     }
@@ -206,12 +210,12 @@ PixelShaderOutput main(VertexShaderOutput input)
     }
 
 // -----------------
-// Point lights (MAX 4)
+// Point lights (MAX 32)
 // -----------------
 float3 diffusePoint = 0.0f;
 float3 specularPoint = 0.0f;
 
-[unroll]
+[loop]
 for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
 {
     if (i >= pointCount) { break; }
@@ -246,6 +250,12 @@ for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
 
     float3 pointLightCol = pl.color.rgb * pl.intensity * attenuation;
 
+    // 点光源の影（壁の向こう側へ漏れない）
+    if (pl.shadowIndex >= 0)
+    {
+        pointLightCol *= SampleOmniShadowDown(pl.shadowIndex, input.worldPosition, N, Lp);
+    }
+
     diffusePoint += base.rgb * pointLightCol * diffuseTermP;
 
     if (currentShininess > 0.0f && NdotLp > 0.0f)
@@ -257,12 +267,12 @@ for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
 }
 
 // -----------------
-// Spot lights (MAX 4)
+// Spot lights (MAX 32)
 // -----------------
 float3 diffuseSpot = 0.0f;
 float3 specularSpot = 0.0f;
 
-[unroll]
+[loop]
 for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
 {
     if (i >= spotCount) { break; }
@@ -287,7 +297,15 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
     float cosLD = dot(-Ls, dirN); // 光の向き(ライト→前) と (ライト→ピクセル) を比較
     float spot = saturate((cosLD - sl.cosAngle) / max(1e-5f, (1.0f - sl.cosAngle)));
 
+    if (spot <= 0.0f) { continue; }
+
     float3 spotLightCol = sl.color.rgb * sl.intensity * attenuationS * spot;
+
+    // スポット影: 壁などに遮られている分だけ光を弱める（完全に遮られれば 0 ＝ 向こう側へ漏れない）
+    if (sl.shadowIndex >= 0)
+    {
+        spotLightCol *= SampleSpotShadow(sl.shadowIndex, input.worldPosition, N, Ls);
+    }
 
     float NdotLs = dot(N, Ls);
 
@@ -314,7 +332,7 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
 
 
 // 合算
-    
+
     // -----------------
     // Area light (Rect)  ※擬似: 四隅4サンプル
     // -----------------
@@ -340,6 +358,59 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
         R /= rLen;
         U /= uLen;
 
+        // -----------------
+        // Tube (線) ライト: halfHeight <= 0 なら「position を中心に right 方向へ ±halfWidth 伸びる線分」
+        // から全方位に光る線光源として扱う（紐・ネオン管など）。
+        // 線分上でピクセルに最も近い点を光源位置とみなす近似（全長にわたって均一な光の帯になる）。
+        // -----------------
+        if (al.halfHeight <= 0.0f)
+        {
+            float3 segA = al.position - R * al.halfWidth;
+            float3 segAB = R * (2.0f * al.halfWidth);
+            float segLen2 = max(dot(segAB, segAB), 1e-6f);
+            float tSeg = saturate(dot(input.worldPosition - segA, segAB) / segLen2);
+            float3 nearest = segA + segAB * tSeg;
+
+            float3 toT = nearest - input.worldPosition;
+            float distT = length(toT);
+            if (distT <= 1e-5f || distT >= al.range)
+                continue;
+
+            float3 Lt = toT / distT;
+            float tT = saturate(1.0f - distT / al.range);
+            float attenuationT = pow(tT, max(al.decay, 0.0001f));
+
+            float NdotLt = dot(N, Lt);
+            float diffuseTermT = 0.0f;
+            if (gMaterial.lightingMode == 2)
+            {
+                float h = saturate(NdotLt * 0.5f + 0.5f);
+                diffuseTermT = h * h;
+            }
+            else
+            {
+                diffuseTermT = saturate(NdotLt);
+            }
+
+            float3 tubeLightCol = al.color.rgb * al.intensity * attenuationT;
+
+            // 線光源の影（壁の向こう側へ漏れない）
+            if (al.shadowIndex >= 0)
+            {
+                tubeLightCol *= SampleOmniShadowDown(al.shadowIndex, input.worldPosition, N, Lt);
+            }
+
+            diffuseArea += base.rgb * tubeLightCol * diffuseTermT;
+
+            if (currentShininess > 0.0f && NdotLt > 0.0f)
+            {
+                float3 Ht = normalize(Lt + V);
+                float specPowT = pow(saturate(dot(N, Ht)), currentShininess);
+                specularArea += tubeLightCol * specPowT;
+            }
+            continue;
+        }
+
         float3 Ln = cross(R, U);
         float nLen = length(Ln);
         if (nLen < 1e-5f)
@@ -358,6 +429,14 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
         };
 
         float3 areaLightColBase = al.color.rgb * al.intensity;
+
+        // 面光源の影（4 隅サンプル共通。中心方向で 1 回だけ判定する）
+        if (al.shadowIndex >= 0)
+        {
+            float3 toCenter = al.position - input.worldPosition;
+            float distCenter = max(length(toCenter), 1e-5f);
+            areaLightColBase *= SampleOmniShadowDown(al.shadowIndex, input.worldPosition, N, toCenter / distCenter);
+        }
 
         // 4サンプル平均
         [unroll]
@@ -408,7 +487,8 @@ for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
     }
 
 // 合算
-    float3 ambient = base.rgb * 0.2f; // 環境光として 20% のベースカラーを足す
+    // 環境光（DirectionalLight の ambientColor / ambientIntensity で制御。既定 0 = ライトの当たった所だけ見える）
+    float3 ambient = base.rgb * gDirectionalLight.ambientColor * gDirectionalLight.ambientIntensity;
     output.color.rgb = ambient + (diffuseDir + diffusePoint + diffuseSpot + diffuseArea) + (specularDir + specularPoint + specularSpot + specularArea);
 
     // -----------------

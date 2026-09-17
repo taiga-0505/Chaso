@@ -28,6 +28,8 @@ struct DirectionalLight
     float4 color;
     float3 direction;
     float intensity;
+    float3 ambientColor;    // 環境光の色
+    float ambientIntensity; // 環境光の強さ（0 で環境光なし）
 };
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 
@@ -46,7 +48,7 @@ struct PointLight
     float decay;
     float2 padding;
 };
-static const uint MAX_POINT_LIGHTS = 4;
+static const uint MAX_POINT_LIGHTS = 256;
 cbuffer PointLightsCB : register(b3)
 {
     uint pointCount;
@@ -65,7 +67,7 @@ struct SpotLight
     float cosAngle;
     float2 padding;
 };
-static const uint MAX_SPOT_LIGHTS = 4;
+static const uint MAX_SPOT_LIGHTS = 256;
 cbuffer SpotLightsCB : register(b4)
 {
     uint spotCount;
@@ -87,7 +89,7 @@ struct AreaLight
     uint twoSided;
     uint pad;
 };
-static const uint MAX_AREA_LIGHTS = 4;
+static const uint MAX_AREA_LIGHTS = 256;
 cbuffer AreaLightsCB : register(b5)
 {
     uint areaCount;
@@ -194,7 +196,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // Scroll world position downward in noise space, so water looks like it's rushing UP
     float3 wp = input.worldPosition + float3(0.0, timeOffset * 15.0, 0.0);
-    
+
     // Stretch noise vertically to look like rushing streaks
     float3 noisePos = float3(wp.x * 5.0, wp.y * 1.5, wp.z * 5.0);
     float noiseVal = fbm3(noisePos);
@@ -216,7 +218,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float ny = fbm3(noisePos + float3(0, eps, 0)) - fbm3(noisePos - float3(0, eps, 0));
     float nz = fbm3(noisePos + float3(0, 0, eps)) - fbm3(noisePos - float3(0, 0, eps));
     float3 noiseNormal = normalize(float3(nx, ny, nz));
-    
+
     N = normalize(N + noiseNormal * 0.4);
 
     if (dot(N, V) < 0.0)
@@ -251,7 +253,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     }
 
     // Point lights
-    [unroll]
+    [loop]
     for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
     {
         if (i >= pointCount) break;
@@ -300,7 +302,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 glowColor = waterBright * innerGlow;
 
     float3 finalColor = diffuseSum + subsurface + glowColor;
-    
+
     // Add extra brightness where foam is strong
     finalColor += waterFoam * foamMask * 0.5;
 

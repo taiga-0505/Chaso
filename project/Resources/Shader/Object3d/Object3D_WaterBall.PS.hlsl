@@ -30,6 +30,8 @@ struct DirectionalLight
     float4 color;
     float3 direction;
     float intensity;
+    float3 ambientColor;    // 環境光の色
+    float ambientIntensity; // 環境光の強さ（0 で環境光なし）
 };
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 
@@ -48,7 +50,7 @@ struct PointLight
     float decay;
     float2 padding;
 };
-static const uint MAX_POINT_LIGHTS = 4;
+static const uint MAX_POINT_LIGHTS = 256;
 cbuffer PointLightsCB : register(b3)
 {
     uint pointCount;
@@ -67,7 +69,7 @@ struct SpotLight
     float cosAngle;
     float2 padding;
 };
-static const uint MAX_SPOT_LIGHTS = 4;
+static const uint MAX_SPOT_LIGHTS = 256;
 cbuffer SpotLightsCB : register(b4)
 {
     uint spotCount;
@@ -89,7 +91,7 @@ struct AreaLight
     uint twoSided;
     uint pad;
 };
-static const uint MAX_AREA_LIGHTS = 4;
+static const uint MAX_AREA_LIGHTS = 256;
 cbuffer AreaLightsCB : register(b5)
 {
     uint areaCount;
@@ -219,7 +221,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float ny = fbm3((wp + float3(0, eps, 0)) * 8.0) - fbm3((wp - float3(0, eps, 0)) * 8.0);
     float nz = fbm3((wp + float3(0, 0, eps)) * 8.0) - fbm3((wp - float3(0, 0, eps)) * 8.0);
     float3 noiseNormal = normalize(float3(nx, ny, nz));
-    
+
     // Blend noise normal with geometry normal
     N = normalize(N + noiseNormal * 0.35);
 
@@ -264,7 +266,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     }
 
     // Point lights
-    [unroll]
+    [loop]
     for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
     {
         if (i >= pointCount)
@@ -298,7 +300,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     }
 
     // Spot lights
-    [unroll]
+    [loop]
     for (uint j = 0; j < MAX_SPOT_LIGHTS; ++j)
     {
         if (j >= spotCount)

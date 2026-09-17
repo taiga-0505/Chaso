@@ -19,6 +19,7 @@ enum class ParticleType : uint8_t {
   Explosion,  ///< 全方向放射（爆発）
   Rain,       ///< 下方向落下（雨）
   Fire,       ///< 炎（浮力・ゆらぎ・中心軸への収束）
+  Electric,   ///< 電撃（殻の表面を這う火花。モデルにまとわりつく帯電表現）
   Count
 };
 
@@ -97,6 +98,14 @@ public:
   void SetPipelinePrefix(const std::string& prefix) { pipelinePrefix_ = prefix; }
   const std::string& GetPipelinePrefix() const { return pipelinePrefix_; }
 
+  /// @brief 「モデルにまとわりつく電撃」のプリセットを適用する
+  /// @details タイプ (Electric) / パイプライン (gpu_particle_electric) / 加算合成 /
+  ///          寿命・スケール・速度・色をまとめて電撃向けの値にする。
+  ///          殻の大きさは emitterShape_ == Box のとき shapeBoxSize_ を「直径」とした楕円体、
+  ///          それ以外は shapeRadius_ の球。emitterOffset_ と合わせて対象モデルに合わせること。
+  ///          既定値は足元ピボット・高さ約 1.7m の Player モデル向け。
+  void ApplyElectricPreset();
+
   // --- Particle Editor 用パラメータ ---
   float minLifeTime_ = 3.0f;     ///< 最小寿命
   float maxLifeTime_ = 8.0f;     ///< 最大寿命
@@ -112,6 +121,20 @@ public:
   RC::Vector4 startColor_ = {1.0f, 1.0f, 1.0f, 1.0f}; ///< 開始色
   RC::Vector4 endColor_ = {1.0f, 1.0f, 1.0f, 0.0f};   ///< 終了色
   RC::Vector3 emitterPosition_ = {0.0f, 0.0f, 0.0f};  ///< エミッタ位置
+  /// @brief エミッタ位置に足すオフセット（ワールド座標）
+  /// @details シーン側は毎フレーム emitterPosition_ をエンティティの Transform で上書きするため、
+  ///          「足元ピボットのモデルの胸の高さから出したい」といった調整はここで行う。
+  ///          GPU に渡す位置は emitterPosition_ + emitterOffset_。
+  RC::Vector3 emitterOffset_ = {0.0f, 0.0f, 0.0f};
+
+  // --- 殻（ParticleType::Electric 専用。CB では shapePad.xy / shapeBoxPad の枠を使う）---
+  /// @brief 殻の角の丸み (0=角のある箱, 1=最短辺いっぱいまで丸める → カプセル/球)。Box 形状のときだけ有効
+  float shellRoundness_ = 1.0f;
+  /// @brief 殻をモデル表面から外側へ浮かせる距離 (m)。0 だと表面と重なって半分が埋まって見える
+  float shellMargin_ = 0.04f;
+  /// @brief 殻の Y 軸回転 (rad)。Transform.rotation.y を入れると回転する箱にも殻が合う
+  float shellYaw_ = 0.0f;
+
   std::string texturePath_ = "Resources/Particle/circle.png"; ///< テクスチャパス
 
 private:

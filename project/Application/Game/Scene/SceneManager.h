@@ -37,7 +37,11 @@ public:
 
   /// @brief 次のフレームでのシーン切り替えをリクエストする（フェード演出を伴う）
   /// @param name 遷移先のシーン名
-  void RequestChange(const std::string &name);
+  /// @return 要求が受理されたら true
+  /// @note 未登録のシーン名は受理しない。受理してしまうと ChangeImmediately が
+  ///       current_ = nullptr にしてしまい、画面が真っ黒なまま復帰できなくなる。
+  /// @note 既に別の遷移要求が処理待ちの場合も受理しない（フェード中の上書き防止）。
+  bool RequestChange(const std::string &name);
 
   /// @brief シーンを即座に切り替える（演出なし）
   /// @param name 遷移先のシーン名

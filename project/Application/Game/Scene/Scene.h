@@ -1,5 +1,6 @@
 #pragma once
 #include <d3d12.h>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -17,8 +18,6 @@ class DebugCamera;
 class MainCamera;
 class ImGuiManager;
 class PipelineManager;
-class BgmManager;
-class SeManager;
 class PostProcess;
 namespace RC { class CameraController; }
 
@@ -32,7 +31,8 @@ enum class PlayState {
 
 /// @struct SceneContext
 /// @brief シーン間で共有されるエンジンコンポーネントへの参照を保持する構造体
-/// @details 各シーンの Update/Render に渡され、グラフィックスデバイス、入力、オーディオ、デバッグツールなどへのアクセスを提供します。
+/// @details 各シーンの Update/Render に渡され、グラフィックスデバイス、入力、デバッグツールなどへのアクセスを提供します。
+///          オーディオはシングルトンの AudioEngine と、エンティティの AudioSourceComponent で扱うためここには含めない。
 struct SceneContext {
   Dx12Core *core = nullptr;             ///< DirectX12 コアシステム
   Input *input = nullptr;               ///< 入力システム（キーボード、マウス、コントローラー）
@@ -40,11 +40,17 @@ struct SceneContext {
   ImGuiManager *imgui = nullptr;         ///< ImGui 管理
   PipelineManager *pipelineManager = nullptr; ///< パイプライン管理
   PostProcess *postProcess = nullptr;     ///< ポストプロセス管理
-  BgmManager *bgmManager = nullptr;      ///< BGM 管理
-  SeManager *seManager = nullptr;        ///< SE 管理
   RC::CameraController *camera = nullptr; ///< エディタカメラ（SceneManager が所有）
   float deltaTime = 1.0f / 60.0f;        ///< 前フレームからの経過時間 (秒)
-  
+
+  /// @brief シーン遷移を要求するコールバック（SceneManager::Init で結線される）
+  /// @details 引数は遷移先のシーン名、戻り値は要求が受理されたか。
+  ///          SceneManager は Scene の入れ子クラスのため型として前方宣言できない。
+  ///          ここを関数オブジェクトにしておくことで、SceneContext から
+  ///          SceneManager への型依存を持たずに遷移要求だけを公開できる。
+  ///          スクリプトからは ScriptableEntity::RequestSceneChange() 経由で使う。
+  std::function<bool(const std::string &)> requestSceneChange;
+
   PlayState playState = PlayState::Playing; ///< 現在の再生状態
 
   D3D12_CPU_DESCRIPTOR_HANDLE currentRTV{}; ///< 現在の描画先RTV
@@ -87,6 +93,14 @@ public:
   /// @param ctx シーンコンテキスト
   /// @param cl グラフィックスコマンドリスト
   virtual void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) = 0;
+
+  /// @brief オーディオ（AudioSourceComponent）の毎フレーム更新
+  /// @param ctx シーンコンテキスト
+  /// @details SceneManager が、シーン遷移の演出中（FadeIn / GrayscaleIntro など
+  ///          Update() を止めている期間）も含めて毎フレーム必ず呼ぶ。
+  ///          BGM は「持ち主が毎フレーム keep-alive を送る」方式なので、
+  ///          Update() の中で行うとゲームを止めた瞬間に BGM が切れてしまう。
+  virtual void UpdateAudio(SceneContext &) {}
 
   /// @brief シーンに属するエンティティのリストを取得
   const std::vector<std::shared_ptr<Entity>>& GetEntities() const { return entities_; }
@@ -136,6 +150,61 @@ public:
                   return false;
               }),
           entities_.end());
+  }
+
+  // ============================================================
+  // エディタ用スナップショット（Undo / Redo / コピー＆ペースト）
+  // ============================================================
+
+  /// @brief 構築済みのエンティティをそのままシーンへ追加する
+  /// @param e 追加するエンティティ（Deserialize 済みでもよい）
+  /// @details CreateEntity と同様に pendingEntities_ 経由で追加するため、
+  ///          更新ループ中に呼んでも安全。
+  void AddEntity(std::shared_ptr<Entity> e) {
+      if (e) pendingEntities_.push_back(std::move(e));
+  }
+
+  /// @brief シーン内の全エンティティを JSON 配列としてスナップショット化する
+  /// @return エンティティ JSON の配列
+  /// @details Undo 履歴用。破棄予定のエンティティは含めない。
+  nlohmann::json CaptureEntitiesSnapshot() {
+      FlushPendingEntities();
+      nlohmann::json arr = nlohmann::json::array();
+      for (auto& e : entities_) {
+          if (!e || e->IsPendingDestroy()) continue;
+          arr.push_back(e->Serialize());
+      }
+      return arr;
+  }
+
+  /// @brief スナップショットからシーンのエンティティを復元する
+  /// @param snapshot CaptureEntitiesSnapshot() の戻り値
+  /// @details 後始末の順序は OnExit / RestoreState と揃えて
+  ///          「スクリプトへ通知 → ランタイムリソース解放」とする。
+  ///          先に解放するとスクリプトの OnDestroy から解放済みハンドルを触りうる。
+  void RestoreEntitiesSnapshot(const nlohmann::json& snapshot) {
+      if (!snapshot.is_array()) return;
+
+      for (auto& e : entities_) {
+          if (!e) continue;
+          if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+              nsc->DestroyAllScripts();
+          }
+      }
+      for (auto& e : entities_) {
+          if (e) ReleaseDynamicEntityRuntime(*e);
+      }
+      entities_.clear();
+      pendingEntities_.clear();
+
+      for (auto& ej : snapshot) {
+          auto entity = std::make_shared<Entity>();
+          entity->Deserialize(ej);
+          entities_.push_back(std::move(entity));
+      }
+      for (auto& e : entities_) {
+          if (e) InitDynamicEntityRuntime(*e);
+      }
   }
 
   /// @brief 選択中のライトエンティティのギズモ（ワイヤフレーム）を描画する

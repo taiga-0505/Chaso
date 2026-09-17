@@ -157,7 +157,7 @@ private:
   /// @brief 描画オプションフラグ
   enum : uint32_t { FLAG_STROKE = 1, FLAG_TEX = 2 };
 
-  static constexpr uint32_t kMaxDrawPerFrame = 256; ///< 1フレームあたりの最大描画数
+  static constexpr uint32_t kMaxDrawPerFrame = 4096; ///< 1フレームあたりの最大描画数
   static constexpr uint32_t Align256(uint32_t v) { return (v + 255u) & ~255u; }
 
   Params paramsCPU_{}; ///< CPU側のパラメータキャッシュ

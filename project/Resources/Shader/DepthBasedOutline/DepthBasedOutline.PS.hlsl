@@ -6,6 +6,11 @@ Texture2D<float> gDepthTexture : register(t1);
 SamplerState gSampler : register(s0);
 SamplerState gSamplerPoint : register(s1);
 
+/// @brief 輪郭を出さない矩形（HUD の領域）の上限
+/// @details このパスは 2D まで描き終えた最終画に掛かるので、放っておくと
+///          HP バーやタイマーの上に壁の輪郭が乗ってしまう。UI が申告した矩形を素通しにする。
+static const int kMaxExclusions = 16;
+
 struct Material {
     float4x4 projectionInverse;
     float4 outlineColor;
@@ -13,6 +18,9 @@ struct Material {
     float outlineThickness;
     int outlineMode;
     float padding;
+    int excludeCount;  ///< 有効な除外矩形の数
+    float3 padding2;
+    float4 excludeRects[kMaxExclusions]; ///< (minU, minV, maxU, maxV)
 };
 ConstantBuffer<Material> gMaterial : register(b1);
 
@@ -29,6 +37,15 @@ static const float kPrewittVerticalKernel[3][3] = {
 };
 
 float4 main(VertexShaderOutput input) : SV_TARGET {
+    // UI の上には輪郭を出さない（HUD が申告した矩形の中は素通し）
+    for (int e = 0; e < gMaterial.excludeCount; ++e) {
+        const float4 rect = gMaterial.excludeRects[e];
+        if (input.texcoord.x >= rect.x && input.texcoord.x <= rect.z &&
+            input.texcoord.y >= rect.y && input.texcoord.y <= rect.w) {
+            return gTexture.Sample(gSampler, input.texcoord);
+        }
+    }
+
     uint width, height;
     gDepthTexture.GetDimensions(width, height);
     float2 uvStepSize = float2(1.0f / width, 1.0f / height);
@@ -70,6 +87,6 @@ float4 main(VertexShaderOutput input) : SV_TARGET {
     }
 
     float4 color = gTexture.Sample(gSampler, input.texcoord);
-    
+
     return lerp(color, gMaterial.outlineColor, weight);
 }

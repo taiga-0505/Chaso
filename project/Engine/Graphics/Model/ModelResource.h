@@ -65,10 +65,12 @@ public:
   /// @brief マテリアルの定数バッファ（CPUマップ済み）を取得する
   /// @return Material 構造体へのポインタ
   Material *Mat() { return cbMat_.mapped; }
+  const Material *Mat() const { return cbMat_.mapped; }
 
   /// @brief ライトの定数バッファ（CPUマップ済み）を取得する
   /// @return DirectionalLight 構造体へのポインタ
   DirectionalLight *Light() { return cbLight_.mapped; }
+  const DirectionalLight *Light() const { return cbLight_.mapped; }
 
   /// @brief 外部で管理されているライトCBのアドレスを設定する
   /// @param addr ライトCBの GPU 仮想アドレス
@@ -96,9 +98,11 @@ public:
   /// @param view ビュー行列
   /// @param proj プロジェクション行列
   /// @param frame フレームリソース（動的CB確保用）
+  /// @param worldOnly true なら World 行列だけを転送し、WVP / WorldInverseTranspose の計算を省く
+  ///        （シャドウパスの VS は World しか読まないため。結果は変わらない）
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
             const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj,
-            RC::FrameResource &frame);
+            RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief インスタンシングによる一括描画を実行する
   /// @param cmdList コマンドリスト
@@ -106,10 +110,11 @@ public:
   /// @param proj プロジェクション行列
   /// @param instances インスタンスごとのトランスフォームリスト
   /// @param frame フレームリソース
+  /// @param worldOnly true なら World 行列だけを転送する（シャドウパス用。Draw と同じ）
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
-                 RC::FrameResource &frame);
+                 RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief インスタンシング描画（単色指定付き）
   /// @param cmdList コマンドリスト
@@ -118,11 +123,12 @@ public:
   /// @param instances インスタンスごとのトランスフォームリスト
   /// @param color 全インスタンスに適用するオーバーライドカラー
   /// @param frame フレームリソース
+  /// @param worldOnly true なら World 行列だけを転送する（シャドウパス用。Draw と同じ）
   void DrawBatch(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &view,
                  const RC::Matrix4x4 &proj,
                  const std::vector<Transform> &instances,
                  const RC::Vector4 &color,
-                 RC::FrameResource &frame);
+                 RC::FrameResource &frame, bool worldOnly = false);
 
   /// @brief スキニング付きモデルを描画する
   /// @param cmdList コマンドリスト
@@ -186,7 +192,8 @@ public:
   /// @param frame フレームリソース
   void DrawSkinnedCS(ID3D12GraphicsCommandList *cmdList,
                      const RC::Matrix4x4 &world, const RC::Matrix4x4 &view,
-                     const RC::Matrix4x4 &proj, RC::FrameResource &frame);
+                     const RC::Matrix4x4 &proj, RC::FrameResource &frame,
+                     bool worldOnly = false);
 
 private:
   /// @struct CB_Material

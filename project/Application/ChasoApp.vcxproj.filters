@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <ItemGroup>
     <Filter Include="..">
@@ -27,9 +27,6 @@
     </Filter>
     <Filter Include="Game\Scene\LightScene">
       <UniqueIdentifier>{09aa9018-e68d-8d1b-6faf-3a5c034579b9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Game\Scene\ParticleScene">
-      <UniqueIdentifier>{c8cf4e5e-96e3-488b-cab4-76b4ea44aa59}</UniqueIdentifier>
     </Filter>
     <Filter Include="Game\Scene\ResultScene">
       <UniqueIdentifier>{84889b9b-b70e-b1c0-d6a3-efdd8c41adc1}</UniqueIdentifier>
@@ -63,6 +60,9 @@
     </Filter>
     <Filter Include="Resources\Shader\Primitive3D">
       <UniqueIdentifier>{008980ce-0bb4-6ecf-1f9d-a657dd08dc18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Shader\Font">
+      <UniqueIdentifier>{943006fd-535a-44fe-9f0b-5db3c78ee6f3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Resources\Shader\Sprite">
       <UniqueIdentifier>{e154087b-a457-5cd9-788f-df6d22fb77aa}</UniqueIdentifier>
@@ -105,9 +105,6 @@
     <ClCompile Include="..\Application\Game\Scene\Fade\Fade.cpp">
       <Filter>Game\Scene\Fade</Filter>
     </ClCompile>
-    <ClCompile Include="..\Application\Game\Scene\ParticleScene\ParticleScene.cpp">
-      <Filter>Game\Scene\ParticleScene</Filter>
-    </ClCompile>
     <ClCompile Include="..\Application\Game\Scene\SceneManager.cpp">
       <Filter>Game\Scene</Filter>
     </ClCompile>
@@ -146,13 +143,13 @@
     <ClInclude Include="..\Application\Game\Scene\Fade\Fade.h">
       <Filter>Game\Scene\Fade</Filter>
     </ClInclude>
-    <ClInclude Include="..\Application\Game\Scene\ParticleScene\ParticleScene.h">
-      <Filter>Game\Scene\ParticleScene</Filter>
-    </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\Scene.h">
       <Filter>Game\Scene</Filter>
     </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\SceneManager.h">
+      <Filter>Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Scene\DataDrivenScene\DataDrivenScene.h">
       <Filter>Game\Scene</Filter>
     </ClInclude>
   </ItemGroup>
@@ -195,6 +192,12 @@
     </FxCompile>
     <FxCompile Include="..\Resources\Shader\Sprite\Sprite.VS.hlsl">
       <Filter>Resources\Shader\Sprite</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Font\Font.PS.hlsl">
+      <Filter>Resources\Shader\Font</Filter>
+    </FxCompile>
+    <FxCompile Include="..\Resources\Shader\Font\Font.VS.hlsl">
+      <Filter>Resources\Shader\Font</Filter>
     </FxCompile>
     <FxCompile Include="..\Resources\Shader\CopyImage\CopyImage.PS.hlsl">
       <Filter>Resources\Shader\CopyImage</Filter>

@@ -5,6 +5,7 @@
 #include "Fade/Fade.h"
 #include "Camera/CameraController.h"
 #include "DataDrivenScene/DataDrivenScene.h"
+#include <algorithm>
 #include <chrono>
 #include <format>
 #include <cstdlib>
@@ -149,7 +150,7 @@ void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     // フェードインを開始（Dissolveから復帰）
     sm.ChangeState(std::make_unique<FadeInState>());
 
-    // 新シーンの初回 Update
+    // 新しいシーンの初期位置構成のため1回目だけUpdateを呼び、各オブジェクトの位置を決定
     if (sm.current_) {
       sm.current_->Update(sm, ctx);
     }
@@ -214,6 +215,15 @@ void Scene::SceneManager::Init(SceneContext &ctx) {
 #endif
   ctx.camera = camera_.get();
 
+  // スクリプト（ScriptableEntity）からのシーン遷移要求の受け口を結線する。
+  // SceneContext は App::sceneCtx_ の実体を通しで使うため、ここで一度差すだけでよい。
+  // RequestChange のみを公開し、ChangeImmediately は意図的に渡さない。
+  // ChangeImmediately をスクリプトの OnUpdate から呼ぶと OnExit ～ エンティティ破棄が
+  // その場で走り、呼び出し元スクリプト自身が解放されて use-after-free になる。
+  ctx.requestSceneChange = [this](const std::string &name) {
+    return RequestChange(name);
+  };
+
   // Fadeコンポーネントを初期化
   fade_ = std::make_unique<Fade>();
   fade_->Init(ctx, width, height);
@@ -238,8 +248,44 @@ void Scene::SceneManager::Register(std::unique_ptr<Scene> scene) {
   scenes_[key] = std::move(scene);
 }
 
-void Scene::SceneManager::RequestChange(const std::string &name) {
+bool Scene::SceneManager::RequestChange(const std::string &name) {
+  if (name.empty()) {
+    Log::Print("[SceneManager] RequestChange: シーン名が空のため無視しました");
+    return false;
+  }
+
+  // 未登録のシーン名を通すと ChangeImmediately で current_ が nullptr になり、
+  // 各 State の Render が「current_ is null!」を吐き続けるだけの黒画面になる。
+  // 原因の切り分けが難しいので、要求の時点で弾いて登録済み一覧をログに出す。
+  if (scenes_.find(name) == scenes_.end()) {
+    std::string names;
+    for (auto &[key, _] : scenes_) {
+      if (!names.empty()) names += ", ";
+      names += key;
+    }
+    Log::Print("[SceneManager] RequestChange: 未登録のシーン名です: " + name);
+    Log::Print("[SceneManager] 登録済みシーン: " + names);
+    return false;
+  }
+
+  // 既に処理待ちの要求があるなら後から来たものは捨てる。
+  // requested_ は ChangeImmediately までクリアされず、FadeOutState は旧シーンの
+  // Update を回し続けるため、フェード中にスクリプトが行き先を書き換えられてしまう。
+  // requested_ がクリアされたあと（LoadingState / FadeInState）もフェード演出は
+  // 続いているので、state_ が NormalState 以外なら「遷移中」として弾く。
+  const bool inTransition =
+      !requested_.empty() ||
+      (state_ && dynamic_cast<NormalState *>(state_.get()) == nullptr);
+  if (inTransition) {
+    Log::Print("[SceneManager] RequestChange: 遷移中のため無視しました (処理中: " +
+               (requested_.empty() ? currentName_ : requested_) + " / 要求: " + name + ")");
+    return false;
+  }
+
+  // 同名シーンへの要求は通す。OnExit -> OnEnter が走るため「リトライ」として機能する。
+
   requested_ = name;
+  return true;
 }
 
 void Scene::SceneManager::ChangeImmediately(const std::string &name,
@@ -317,6 +363,15 @@ void Scene::SceneManager::Update(SceneContext &ctx) {
     state_->Update(*this, ctx);
   }
 
+  // オーディオは状態に関係なく毎フレーム更新する。
+  // 画面が完全に Dissolve されている間はシーンの Update を呼ばないが、
+  // その間も BGM の keep-alive を送り続けないと BGM が止まってしまう。
+  // ChangeImmediately（OnExit → OnEnter）と同じフレームで呼ばれるので、
+  // 次のシーンが同じ BGM を持っていれば途切れずに引き継がれる。
+  if (current_) {
+    current_->UpdateAudio(ctx);
+  }
+
   // カメラ更新 & ビュー/プロジェクション反映（全シーン共通）
   if (camera_) {
     camera_->Update();
@@ -383,21 +438,27 @@ bool Scene::SceneManager::CreateNewScene(const std::string& name, const std::str
     fs::copy_file(templatePath, filePath, fs::copy_options::overwrite_existing);
     Log::Print("[SceneManager] Created new scene from template: " + templatePath);
     scene->Load();
+    // テンプレート由来の sceneName ("SceneTemplate") が残るので、
+    // 新しいシーン名で保存し直す。
+    scene->Save();
   } else {
     // デフォルトのエンティティを追加 (Unityライクな初期状態)
+    // NOTE: Scene::CreateEntity() は TransformComponent を自動付与しないため、
+    //       呼び出し側で必ず明示的に AddComponent すること。
+    //       Transform が無いと DataDrivenScene 側の同期ループ・FindMainCamera・
+    //       ギズモ操作がすべてスキップされる。
     auto dirLight = scene->CreateEntity("Directional Light");
+    dirLight->AddComponent<TransformComponent>();
     auto& dl = dirLight->AddComponent<DirectionalLightComponent>();
     dl.color = {1.0f, 1.0f, 1.0f, 1.0f};
     dl.direction = {0.0f, -1.0f, 0.5f}; // 斜め下
     dl.intensity = 1.0f;
 
     auto mainCam = scene->CreateEntity("Main Camera");
+    auto& camTr = mainCam->AddComponent<TransformComponent>();
+    camTr.position = {0.0f, 1.0f, -10.0f};
     auto& cam = mainCam->AddComponent<CameraComponent>();
     cam.isMain = true;
-    
-    if (auto* tr = mainCam->GetComponent<TransformComponent>()) {
-        tr->position = {0.0f, 1.0f, -10.0f};
-    }
 
     scene->FlushPendingEntities();
     scene->Save();

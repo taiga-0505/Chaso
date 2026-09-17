@@ -54,9 +54,12 @@ void ModelResource::SetMesh(const std::shared_ptr<ModelMesh> &mesh) {
 }
 
 void ModelResource::ResetTextureToMtl() {
+  // override を外すだけ。マテリアル由来の SRV キャッシュ（materialSrvs_）は mesh が同じなら
+  // 変わらないので破棄しない。以前はここで clear → 全マテリアルを TextureManager::Load し直しており、
+  // DrawModel はテクスチャ override が無いとき毎ドローこの関数を呼ぶため
+  // （影パス × 全モデルで毎フレーム数千回）、mutex 取得とパス正規化の文字列確保が積み重なっていた。
   textureSrv_ = {};
-  materialSrvs_.clear();
-  EnsureMaterialSrvsLoaded_();
+  EnsureMaterialSrvsLoaded_(); // 未解決なら（初回・SetMesh 後）ここでロードする
 }
 
 void ModelResource::ApplyLighting(int lightingMode, const float color[3],
@@ -83,12 +86,19 @@ void ModelResource::EnsureMaterialSrvsLoaded_() {
   const auto &mats = mesh_->Materials();
   if (mats.empty()) {
     // 互換：昔の1枚だけ
-    materialSrvs_.clear();
     const auto &mtl = mesh_->MaterialFile();
-    if (!mtl.textureFilePath.empty()) {
-      materialSrvs_.resize(1);
-      materialSrvs_[0] = texman_->Load(mtl.textureFilePath, /*srgb=*/true);
+    if (mtl.textureFilePath.empty()) {
+      materialSrvs_.clear();
+      return;
     }
+    // 既に解決済みなら何もしない。
+    // 以前はここに早期 return が無く、ドローごとに TextureManager::Load
+    // （mutex＋パス正規化＋キャッシュ検索）を呼び直していた
+    if (materialSrvs_.size() == 1 && materialSrvs_[0].ptr != 0) {
+      return;
+    }
+    materialSrvs_.assign(1, D3D12_GPU_DESCRIPTOR_HANDLE{});
+    materialSrvs_[0] = texman_->Load(mtl.textureFilePath, /*srgb=*/true);
     return;
   }
 
@@ -119,7 +129,7 @@ ModelResource::GetSrvForMaterial_(uint32_t materialIndex) const {
     if (h.ptr != 0)
       return h;
   }
-  
+
   if (texman_) {
       return texman_->GetSrv(-1);
   }
@@ -133,12 +143,16 @@ ModelResource::GetSrvForMaterial_(uint32_t materialIndex) const {
 
 void ModelResource::Draw(ID3D12GraphicsCommandList *cmdList,
                          const Matrix4x4 &world, const Matrix4x4 &view,
-                         const Matrix4x4 &proj, FrameResource &frame) {
+                         const Matrix4x4 &proj, FrameResource &frame,
+                         bool worldOnly) {
   if (!isReady_ || !mesh_ || !mesh_->Ready())
     return;
 
   // Node階層を使う場合は DrawItem を使う
   const auto &items = mesh_->DrawItems();
+
+  // view * proj はループ不変なので 1 回だけ計算する（シャドウパスでは使わない）
+  const Matrix4x4 viewProj = worldOnly ? MakeIdentity4x4() : Multiply(view, proj);
 
   // テクスチャ（overrideが無い場合だけ materialIndex対応を準備）
   if (textureSrv_.ptr == 0) {
@@ -170,8 +184,10 @@ void ModelResource::Draw(ID3D12GraphicsCommandList *cmdList,
 
     auto *tm = reinterpret_cast<TransformationMatrix *>(dst);
     tm->World = world;
-    tm->WVP = Multiply(world, Multiply(view, proj));
-    tm->worldInverseTranspose = Transpose(Inverse(world));
+    if (!worldOnly) {
+      tm->WVP = Multiply(world, viewProj);
+      tm->worldInverseTranspose = Transpose(Inverse(world));
+    }
 
     cmdList->SetGraphicsRootConstantBufferView(1, addr);
 
@@ -209,8 +225,10 @@ void ModelResource::Draw(ID3D12GraphicsCommandList *cmdList,
 
     auto *tm = reinterpret_cast<TransformationMatrix *>(dst);
     tm->World = nodeWorld;
-    tm->WVP = Multiply(nodeWorld, Multiply(view, proj));
-    tm->worldInverseTranspose = Transpose(Inverse(nodeWorld));
+    if (!worldOnly) {
+      tm->WVP = Multiply(nodeWorld, viewProj);
+      tm->worldInverseTranspose = Transpose(Inverse(nodeWorld));
+    }
 
     cmdList->SetGraphicsRootConstantBufferView(1, addr);
 
@@ -238,7 +256,7 @@ void ModelResource::Draw(ID3D12GraphicsCommandList *cmdList,
 void ModelResource::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                               const Matrix4x4 &view, const Matrix4x4 &proj,
                               const std::vector<Transform> &instances,
-                              FrameResource &frame) {
+                              FrameResource &frame, bool worldOnly) {
   if (!isReady_ || !mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
   }
@@ -273,13 +291,24 @@ void ModelResource::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   D3D12_GPU_VIRTUAL_ADDRESS instAddr = frame.AllocSRV(dataSize, &mapped);
   auto *dst = reinterpret_cast<InstanceDataGPU *>(mapped);
 
-  for (uint32_t i = 0; i < count; ++i) {
-    const Transform &tr = instances[i];
-    Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
-    dst[i].World = world;
-    dst[i].WVP = Multiply(world, Multiply(view, proj));
-    dst[i].WorldInverseTranspose = Transpose(Inverse(world));
-    dst[i].color = {1, 1, 1, 1};
+  if (worldOnly) {
+    // シャドウパス：VS は World しか読まないので WVP / 逆転置行列（4x4 の逆行列）を省く。
+    // 壁・床は数百インスタンス × 影タイル数だけ毎フレーム通るため効果が大きい
+    for (uint32_t i = 0; i < count; ++i) {
+      const Transform &tr = instances[i];
+      dst[i].World = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+      dst[i].color = {1, 1, 1, 1};
+    }
+  } else {
+    const Matrix4x4 viewProj = Multiply(view, proj); // ループ不変
+    for (uint32_t i = 0; i < count; ++i) {
+      const Transform &tr = instances[i];
+      Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+      dst[i].World = world;
+      dst[i].WVP = Multiply(world, viewProj);
+      dst[i].WorldInverseTranspose = Transpose(Inverse(world));
+      dst[i].color = {1, 1, 1, 1};
+    }
   }
 
   cmdList->SetGraphicsRootShaderResourceView(1, instAddr);
@@ -324,7 +353,7 @@ void ModelResource::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                               const Matrix4x4 &view, const Matrix4x4 &proj,
                               const std::vector<Transform> &instances,
                               const RC::Vector4 &color,
-                              FrameResource &frame) {
+                              FrameResource &frame, bool worldOnly) {
   if (!isReady_ || !mesh_ || !mesh_->Ready() || instances.empty()) {
     return;
   }
@@ -359,13 +388,23 @@ void ModelResource::DrawBatch(ID3D12GraphicsCommandList *cmdList,
   D3D12_GPU_VIRTUAL_ADDRESS instAddr = frame.AllocSRV(dataSize, &mapped);
   auto *dst = reinterpret_cast<InstanceDataGPU *>(mapped);
 
-  for (uint32_t i = 0; i < count; ++i) {
-    const Transform &tr = instances[i];
-    Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
-    dst[i].World = world;
-    dst[i].WVP = Multiply(world, Multiply(view, proj));
-    dst[i].WorldInverseTranspose = Transpose(Inverse(world));
-    dst[i].color = color;
+  if (worldOnly) {
+    // シャドウパス：VS は World しか読まないので WVP / 逆転置行列（4x4 の逆行列）を省く
+    for (uint32_t i = 0; i < count; ++i) {
+      const Transform &tr = instances[i];
+      dst[i].World = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+      dst[i].color = color;
+    }
+  } else {
+    const Matrix4x4 viewProj = Multiply(view, proj); // ループ不変
+    for (uint32_t i = 0; i < count; ++i) {
+      const Transform &tr = instances[i];
+      Matrix4x4 world = MakeAffineMatrix(tr.scale, tr.rotation, tr.translation);
+      dst[i].World = world;
+      dst[i].WVP = Multiply(world, viewProj);
+      dst[i].WorldInverseTranspose = Transpose(Inverse(world));
+      dst[i].color = color;
+    }
   }
 
   cmdList->SetGraphicsRootShaderResourceView(1, instAddr);
@@ -615,7 +654,8 @@ void ModelResource::DispatchSkinning(ID3D12GraphicsCommandList *cmdList,
 
 void ModelResource::DrawSkinnedCS(ID3D12GraphicsCommandList *cmdList,
                                    const Matrix4x4 &world, const Matrix4x4 &view,
-                                   const Matrix4x4 &proj, FrameResource &frame) {
+                                   const Matrix4x4 &proj, FrameResource &frame,
+                                   bool worldOnly) {
   if (!isReady_ || !mesh_ || !mesh_->Ready() || !skinningDispatched_)
     return;
 
@@ -646,8 +686,11 @@ void ModelResource::DrawSkinnedCS(ID3D12GraphicsCommandList *cmdList,
       frame.AllocCB(sizeof(TransformationMatrix), &dst);
   auto *tm = reinterpret_cast<TransformationMatrix *>(dst);
   tm->World = world;
-  tm->WVP = Multiply(world, Multiply(view, proj));
-  tm->worldInverseTranspose = Transpose(Inverse(world));
+  if (!worldOnly) {
+    // シャドウパスの VS は World しか読まないので、その場合は WVP / 逆転置行列の計算を省く
+    tm->WVP = Multiply(world, Multiply(view, proj));
+    tm->worldInverseTranspose = Transpose(Inverse(world));
+  }
   cmdList->SetGraphicsRootConstantBufferView(1, addr);
 
   // Light CB (slot 3, PS)

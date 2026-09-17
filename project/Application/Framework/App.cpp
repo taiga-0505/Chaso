@@ -1,6 +1,7 @@
 #include "App.h"
 #include "RC.h"
 #include "SceneManager.h"
+#include "Audio/AudioEngine.h"
 #include "../Editor/VerifyPanel.h"
 #include <cassert>
 #include <chrono>
@@ -16,7 +17,7 @@ inline void ReportLiveObjectsDbg(const char *tag) {
   using Microsoft::WRL::ComPtr;
   OutputDebugStringA(
       ("==== LIVE REPORT @" + std::string(tag) + " ====\n").c_str());
-      
+
   // Report DXGI
   ComPtr<IDXGIDebug> dxgiDbg;
   if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDbg)))) {
@@ -47,7 +48,7 @@ bool App::Init() {
   // Window
   window_ = std::make_unique<Window>();
   window_->Initialize(appConfig_.title.c_str(), appConfig_.width, appConfig_.height, appConfig_.fullscreen);
-  
+
   auto now = std::chrono::high_resolution_clock::now();
   Log::Print(std::format("[App] Window 生成完了 (Time: {:.3f}ms)", std::chrono::duration<float, std::milli>(now - stepStart).count()));
   stepStart = now;
@@ -113,6 +114,10 @@ bool App::Init() {
   Log::Print(std::format("[App] RenderContext 初期化完了 (Time: {:.3f}ms)", std::chrono::duration<float, std::milli>(now - stepStart).count()));
   stepStart = now;
 
+  // Audio（初期シーンのロードで AudioSourceComponent がクリップを読むため、Game より先に）
+  // オーディオデバイスが無い環境では false が返るが、その場合は無音で続行する
+  AudioEngine::Get().Init();
+
   // Game (Initial Scene Load)
   game_.Init(sceneCtx_);
 
@@ -156,19 +161,19 @@ int App::Run() {
 #if RC_ENABLE_IMGUI
       // ImGui フレーム開始
       imgui_.NewFrame();
-      
+
       // エディタのUI構築（DockSpace, MenuBarなど）
       editorManager_.Update(&core_, [this]() {
           // ゲーム（シーン）のUIをMenuBarの中（Windowの右）に構築する
           game_.DrawDebugUI(sceneCtx_);
       }, game_.GetCurrentScene());
-      
+
       // 前フレームのViewportホバー状態を入力クラスに伝達
       input_->SetViewportHovered(editorManager_.IsViewportHovered());
 
       // プレイ状態の同期
       PlayState currentPlayState = editorManager_.GetPlayState();
-      
+
       if (editorManager_.IsRestartRequested()) {
           game_.RestoreCurrentScene(sceneCtx_);
           editorManager_.ClearRestartRequest();
@@ -186,6 +191,8 @@ int App::Run() {
               } else if (currentPlayState == PlayState::Stopped) {
                   // 停止された場合、バックアップからシーンを復元する
                   game_.RestoreCurrentScene(sceneCtx_);
+                  // 鳴り残っている SE / BGM も止めて、編集モードは無音から始める
+                  AudioEngine::Get().StopAll();
               }
               sceneCtx_.playState = currentPlayState;
           }
@@ -209,12 +216,12 @@ int App::Run() {
       // RenderTextureをクリアしてセット（青）
       float clearColor[] = {0.1f, 0.25f, 0.5f, 1.0f};
       cl_->ClearRenderTargetView(renderTexture_.GetRTV(), clearColor, 0, nullptr);
-      
+
       // 描画先をRenderTextureに、深度バッファはそのまま
       D3D12_CPU_DESCRIPTOR_HANDLE rtv = renderTexture_.GetRTV();
       D3D12_CPU_DESCRIPTOR_HANDLE dsv = core_.Dsv();
       cl_->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-      
+
       sceneCtx_.currentRTV = rtv;
       sceneCtx_.currentDSV = dsv;
 
@@ -238,7 +245,7 @@ int App::Run() {
 #if RC_ENABLE_IMGUI
       // エディタモード：ポストプロセスの出力を viewportTexture_ に書き込む
       postProcess_->Draw(cl_, renderTexture_, &viewportTexture_);
-      
+
       // Viewport 描画用にSRV状態へ遷移
       viewportTexture_.TransitionToShaderResource(cl_);
 
@@ -282,6 +289,14 @@ void App::Update() {
   // ====================
   // ゲーム更新
   game_.Update(sceneCtx_);
+
+  // ====================
+  // Audio
+  // ====================
+  // 鳴り終わった SE の回収と、持ち主のいない BGM の停止。
+  // シーン遷移（OnExit → OnEnter → 新シーンの Update）が同じフレーム内で終わった後に
+  // 呼ばれるので、次のシーンが同じ BGM を要求していれば途切れない。
+  AudioEngine::Get().Update();
 }
 
 void App::Render() {
@@ -320,6 +335,12 @@ void App::Term() {
   game_.Term();
 
   // ====================
+  // Audio
+  // ====================
+  // シーン（エンティティ）の破棄が終わってから、全ボイスとクリップを解放する
+  AudioEngine::Get().Term();
+
+  // ====================
   // Render Layer
   // ====================
   // RenderCommon 終了
@@ -356,6 +377,7 @@ void App::Term() {
 }
 
 void App::LoadAppConfig() {
+  bool loaded = false;
   std::ifstream ifs("../project/AppConfig.json");
   if (ifs) {
     try {
@@ -364,15 +386,21 @@ void App::LoadAppConfig() {
       if (j.contains("width")) appConfig_.width = j["width"];
       if (j.contains("height")) appConfig_.height = j["height"];
       if (j.contains("fullscreen")) appConfig_.fullscreen = j["fullscreen"];
-      Log::Print(std::format("[App] Loaded AppConfig: {}x{} Fullscreen:{}", appConfig_.width, appConfig_.height, appConfig_.fullscreen));
-      return;
+      loaded = true;
     } catch (...) {
       Log::Print("[App] Failed to parse AppConfig.json");
     }
   }
 
-  // AppConfig.h の初期値を使用する
-  Log::Print(std::format("[App] Default AppConfig: {}x{} Fullscreen:{}", appConfig_.width, appConfig_.height, appConfig_.fullscreen));
+#if defined(_DEBUG) || defined(RC_DEVELOPMENT)
+  // Debug / Development ビルドは AppConfig.json の値に関わらず常にフルスクリーンで起動する
+  // （実際のサイズは Window::Initialize がモニター解像度に合わせて決定する）
+  appConfig_.fullscreen = true;
+#endif
+
+  Log::Print(std::format("[App] {} AppConfig: {}x{} Fullscreen:{}",
+                         loaded ? "Loaded" : "Default",
+                         appConfig_.width, appConfig_.height, appConfig_.fullscreen));
 }
 
 void App::SaveAppConfig() {

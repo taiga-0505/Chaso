@@ -59,12 +59,34 @@ void Sprite2D::SetScreenSize(float w, float h) {
 }
 
 void Sprite2D::SetSize(float w, float h) {
+  // ワールド空間モードでは大きさは Transform.scale がそのまま意味を持つので上書きしない
+  if (worldSpace_) {
+    return;
+  }
   transform_.scale.x = w;
   transform_.scale.y = h;
   transform_.scale.z = 1.0f;
 }
 
 void Sprite2D::Update() {
+  if (worldSpace_) {
+    // 共有クアッドは「左上原点・右下(1,1)・Y下向き」のスクリーン用なので、
+    // 3D 用に「原点中心・1×1・Y上向き」へ補正してから Transform を掛ける。
+    //   local.x = x - 0.5
+    //   local.y = 0.5 - y   （Y反転）
+    Matrix4x4 pre = MakeIdentity4x4();
+    pre.m[1][1] = -1.0f; // Y反転
+    pre.m[3][0] = -0.5f; // 中心合わせ
+    pre.m[3][1] = 0.5f;
+
+    Matrix4x4 world =
+        Multiply(pre, MakeAffineMatrix(transform_.scale, transform_.rotation,
+                                       transform_.translation));
+    cbWVP_.map->World = world;
+    cbWVP_.map->WVP = Multiply(world, Multiply(camView_, camProj_));
+    return;
+  }
+
   Matrix4x4 world = MakeAffineMatrix(transform_.scale, transform_.rotation,
                                      transform_.translation);
   cbWVP_.map->World = world;

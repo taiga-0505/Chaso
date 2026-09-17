@@ -5,6 +5,31 @@
 
 namespace RC {
 
+namespace {
+
+/// アクティブな DirectionalLight のライティングモードをメッシュに同期する。
+/// 個別オーバーライド (SetLightingMode) が設定されているメッシュは上書きしない。
+/// @param ctx レンダーコンテキスト
+/// @param m 対象のプリミティブメッシュ
+static void ApplyDirLightMode_(RenderContext &ctx, PrimitiveMesh *m) {
+  Material *mat = m->Mat();
+  if (!mat) {
+    return;
+  }
+  const int ovr = m->GetLightingModeOverride();
+  if (ovr >= 0) {
+    mat->lightingMode = ovr; // 個別固定：ライトに追従しない
+    return;
+  }
+  if (ctx.DirLights().GetActiveCBAddress() != 0) {
+    if (const auto *active = ctx.DirLights().GetActive()) {
+      mat->lightingMode = active->GetLightingMode();
+    }
+  }
+}
+
+} // namespace
+
 int GeneratePlane(float width, float height, int texHandle) {
   auto &ctx = GetRenderContext();
   ModelData data = MeshGenerator::GeneratePlane(width, height);
@@ -47,12 +72,50 @@ int GenerateCapsule(float radius, float height, int texHandle) {
   return ctx.PrimitiveMeshes().Create(data, texHandle, "Capsule");
 }
 
+int GenerateCircle(float radius, uint32_t segments, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateCircle(radius, segments);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Circle");
+}
+
+int GenerateRing(float innerRadius, float outerRadius, uint32_t segments,
+                 int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data =
+      MeshGenerator::GenerateRing(innerRadius, outerRadius, segments);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "Ring");
+}
+
+int GenerateRingEx(float innerRadius, float outerRadius, uint32_t segments,
+                   float startAngle, float endAngle, bool isVerticalUV,
+                   bool isXY, int texHandle) {
+  auto &ctx = GetRenderContext();
+  // innerColor / outerColor は VertexData に頂点カラーが無いため使用しない
+  // （MeshGenerator 側も UV に押し出す実装になっている）
+  ModelData data = MeshGenerator::GenerateRingEx(
+      innerRadius, outerRadius, segments, {1, 1, 1, 1}, {1, 1, 1, 1},
+      startAngle, endAngle, isVerticalUV, isXY);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "RingEx");
+}
+
+int GenerateEffectCylinder(float topRadius, float bottomRadius, float height,
+                           uint32_t segments, float startAngle, float endAngle,
+                           bool isVerticalUV, bool flipV, int texHandle) {
+  auto &ctx = GetRenderContext();
+  ModelData data = MeshGenerator::GenerateEffectCylinder(
+      topRadius, bottomRadius, height, segments, startAngle, endAngle,
+      isVerticalUV, flipV);
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "EffectCylinder");
+}
+
 void DrawPrimitiveMesh(int meshHandle, int texHandle) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return;
 
   auto *m = ctx.PrimitiveMeshes().Get(meshHandle);
   if (!m) return;
+
+  ApplyDirLightMode_(ctx, m);
 
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
@@ -126,9 +189,11 @@ void DrawPrimitiveMeshWater(int meshHandle, int texHandle) {
   auto *m = ctx.PrimitiveMeshes().Get(meshHandle);
   if (!m) return;
 
+  ApplyDirLightMode_(ctx, m);
+
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
-  
+
   // Water layer (same as glass: translucent layer)
   const uint64_t key = SortKey::Make(SortKey::kLayerGlass, SortKey::HashPSO("object3d_water"), 0);
 
@@ -191,6 +256,74 @@ void DrawPrimitiveMeshWater(int meshHandle, int texHandle) {
   }, "PrimitiveMesh(Water)", meshHandle);
 }
 
+namespace {
+
+/// エフェクト用プリミティブの共通描画。
+/// 加算合成・非ライティングの専用 PSO を直接叩くだけの軽い経路で、
+/// ApplyDirLightMode_ は呼ばない（Material の流用スロットを壊さないため）。
+/// @param meshHandle メッシュハンドル
+/// @param texHandle 差し替えテクスチャ（-1 で生成時のもの）
+/// @param prefix 使用する PSO のプレフィックス（文字列リテラルのみ）
+/// @param label デバッグ表示用ラベル（文字列リテラルのみ）
+static void DrawPrimitiveMeshEffect_(int meshHandle, int texHandle,
+                                     const char *prefix, const char *label) {
+  auto &ctx = GetRenderContext();
+  if (!ctx.IsInitialized()) return;
+
+  auto *m = ctx.PrimitiveMeshes().Get(meshHandle);
+  if (!m) return;
+
+  Matrix4x4 world =
+      MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
+
+  // 加算合成なので最後（ガラスと同じ半透明レイヤー）に流す
+  const uint64_t key =
+      SortKey::Make(SortKey::kLayerGlass, SortKey::HashPSO(prefix), 0);
+
+  ctx.PushCommand3D(
+      key,
+      [m, meshHandle, world, texHandle, prefix](ID3D12GraphicsCommandList *cl) {
+        auto &ctx = GetRenderContext();
+        auto prevBlend = ctx.CurrentBlendMode();
+        ctx.SetBlendMode(kBlendModeAdd);
+
+        if (ctx.BindPipeline(prefix)) {
+          ctx.BindCameraCB();
+          ctx.BindAllLightCBs();
+          ctx.PrimitiveMeshes().ApplyTexture(meshHandle, texHandle);
+          m->Draw(cl, world);
+        }
+
+        ctx.SetBlendMode(prevBlend);
+      },
+      label, meshHandle);
+}
+
+} // namespace
+
+void DrawPrimitiveMeshScanRing(int meshHandle, int texHandle) {
+  DrawPrimitiveMeshEffect_(meshHandle, texHandle, "object3d_scanring",
+                           "PrimitiveMesh(ScanRing)");
+}
+
+void DrawPrimitiveMeshScanBeam(int meshHandle, int texHandle) {
+  DrawPrimitiveMeshEffect_(meshHandle, texHandle, "object3d_scanbeam",
+                           "PrimitiveMesh(ScanBeam)");
+}
+
+void SetPrimitiveMeshEffectParams(int meshHandle, const Vector4 &color,
+                                  float progress, float time) {
+  auto *m = GetRenderContext().PrimitiveMeshes().Get(meshHandle);
+  if (!m) return;
+  Material *mat = m->Mat();
+  if (!mat) return;
+
+  mat->color = color;
+  // エフェクトシェーダー側で progress / time として読む流用スロット
+  mat->shininess = progress;
+  mat->environmentCoefficient = time;
+}
+
 void DrawPrimitiveMeshWaterColumn(int meshHandle, int texHandle) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return;
@@ -198,9 +331,11 @@ void DrawPrimitiveMeshWaterColumn(int meshHandle, int texHandle) {
   auto *m = ctx.PrimitiveMeshes().Get(meshHandle);
   if (!m) return;
 
+  ApplyDirLightMode_(ctx, m);
+
   Matrix4x4 world = MakeAffineMatrix(m->T().scale, m->T().rotation, m->T().translation);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
-  
+
   // Water column layer (same as glass: translucent layer)
   const uint64_t key = SortKey::Make(SortKey::kLayerGlass, SortKey::HashPSO("object3d_watercolumn"), 0);
 
@@ -287,6 +422,18 @@ Material *GetPrimitiveMeshMaterialPtr(int meshHandle) {
   auto *m = GetRenderContext().PrimitiveMeshes().Get(meshHandle);
   if (!m) return nullptr;
   return m->Mat();
+}
+
+void SetPrimitiveMeshLightingMode(int meshHandle, LightingMode mode) {
+  auto *m = GetRenderContext().PrimitiveMeshes().Get(meshHandle);
+  if (!m) return;
+  m->SetLightingMode(mode);
+}
+
+void ClearPrimitiveMeshLightingModeOverride(int meshHandle) {
+  auto *m = GetRenderContext().PrimitiveMeshes().Get(meshHandle);
+  if (!m) return;
+  m->ClearLightingModeOverride();
 }
 
 void SetPrimitiveMeshNormalMap(int meshHandle, int texHandle) {

@@ -39,14 +39,14 @@ namespace RC {
 // Init / Term
 // ============================================================================
 
-void Init(SceneContext &ctx) { 
-  RenderContext::GetInstance().Init(ctx); 
+void Init(SceneContext &ctx) {
+  RenderContext::GetInstance().Init(ctx);
   InitInteractiveWater();
 }
 
-void Term() { 
+void Term() {
   TermInteractiveWater();
-  RenderContext::GetInstance().Term(); 
+  RenderContext::GetInstance().Term();
 }
 
 // ============================================================================
@@ -74,6 +74,56 @@ void EndShadowPass() {
   RenderContext::GetInstance().EndShadowPass();
 }
 
+// ============================================================================
+// Mask Pass
+// ============================================================================
+
+bool BeginMaskPass() {
+  return RenderContext::GetInstance().BeginMaskPass();
+}
+
+void EndMaskPass() {
+  RenderContext::GetInstance().EndMaskPass();
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE GetMaskSRVGPU() {
+  return RenderContext::GetInstance().GetMaskSRVGPU();
+}
+
+// ============================================================================
+// Spot Light Shadow
+// ============================================================================
+
+void SetSpotLightShadowIndex(int spotLightHandle, int shadowIndex) {
+  auto &ctx = RenderContext::GetInstance();
+  if (!ctx.IsInitialized()) {
+    return;
+  }
+  if (auto *l = ctx.SpLights().Get(spotLightHandle)) {
+    l->SetShadowIndex(shadowIndex);
+  }
+}
+
+void UpdateSpotShadowParams(const SpotShadowCB &params) {
+  RenderContext::GetInstance().UpdateSpotShadowParams(params);
+}
+
+bool BeginSpotShadowAtlas() {
+  return RenderContext::GetInstance().BeginSpotShadowAtlas();
+}
+
+void BeginSpotShadowTile(int tileIndex) {
+  RenderContext::GetInstance().BeginSpotShadowTile(tileIndex);
+}
+
+void EndSpotShadowTile() {
+  RenderContext::GetInstance().EndSpotShadowTile();
+}
+
+void EndSpotShadowAtlas() {
+  RenderContext::GetInstance().EndSpotShadowAtlas();
+}
+
 void Execute3DCommands() {
   RenderContext::GetInstance().Execute3DCommands();
 }
@@ -93,6 +143,14 @@ void PreDraw3D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RenderContext::GetInstance().PreDraw2D(ctx, cl);
+}
+
+void PreDraw2DBackground(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  RenderContext::GetInstance().PreDraw2DBackground(ctx, cl);
+}
+
+void ExecuteOverlay3D() {
+  RenderContext::GetInstance().ExecuteOverlay3DCommands();
 }
 
 // ============================================================================
@@ -155,7 +213,7 @@ void DrawViewShadingModeImGui(const char *label) {
   }
 
   int current = static_cast<int>(GetViewShadingMode());
-  
+
   const char *tooltips[] = {
     "Solid",
     "Wireframe",
@@ -169,17 +227,17 @@ void DrawViewShadingModeImGui(const char *label) {
     ImGui::Text("%s", label);
     ImGui::SameLine();
   }
-  
+
   // ボタン間の隙間を少しあける
   ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 0));
   // ボタン内の余白を固定(上下左右2px)して、ボタン全体の高さを24pxに固定する
   ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-  
+
   for (int i = 0; i < 6; i++) {
     if (i > 0) ImGui::SameLine();
-    
+
     bool is_selected = (current == i);
-    
+
     ImVec4 bgCol = ImVec4(0, 0, 0, 0);
 
     // 選択中のボタンは色をハイライト
@@ -191,7 +249,7 @@ void DrawViewShadingModeImGui(const char *label) {
       ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
       ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.4f, 0.4f, 0.4f, 0.6f));
     }
-    
+
     char str_id[32];
     snprintf(str_id, sizeof(str_id), "##ShdBtn%d", i);
 
@@ -211,15 +269,15 @@ void DrawViewShadingModeImGui(const char *label) {
             SetViewShadingMode(static_cast<ViewShadingMode>(i));
         }
     }
-    
+
     ImGui::PopStyleColor(2);
-    
+
     // ホバー時に名前を表示
     if (ImGui::IsItemHovered()) {
       ImGui::SetTooltip("%s", tooltips[i]);
     }
   }
-  
+
   ImGui::PopStyleVar(2);
 }
 #endif
@@ -322,6 +380,65 @@ void SetRandomNoiseIntensity(float intensity) {
   }
 }
 
+void SetBloomParams(float threshold, float intensity, float radius, float knee) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetBloomThreshold(threshold);
+    pp->SetBloomIntensity(intensity);
+    pp->SetBloomRadius(radius);
+    pp->SetBloomKnee(knee);
+  }
+}
+
+void SetSsaoParams(float radius, float intensity, float bias, float power) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetSsaoRadius(radius);
+    pp->SetSsaoIntensity(intensity);
+    pp->SetSsaoBias(bias);
+    pp->SetSsaoPower(power);
+  }
+}
+
+void SetColorGradeParams(float exposure, float contrast, float saturation,
+                         float temperature, float tint) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetGradeExposure(exposure);
+    pp->SetGradeContrast(contrast);
+    pp->SetGradeSaturation(saturation);
+    pp->SetGradeTemperature(temperature);
+    pp->SetGradeTint(tint);
+  }
+}
+
+void SetColorGradeFilter(float r, float g, float b) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetGradeColorFilter(r, g, b);
+  }
+}
+
+void SetColorGradeAmount(float amount) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetGradeLerpFactor(amount);
+  }
+}
+
+void SetMaskOutlineColor(float r, float g, float b, float a) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetMaskOutlineColor(r, g, b, a);
+  }
+}
+
+void SetMaskOutlineThickness(float thickness) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetMaskOutlineThickness(thickness);
+  }
+}
+
+void SetMaskOutlineStrength(float strength) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetMaskOutlineStrength(strength);
+  }
+}
+
 void SetRandomNoiseColor(float r, float g, float b) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
     pp->SetRandomNoiseColor(r, g, b);
@@ -349,6 +466,35 @@ void SetScreenDropletsDistortion(float distortion) {
 void SetScreenDropletsScale(float scale) {
   if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
     pp->SetScreenDropletsScale(scale);
+  }
+}
+
+void SetBloodOverlayLevels(float hitFlash, float lowHealth) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetBloodOverlayHitFlash(hitFlash);
+    pp->SetBloodOverlayLowHealth(lowHealth);
+  }
+}
+
+void SetBloodOverlayLook(float r, float g, float b, float coverage,
+                         float splatterScale, float desaturate) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetBloodOverlayColor(r, g, b);
+    pp->SetBloodOverlayCoverage(coverage);
+    pp->SetBloodOverlaySplatterScale(splatterScale);
+    pp->SetBloodOverlayDesaturate(desaturate);
+  }
+}
+
+void SetBloodOverlayPulseSpeed(float speed) {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->SetBloodOverlayPulseSpeed(speed);
+  }
+}
+
+void RerollBloodOverlaySplatter() {
+  if (PostProcess *pp = RenderContext::GetInstance().GetPostProcess()) {
+    pp->RerollBloodOverlaySplatter();
   }
 }
 

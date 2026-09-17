@@ -24,7 +24,7 @@ void PrimitiveMesh::Initialize(ID3D12Device *device, const ModelData &data) {
   // CB: WVP
   cbWvp_.resource = CreateBufferResource(device_.Get(), sizeof(TransformationMatrix), L"PrimitiveMesh::cbWvp_");
   cbWvp_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbWvp_.mapped));
-  
+
   // CB: Material
   cbMat_.resource = CreateBufferResource(device_.Get(), sizeof(Material), L"PrimitiveMesh::cbMat_");
   cbMat_.resource->Map(0, nullptr, reinterpret_cast<void **>(&cbMat_.mapped));
@@ -77,9 +77,13 @@ void PrimitiveMesh::Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4
 
   auto &ctx = GetRenderContext();
   cbWvp_.mapped->World = world;
-  Matrix4x4 vp = Multiply(ctx.View(), ctx.Proj());
-  cbWvp_.mapped->WVP = Multiply(world, vp);
-  cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
+  if (!ctx.IsShadowPass()) {
+    // シャドウパスの VS は World しか読まないので、WVP / 逆転置行列（4x4 逆行列）は
+    // 通常パスのときだけ計算する（影タイル数ぶん毎フレーム繰り返されるため）
+    Matrix4x4 vp = Multiply(ctx.View(), ctx.Proj());
+    cbWvp_.mapped->WVP = Multiply(world, vp);
+    cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
+  }
 
   // IA
   cmdList->IASetVertexBuffers(0, 1, &vb_.view);

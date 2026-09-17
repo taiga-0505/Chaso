@@ -22,6 +22,8 @@ struct DirectionalLight
     float4 color;
     float3 direction;
     float  intensity;
+    float3 ambientColor;    // 環境光の色
+    float ambientIntensity; // 環境光の強さ（0 で環境光なし）
 };
 
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
@@ -168,7 +170,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float returnWaveFreq = 4.0f;
     float returnWaveSpeed = 3.5f;
     float returnWavePhase = depthDiff * returnWaveFreq + gTime * returnWaveSpeed;
-    
+
     // 岸辺に近いほど波を強くする
     float foamDepthThreshold = max(gFoamParams.x, 0.001f);
     float foamFade = saturate(depthDiff / foamDepthThreshold);
@@ -176,7 +178,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // 跳ね返り波による法線の傾き（cos波でうねりを表現）
     float returnSlope = cos(returnWavePhase) * 0.5f * foamBaseIntensity;
-    
+
     // 跳ね返り方向（沖方向）に法線を傾ける
     float3 bounceNormal = depthGradient * returnSlope;
 
@@ -188,7 +190,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float hD = gInteractiveWave.Sample(gSamplerClamp, waveUV + float2(0, -texelSize));
     float hU = gInteractiveWave.Sample(gSamplerClamp, waveUV + float2(0, texelSize));
     float3 interactiveNormal = normalize(float3(hL - hR, 2.0f * (100.0f * texelSize), hD - hU));
-    
+
     // ジオメトリ法線 + 波紋法線 + 跳ね返り法線
     geoNormal = normalize(geoNormal + (interactiveNormal - float3(0, 1, 0)) + bounceNormal);
 
@@ -244,7 +246,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     // =========================
     // 波打ち際（フォーム）の計算
     // =========================
- 
+
 
     // =========================
     // 跳ね返り波（逆向きに広がる波紋）の計算

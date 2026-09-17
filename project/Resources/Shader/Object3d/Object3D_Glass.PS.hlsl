@@ -16,6 +16,9 @@ struct DirectionalLight
     float4 color;
     float3 direction;
     float intensity;
+
+    float3 ambientColor;    // 環境光の色
+    float ambientIntensity; // 環境光の強さ（0 で環境光なし）
 };
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 
@@ -32,9 +35,10 @@ struct PointLight
     float intensity;
     float radius;
     float decay;
-    float2 padding;
+    int shadowIndex;   // 影アトラスのタイル番号（-1 で影なし）
+    float padding;
 };
-static const uint MAX_POINT_LIGHTS = 4;
+static const uint MAX_POINT_LIGHTS = 256;
 cbuffer PointLightsCB : register(b3)
 {
     uint pointCount;
@@ -51,9 +55,10 @@ struct SpotLight
     float distance;
     float decay;
     float cosAngle;
-    float2 padding;
+    int shadowIndex;   // スポット影アトラスのタイル番号（-1 で影なし）
+    float padding;
 };
-static const uint MAX_SPOT_LIGHTS = 4;
+static const uint MAX_SPOT_LIGHTS = 256;
 cbuffer SpotLightsCB : register(b4)
 {
     uint spotCount;
@@ -73,9 +78,9 @@ struct AreaLight
     float range;
     float decay;
     uint twoSided;
-    uint pad;
+    int shadowIndex;  // 影アトラスのタイル番号（-1 で影なし）
 };
-static const uint MAX_AREA_LIGHTS = 4;
+static const uint MAX_AREA_LIGHTS = 256;
 cbuffer AreaLightsCB : register(b5)
 {
     uint areaCount;
@@ -187,8 +192,8 @@ PixelShaderOutput main(VertexShaderOutput input)
         }
     }
 
-    // ---- Point (MAX 4)
-    [unroll]
+    // ---- Point (MAX 32)
+    [loop]
     for (uint i = 0; i < MAX_POINT_LIGHTS; ++i)
     {
         if (i >= pointCount)
@@ -213,6 +218,12 @@ PixelShaderOutput main(VertexShaderOutput input)
 
         float3 lightCol = pl.color.rgb * pl.intensity * atten;
 
+        // 点光源の影（壁の向こう側へ漏れない）
+        if (pl.shadowIndex >= 0)
+        {
+            lightCol *= SampleOmniShadowDown(pl.shadowIndex, input.worldPosition, N, L);
+        }
+
         diffuseSum += base.rgb * lightCol * diffuseTerm;
 
         if (NdotL > 0.0f)
@@ -223,8 +234,8 @@ PixelShaderOutput main(VertexShaderOutput input)
         }
     }
 
-    // ---- Spot (MAX 4)
-    [unroll]
+    // ---- Spot (MAX 32)
+    [loop]
     for (uint i = 0; i < MAX_SPOT_LIGHTS; ++i)
     {
         if (i >= spotCount)
@@ -247,8 +258,16 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 dirN = normalize(sl.direction);
         float cosLD = dot(-L, dirN);
         float spot = saturate((cosLD - sl.cosAngle) / max(1e-5f, (1.0f - sl.cosAngle)));
+        if (spot <= 0.0f)
+            continue;
 
         float3 lightCol = sl.color.rgb * sl.intensity * atten * spot;
+
+        // スポット影（壁の向こう側へ漏れない）
+        if (sl.shadowIndex >= 0)
+        {
+            lightCol *= SampleSpotShadow(sl.shadowIndex, input.worldPosition, N, L);
+        }
 
         float NdotL = dot(N, L);
         float diffuseTerm = CalcDiffuseTerm(NdotL, gMaterial.lightingMode);
@@ -281,6 +300,40 @@ PixelShaderOutput main(VertexShaderOutput input)
         R /= rLen;
         U /= uLen;
 
+        // Tube (線) ライト: halfHeight <= 0 なら right 方向の線分から全方位に光る線光源（Object3d.PS と同じ近似）
+        if (al.halfHeight <= 0.0f)
+        {
+            float3 segA = al.position - R * al.halfWidth;
+            float3 segAB = R * (2.0f * al.halfWidth);
+            float segLen2 = max(dot(segAB, segAB), 1e-6f);
+            float tSeg = saturate(dot(input.worldPosition - segA, segAB) / segLen2);
+            float3 toT = (segA + segAB * tSeg) - input.worldPosition;
+            float distT = length(toT);
+            if (distT <= 1e-5f || distT >= al.range)
+                continue;
+
+            float3 Lt = toT / distT;
+            float attenT = pow(saturate(1.0f - distT / al.range), max(al.decay, 0.0001f));
+            float NdotLt = dot(N, Lt);
+            float diffuseTermT = CalcDiffuseTerm(NdotLt, gMaterial.lightingMode);
+            float3 lightColT = al.color.rgb * al.intensity * attenT;
+
+            // 線光源の影（壁の向こう側へ漏れない）
+            if (al.shadowIndex >= 0)
+            {
+                lightColT *= SampleOmniShadowDown(al.shadowIndex, input.worldPosition, N, Lt);
+            }
+
+            diffuseSum += base.rgb * lightColT * diffuseTermT;
+            if (NdotLt > 0.0f)
+            {
+                float3 Ht = normalize(Lt + V);
+                float specPowT = pow(saturate(dot(N, Ht)), shininess);
+                specularSum += lightColT * specPowT;
+            }
+            continue;
+        }
+
         float3 Ln = cross(R, U);
         float nLen = length(Ln);
         if (nLen < 1e-5f)
@@ -300,6 +353,14 @@ PixelShaderOutput main(VertexShaderOutput input)
         };
 
         float3 lightBase = al.color.rgb * al.intensity;
+
+        // 面光源の影（4 隅サンプル共通。中心方向で 1 回だけ判定する）
+        if (al.shadowIndex >= 0)
+        {
+            float3 toCenter = al.position - input.worldPosition;
+            float distCenter = max(length(toCenter), 1e-5f);
+            lightBase *= SampleOmniShadowDown(al.shadowIndex, input.worldPosition, N, toCenter / distCenter);
+        }
 
         [unroll]
         for (int si = 0; si < 4; ++si)

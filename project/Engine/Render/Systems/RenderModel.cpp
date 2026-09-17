@@ -28,8 +28,10 @@ static D3D12_GPU_VIRTUAL_ADDRESS ApplyDirLight_(RenderContext &ctx,
   if (lightAddr != 0) {
     if (const auto *active = ctx.DirLights().GetActive()) {
       if (Material *mat = m->Mat()) {
-        mat->lightingMode = active->GetLightingMode();
-        mat->shininess = active->GetShininess();
+        // 個別オーバーライドが設定されているモデルはライトのモードで上書きしない
+        const int ovr = m->GetLightingModeOverride();
+        mat->lightingMode = (ovr >= 0) ? ovr : active->GetLightingMode();
+        mat->shininess = m->GetShininess();
       }
     }
   }
@@ -45,7 +47,9 @@ static void ApplyDirLightGlass_(RenderContext &ctx, ModelObject *m) {
   if (lightAddr != 0) {
     if (const auto *active = ctx.DirLights().GetActive()) {
       if (Material *mat = m->Mat()) {
-        mat->lightingMode = active->GetLightingMode();
+        // 個別オーバーライドが設定されているモデルはライトのモードで上書きしない
+        const int ovr = m->GetLightingModeOverride();
+        mat->lightingMode = (ovr >= 0) ? ovr : active->GetLightingMode();
       }
     }
   }
@@ -112,7 +116,7 @@ static void DrawDebugSingle_(RenderContext &ctx, ModelObject *m,
   ctx.SetBlendMode(kBlendModeNone);
 
   if (BindStandard3D_(ctx, ResolveSinglePrefix_(mode, skinned))) {
-    m->Draw(cl, world, ctx.CurrentFrame());
+    m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
   }
 
   ctx.SetBlendMode(prevBlend);
@@ -127,7 +131,7 @@ static void DrawDebugInst_(RenderContext &ctx, ModelObject *m,
   ctx.SetBlendMode(kBlendModeNone);
 
   if (BindStandard3D_(ctx, ResolveInstPrefix_(mode))) {
-    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
   }
 
   ctx.SetBlendMode(prevBlend);
@@ -143,7 +147,7 @@ static void DrawDebugInstColored_(RenderContext &ctx, ModelObject *m,
   ctx.SetBlendMode(kBlendModeNone);
 
   if (BindStandard3D_(ctx, ResolveInstPrefix_(mode))) {
-    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+    m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
   }
 
   ctx.SetBlendMode(prevBlend);
@@ -165,6 +169,15 @@ int LoadModel(const std::string &path) {
 
 void UnloadModel(int modelHandle) {
   GetRenderContext().Models().Unload(modelHandle);
+}
+
+bool IsModelReady(int modelHandle) {
+  auto &ctx = GetRenderContext();
+  if (!ctx.IsInitialized()) {
+    return false;
+  }
+  auto *m = ctx.Models().Get(modelHandle);
+  return (m && m->IsReady());
 }
 
 // ============================================================================
@@ -189,16 +202,22 @@ void DrawModel(int modelHandle, int texHandle) {
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
   Matrix4x4 world = ResolveModelWorld_(m);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
+  const auto *mat = m->Mat();
+  const bool isTranslucent = (mat && mat->color.w < 1.0f);
+  if (isTranslucent && blend == kBlendModeNone) {
+    blend = kBlendModeNormal;
+  }
 
-  // ソートキー構築（Opaqueレイヤー + object3d PSO）
-  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+  // ソートキー構築（透明度に応じて Opaque / Translucent を切り替え）
+  const auto layer = isTranslucent ? SortKey::kLayerTranslucent : SortKey::kLayerOpaque;
+  const uint64_t key = SortKey::Make(layer,
                                      SortKey::HashPSO("object3d"), 0);
 
   ctx.PushCommand3D(key, [m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
@@ -226,18 +245,18 @@ void DrawModel(int modelHandle, int texHandle) {
     } else {
       if (shadingMode != ViewShadingMode::Wireframe) {
         if (BindStandard3D_(ctx, pipelinePrefix)) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+          m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
       if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
         const std::string_view wirePipeline = (skinned && !useCSSkinning) ? "object3d_wire_skin" : "object3d_wire";
         if (BindStandard3D_(ctx, wirePipeline)) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+          m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
     }
     ctx.SetBlendMode(prevBlend);
-  }, "Model(Opaque)", modelHandle);
+  }, isTranslucent ? "Model(Translucent)" : "Model(Opaque)", modelHandle);
 }
 
 void DrawModel(int modelHandle) { DrawModel(modelHandle, -1); }
@@ -248,15 +267,21 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
   Matrix4x4 world = ResolveModelWorld_(m);
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
+  const auto *mat = m->Mat();
+  const bool isTranslucent = (mat && mat->color.w < 1.0f);
+  if (isTranslucent && blend == kBlendModeNone) {
+    blend = kBlendModeNormal;
+  }
 
-  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+  const auto layer = isTranslucent ? SortKey::kLayerTranslucent : SortKey::kLayerOpaque;
+  const uint64_t key = SortKey::Make(layer,
                                      SortKey::HashPSO("object3d_nocull"), 0);
 
   ctx.PushCommand3D(key, [m, world, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
@@ -281,18 +306,18 @@ void DrawModelNoCull(int modelHandle, int texHandle) {
       const std::string_view pipeline = (skinned && !useCSSkinning) ? "object3d_skin_nocull" : "object3d_nocull";
       if (shadingMode != ViewShadingMode::Wireframe) {
         if (BindStandard3D_(ctx, pipeline)) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+          m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
       if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
         const std::string_view wirePipeline = (skinned && !useCSSkinning) ? "object3d_wire_skin" : "object3d_wire";
         if (BindStandard3D_(ctx, wirePipeline)) {
-          m->Draw(cl, world, ctx.CurrentFrame());
+          m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
     }
     ctx.SetBlendMode(prevBlend);
-  }, "Model(NoCull)", modelHandle);
+  }, isTranslucent ? "Model(NoCull_Translucent)" : "Model(NoCull)", modelHandle);
 }
 
 // ============================================================================
@@ -306,14 +331,20 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
+  const auto *mat = m->Mat();
+  const bool isTranslucent = (mat && mat->color.w < 1.0f);
+  if (isTranslucent && blend == kBlendModeNone) {
+    blend = kBlendModeNormal;
+  }
 
-  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+  const auto layer = isTranslucent ? SortKey::kLayerTranslucent : SortKey::kLayerOpaque;
+  const uint64_t key = SortKey::Make(layer,
                                      SortKey::HashPSO("object3d_inst"), 0);
 
   ctx.PushCommand3D(key, [m, instances, texHandle, lightAddr, blend](ID3D12GraphicsCommandList *cl) {
@@ -334,17 +365,17 @@ void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
     } else {
       if (shadingMode != ViewShadingMode::Wireframe) {
         if (BindStandard3D_(ctx, "object3d_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
       if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
         if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
     }
     ctx.SetBlendMode(prevBlend);
-  }, "Model(Batch)", modelHandle);
+  }, isTranslucent ? "Model(Batch_Translucent)" : "Model(Batch)", modelHandle);
 }
 
 void DrawModelBatchColored(int modelHandle,
@@ -355,14 +386,19 @@ void DrawModelBatchColored(int modelHandle,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
   D3D12_GPU_VIRTUAL_ADDRESS lightAddr = ctx.DirLights().GetActiveCBAddress();
   BlendMode blend = ctx.CurrentBlendMode();
+  const bool isTranslucent = (color.w < 1.0f);
+  if (isTranslucent && blend == kBlendModeNone) {
+    blend = kBlendModeNormal;
+  }
 
-  const uint64_t key = SortKey::Make(SortKey::kLayerOpaque,
+  const auto layer = isTranslucent ? SortKey::kLayerTranslucent : SortKey::kLayerOpaque;
+  const uint64_t key = SortKey::Make(layer,
                                      SortKey::HashPSO("object3d_inst"), 0);
 
   ctx.PushCommand3D(key, [m, instances, color, texHandle,
@@ -384,17 +420,17 @@ void DrawModelBatchColored(int modelHandle,
     } else {
       if (shadingMode != ViewShadingMode::Wireframe) {
         if (BindStandard3D_(ctx, "object3d_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
       if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
         if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
     }
     ctx.SetBlendMode(prevBlend);
-  }, "Model(BatchColored)", modelHandle);
+  }, isTranslucent ? "Model(BatchColored_Translucent)" : "Model(BatchColored)", modelHandle);
 }
 
 // ============================================================================
@@ -407,7 +443,7 @@ void DrawModelGlass(int modelHandle, int texHandle) {
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -438,13 +474,13 @@ void DrawModelGlass(int modelHandle, int texHandle) {
         } else {
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass")) {
-              m->Draw(cl, world, ctx.CurrentFrame());
+              m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
             const std::string_view wirePipeline = skinned ? "object3d_wire_skin" : "object3d_wire";
             if (BindStandard3D_(ctx, wirePipeline)) {
-              m->Draw(cl, world, ctx.CurrentFrame());
+              m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
         }
@@ -460,7 +496,7 @@ void DrawModelGlassBatch(int modelHandle,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -488,12 +524,12 @@ void DrawModelGlassBatch(int modelHandle,
         } else {
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
             if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
         }
@@ -509,7 +545,7 @@ void DrawModelGlassBatchColored(int modelHandle,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -538,12 +574,12 @@ void DrawModelGlassBatchColored(int modelHandle,
         } else {
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
             if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
         }
@@ -564,7 +600,7 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -597,19 +633,19 @@ void DrawModelGlassTwoPass(int modelHandle, int texHandle) {
           // 1) 背面（内側） - Solidのみ
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass_front")) {
-              m->Draw(cl, world, ctx.CurrentFrame());
+              m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           // 2) 表面（外側） - SolidWireframeならワイヤーフレームも重ねる
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass")) {
-              m->Draw(cl, world, ctx.CurrentFrame());
+              m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
             const std::string_view wirePipeline = skinned ? "object3d_wire_skin" : "object3d_wire";
             if (BindStandard3D_(ctx, wirePipeline)) {
-              m->Draw(cl, world, ctx.CurrentFrame());
+              m->Draw(cl, world, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
         }
@@ -626,7 +662,7 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -654,15 +690,15 @@ void DrawModelGlassTwoPassBatch(int modelHandle,
         } else {
           if (shadingMode != ViewShadingMode::Wireframe) {
             if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
             if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
           if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
             if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame());
+              m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, ctx.CurrentFrame(), ctx.IsShadowPass());
             }
           }
         }
@@ -679,7 +715,7 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
     return;
   }
   auto *m = ctx.Models().Get(modelHandle);
-  if (!m) {
+  if (!m || !m->IsReady()) {
     return;
   }
 
@@ -707,15 +743,15 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
     } else {
       if (shadingMode != ViewShadingMode::Wireframe) {
         if (BindStandard3D_(ctx, "object3d_glass_front_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
         if (BindStandard3D_(ctx, "object3d_glass_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
       if (shadingMode == ViewShadingMode::Wireframe || shadingMode == ViewShadingMode::SolidWireframe) {
         if (BindStandard3D_(ctx, "object3d_wire_inst")) {
-          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame());
+          m->DrawBatch(cl, ctx.View(), ctx.Proj(), instances, color, ctx.CurrentFrame(), ctx.IsShadowPass());
         }
       }
     }
@@ -748,8 +784,16 @@ void SetModelColor(int modelHandle, const Vector4 &color) {
   GetRenderContext().Models().SetColor(modelHandle, color);
 }
 
+void SetModelShininess(int modelHandle, float shininess) {
+  GetRenderContext().Models().SetShininess(modelHandle, shininess);
+}
+
 void SetModelLightingMode(int modelHandle, LightingMode m) {
   GetRenderContext().Models().SetLightingMode(modelHandle, m);
+}
+
+void ClearModelLightingModeOverride(int modelHandle) {
+  GetRenderContext().Models().ClearLightingModeOverride(modelHandle);
 }
 
 void SetModelMesh(int modelHandle, const std::string &path) {
@@ -826,9 +870,18 @@ float GetModelAnimationDuration(int modelHandle) {
 
 void DrawModelSkeleton(int modelHandle) {
   auto &ctx = GetRenderContext();
+  if (!ctx.IsInitialized()) return;
   auto *m = ctx.Models().Get(modelHandle);
   if (!m) return;
+
+  // 骨格はメッシュの内側にあるので、必ずオーバーレイレイヤー
+  // （sortKey = kLayerOverlay / 深度テストなし）で積む必要がある。
+  // 素の 3D プリミティブは sortKey == 0 になり、安定ソートでモデルより
+  // 前に実行されてしまうため、そのままではモデルに塗り潰されて何も見えない。
+  const bool prevOverlay = ctx.IsOverlayMode();
+  ctx.SetOverlayMode(true);
   m->DrawSkeleton();
+  ctx.SetOverlayMode(prevOverlay);
 }
 
 bool HasModelSkinData(int modelHandle) {

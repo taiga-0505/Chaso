@@ -5,6 +5,7 @@
 #include "imgui/imgui.h"
 #include <algorithm>
 #include <cassert>
+#include <cfloat>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -41,7 +42,8 @@ void ModelObject::Update(const Matrix4x4 &view, const Matrix4x4 &proj) {
 }
 
 void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
-                       const Matrix4x4 &world, FrameResource &frame) {
+                       const Matrix4x4 &world, FrameResource &frame,
+                       bool worldOnly) {
   if (!visible_)
     return;
 
@@ -54,30 +56,30 @@ void ModelObject::Draw(ID3D12GraphicsCommandList *cmdList,
     // CS スキニングが有効かつ Dispatch 済みの場合
     if (resource_.HasCSSkinning() && resource_.IsSkinningDispatched()) {
       // CS スキニング済み頂点で通常描画（object3d パイプラインで描画）
-      resource_.DrawSkinnedCS(cmdList, world, view, proj, frame);
+      resource_.DrawSkinnedCS(cmdList, world, view, proj, frame, worldOnly);
     } else if (!resource_.HasCSSkinning()) {
       // フォールバック: 従来の VS スキニング
       resource_.DrawSkinned(cmdList, world, view, proj, skinMatrices_, frame);
     }
     // CS 有効だが未 Dispatch → スキップ（次フレームで描画）
   } else {
-    resource_.Draw(cmdList, world, view, proj, frame);
+    resource_.Draw(cmdList, world, view, proj, frame, worldOnly);
   }
 }
 
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances,
-                            FrameResource &frame) {
-  resource_.DrawBatch(cmdList, view, proj, instances, frame);
+                            FrameResource &frame, bool worldOnly) {
+  resource_.DrawBatch(cmdList, view, proj, instances, frame, worldOnly);
 }
 
 void ModelObject::DrawBatch(ID3D12GraphicsCommandList *cmdList,
                             const Matrix4x4 &view, const Matrix4x4 &proj,
                             const std::vector<Transform> &instances,
                             const RC::Vector4 &color,
-                            FrameResource &frame) {
-  resource_.DrawBatch(cmdList, view, proj, instances, color, frame);
+                            FrameResource &frame, bool worldOnly) {
+  resource_.DrawBatch(cmdList, view, proj, instances, color, frame, worldOnly);
 }
 
 ModelObject &ModelObject::SetLightingConfig(LightingMode mode,
@@ -912,43 +914,56 @@ void DrawSphereRings3D(const Vector3& center, float radius,
 void ModelObject::DrawSkeleton() {
     if (!hasSkeleton_ || skeleton_.joints.empty()) return;
 
-    // モデルのワールド行列を構築
-    const RC::Matrix4x4 world = MakeAffineMatrix(
-        transform_.scale, transform_.rotation, transform_.translation);
+    // モデルの描画に使われているワールド行列を求める。
+    // SetWorldOverride 中（ボーン追従など）に Transform の TRS から作ると、
+    // モデル本体と骨格の位置がずれてしまう。
+    const RC::Matrix4x4 world = hasWorldOverride_
+        ? worldOverride_
+        : MakeAffineMatrix(transform_.scale, transform_.rotation,
+                           transform_.translation);
+
+    // 各Jointのワールド座標を先に求めておく（親の行列を二重計算しない）
+    const size_t jointCount = skeleton_.joints.size();
+    std::vector<RC::Vector3> jointPositions(jointCount);
+    RC::Vector3 mn{FLT_MAX, FLT_MAX, FLT_MAX};
+    RC::Vector3 mx{-FLT_MAX, -FLT_MAX, -FLT_MAX};
+
+    for (size_t i = 0; i < jointCount; ++i) {
+        // jointWorldMatrix = skeletonSpaceMatrix * worldMatrix
+        const RC::Matrix4x4 jointWorld =
+            Multiply(skeleton_.joints[i].skeletonSpaceMatrix, world);
+
+        // 行列の平行移動成分からワールド座標を取得
+        const RC::Vector3 pos = {jointWorld.m[3][0], jointWorld.m[3][1],
+                                 jointWorld.m[3][2]};
+        jointPositions[i] = pos;
+
+        // windows.h が min / max を関数マクロとして定義しているため、
+        // 括弧で囲んでマクロ展開を止める（このリポジトリでは NOMINMAX を定義していない）。
+        mn.x = (std::min)(mn.x, pos.x); mx.x = (std::max)(mx.x, pos.x);
+        mn.y = (std::min)(mn.y, pos.y); mx.y = (std::max)(mx.y, pos.y);
+        mn.z = (std::min)(mn.z, pos.z); mx.z = (std::max)(mx.z, pos.z);
+    }
 
     // 色定義
     const RC::Vector4 jointColor = {1.0f, 1.0f, 0.0f, 1.0f}; // 黄色（Joint球）
     const RC::Vector4 boneColor  = {1.0f, 1.0f, 1.0f, 1.0f}; // 白（Bone線）
-    const float jointRadius = 0.02f;
 
-    for (const Joint& joint : skeleton_.joints) {
-        // jointWorldMatrix = skeletonSpaceMatrix * worldMatrix
-        const RC::Matrix4x4 jointWorld = Multiply(
-            joint.skeletonSpaceMatrix, world);
+    // Joint球の半径は骨格の大きさから決める。
+    // 固定値だとモデルのスケール（cm単位のモデル等）によって
+    // 点にしか見えない／巨大すぎるという状態になるため。
+    const float extent = (std::max)({mx.x - mn.x, mx.y - mn.y, mx.z - mn.z});
+    const float jointRadius = (extent > 1e-4f) ? extent * 0.015f : 0.02f;
 
-        // 行列の平行移動成分からワールド座標を取得
-        const RC::Vector3 jointPos = {
-            jointWorld.m[3][0],
-            jointWorld.m[3][1],
-            jointWorld.m[3][2]
-        };
+    for (size_t i = 0; i < jointCount; ++i) {
+        const RC::Vector3& jointPos = jointPositions[i];
 
         // Joint位置に球を描画
         RC::DrawSphereRings3D(jointPos, jointRadius, jointColor, 8, false);
 
         // 親がいれば親Jointとの間にBone線を描画
-        if (joint.parent) {
-            const Joint& parentJoint = skeleton_.joints[*joint.parent];
-            const RC::Matrix4x4 parentWorld = Multiply(
-                parentJoint.skeletonSpaceMatrix, world);
-
-            const RC::Vector3 parentPos = {
-                parentWorld.m[3][0],
-                parentWorld.m[3][1],
-                parentWorld.m[3][2]
-            };
-
-            RC::DrawLine3D(parentPos, jointPos, boneColor, false);
+        if (const auto& parent = skeleton_.joints[i].parent) {
+            RC::DrawLine3D(jointPositions[*parent], jointPos, boneColor, false);
         }
     }
 }

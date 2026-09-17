@@ -33,9 +33,19 @@ public:
   void Draw(ID3D12GraphicsCommandList *cmdList);
 
   /// @brief ワールド行列を外部から指定して描画する（コマンドキュー用）
+  /// @details ビュー・プロジェクションは RenderContext の現在値を使う
   /// @param cmdList コマンドリスト
   /// @param world 使用するワールド行列
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world);
+
+  /// @brief ワールド行列とビュープロジェクション行列を外部から指定して描画する
+  /// @details 天球をカメラ中心に固定したい場合など、平行移動を除いたビュー行列を
+  /// 使いたいときに用いる（RC::DrawSkydome が使用）
+  /// @param cmdList コマンドリスト
+  /// @param world 使用するワールド行列
+  /// @param viewProj 使用するビュー×プロジェクション行列
+  void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
+            const RC::Matrix4x4 &viewProj);
 
   /// @brief ImGui を使用したデバッグ用 UI を表示する
   /// @param name 表示ラベル

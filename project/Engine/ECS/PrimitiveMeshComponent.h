@@ -31,7 +31,7 @@ public:
 
   // --- Material properties (mirrored to GPU Material on initialize) ---
   // 既定値は PrimitiveMesh::Initialize() の GPU 側 Material 初期値と一致させる
-  int lightingMode = 2;          ///< Lighting mode (0:None, 1:Lambert, 2:Half Lambert)
+  int lightingMode = -1;         ///< -1: follow DirectionalLight / 0:None 1:Lambert 2:Half Lambert
   float shininess = 32.0f;       ///< Specular shininess
   RC::Vector2 uvTiling = {1.0f, 1.0f};  ///< UV tiling (uvTransform scale)
   RC::Vector2 uvOffset = {0.0f, 0.0f};  ///< UV offset (uvTransform translation)

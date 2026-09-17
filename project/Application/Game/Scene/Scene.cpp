@@ -8,9 +8,11 @@
 #include "ECS/NativeScriptComponent.h"
 #include "ECS/ScriptableEntity.h"
 #include "Common/Math/MathUtils.h"
+#include "Common/Log/Log.h"
 #include "RenderCommon.h"
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 void Scene::DrawLightGizmos(uint32_t selectedEntityId) {
 #if RC_ENABLE_IMGUI
@@ -100,6 +102,9 @@ void Scene::DrawLightGizmos(uint32_t selectedEntityId) {
       RC::Vector3 d = Normalize(spLight->direction);
       float dist = spLight->distance;
 
+      // ライト本体と同じくオフセットを適用した位置を起点にする
+      RC::Vector3 spotPos = spLight->ResolvePosition(tr->position, tr->rotation);
+
       // コーンの底面半径 = distance * tan(acos(cosAngle))
       float cosA = spLight->cosAngle;
       if (cosA < 0.001f) cosA = 0.001f;
@@ -109,13 +114,13 @@ void Scene::DrawLightGizmos(uint32_t selectedEntityId) {
 
       // コーン先端
       RC::Vector3 tip = {
-        pos.x + d.x * dist,
-        pos.y + d.y * dist,
-        pos.z + d.z * dist
+        spotPos.x + d.x * dist,
+        spotPos.y + d.y * dist,
+        spotPos.z + d.z * dist
       };
 
       // 中心線
-      RC::DrawLine3D(pos, tip, spLight->color, true);
+      RC::DrawLine3D(spotPos, tip, spLight->color, true);
 
       // 直交ベクトル
       RC::Vector3 up = {0.0f, 1.0f, 0.0f};
@@ -158,7 +163,7 @@ void Scene::DrawLightGizmos(uint32_t selectedEntityId) {
         }
         // 4本の側面線（0°, 90°, 180°, 270°）
         if (i % (kSeg / 4) == 0 && i < kSeg) {
-          RC::DrawLine3D(pos, pt, spLight->color, true);
+          RC::DrawLine3D(spotPos, pt, spLight->color, true);
         }
         prevPt = pt;
       }
@@ -318,6 +323,9 @@ bool VolumesOverlap(const ColliderVolume& a, const ColliderVolume& b) {
     return RC::CheckCollisionSphereAabb(s.center, s.radius, minB, maxB).hit;
 }
 
+// 衝突判定の粗い除外（Broad-phase）に用いる安全距離マージン定数
+inline constexpr float kBroadPhaseDistanceMargin = 3.0f; // 余裕を持たせた近接判定マージン（m）
+
 } // namespace
 
 bool Scene::TestBlockingOverlap(Entity* self, const RC::Vector3& testPos, float skin,
@@ -331,6 +339,13 @@ bool Scene::TestBlockingOverlap(Entity* self, const RC::Vector3& testPos, float 
     ColliderVolume selfVol;
     if (!BuildColliderVolume(self, testPos, skin, selfVol)) return false;
 
+    // 自身のバウンディングサイズから、大まかな影響範囲（半径の2乗）を算出
+    const float selfMaxExtent = selfVol.isSphere
+        ? selfVol.radius
+        : (std::max)({ selfVol.half.x, selfVol.half.y, selfVol.half.z });
+    const float cutoffDistance = selfMaxExtent + kBroadPhaseDistanceMargin;
+    const float cutoffDistanceSq = cutoffDistance * cutoffDistance;
+
     for (auto& other : entities_) {
         if (!other || other.get() == self) continue;
         if (!other->IsActive() || other->IsPendingDestroy()) continue;
@@ -342,6 +357,11 @@ bool Scene::TestBlockingOverlap(Entity* self, const RC::Vector3& testPos, float 
 
         auto* otherTr = other->GetComponent<TransformComponent>();
         if (!otherTr) continue;
+
+        // 粗い距離判定（Broad-phase）：XZ平面で一定以上離れていれば形状計算をスキップ
+        const float dx = otherTr->position.x - selfVol.center.x;
+        const float dz = otherTr->position.z - selfVol.center.z;
+        if (dx * dx + dz * dz > cutoffDistanceSq) continue;
 
         ColliderVolume otherVol;
         if (!BuildColliderVolume(other.get(), otherTr->position, 0.0f, otherVol)) continue;
@@ -385,8 +405,8 @@ RC::Vector3 Scene::MoveWithCollision(Entity* self, const RC::Vector3& delta, flo
 
     for (int i = 0; i < steps; ++i) {
         // このステップ開始時点で既にめり込んでいるか
-        // （めり込んでいる場合は移動を止めると永久に抜け出せなくなるので許可する）
-        const bool stuckAtStart = TestBlockingOverlap(self, tr->position, skin);
+        Entity* stuckHit = nullptr;
+        const bool stuckAtStart = TestBlockingOverlap(self, tr->position, skin, &stuckHit);
 
         // 軸ごとに個別に試す。ブロックされた軸だけ取り消すので
         // 斜め移動で壁に当たっても残りの成分で壁に沿ってスライドする。
@@ -399,8 +419,37 @@ RC::Vector3 Scene::MoveWithCollision(Entity* self, const RC::Vector3& delta, flo
             else if (axis == 1) candidate.y += stepAxis[axis];
             else candidate.z += stepAxis[axis];
 
-            if (!stuckAtStart && TestBlockingOverlap(self, candidate, skin)) {
-                continue; // この軸はブロック — 移動を取り消す
+            Entity* candHit = nullptr;
+            const bool candOverlap = TestBlockingOverlap(self, candidate, skin, &candHit);
+
+            if (candOverlap) {
+                // 通常時：障害物と重なる移動はブロック
+                if (!stuckAtStart) {
+                    continue;
+                }
+
+                // スタック脱出中：別の障害物に当たる場合はブロック
+                if (candHit != stuckHit) {
+                    continue;
+                }
+
+                // スタック中の同一障害物に対して、中心から離れる（脱出する）方向の移動のみ許可
+                if (auto* obsTr = stuckHit ? stuckHit->GetComponent<TransformComponent>() : nullptr) {
+                    const float curDx = tr->position.x - obsTr->position.x;
+                    const float curDz = tr->position.z - obsTr->position.z;
+                    const float curDistSq = curDx * curDx + curDz * curDz;
+
+                    const float candDx = candidate.x - obsTr->position.x;
+                    const float candDz = candidate.z - obsTr->position.z;
+                    const float candDistSq = candDx * candDx + candDz * candDz;
+
+                    // 障害物中心に近づく（さらに深くめり込む）場合はブロック
+                    if (candDistSq <= curDistSq) {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
             }
             tr->position = candidate;
         }
@@ -428,23 +477,104 @@ RC::Vector3 ScriptableEntity::MoveAndSlide(const RC::Vector3& delta, float maxSt
     return scene->MoveWithCollision(e, delta, maxStep);
 }
 
+// ScriptableEntity::RequestSceneChange の実体。
+// 宣言は Engine/ECS/ScriptableEntity.h（SceneContext は前方宣言のみ）にあるため、
+// SceneContext の完全型が見えるこの翻訳単位で定義する。
+//
+// 経路は ScriptableEntity -> SceneContext::requestSceneChange -> SceneManager::RequestChange
+// の一方向。エンジン層（ECS）がアプリ層（SceneManager）を型として知らずに済む。
+bool ScriptableEntity::RequestSceneChange(const std::string& name) {
+    SceneContext* ctx = GetSceneContext();
+    if (!ctx) {
+        Log::Print("[Script] RequestSceneChange: SceneContext が未設定です (" + name + ")");
+        return false;
+    }
+
+    // 編集モード（Stopped）や一時停止中は遷移させない。
+    // DataDrivenScene::Update は停止中も dt=0 で UpdateEntities を回すため、
+    // 入力トリガで遷移を書くとエディタで編集中に飛んで未保存の変更が消える。
+    if (!ctx->isPlaying()) {
+        return false;
+    }
+
+    if (!ctx->requestSceneChange) {
+        Log::Print("[Script] RequestSceneChange: 受け口が未結線です (" + name + ")");
+        return false;
+    }
+
+    return ctx->requestSceneChange(name);
+}
+
 void Scene::ResolveCollisions() {
+    // コンポーネントのポインタをエンティティごとに 1 回だけ引いておく。
+    // 以前は N^2 のペアループの内側で GetComponent（type_index のハッシュ検索）を
+    // 1 ペアにつき最大 6 回呼んでいた（N≈800 で毎フレーム約 200 万回）。
+    // 有効／無効・位置などの「状態」は以前どおりペアごとに読む（OnCollision の中で
+    // コライダーが無効化される等、同フレーム内の変化を取りこぼさないため）。
+    // entities_ は更新中 pendingEntities_ 経由で追加されるため、このループ中はサイズが変わらない。
+    struct ColliderCache {
+        TransformComponent* tr = nullptr;
+        ColliderComponent* col = nullptr;
+        RigidbodyComponent* rb = nullptr;
+        NativeScriptComponent* nsc = nullptr;
+        bool interesting = false; ///< 押し出し対象（動的）か OnCollision を受けるスクリプトを持つか
+    };
+    static std::vector<ColliderCache> s_cache; // 毎フレーム clear して使い回す
+    s_cache.clear();
+    s_cache.resize(entities_.size());
+    for (size_t i = 0; i < entities_.size(); ++i) {
+        auto& e = entities_[i];
+        if (!e) continue;
+        auto& c = s_cache[i];
+        c.tr = e->GetComponent<TransformComponent>();
+        c.col = e->GetComponent<ColliderComponent>();
+        if (!c.tr || !c.col) continue; // 判定対象外（以前も continue していた組み合わせ）
+        c.rb = e->GetComponent<RigidbodyComponent>();
+        c.nsc = e->GetComponent<NativeScriptComponent>();
+        c.interesting = (c.rb && !c.rb->isKinematic) || (c.nsc != nullptr);
+    }
+
     for (size_t i = 0; i < entities_.size(); ++i) {
         auto& e1 = entities_[i];
         if (!e1 || !e1->IsActive() || e1->IsPendingDestroy()) continue;
-        auto* tr1 = e1->GetComponent<TransformComponent>();
-        auto* col1 = e1->GetComponent<ColliderComponent>();
+        const auto& c1 = s_cache[i];
+        auto* tr1 = c1.tr;
+        auto* col1 = c1.col;
         if (!tr1 || !col1 || !col1->IsEnabled()) continue;
 
+        auto* rb1 = c1.rb;
+        auto* nsc1 = c1.nsc;
+
         for (size_t j = i + 1; j < entities_.size(); ++j) {
+            const auto& c2 = s_cache[j];
+
+            // 物理押し出しを行わず、OnCollisionコールバックを受け取るスクリプトも無く、
+            // コライダーデバッグ表示も無効なペア（壁 vs 壁 など）は何も起きないので最初に弾く。
+            // （isKinematic は実行中に変わり得るので、下で改めて判定する。ここは粗い前振り分け）
+            if (!c1.interesting && !c2.interesting && !showColliderGizmos_) {
+                continue;
+            }
+
             auto& e2 = entities_[j];
             if (!e2 || !e2->IsActive() || e2->IsPendingDestroy()) continue;
-            auto* tr2 = e2->GetComponent<TransformComponent>();
-            auto* col2 = e2->GetComponent<ColliderComponent>();
+            auto* tr2 = c2.tr;
+            auto* col2 = c2.col;
             if (!tr2 || !col2 || !col2->IsEnabled()) continue;
 
-            auto* rb1 = e1->GetComponent<RigidbodyComponent>();
-            auto* rb2 = e2->GetComponent<RigidbodyComponent>();
+            // レイヤーマスクが噛み合わない組み合わせは即スキップ
+            if ((col1->layer & col2->layer) == 0) continue;
+
+            auto* rb2 = c2.rb;
+            const bool isDynamic1 = (rb1 && !rb1->isKinematic);
+            const bool isDynamic2 = (rb2 && !rb2->isKinematic);
+
+            auto* nsc2 = c2.nsc;
+
+            // 物理押し出しを行わず、OnCollisionコールバックを受け取るスクリプトも無く、
+            // コライダーデバッグ表示も無効なペアは幾何判定を行わずに早期スキップ
+            if (!isDynamic1 && !isDynamic2 && !nsc1 && !nsc2 && !showColliderGizmos_) {
+                continue;
+            }
 
             // e1 の情報計算
             RC::Vector3 scaledCenter1 = {
@@ -461,6 +591,20 @@ void Scene::ResolveCollisions() {
                 col2->center.z * tr2->scale.z
             };
             RC::Vector3 center2 = RC::Add(tr2->position, scaledCenter2);
+
+            // 粗い距離判定（Broad-phase）：互いの最大バウンディング半径＋マージンより離れていれば交差判定をスキップ
+            const float approxExtent1 = (col1->shape == ColliderComponent::Shape::Sphere)
+                ? (col1->radius * (std::max)({ std::abs(tr1->scale.x), std::abs(tr1->scale.y), std::abs(tr1->scale.z) }))
+                : (0.5f * (std::max)({ std::abs(col1->size.x * tr1->scale.x), std::abs(col1->size.y * tr1->scale.y), std::abs(col1->size.z * tr1->scale.z) }));
+            const float approxExtent2 = (col2->shape == ColliderComponent::Shape::Sphere)
+                ? (col2->radius * (std::max)({ std::abs(tr2->scale.x), std::abs(tr2->scale.y), std::abs(tr2->scale.z) }))
+                : (0.5f * (std::max)({ std::abs(col2->size.x * tr2->scale.x), std::abs(col2->size.y * tr2->scale.y), std::abs(col2->size.z * tr2->scale.z) }));
+            const float broadDistance = approxExtent1 + approxExtent2 + kBroadPhaseDistanceMargin;
+            const float broadDistanceSq = broadDistance * broadDistance;
+            const float dx = center1.x - center2.x;
+            const float dy = center1.y - center2.y;
+            const float dz = center1.z - center2.z;
+            if (dx * dx + dy * dy + dz * dz > broadDistanceSq) continue;
 
             RC::CollisionResult result;
             bool reverseNormal = false;
@@ -490,17 +634,17 @@ void Scene::ResolveCollisions() {
 
             if (result.hit) {
                 // コールバック呼び出し
-                if (auto* nsc1 = e1->GetComponent<NativeScriptComponent>()) {
+                if (nsc1) {
                     for (auto& entry : nsc1->scripts) {
                         if (entry.instance) entry.instance->OnCollision(e2.get(), result.contactPoint);
                     }
                 }
-                if (auto* nsc2 = e2->GetComponent<NativeScriptComponent>()) {
+                if (nsc2) {
                     for (auto& entry : nsc2->scripts) {
                         if (entry.instance) entry.instance->OnCollision(e1.get(), result.contactPoint);
                     }
                 }
-                
+
                 // 衝突位置のデバッグ描画
                 if (showColliderGizmos_) {
                     RC::DrawSphereRings3D(result.contactPoint, 0.5f, {1.0f, 0.0f, 0.0f, 1.0f}, 8, false);
@@ -510,8 +654,6 @@ void Scene::ResolveCollisions() {
                 if (col1->isTrigger || col2->isTrigger) continue;
 
                 // 両方とも動かない場合は物理解決をスキップ
-                bool isDynamic1 = (rb1 && !rb1->isKinematic);
-                bool isDynamic2 = (rb2 && !rb2->isKinematic);
                 if (!isDynamic1 && !isDynamic2) continue;
 
                 // result.normal direction is from 1 to 2

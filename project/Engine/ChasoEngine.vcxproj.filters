@@ -91,6 +91,9 @@
     <Filter Include="Graphics\Mesh">
       <UniqueIdentifier>{b1c2d3e4-f5a6-7890-abcd-ef1234567890}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphics\Font">
+      <UniqueIdentifier>{263c4d18-2877-456c-9ecb-b92020e46943}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Graphics\Sprite">
       <UniqueIdentifier>{0e8b317f-e4fb-d7ea-1397-cf71255b0267}</UniqueIdentifier>
     </Filter>
@@ -174,6 +177,9 @@
     </Filter>
     <Filter Include="Render\Mesh">
       <UniqueIdentifier>{f1e2d3c4-b5a6-7890-abcd-ef0987654321}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render\Font">
+      <UniqueIdentifier>{6c5e171f-f861-4e68-b9de-d94700552c94}</UniqueIdentifier>
     </Filter>
     <Filter Include="Render\Sprite">
       <UniqueIdentifier>{a79c31e4-476c-db46-9f9a-17dfba8aeec7}</UniqueIdentifier>
@@ -315,6 +321,9 @@
     <ClCompile Include="..\Engine\Audio\Sound.cpp">
       <Filter>Audio</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Audio\AudioEngine.cpp">
+      <Filter>Audio</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp">
       <Filter>Graphics\Skydome</Filter>
     </ClCompile>
@@ -332,6 +341,9 @@
     </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp">
       <Filter>Graphics\Sprite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Font\FontAtlas.cpp">
+      <Filter>Graphics\Font</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp">
       <Filter>Graphics\Texture\Texture2D</Filter>
@@ -420,6 +432,9 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp">
       <Filter>Render\Systems</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Render\Systems\RenderFont.cpp">
+      <Filter>Render\Systems</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Render\Systems\RenderInteractiveWater.cpp">
       <Filter>Render\Systems</Filter>
     </ClCompile>
@@ -443,6 +458,9 @@
     </ClCompile>
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp">
       <Filter>Render\Sprite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Render\Font\FontManager.cpp">
+      <Filter>Render\Font</Filter>
     </ClCompile>
     <ClCompile Include="..\Engine\Window\Window.cpp">
       <Filter>Window</Filter>
@@ -581,10 +599,7 @@
     <ClInclude Include="..\Engine\Particle\EffectPreset.h">
       <Filter>Particle</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Audio\BgmManager.h">
-      <Filter>Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Audio\SeManager.h">
+    <ClInclude Include="..\Engine\Audio\AudioEngine.h">
       <Filter>Audio</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Audio\Sound.h">
@@ -604,6 +619,9 @@
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h">
       <Filter>Graphics\Sprite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Font\FontAtlas.h">
+      <Filter>Graphics\Font</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h">
       <Filter>Graphics\Texture\Texture2D</Filter>
@@ -698,6 +716,9 @@
     <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h">
       <Filter>Render\Sprite</Filter>
     </ClInclude>
+    <ClInclude Include="..\Engine\Render\Font\FontManager.h">
+      <Filter>Render\Font</Filter>
+    </ClInclude>
     <ClInclude Include="..\Engine\Window\Window.h">
       <Filter>Window</Filter>
     </ClInclude>
@@ -736,6 +757,18 @@
       <Filter>ECS</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\ECS\ColliderComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\AudioSourceComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\AudioListenerComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\TextRendererComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\BoneAttachmentComponent.h">
       <Filter>ECS</Filter>
     </ClInclude>
   </ItemGroup>

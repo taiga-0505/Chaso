@@ -276,6 +276,11 @@ private:
       l.color = color;
       l.intensity = intensity;
       l.direction = direction;
+      // Blender 側には無い独自パラメータ。指定が無ければエンティティ中心のまま。
+      if (object.contains("offset") && object["offset"].size() >= 3) {
+        auto& o = object["offset"];
+        l.offset = {o[0].get<float>(), o[1].get<float>(), o[2].get<float>()};
+      }
       if (object.contains("distance")) l.distance = object["distance"].get<float>();
       if (object.contains("decay")) l.decay = object["decay"].get<float>();
       // Blender の spot_size は「円錐の全開き角(ラジアン)」なので半分にしてから cos を取る

@@ -76,6 +76,12 @@ void Skydome::Draw(ID3D12GraphicsCommandList *cmdList) {
   if (!vb_.resource || !ib_.resource || !visible_)
     return;
 
+  // テクスチャ未解決（ロード待ち等）のまま描くと t0 のディスクリプタテーブルが
+  // 未設定になり動作未定義なので、その間は描画をスキップする
+  // （SkydomeManager::ApplyTexture が毎フレーム解決を試みる。テクスチャ無しなら white1x1）
+  if (textureSrv_.ptr == 0)
+    return;
+
   cmdList->IASetVertexBuffers(0, 1, &vb_.view);
   cmdList->IASetIndexBuffer(&ib_.view);
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -85,10 +91,7 @@ void Skydome::Draw(ID3D12GraphicsCommandList *cmdList) {
       0, cbMat_.resource->GetGPUVirtualAddress());
   cmdList->SetGraphicsRootConstantBufferView(
       1, cbWvp_.resource->GetGPUVirtualAddress());
-  
-  if (textureSrv_.ptr != 0) {
-      cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
-  }
+  cmdList->SetGraphicsRootDescriptorTable(2, textureSrv_);
 
   // Light CB（b1）: 外部ライトが指定されていればそちらを使う
   const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
@@ -101,15 +104,18 @@ void Skydome::Draw(ID3D12GraphicsCommandList *cmdList) {
 }
 
 void Skydome::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
+  auto &ctx = GetRenderContext();
+  Draw(cmdList, world, Multiply(ctx.View(), ctx.Proj()));
+}
+
+void Skydome::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world,
+                   const Matrix4x4 &viewProj) {
   if (!vb_.resource || !ib_.resource || !visible_ || !cbWvp_.mapped)
     return;
 
-  auto &ctx = GetRenderContext();
   cbWvp_.mapped->World = world;
-  Matrix4x4 vp = Multiply(ctx.View(), ctx.Proj());
-  cbWvp_.mapped->WVP = Multiply(world, vp);
+  cbWvp_.mapped->WVP = Multiply(world, viewProj);
   cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
-
 
   Draw(cmdList);
 }

@@ -124,6 +124,14 @@ void GPUParticle::Initialize(SceneContext &ctx) {
       set.update.Initialize(device_.Get(), ctx.pipelineManager, "update_fire_cs");
       set.ready = set.emit.IsReady() && set.update.IsReady();
     }
+
+    // Electric タイプ
+    {
+      auto &set = csSets_[static_cast<uint32_t>(ParticleType::Electric)];
+      set.emit.Initialize(device_.Get(), ctx.pipelineManager, "emit_electric_cs");
+      set.update.Initialize(device_.Get(), ctx.pipelineManager, "update_electric_cs");
+      set.ready = set.emit.IsReady() && set.update.IsReady();
+    }
   }
 
   // ==================
@@ -145,13 +153,17 @@ void GPUParticle::Initialize(SceneContext &ctx) {
   perFrameMapped_->velocityVariance = velocityVariance_;
   perFrameMapped_->shapeRadius = shapeRadius_;
   perFrameMapped_->coneAngle = coneAngle_;
-  perFrameMapped_->shapePad = {0.0f, 0.0f};
+  // shapePad は Electric タイプだけが「殻の丸み / マージン」として読む（他タイプは未参照）
+  perFrameMapped_->shapePad = {shellRoundness_, shellMargin_};
   perFrameMapped_->startColor = startColor_;
   perFrameMapped_->endColor = endColor_;
-  perFrameMapped_->emitterPosition = emitterPosition_;
+  perFrameMapped_->emitterPosition = {emitterPosition_.x + emitterOffset_.x,
+                                      emitterPosition_.y + emitterOffset_.y,
+                                      emitterPosition_.z + emitterOffset_.z};
   perFrameMapped_->emitCount = emitCount_;
   perFrameMapped_->shapeBoxSize = shapeBoxSize_;
-  perFrameMapped_->shapeBoxPad = 0.0f;
+  // shapeBoxPad は Electric タイプだけが「殻の Y 軸回転」として読む（他タイプは未参照）
+  perFrameMapped_->shapeBoxPad = shellYaw_;
 
   initialized_ = true;
   Log::Print(std::format("[GPUParticle] Initialized: {} particles (FreeList, {} types)",
@@ -294,13 +306,17 @@ void GPUParticle::Update(const RC::Matrix4x4 &view, const RC::Matrix4x4 &proj,
   perFrameMapped_->velocityVariance = velocityVariance_;
   perFrameMapped_->shapeRadius = shapeRadius_;
   perFrameMapped_->coneAngle = coneAngle_;
-  perFrameMapped_->shapePad = {0.0f, 0.0f};
+  // shapePad は Electric タイプだけが「殻の丸み / マージン」として読む（他タイプは未参照）
+  perFrameMapped_->shapePad = {shellRoundness_, shellMargin_};
   perFrameMapped_->startColor = startColor_;
   perFrameMapped_->endColor = endColor_;
-  perFrameMapped_->emitterPosition = emitterPosition_;
+  perFrameMapped_->emitterPosition = {emitterPosition_.x + emitterOffset_.x,
+                                      emitterPosition_.y + emitterOffset_.y,
+                                      emitterPosition_.z + emitterOffset_.z};
   perFrameMapped_->emitCount = emitCount_;
   perFrameMapped_->shapeBoxSize = shapeBoxSize_;
-  perFrameMapped_->shapeBoxPad = 0.0f;
+  // shapeBoxPad は Electric タイプだけが「殻の Y 軸回転」として読む（他タイプは未参照）
+  perFrameMapped_->shapeBoxPad = shellYaw_;
 }
 
 void GPUParticle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
@@ -440,7 +456,7 @@ void GPUParticle::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 void GPUParticle::DrawImGui() {
   if (ImGui::TreeNode("GPUParticle")) {
     ImGui::Checkbox("Visible", &visible_);
-  
+
     int maxP = static_cast<int>(maxParticles_);
     if (ImGui::SliderInt("Max Particles", &maxP, 256, 16384)) {
       SetMaxParticles(static_cast<uint32_t>(maxP));
@@ -452,7 +468,9 @@ void GPUParticle::DrawImGui() {
     }
 
     // ParticleType 切り替え
-    const char *typeNames[] = {"Default", "Explosion", "Rain", "Fire"};
+    const char *typeNames[] = {"Default", "Explosion", "Rain", "Fire", "Electric"};
+    static_assert(IM_ARRAYSIZE(typeNames) == static_cast<int>(ParticleType::Count),
+                  "typeNames と ParticleType の数を揃えること");
     int currentTypeInt = static_cast<int>(currentType_);
     if (ImGui::Combo("Particle Type", &currentTypeInt, typeNames,
                      IM_ARRAYSIZE(typeNames))) {
@@ -492,8 +510,21 @@ void GPUParticle::DrawImGui() {
       ImGui::DragFloat3("Box Size", &shapeBoxSize_.x, 0.1f, 0.0f, 50.0f);
     }
 
+    // 殻（Electric 専用）
+    if (currentType_ == ParticleType::Electric) {
+      if (emitterShape_ == EmitterShape::Box) {
+        ImGui::SliderFloat("Shell Roundness", &shellRoundness_, 0.0f, 1.0f);
+      }
+      ImGui::DragFloat("Shell Margin", &shellMargin_, 0.005f, 0.0f, 2.0f, "%.3f m");
+      float yawDeg = shellYaw_ * 180.0f / 3.14159265f;
+      if (ImGui::DragFloat("Shell Yaw (deg)", &yawDeg, 1.0f, -360.0f, 360.0f)) {
+        shellYaw_ = yawDeg * 3.14159265f / 180.0f;
+      }
+    }
+
     // 位置
     ImGui::DragFloat3("Emitter Position", &emitterPosition_.x, 0.1f);
+    ImGui::DragFloat3("Emitter Offset", &emitterOffset_.x, 0.05f);
 
     // ライフタイム
     ImGui::DragFloat("Min Lifetime", &minLifeTime_, 0.1f, 0.1f, 30.0f);
@@ -530,6 +561,41 @@ void GPUParticle::SetTexture(const std::string& path) {
   Log::Print(std::format("[GPUParticle] Texture changed to: {}", path));
 }
 
+void GPUParticle::ApplyElectricPreset() {
+  SetParticleType(ParticleType::Electric);
+  SetPipelinePrefix("gpu_particle_electric");
+  SetBlendMode(kBlendModeAdd);
+
+  // 殻: Box は「直径」で指定する楕円体。Player モデル（幅 0.8m × 高さ 1.7m、足元ピボット）を
+  // 少し余裕をもって包む大きさ。胸の高さが中心になるようにオフセットを足す
+  emitterShape_ = EmitterShape::Box;
+  shapeBoxSize_ = {1.0f, 1.9f, 1.0f};
+  shapeRadius_ = 0.6f; // Sphere に切り替えたときの半径
+  emitterOffset_ = {0.0f, 0.35f, 0.0f};
+  shellRoundness_ = 1.0f; // 丸め切ってカプセル状に（箱型のモデルなら 0〜0.2 に下げる）
+  shellMargin_ = 0.04f;   // 表面から 4cm 浮かせる（0 だと表面と重なって半分隠れる）
+  shellYaw_ = 0.0f;
+
+  // 火花は短命。長くすると「光る玉」になって電流に見えない
+  minLifeTime_ = 0.08f;
+  maxLifeTime_ = 0.22f;
+
+  // 板の半サイズ (m)。稲妻 1 本の長さがこの 2 倍になる
+  minScale_ = 0.12f;
+  maxScale_ = 0.30f;
+
+  // 電撃では baseVelocity_ の「長さ」だけが接線方向の速さ (units/frame) として使われる
+  baseVelocity_ = {0.03f, 0.0f, 0.0f};
+  velocityVariance_ = 0.02f;
+  gravity_ = 0.0f;
+
+  // 青白い電撃（にじみが設定色、芯は PS 側で白に寄る）
+  startColor_ = {0.55f, 0.85f, 1.0f, 1.0f};
+  endColor_ = {0.25f, 0.45f, 1.0f, 0.0f};
+
+  emitCount_ = 14;
+}
+
 void GPUParticle::SaveToJson(const std::string& filepath) const {
   nlohmann::json j;
   j["maxParticles"] = maxParticles_;
@@ -556,6 +622,10 @@ void GPUParticle::SaveToJson(const std::string& filepath) const {
   j["startColor"] = { startColor_.x, startColor_.y, startColor_.z, startColor_.w };
   j["endColor"] = { endColor_.x, endColor_.y, endColor_.z, endColor_.w };
   j["emitterPosition"] = { emitterPosition_.x, emitterPosition_.y, emitterPosition_.z };
+  j["emitterOffset"] = { emitterOffset_.x, emitterOffset_.y, emitterOffset_.z };
+  j["shellRoundness"] = shellRoundness_;
+  j["shellMargin"] = shellMargin_;
+  j["shellYaw"] = shellYaw_;
 
   std::ofstream ofs(filepath);
   if (ofs) {
@@ -611,6 +681,12 @@ void GPUParticle::LoadFromJson(const std::string& filepath) {
     if (j.contains("emitterPosition") && j["emitterPosition"].is_array() && j["emitterPosition"].size() == 3) {
       emitterPosition_ = { j["emitterPosition"][0].get<float>(), j["emitterPosition"][1].get<float>(), j["emitterPosition"][2].get<float>() };
     }
+    if (j.contains("emitterOffset") && j["emitterOffset"].is_array() && j["emitterOffset"].size() == 3) {
+      emitterOffset_ = { j["emitterOffset"][0].get<float>(), j["emitterOffset"][1].get<float>(), j["emitterOffset"][2].get<float>() };
+    }
+    if (j.contains("shellRoundness")) shellRoundness_ = j["shellRoundness"].get<float>();
+    if (j.contains("shellMargin")) shellMargin_ = j["shellMargin"].get<float>();
+    if (j.contains("shellYaw")) shellYaw_ = j["shellYaw"].get<float>();
 
     Log::Print(std::format("[GPUParticle] Loaded from: {}", filepath));
   } catch (const std::exception& e) {
@@ -621,7 +697,7 @@ void GPUParticle::LoadFromJson(const std::string& filepath) {
 void GPUParticle::SetMaxParticles(uint32_t maxCount) {
   if (maxParticles_ == maxCount) return;
   maxParticles_ = maxCount;
-  
+
   if (initialized_) {
     rebuildBuffers_();
   }

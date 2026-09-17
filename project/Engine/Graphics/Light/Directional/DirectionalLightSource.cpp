@@ -10,6 +10,8 @@ DirectionalLightSource::DirectionalLightSource() {
   data_.color = {1.0f, 1.0f, 1.0f, 1.0f};
   data_.direction = {0.0f, -1.0f, 0.0f};
   data_.intensity = 0.0f; // デフォルトで照らさないようにする
+  data_.ambientColor = {1.0f, 1.0f, 1.0f};
+  data_.ambientIntensity = 0.0f; // デフォルトは環境光なし（ライトの当たった所だけ見える）
 }
 
 void DirectionalLightSource::SetDirection(const Vector3 &dir, bool normalize) {
@@ -35,6 +37,11 @@ void DirectionalLightSource::SetColor(const Vector4 &rgba) {
 
 void DirectionalLightSource::SetIntensity(float intensity) {
   data_.intensity = intensity;
+}
+
+void DirectionalLightSource::SetAmbient(const Vector3 &rgb, float intensity) {
+  data_.ambientColor = rgb;
+  data_.ambientIntensity = intensity;
 }
 
 DirectionalLight DirectionalLightSource::DataForGPU() const {
@@ -100,6 +107,12 @@ void DirectionalLightSource::DrawImGui(const char *name) {
     // 強さ
     ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
                      0.01f, 0.0f, 16.0f, "%.2f");
+
+    // 環境光（ライトが当たっていない面の底上げ。0 で真っ暗）
+    ImGui::ColorEdit3((std::string("環境光カラー##") + label).c_str(),
+                      &data_.ambientColor.x, ImGuiColorEditFlags_Float);
+    ImGui::DragFloat((std::string("環境光の強さ##") + label).c_str(),
+                     &data_.ambientIntensity, 0.005f, 0.0f, 2.0f, "%.3f");
 
     ImGui::Dummy(ImVec2(0, 6));
 

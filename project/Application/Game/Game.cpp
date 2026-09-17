@@ -29,14 +29,6 @@ void Game::registerScenes_() {
   sceneMgr_.LoadScenesFromDirectory(kSceneDir);
 }
 
-
-void Game::registerAudioPaths_() {
-  // 各音声の登録をここで行う
-  // --- BGM ---
-
-  // --- SE ---
-}
-
 void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }
 
 void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
@@ -45,8 +37,7 @@ void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
 
 void Game::Term() {
   sceneMgr_.Term();
-  se_.Term();
-  bgm_.Stop();
+  // オーディオの終了処理は App::Term() の AudioEngine::Term() で行う
 }
 
 void Game::RequestChange(const std::string &name) {

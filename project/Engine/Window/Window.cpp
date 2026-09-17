@@ -66,10 +66,30 @@ void Window::UpdateBackgroundBrush() {
   wc.hbrBackground = hbrBackground_;
 }
 
-void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
-                        const int32_t kClientHeight, bool fullscreen) {
+namespace {
+// DPI スケーリングの影響を受けずモニターの実解像度を扱えるようにする
+// (Per-Monitor V2 が使えない環境ではシステム DPI Aware にフォールバック)
+void EnableDpiAwareness() {
+  if (HMODULE user32 = GetModuleHandleW(L"user32.dll")) {
+    using SetCtxFn = BOOL(WINAPI *)(HANDLE);
+    if (auto setCtx = reinterpret_cast<SetCtxFn>(
+            GetProcAddress(user32, "SetProcessDpiAwarenessContext"))) {
+      // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (= -4)
+      if (setCtx(reinterpret_cast<HANDLE>(static_cast<INT_PTR>(-4)))) {
+        return;
+      }
+    }
+  }
+  SetProcessDPIAware();
+}
+} // namespace
+
+void Window::Initialize(const char *windowTitle, int &clientWidth,
+                        int &clientHeight, bool fullscreen) {
 
   timeBeginPeriod(1); // タイマー精度を1msに設定
+
+  EnableDpiAwareness(); // ウィンドウ生成前に有効化すること
 
   // ==============================
   // ウィンドウの初期化
@@ -98,15 +118,22 @@ void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
   DWORD style = fullscreen ? (WS_POPUP | WS_VISIBLE) : WS_OVERLAPPEDWINDOW;
 #endif
 
-  RECT wrc = {0, 0, kClientWidth, kClientHeight};
-  AdjustWindowRect(&wrc, style, false);
-
-  int windowW = wrc.right - wrc.left;
-  int windowH = wrc.bottom - wrc.top;
-  
+  int windowW = 0;
+  int windowH = 0;
   int x = 0;
   int y = 0;
-  if (!fullscreen) {
+
+  if (fullscreen) {
+    // 起動したモニター（プライマリ）の実解像度に合わせる
+    clientWidth = GetSystemMetrics(SM_CXSCREEN);
+    clientHeight = GetSystemMetrics(SM_CYSCREEN);
+    windowW = clientWidth;
+    windowH = clientHeight;
+  } else {
+    RECT wrc = {0, 0, clientWidth, clientHeight};
+    AdjustWindowRect(&wrc, style, false);
+    windowW = wrc.right - wrc.left;
+    windowH = wrc.bottom - wrc.top;
     int screenW = GetSystemMetrics(SM_CXSCREEN);
     int screenH = GetSystemMetrics(SM_CYSCREEN);
     x = (screenW - windowW) / 2;
@@ -130,7 +157,7 @@ void Window::Initialize(const char *windowTitle, const int32_t kClientWidth,
   // ウィンドウを表示
   ShowWindow(hwnd, SW_SHOW);
 
-  Log::Print(std::format("[Window] Created: \"{}\" ({}x{})", windowTitle, kClientWidth, kClientHeight));
+  Log::Print(std::format("[Window] Created: \"{}\" ({}x{}) Fullscreen:{}", windowTitle, clientWidth, clientHeight, fullscreen));
 }
 
 void Window::Resize(int& outWidth, int& outHeight, bool fullscreen) {
@@ -145,9 +172,15 @@ void Window::Resize(int& outWidth, int& outHeight, bool fullscreen) {
   SetWindowLongPtr(hwnd, GWL_STYLE, style);
 
   if (fullscreen) {
-    int screenW = GetSystemMetrics(SM_CXSCREEN);
-    int screenH = GetSystemMetrics(SM_CYSCREEN);
-    SetWindowPos(hwnd, HWND_TOP, 0, 0, screenW, screenH, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+    // ウィンドウが現在表示されているモニターの実解像度に合わせる
+    HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi{};
+    mi.cbSize = sizeof(MONITORINFO);
+    GetMonitorInfo(monitor, &mi);
+    int screenW = mi.rcMonitor.right - mi.rcMonitor.left;
+    int screenH = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    SetWindowPos(hwnd, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top, screenW,
+                 screenH, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
     outWidth = screenW;
     outHeight = screenH;
   } else {

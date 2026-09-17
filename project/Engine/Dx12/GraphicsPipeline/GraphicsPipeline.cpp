@@ -356,7 +356,23 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     params[12].Descriptor.ShaderRegister = 6; // b6
 
-    paramCount = 13;
+    // 13: SRV table t5 (PS) SpotShadowAtlas（スポットライト影のアトラス）
+    ranges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[5].BaseShaderRegister = 5; // t5
+    ranges[5].NumDescriptors = 1;
+    ranges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[13].DescriptorTable.NumDescriptorRanges = 1;
+    params[13].DescriptorTable.pDescriptorRanges = &ranges[5];
+
+    // 14: CBV b7 (PS) SpotShadowCB
+    params[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[14].Descriptor.ShaderRegister = 7; // b7
+
+    paramCount = 15;
     break;
 
   case RootSignatureType::Object3DInstancing:
@@ -458,7 +474,23 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     params[12].Descriptor.ShaderRegister = 6; // b6
 
-    paramCount = 13;
+    // 13: SRV table t5 (PS) SpotShadowAtlas（スポットライト影のアトラス）
+    ranges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[6].BaseShaderRegister = 5; // t5
+    ranges[6].NumDescriptors = 1;
+    ranges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[13].DescriptorTable.NumDescriptorRanges = 1;
+    params[13].DescriptorTable.pDescriptorRanges = &ranges[6];
+
+    // 14: CBV b7 (PS) SpotShadowCB
+    params[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[14].Descriptor.ShaderRegister = 7; // b7
+
+    paramCount = 15;
     break;
 
   case RootSignatureType::Object3DSkin:
@@ -565,7 +597,23 @@ void GraphicsPipeline::buildRootSignature_(RootSignatureType type) {
     params[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     params[13].Descriptor.ShaderRegister = 1; // t1
 
-    paramCount = 14;
+    // 14: SRV table t5 (PS) SpotShadowAtlas（スポットライト影のアトラス）
+    ranges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[5].BaseShaderRegister = 5; // t5
+    ranges[5].NumDescriptors = 1;
+    ranges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    params[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    params[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[14].DescriptorTable.NumDescriptorRanges = 1;
+    params[14].DescriptorTable.pDescriptorRanges = &ranges[5];
+
+    // 15: CBV b7 (PS) SpotShadowCB
+    params[15].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    params[15].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    params[15].Descriptor.ShaderRegister = 7; // b7
+
+    paramCount = 16;
     break;
 
   case RootSignatureType::Sprite:

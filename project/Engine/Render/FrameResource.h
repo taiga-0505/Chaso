@@ -72,15 +72,23 @@ private:
   /// @brief 256 バイトアライメントに切り上げる
   static constexpr uint32_t Align256(uint32_t s) { return (s + 255u) & ~255u; }
 
-  /// @brief CB ヒープの初期容量（1MB：WVP 約数千個分を想定）
-  static constexpr uint64_t kDefaultCBSize = 1u * 1024 * 1024;
+  /// @brief CB ヒープの初期容量（8MB：256byte の Transform CB 約 3.2 万個分）
+  /// @details 単体モデルの Draw は 1 回ごとに 256byte を確保する。スポットライト影で
+  ///          同じモデルを最大 18 回描くようになったため 1MB → 4MB に拡張し、
+  ///          影の上限が kMaxSpotShadows = 32 灯（影 32 + 平行光源影 + メイン ＝ 最大 34 パス）に
+  ///          増えたのに合わせて 4MB → 8MB に再拡張。kMaxSpotShadows を増やすならここも比例で増やす。
+  static constexpr uint64_t kDefaultCBSize = 8u * 1024 * 1024;
   Microsoft::WRL::ComPtr<ID3D12Resource> cbHeap_; ///< 定数バッファ用リソース
   uint8_t *cbMapped_ = nullptr;                  ///< マップされた先頭ポインタ
   uint64_t cbOffset_ = 0;                        ///< 現在の書き込みオフセット
   uint64_t cbCapacity_ = 0;                      ///< ヒープの総容量
 
-  /// @brief SRV ヒープの初期容量（4MB：InstanceDataGPU 約数万個分を想定）
-  static constexpr uint64_t kDefaultSRVSize = 4u * 1024 * 1024;
+  /// @brief SRV ヒープの初期容量（32MB：InstanceDataGPU 約 16 万個分）
+  /// @details インスタンス描画は 1 回の Draw ごとに count × 208byte を確保する。
+  ///          スポットライト影（最大 kMaxSpotShadows = 32 灯）＋平行光源影＋メインで
+  ///          同じバッチを最大 34 回描くため、マップの床・壁（20×20 で約 500 個 ≒ 100KB/回）でも
+  ///          余裕を持たせて 16MB → 32MB に拡張。kMaxSpotShadows を増やすならここも比例で増やす。
+  static constexpr uint64_t kDefaultSRVSize = 32u * 1024 * 1024;
   Microsoft::WRL::ComPtr<ID3D12Resource> srvHeap_; ///< SRV/StructuredBuffer用リソース
   uint8_t *srvMapped_ = nullptr;                   ///< マップされた先頭ポインタ
   uint64_t srvOffset_ = 0;                         ///< 現在の書き込みオフセット

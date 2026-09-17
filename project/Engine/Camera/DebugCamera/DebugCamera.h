@@ -15,7 +15,8 @@ public:
                   float farZ);
 
   /// @brief 更新処理。入力に基づいてカメラの移動・回転・行列計算を行う。
-  void Update();
+  /// @param dt フレーム経過時間 (秒)
+  void Update(float dt = 1.0f / 60.0f);
 
   /// @brief 位置と回転を初期状態にリセットする
   void Reset();
@@ -45,6 +46,14 @@ public:
   /// @param rot 設定する回転角 (ラジアン)
   void SetTransform(const RC::Vector3 &pos, const RC::Vector3 &rot);
 
+  /// @brief 移動速度の設定
+  void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
+  float GetMoveSpeed() const { return moveSpeed_; }
+
+  /// @brief Shift加速倍率の設定
+  void SetBoostMultiplier(float mult) { boostMultiplier_ = mult; }
+  float GetBoostMultiplier() const { return boostMultiplier_; }
+
 private:
   /// @brief ビュー行列の再計算を行う内部関数
   void RebuildView_();
@@ -57,6 +66,11 @@ private:
 
   float deltaTime_ = 1.0f / 60.0f;       ///< 1フレームあたりの経過時間
 
-  const float moveSpeed_ = 2.0f;         ///< カメラの移動速度
-  const float rotateSpeed_ = 1.0f;       ///< カメラの回転速度
+  float moveSpeed_ = 5.0f;               ///< カメラの基本移動速度 (m/s)
+  float boostMultiplier_ = 3.5f;         ///< Shift押下時の加速倍率
+  float rotateSpeed_ = 1.5f;             ///< キー入力による回転速度
+  float mouseRotateSpeed_ = 0.003f;      ///< マウスドラッグ回転感度
+  float mousePanSpeed_ = 0.008f;         ///< マウスドラッグ平行移動感度
+  float mouseZoomSpeed_ = 0.015f;        ///< マウスドラッグズーム感度
+  float mouseWheelSpeed_ = 0.003f;       ///< マウスホイール感度
 };

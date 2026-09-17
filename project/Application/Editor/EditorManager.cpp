@@ -20,8 +20,11 @@
 #include "ECS/LightComponent.h"
 #include "ECS/CameraComponent.h"
 #include "ECS/AnimationComponent.h"
+#include "ECS/BoneAttachmentComponent.h"
+#include "Graphics/Model/Animation.h" // RC::GetAnimationCount
 #include "ECS/PrimitiveMeshComponent.h"
 #include "ECS/SpriteRendererComponent.h"
+#include "ECS/TextRendererComponent.h"
 #include "ECS/WaterComponent.h"
 #include "ECS/RigidbodyComponent.h"
 #include "Render/RenderCommon.h"
@@ -30,8 +33,15 @@
 #include "Camera/CameraMath.h"
 #include "ECS/ColliderComponent.h"
 #include "ECS/NativeScriptComponent.h"
+#include "ECS/AudioSourceComponent.h"
+#include "ECS/AudioListenerComponent.h"
 #include "ECS/ScriptRegistry.h"
 #include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <vector>
 #include <filesystem>
 #include <fstream>
 #include <chrono>
@@ -40,10 +50,57 @@
 #include <nlohmann/json.hpp>
 #include <set>
 
+namespace {
+
+/// @brief 2D（スクリーン座標）で描かれるエンティティか（Text / Sprite）
+bool Is2DEntity(const Entity& e) {
+  if (e.GetComponent<TextRendererComponent>() != nullptr) return true;
+  if (auto* spr = e.GetComponent<SpriteRendererComponent>()) {
+    // ワールド空間スプライトは 3D 扱い（通常のギズモで操作する）
+    return !spr->IsWorldSpace();
+  }
+  return false;
+}
+
+/// @brief 2D エンティティの画面上の矩形（ゲーム解像度ピクセル）を求める
+/// @return 矩形を持つなら true
+bool Get2DRect(const Entity& e, RC::Vector2& outMin, RC::Vector2& outMax) {
+  auto* tr = e.GetComponent<TransformComponent>();
+  if (!tr) return false;
+  const float x = tr->position.x;
+  const float y = tr->position.y;
+
+  if (auto* txt = e.GetComponent<TextRendererComponent>()) {
+    RC::Vector2 size{0.0f, 0.0f};
+    if (txt->HasFont()) {
+      size = RC::MeasureString(txt->fontHandle, txt->text, txt->scale, txt->lineSpacing);
+    }
+    // フォント未ロード・空文字でも掴めるように最小サイズを確保
+    const float minH = txt->fontSize * txt->scale;
+    if (size.x < 8.0f) size.x = (std::max)(8.0f, minH * 0.5f);
+    if (size.y < 8.0f) size.y = (std::max)(8.0f, minH);
+    float left = x;
+    if (txt->align == TextAlign::Center) left -= size.x * 0.5f;
+    else if (txt->align == TextAlign::Right) left -= size.x;
+    outMin = {left, y};
+    outMax = {left + size.x, y + size.y};
+    return true;
+  }
+  if (auto* spr = e.GetComponent<SpriteRendererComponent>()) {
+    if (spr->IsWorldSpace()) return false; // ワールド空間は 3D 扱い
+    outMin = {x, y};
+    outMax = {x + (std::max)(spr->size.x, 8.0f), y + (std::max)(spr->size.y, 8.0f)};
+    return true;
+  }
+  return false;
+}
+
+} // namespace
+
 void EditorManager::Initialize() {
 #if RC_ENABLE_IMGUI
   playState_ = PlayState::Stopped;
-  
+
   playIconTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/play.png");
   pauseIconTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/pause.png");
   stopIconTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/stop.png");
@@ -53,7 +110,7 @@ void EditorManager::Initialize() {
   eyeHiddenTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/eye_hidden.png");
   lockLockedTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/lock_locked.png");
   lockUnlockedTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/lock_unlocked.png");
-  
+
   folderIconTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/folder.png");
   fileIconTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/file.png");
   fileImageTex_ = RC::GetRenderContext().Textures().LoadID("Resources/icons/file_image.png");
@@ -72,6 +129,388 @@ void EditorManager::Initialize() {
 uint32_t EditorManager::GetSelectedEntityId() const {
   if (auto e = selectedEntity_.lock()) return e->Id();
   return 0;
+}
+
+namespace {
+
+/// @brief スナップショットを比較可能な形に正規化する
+/// @details Entity::Serialize() は components_（unordered_map）を走査して配列を作るため、
+///          Deserialize で作り直すと同じ内容でも配列の並びが変わりうる。
+///          そのままハッシュを取ると復元直後に「変更あり」と誤検知してしまうので、
+///          コンポーネント配列を type 名でソートして順序を固定する。
+///          エンティティ自体の並びは Hierarchy の表示順なので触らない
+///          （復元時も配列順は保たれるため比較には影響しない）。
+void CanonicalizeSnapshot(nlohmann::json& snapshot) {
+  if (!snapshot.is_array()) return;
+  for (auto& ej : snapshot) {
+    if (!ej.is_object()) continue;
+    auto it = ej.find("components");
+    if (it == ej.end() || !it->is_array()) continue;
+    std::vector<nlohmann::json> comps(it->begin(), it->end());
+    std::sort(comps.begin(), comps.end(), [](const nlohmann::json& a, const nlohmann::json& b) {
+      return a.value("type", std::string{}) < b.value("type", std::string{});
+    });
+    *it = comps;
+  }
+}
+
+/// @brief スナップショットの内容ハッシュ（変更検知用）
+/// @details 既定の dump() は不正な UTF-8 を含む文字列で例外を投げる。
+///          エンティティ名やテキストに何が入るかは分からないので、
+///          replace ハンドラを指定して絶対に throw させない。
+size_t HashSnapshot(const nlohmann::json& j) {
+  return std::hash<std::string>{}(
+      j.dump(-1, ' ', false, nlohmann::json::error_handler_t::replace));
+}
+
+/// @brief 正規化済みのスナップショットを取得する
+nlohmann::json CaptureCanonicalSnapshot(Scene* scene) {
+  nlohmann::json snapshot = scene->CaptureEntitiesSnapshot();
+  CanonicalizeSnapshot(snapshot);
+  return snapshot;
+}
+
+/// @brief 指定エンティティとその子孫を階層順（親が先）に集める
+std::vector<std::shared_ptr<Entity>> CollectSubtree(Scene* scene, const std::shared_ptr<Entity>& root) {
+  std::vector<std::shared_ptr<Entity>> result;
+  if (!scene || !root) return result;
+  // 親子付けの取り回しで GUID が循環しても無限ループしないように既訪問を持つ
+  std::set<uint64_t> visited;
+  result.push_back(root);
+  visited.insert(root->Guid());
+  // 幅優先。result を走査しながら末尾へ追加していくため、インデックスで回す
+  for (size_t i = 0; i < result.size(); ++i) {
+    const uint64_t parentGuid = result[i]->Guid();
+    for (const auto& e : scene->GetEntities()) {
+      if (!e || e->IsPendingDestroy()) continue;
+      if (e->ParentGuid() != parentGuid) continue;
+      if (!visited.insert(e->Guid()).second) continue;
+      result.push_back(e);
+    }
+  }
+  return result;
+}
+
+} // namespace
+
+// =================================================================
+// ショートカット / Undo・Redo / コピー＆ペースト
+// =================================================================
+
+void EditorManager::HandleShortcuts(Dx12Core* core, Scene* currentScene) {
+#if RC_ENABLE_IMGUI
+  // --- F2: スクリーンショット（再生中でも常時有効） ---
+  if (ImGui::IsKeyPressed(ImGuiKey_F2, false)) {
+    if (core) core->RequestScreenshot();
+  }
+
+  // 以降は編集モード（Stopped）専用。
+  // テキスト入力中はそちらの Ctrl+C / Ctrl+Z を優先する。
+  if (playState_ != PlayState::Stopped) return;
+  if (ImGui::GetIO().WantTextInput) return;
+  if (!currentScene) return;
+
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_C)) {
+    CopySelectedEntity(currentScene);
+  }
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_V)) {
+    PasteEntityClipboard(currentScene);
+  }
+  // Ctrl+Shift+N: 空のオブジェクトを作成（選択中のエンティティがあればその子として）
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_N)) {
+    auto sel = selectedEntity_.lock();
+    CreateEmptyEntity(currentScene, sel ? sel->Guid() : 0);
+  }
+
+  // Ctrl+Y と Ctrl+Shift+Z のどちらでも Redo できるようにする
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z) ||
+      ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Y)) {
+    Redo(currentScene);
+  } else if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_Z)) {
+    Undo(currentScene);
+  }
+#else
+  (void)core; (void)currentScene;
+#endif
+}
+
+std::shared_ptr<Entity> EditorManager::CreateEmptyEntity(Scene* currentScene, uint64_t parentGuid) {
+  if (!currentScene) return nullptr;
+
+  // Unity の "Create Empty" 相当。描画系コンポーネントは持たず Transform だけを付ける。
+  // 親子付けの基点やスクリプト用の器として使う想定。
+  auto e = currentScene->CreateEntity("Empty");
+  e->AddComponent<TransformComponent>();
+
+  // 親が指定されていて実在する場合のみ子として配置する
+  if (parentGuid != 0 && currentScene->FindEntityByGuid(parentGuid)) {
+    e->SetParentGuid(parentGuid);
+    expandEntityGuid_ = parentGuid; // 折りたたまれた親の下に隠れないよう次フレームで展開する
+  } else {
+    e->SetParentGuid(0);
+  }
+
+  selectedEntity_ = e;
+  return e;
+}
+
+void EditorManager::ResetHistory(Scene* currentScene) {
+  undoStack_.clear();
+  redoStack_.clear();
+  historyCurrent_ = nlohmann::json::array();
+  historyHash_ = 0;
+  historyPending_ = nullptr;
+  historyPendingHash_ = 0;
+  historyValid_ = false;
+  historyResync_ = false;
+  historySceneKey_ = currentScene;
+  historyPollTimer_ = 0.0f;
+}
+
+void EditorManager::CommitHistoryIfChanged(Scene* currentScene) {
+#if RC_ENABLE_IMGUI
+  // 履歴が動いていない原因が分かるように、状態が変わった時だけ理由をログへ出す
+  const auto logBlockReason = [this](int reason, const char* message) {
+    if (historyBlockLogged_ == reason) return;
+    historyBlockLogged_ = reason;
+    Log::Print(message);
+  };
+
+  if (!historyEnabled_) {
+    logBlockReason(3, "[Editor] 履歴: メニューで無効化されています");
+    return;
+  }
+  if (!currentScene) {
+    logBlockReason(1, "[Editor] 履歴: シーンが取得できないため停止中");
+    return;
+  }
+
+  // シーンが切り替わったら履歴を作り直す（別シーンの状態を復元しないため）
+  if (historySceneKey_ != currentScene) {
+    ResetHistory(currentScene);
+  }
+
+  // 編集モード以外では履歴を取らない。再生で状態が変わるため、
+  // 停止に戻った時点の状態を基準として再取得する。
+  if (playState_ != PlayState::Stopped) {
+    logBlockReason(2, "[Editor] 履歴: 編集モード(Stop)ではないため停止中");
+    historyValid_ = false;
+    return;
+  }
+  logBlockReason(0, "[Editor] 履歴: 有効");
+
+  // 毎フレーム全体をシリアライズすると重いので間隔を空けて検知する
+  historyPollTimer_ += ImGui::GetIO().DeltaTime;
+  if (historyPollTimer_ < kHistoryPollInterval) return;
+  historyPollTimer_ = 0.0f;
+
+  // シリアライズは何が起きても履歴機能ごと黙って止めないように保護する
+  nlohmann::json snapshot;
+  size_t hash = 0;
+  try {
+    snapshot = CaptureCanonicalSnapshot(currentScene);
+    hash = HashSnapshot(snapshot);
+  } catch (const std::exception& ex) {
+    if (!historyErrorLogged_) {
+      historyErrorLogged_ = true;
+      Log::Print(std::string("[Editor] 履歴のスナップショット取得に失敗: ") + ex.what());
+    }
+    return;
+  }
+
+  // 初回（または再生から戻った直後）は現在の状態を基準として記録するだけ
+  if (!historyValid_) {
+    historyCurrent_ = std::move(snapshot);
+    historyHash_ = hash;
+    historyPendingHash_ = 0;
+    historyValid_ = true;
+    historyResync_ = false;
+    Log::Print(std::format("[Editor] 履歴の基準を取得 ({} エンティティ)", historyCurrent_.size()));
+    return;
+  }
+
+  // 変化なし
+  if (hash == historyHash_) {
+    historyPendingHash_ = 0;
+    historyPending_ = nullptr;
+    historyResync_ = false;
+    return;
+  }
+
+  // まだ値が動いている（ドラッグ中・入力中）＝ 確定しない。
+  // ImGui や ImGuizmo の内部状態には依存せず「2回連続で同じ内容なら落ち着いた」と判定する。
+  // 状態フラグが立ちっぱなしになって履歴が永久に止まる事故を避けるため。
+  if (hash != historyPendingHash_) {
+    historyPendingHash_ = hash;
+    historyPending_ = std::move(snapshot);
+    return;
+  }
+
+  // Undo/Redo・ペーストで復元した直後の差分は「ユーザーの編集」ではないので履歴に積まない。
+  // ここで積むと Undo が同じ状態を往復し、Redo は消えてしまう。
+  if (historyResync_) {
+    historyResync_ = false;
+    historyCurrent_ = std::move(historyPending_);
+    historyHash_ = hash;
+    historyPendingHash_ = 0;
+    return;
+  }
+
+  undoStack_.push_back(std::move(historyCurrent_));
+  if (undoStack_.size() > kMaxHistory) {
+    undoStack_.erase(undoStack_.begin());
+  }
+  redoStack_.clear();
+  historyCurrent_ = std::move(historyPending_);
+  historyHash_ = hash;
+  historyPendingHash_ = 0;
+  Log::Print(std::format("[Editor] 変更を記録 (戻せる {} 手)", undoStack_.size()));
+#else
+  (void)currentScene;
+#endif
+}
+
+void EditorManager::ApplySnapshot(Scene* currentScene, const nlohmann::json& snapshot) {
+  if (!currentScene) return;
+
+  // 復元でエンティティが作り直されるため、選択は GUID で引き直す
+  uint64_t selectedGuid = 0;
+  if (auto sel = selectedEntity_.lock()) selectedGuid = sel->Guid();
+
+  currentScene->RestoreEntitiesSnapshot(snapshot);
+  currentScene->FlushPendingEntities();
+
+  selectedEntity_.reset();
+  if (selectedGuid != 0) {
+    if (auto restored = currentScene->FindEntityByGuid(selectedGuid)) {
+      selectedEntity_ = restored;
+    }
+  }
+  currentScene->SetSelectedEntityId(GetSelectedEntityId());
+  renamingEntityId_ = 0;
+  dragging2D_ = false;
+
+  // 次回の変更検知では「復元による差分」として扱い、履歴を汚さない
+  historyResync_ = true;
+  historyPending_ = nullptr;
+  historyPendingHash_ = 0;
+  historyPollTimer_ = 0.0f;
+}
+
+void EditorManager::Undo(Scene* currentScene) {
+  if (!currentScene) return;
+  // キーは届いているのか、履歴が空なのかを切り分けられるようにログを出す
+  if (undoStack_.empty()) {
+    Log::Print("[Editor] Undo: 戻せる履歴がありません");
+    return;
+  }
+
+  redoStack_.push_back(historyCurrent_);
+  historyCurrent_ = undoStack_.back();
+  undoStack_.pop_back();
+  historyHash_ = HashSnapshot(historyCurrent_);
+  historyValid_ = true;
+  historyPollTimer_ = 0.0f;
+
+  ApplySnapshot(currentScene, historyCurrent_);
+  Log::Print(std::format("[Editor] Undo (残り {} / やり直し {})", undoStack_.size(), redoStack_.size()));
+}
+
+void EditorManager::Redo(Scene* currentScene) {
+  if (!currentScene) return;
+  if (redoStack_.empty()) {
+    Log::Print("[Editor] Redo: やり直せる履歴がありません");
+    return;
+  }
+
+  undoStack_.push_back(historyCurrent_);
+  historyCurrent_ = redoStack_.back();
+  redoStack_.pop_back();
+  historyHash_ = HashSnapshot(historyCurrent_);
+  historyValid_ = true;
+  historyPollTimer_ = 0.0f;
+
+  ApplySnapshot(currentScene, historyCurrent_);
+  Log::Print(std::format("[Editor] Redo (戻せる {} / やり直し {})", undoStack_.size(), redoStack_.size()));
+}
+
+void EditorManager::CopySelectedEntity(Scene* currentScene) {
+  auto selected = selectedEntity_.lock();
+  if (!currentScene || !selected) return;
+
+  const auto subtree = CollectSubtree(currentScene, selected);
+  entityClipboard_ = nlohmann::json::array();
+  for (const auto& e : subtree) {
+    if (e) entityClipboard_.push_back(e->Serialize());
+  }
+  Log::Print(std::format("[Editor] Copied: {} ({} entities)", selected->Name(), entityClipboard_.size()));
+}
+
+void EditorManager::PasteEntityClipboard(Scene* currentScene) {
+  if (!currentScene || !entityClipboard_.is_array() || entityClipboard_.empty()) return;
+
+  // 貼り付けそのものも Undo の1ステップにする
+  if (historyValid_) {
+    undoStack_.push_back(historyCurrent_);
+    if (undoStack_.size() > kMaxHistory) undoStack_.erase(undoStack_.begin());
+    redoStack_.clear();
+  }
+
+  // コピー元の GUID を新しい GUID へ差し替える。
+  // 親子関係はコピー範囲内なら新 GUID へ、範囲外ならそのまま（元と兄弟になる）。
+  std::unordered_map<uint64_t, uint64_t> guidRemap;
+  for (const auto& ej : entityClipboard_) {
+    if (ej.contains("guid")) {
+      guidRemap[ej["guid"].get<uint64_t>()] = Entity::GenerateGUID();
+    }
+  }
+
+  std::shared_ptr<Entity> pastedRoot;
+  std::vector<std::shared_ptr<Entity>> pasted;
+  for (const auto& ej : entityClipboard_) {
+    auto entity = std::make_shared<Entity>();
+    entity->Deserialize(ej);
+
+    if (auto it = guidRemap.find(entity->Guid()); it != guidRemap.end()) {
+      entity->SetGuid(it->second);
+    } else {
+      entity->SetGuid(Entity::GenerateGUID());
+    }
+    if (auto it = guidRemap.find(entity->ParentGuid()); it != guidRemap.end()) {
+      entity->SetParentGuid(it->second);
+    }
+
+    if (!pastedRoot) {
+      pastedRoot = entity; // CollectSubtree はルートを先頭に入れている
+      entity->SetName(entity->Name() + " Copy");
+    }
+
+    pasted.push_back(entity);
+    currentScene->AddEntity(entity);
+  }
+  currentScene->FlushPendingEntities();
+
+  // モデル・テクスチャ・ライト等のランタイムハンドルを作り直す。
+  // Serialize にはパスしか含まれずハンドルは未設定のままなので、
+  // ここで初期化しないと貼り付けたエンティティが描画されない。
+  for (const auto& e : pasted) {
+    if (e) currentScene->InitDynamicEntityRuntime(*e);
+  }
+
+  if (pastedRoot) {
+    selectedEntity_ = pastedRoot;
+    currentScene->SetSelectedEntityId(pastedRoot->Id());
+    Log::Print(std::format("[Editor] Pasted: {}", pastedRoot->Name()));
+  }
+
+  // 貼り付け後の状態を基準として記録し直す
+  historyCurrent_ = CaptureCanonicalSnapshot(currentScene);
+  historyHash_ = HashSnapshot(historyCurrent_);
+  historyValid_ = true;
+  historyResync_ = true; // ランタイム初期化ぶんの差分を編集扱いにしない
+  historyPending_ = nullptr;
+  historyPendingHash_ = 0;
+  historyPollTimer_ = 0.0f;
 }
 
 void EditorManager::ApplyDarkTheme() {
@@ -154,12 +593,45 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
   }
 
   // ============================
+  // ショートカット
+  // ============================
+  // 先に履歴を確定させてからキー入力を処理する。
+  // 逆順だと Ctrl+Z の直前の変更が履歴に入らず1手ぶん取りこぼす。
+  CommitHistoryIfChanged(currentScene);
+  HandleShortcuts(core, currentScene);
+
+  // ============================
   // メニューバー
   // ============================
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Exit")) {
         PostQuitMessage(0);
+      }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+      const bool editable = (playState_ == PlayState::Stopped) && currentScene != nullptr;
+      // 履歴が積まれているかを確認できるように件数を出す
+      const std::string undoLabel = std::format("Undo ({})", undoStack_.size());
+      const std::string redoLabel = std::format("Redo ({})", redoStack_.size());
+      if (ImGui::MenuItem(undoLabel.c_str(), "Ctrl+Z", false, editable && !undoStack_.empty())) {
+        Undo(currentScene);
+      }
+      if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, editable && !redoStack_.empty())) {
+        Redo(currentScene);
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("Copy", "Ctrl+C", false, editable && !selectedEntity_.expired())) {
+        CopySelectedEntity(currentScene);
+      }
+      if (ImGui::MenuItem("Paste", "Ctrl+V", false, editable && entityClipboard_.is_array() && !entityClipboard_.empty())) {
+        PasteEntityClipboard(currentScene);
+      }
+      ImGui::Separator();
+      // 履歴機能が他の挙動に影響していないか切り分けるためのオン/オフ
+      if (ImGui::MenuItem("Undo履歴を記録する", nullptr, &historyEnabled_)) {
+        if (!historyEnabled_) ResetHistory(currentScene);
       }
       ImGui::EndMenu();
     }
@@ -188,6 +660,10 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
 
     if (currentScene) {
       if (ImGui::BeginMenu("Add")) {
+        if (ImGui::MenuItem("Empty", "Ctrl+Shift+N")) {
+          CreateEmptyEntity(currentScene, 0);
+        }
+        ImGui::Separator();
         if (ImGui::BeginMenu("Mesh")) {
           if (ImGui::MenuItem("Cube")) {
             auto e = currentScene->CreateEntity("Cube");
@@ -275,6 +751,62 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
           e->AddComponent<TransformComponent>();
           e->AddComponent<CameraComponent>();
         }
+        if (ImGui::MenuItem("Sprite")) {
+          auto e = currentScene->CreateEntity("Sprite");
+          auto& tr = e->AddComponent<TransformComponent>();
+          tr.position = {100.0f, 100.0f, 0.0f}; // スクリーン座標（ピクセル、左上原点）
+          auto& spr = e->AddComponent<SpriteRendererComponent>();
+          spr.spritePath = "Resources/uvChecker.png"; // Inspector / ドラッグ&ドロップで差し替え可
+          selectedEntity_ = e;
+        }
+        if (ImGui::MenuItem("Text")) {
+          auto e = currentScene->CreateEntity("Text");
+          auto& tr = e->AddComponent<TransformComponent>();
+          tr.position = {100.0f, 100.0f, 0.0f}; // スクリーン座標（ピクセル、左上原点）
+          auto& txt = e->AddComponent<TextRendererComponent>();
+          txt.text = "Text";
+          // フォントは描画時に TextRendererComponent の設定から自動ロードされる
+        }
+        if (ImGui::BeginMenu("Audio")) {
+          if (ImGui::MenuItem("BGM")) {
+            // 空のオブジェクトに BGM を持たせる。再生開始（Playing）と同時に鳴り始める
+            auto e = currentScene->CreateEntity("BGM");
+            e->AddComponent<TransformComponent>();
+            auto& audio = e->AddComponent<AudioSourceComponent>();
+            audio.bus = AudioBus::BGM;
+            audio.AddClip("main", "Resources/Sounds/bgm_main.mp3", 1.0f, /*loop=*/true);
+            audio.playOnAwake = "main"; // Inspector / ドラッグ&ドロップで差し替え可
+            selectedEntity_ = e;
+          }
+          if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("同じ曲を次のシーンにも置いておくと途切れずに続きます");
+          }
+          if (ImGui::MenuItem("Audio Source (SE)")) {
+            auto e = currentScene->CreateEntity("Audio Source");
+            e->AddComponent<TransformComponent>();
+            auto& audio = e->AddComponent<AudioSourceComponent>();
+            audio.bus = AudioBus::SE;
+            selectedEntity_ = e;
+          }
+          if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("スクリプトから GetComponent<AudioSourceComponent>()->Play(\"名前\") で鳴らします");
+          }
+          if (ImGui::MenuItem("Audio Source (3D SE)")) {
+            // 位置から聞こえる SE。エンティティの Transform を動かすと定位・音量が変わる
+            auto e = currentScene->CreateEntity("Audio Source 3D");
+            e->AddComponent<TransformComponent>();
+            auto& audio = e->AddComponent<AudioSourceComponent>();
+            audio.bus = AudioBus::SE;
+            audio.spatialBlend = 1.0f;
+            audio.minDistance = 1.0f;
+            audio.maxDistance = 50.0f;
+            selectedEntity_ = e;
+          }
+          if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("エンティティの位置から聞こえる SE（左右の定位・距離減衰・ドップラー）。\n聞き手は Audio Listener、無ければカメラ");
+          }
+          ImGui::EndMenu();
+        }
         ImGui::EndMenu();
       }
     }
@@ -283,7 +815,8 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
     if (ImGui::MenuItem("スクリーンショット")) {
       if (core) core->RequestScreenshot();
     }
-    
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("F2");
+
     bool isRecording = core && core->GetVideoRecorder().IsRecording();
     const char* recLabel = isRecording ? "画面録画停止" : "画面録画開始";
     if (ImGui::MenuItem(recLabel)) {
@@ -361,10 +894,10 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
     float buttonCount = 2.0f;
     float totalWidth = buttonWidth * buttonCount;
     float menuBarHeight = ImGui::GetWindowSize().y;
-    
+
     // カーソルを右端へ移動
     ImGui::SameLine(ImGui::GetWindowWidth() - totalWidth);
-    
+
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0)); // ボタン間の隙間をなくす
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0)); // 背景透明
@@ -385,7 +918,7 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
         if (hwnd) PostMessage(hwnd, WM_CLOSE, 0, 0);
         else PostQuitMessage(0);
     }
-    
+
     ImGui::PopStyleColor(2); // Xボタン用の色を戻す
     ImGui::PopStyleColor(3); // 透明背景などの色を戻す
     ImGui::PopStyleVar(2); // FramePadding, ItemSpacing
@@ -413,9 +946,9 @@ void EditorManager::SetupDockingLayout() {
 
   if (!resetLayout_) return;
   resetLayout_ = false;
-  
+
   // 既存のレイアウトをクリア
-  ImGui::DockBuilderRemoveNode(dockspace_id); 
+  ImGui::DockBuilderRemoveNode(dockspace_id);
   ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
   ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
@@ -545,7 +1078,7 @@ void EditorManager::DrawEntityNode(std::shared_ptr<Entity> e, Scene* currentScen
     if (renamingEntityId_ == e->Id()) {
         char nameBuf[256];
         strncpy_s(nameBuf, sizeof(nameBuf), e->Name().c_str(), _TRUNCATE);
-        
+
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (focusRename_) {
             ImGui::SetKeyboardFocusHere();
@@ -566,9 +1099,16 @@ void EditorManager::DrawEntityNode(std::shared_ptr<Entity> e, Scene* currentScen
         if (selectedEntity_.lock() == e) {
             flags |= ImGuiTreeNodeFlags_Selected;
         }
-        
+
         // フォルダの場合はデフォルトで開く
         if (e->IsFolder()) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+
+        // 子を追加した直後の親は展開して新しい子を見せる。
+        // 子が entities_ に反映される（Leaf でなくなる）まで待ってから開く。
+        if (expandEntityGuid_ != 0 && expandEntityGuid_ == e->Guid() && hasChildren) {
+            ImGui::SetNextItemOpen(true);
+            expandEntityGuid_ = 0;
+        }
 
         isOpen = ImGui::TreeNodeEx("##node", flags, "%s", e->Name().c_str());
 
@@ -610,19 +1150,23 @@ void EditorManager::DrawEntityNode(std::shared_ptr<Entity> e, Scene* currentScen
             renamingEntityId_ = e->Id();
             focusRename_ = true;
         }
-        
-        // 右クリックメニュー (Delete, Rename, Create Folder)
+
+        // 右クリックメニュー (Delete, Rename, Create Empty, Create Folder)
         if (!e->IsLocked()) {
             if (ImGui::BeginPopupContextItem()) {
                 if (ImGui::MenuItem("Rename")) {
                     renamingEntityId_ = e->Id();
                     focusRename_ = true;
                 }
+                if (ImGui::MenuItem("Create Empty inside")) {
+                    CreateEmptyEntity(currentScene, e->Guid());
+                }
                 if (e->IsFolder() || true) {
                     if (ImGui::MenuItem("Create Folder inside")) {
                         auto folder = currentScene->CreateEntity("New Folder");
                         folder->SetIsFolder(true);
                         folder->SetParentGuid(e->Guid());
+                        expandEntityGuid_ = e->Guid();
                     }
                 }
                 if (ImGui::MenuItem("Delete")) {
@@ -687,7 +1231,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
       static float fpsHistory[120] = {0};
       static float msHistory[120] = {0};
       static int historyIdx = 0;
-      
+
       fpsHistory[historyIdx] = fps;
       msHistory[historyIdx] = frameTime;
       historyIdx = (historyIdx + 1) % 120;
@@ -695,9 +1239,9 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
       if (ImGui::CollapsingHeader("Timing & Performance", ImGuiTreeNodeFlags_DefaultOpen)) {
           ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "FPS: %.1f", fps);
           ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Frame Time: %.3f ms", frameTime);
-          
+
           ImGui::Separator();
-          
+
           char overlayFps[32];
           sprintf_s(overlayFps, "Avg FPS: %.1f", fps);
           ImGui::PlotLines("##FPS", fpsHistory, 120, historyIdx, overlayFps, 0.0f, 120.0f, ImVec2(ImGui::GetContentRegionAvail().x, 60.0f));
@@ -706,7 +1250,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           sprintf_s(overlayMs, "Avg %.2f ms", frameTime);
           ImGui::PlotLines("##MS", msHistory, 120, historyIdx, overlayMs, 0.0f, 33.0f, ImVec2(ImGui::GetContentRegionAvail().x, 60.0f));
       }
-      
+
       if (core) {
           if (ImGui::CollapsingHeader("Graphics Info", ImGuiTreeNodeFlags_DefaultOpen)) {
               ImGui::Text("Viewport: %.0f x %.0f", core->Viewport().Width, core->Viewport().Height);
@@ -719,10 +1263,10 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           if (core) {
               float currentFps = core->GetTargetFps();
               bool isFixed = currentFps > 0.0f;
-              
+
               const char* fpsOptions[] = { "30 FPS", "60 FPS", "120 FPS", "144 FPS", "Uncapped" };
               float fpsValues[] = { 30.0f, 60.0f, 120.0f, 144.0f, 0.0f };
-              
+
               int currentItem = 1; // default to 60 FPS
               if (!isFixed) {
                   currentItem = 4;
@@ -742,7 +1286,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
               }
 
               ImGui::Separator();
-              
+
               // Resolution Settings
 #if defined(_DEBUG) || defined(RC_DEVELOPMENT)
               const char* resOptions[] = {
@@ -759,14 +1303,14 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                   "1280 x 720 (Windowed)"
               };
 #endif
-              
+
               int currentResItem = 0;
               float w = core->Viewport().Width;
               float h = core->Viewport().Height;
-              
+
               int screenW = GetSystemMetrics(SM_CXSCREEN);
               int screenH = GetSystemMetrics(SM_CYSCREEN);
-              
+
               if (w == screenW && h == screenH) currentResItem = 0;
               else if (w == 1920 && h == 1080) currentResItem = 1;
               else if (w == 1600 && h == 900) currentResItem = 2;
@@ -809,7 +1353,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
     if (ImGui::Begin("Render Queue", &showRenderQueue_)) {
       const auto& queue = RC::GetRenderContext().GetLastCommandHistory();
       ImGui::Text("Total Commands: %zu", queue.size());
-      
+
       ImGui::SameLine();
       if (ImGui::Button("Export Dump to File")) {
         ExportRenderQueueDump();
@@ -826,8 +1370,8 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
 
           for (size_t i = 0; i < queue.size(); ++i) {
             const auto& cmd = queue[i];
-            
-            std::string displayName = cmd.debugName;
+
+            std::string displayName(cmd.debugName); // debugName は string_view
             if (cmd.debugIndex >= 0) {
               std::string resourceName = "";
               if (cmd.debugName.find("Model") != std::string::npos) {
@@ -839,7 +1383,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                   resourceName = std::filesystem::path(s->GetFilePath()).filename().string();
                 }
               }
-              
+
               if (!resourceName.empty()) {
                 displayName += " [" + resourceName + "]";
               }
@@ -904,7 +1448,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             break;
           }
         }
-        
+
         if (skyEntity) {
           ImGui::Text("Current Environment Entity: %s", skyEntity->GetName().c_str());
           if (ImGui::Button("Select in Hierarchy")) {
@@ -956,15 +1500,36 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
     vMin.y += ImGui::GetWindowPos().y;
     vMax.x += ImGui::GetWindowPos().x;
     vMax.y += ImGui::GetWindowPos().y;
-    
+
     float width = vMax.x - vMin.x;
     float height = vMax.y - vMin.y;
 
+    // パネル内に収まる 16:9 の矩形を計算して中央に配置する（レターボックス）
+    constexpr float kViewportAspect = 16.0f / 9.0f;
+    if (width > 0 && height > 0) {
+      float imgW = width;
+      float imgH = imgW / kViewportAspect;
+      if (imgH > height) {
+        imgH = height;
+        imgW = imgH * kViewportAspect;
+      }
+      // 余白（レターボックス）部分を黒で塗りつぶす
+      ImGui::GetWindowDrawList()->AddRectFilled(vMin, vMax, IM_COL32(0, 0, 0, 255));
+      // 以降の処理（マウス座標変換・ピッキング・ギズモ）はすべて画像矩形基準で行う
+      vMin.x += (width - imgW) * 0.5f;
+      vMin.y += (height - imgH) * 0.5f;
+      vMax.x = vMin.x + imgW;
+      vMax.y = vMin.y + imgH;
+      width = imgW;
+      height = imgH;
+    }
+
       // ゲーム描画用SRVをImGuiのImageとして表示
     if (viewportSrv.ptr != 0 && width > 0 && height > 0) {
+      ImGui::SetCursorScreenPos(vMin); // 中央寄せした位置から描画
       ImGui::Image((ImTextureID)viewportSrv.ptr, ImVec2(width, height));
       bool isHoveringImage = ImGui::IsItemHovered();
-      
+
       // ===== Mouse Position Update for Game =====
       float currentMouseX = ImGui::GetMousePos().x - vMin.x;
       float currentMouseY = ImGui::GetMousePos().y - vMin.y;
@@ -978,8 +1543,187 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           }
       }
 
+      // ===== 2D 要素（Text / Sprite）の枠表示・クリック選択・ドラッグ移動 =====
+      // 3D のギズモの代わりに、スクリーン座標の矩形を直接ドラッグして位置を変える
+      bool consumed2DClick = false;
+      if (currentScene && (!currentScene->GetContext() || !currentScene->GetContext()->isPlaying())) {
+          float gameW = width, gameH = height;
+          if (core) { gameW = core->Viewport().Width; gameH = core->Viewport().Height; }
+          else if (auto* sctx = RC::GetRenderContext().Ctx(); sctx && sctx->app) { gameW = (float)sctx->app->width; gameH = (float)sctx->app->height; }
+          const float sx = (gameW > 0.0f) ? width / gameW : 1.0f;
+          const float sy = (gameH > 0.0f) ? height / gameH : 1.0f;
+          auto toScreen = [&](const RC::Vector2& g) { return ImVec2(vMin.x + g.x * sx, vMin.y + g.y * sy); };
+
+          ImDrawList* dl = ImGui::GetWindowDrawList();
+          const ImVec2 mouse = ImGui::GetMousePos();
+          auto selected = selectedEntity_.lock();
+
+          // ホバー判定（後ろ＝上に描かれるものを優先）
+          std::shared_ptr<Entity> hovered2D;
+          const auto& ents = currentScene->GetEntities();
+          for (auto it = ents.rbegin(); it != ents.rend(); ++it) {
+              const auto& e = *it;
+              if (!e || e->IsPendingDestroy() || !e->IsVisible() || !e->IsActive()) continue;
+              RC::Vector2 mn, mx;
+              if (!Get2DRect(*e, mn, mx)) continue;
+              const ImVec2 a = toScreen(mn), b = toScreen(mx);
+              if (isHoveringImage && mouse.x >= a.x && mouse.x <= b.x && mouse.y >= a.y && mouse.y <= b.y) {
+                  hovered2D = e;
+                  break;
+              }
+          }
+
+          // 選択中の 2D 要素の矩形と四隅ハンドルのホバー判定
+          const float kHandleHit = 7.0f; // ハンドルの当たり半径（画面 px）
+          int hoveredCorner = -1;        // 0=左上 1=右上 2=左下 3=右下
+          RC::Vector2 selMin{}, selMax{};
+          const bool selectedIs2D = selected && Is2DEntity(*selected) && selected->IsVisible() && Get2DRect(*selected, selMin, selMax);
+          if (selectedIs2D && isHoveringImage) {
+              const ImVec2 a = toScreen(selMin), b = toScreen(selMax);
+              const ImVec2 corners[4] = { a, ImVec2(b.x, a.y), ImVec2(a.x, b.y), b };
+              for (int i = 0; i < 4; ++i) {
+                  if (std::fabs(mouse.x - corners[i].x) <= kHandleHit && std::fabs(mouse.y - corners[i].y) <= kHandleHit) {
+                      hoveredCorner = i;
+                      break;
+                  }
+              }
+          }
+
+          // 枠の描画
+          for (const auto& e : ents) {
+              if (!e || e->IsPendingDestroy() || !e->IsVisible() || !e->IsActive()) continue;
+              if (e != selected && e != hovered2D) continue;
+              RC::Vector2 mn, mx;
+              if (!Get2DRect(*e, mn, mx)) continue;
+              const ImVec2 a = toScreen(mn), b = toScreen(mx);
+              if (e == selected) {
+                  dl->AddRect(a, b, IM_COL32(255, 170, 40, 255), 0.0f, 0, 2.0f);
+                  // 四隅ハンドル（ドラッグでサイズ変更）
+                  const ImVec2 corners[4] = { a, ImVec2(b.x, a.y), ImVec2(a.x, b.y), b };
+                  for (int i = 0; i < 4; ++i) {
+                      const bool hot = (hoveredCorner == i) || (drag2DMode_ == 2 && dragging2D_);
+                      const float hs = hot ? 6.0f : 4.0f;
+                      const ImVec2& c = corners[i];
+                      dl->AddRectFilled(ImVec2(c.x - hs, c.y - hs), ImVec2(c.x + hs, c.y + hs),
+                                        hot ? IM_COL32(255, 255, 255, 255) : IM_COL32(255, 170, 40, 255));
+                  }
+                  // 位置・サイズラベル
+                  if (auto* tr = e->GetComponent<TransformComponent>()) {
+                      char buf[96];
+                      if (auto* txt = e->GetComponent<TextRendererComponent>()) {
+                          snprintf(buf, sizeof(buf), "(%.0f, %.0f)  %.0fpx x%.2f", tr->position.x, tr->position.y, txt->fontSize, txt->scale);
+                      } else {
+                          snprintf(buf, sizeof(buf), "(%.0f, %.0f)  %.0f x %.0f", tr->position.x, tr->position.y, mx.x - mn.x, mx.y - mn.y);
+                      }
+                      dl->AddText(ImVec2(a.x, a.y - 16.0f), IM_COL32(255, 220, 150, 255), buf);
+                  }
+              } else {
+                  dl->AddRect(a, b, IM_COL32(255, 255, 255, 120), 0.0f, 0, 1.0f);
+              }
+          }
+
+          // クリック：ハンドル上ならサイズ変更開始、要素上なら選択して移動開始
+          if (isHoveringImage && ImGui::IsMouseClicked(0) && !ImGuizmo::IsOver()) {
+              if (selectedIs2D && hoveredCorner >= 0 && !selected->IsLocked()) {
+                  dragging2D_ = true;
+                  drag2DMode_ = 2;
+                  // 反対側のコーナーを固定点にする
+                  drag2DAnchorX_ = (hoveredCorner == 0 || hoveredCorner == 2) ? selMax.x : selMin.x;
+                  drag2DAnchorY_ = (hoveredCorner == 0 || hoveredCorner == 1) ? selMax.y : selMin.y;
+                  drag2DBaseW_ = (std::max)(selMax.x - selMin.x, 1.0f);
+                  drag2DBaseH_ = (std::max)(selMax.y - selMin.y, 1.0f);
+                  if (auto* txt = selected->GetComponent<TextRendererComponent>()) drag2DBaseScale_ = txt->scale;
+                  else drag2DBaseScale_ = 1.0f;
+                  consumed2DClick = true;
+              } else if (hovered2D) {
+                  if (!hovered2D->IsLocked()) {
+                      selectedEntity_ = hovered2D;
+                      dragging2D_ = true;
+                      drag2DMode_ = 1;
+                      drag2DLastX_ = mouse.x;
+                      drag2DLastY_ = mouse.y;
+                  }
+                  consumed2DClick = true;
+              }
+          }
+
+          // ドラッグ中の更新
+          if (dragging2D_) {
+              auto sel = selectedEntity_.lock();
+              if (!ImGui::IsMouseDown(0) || !sel || !Is2DEntity(*sel)) {
+                  // 終了：Text のサイズ変更は scale を fontSize に焼き込んで等倍に戻す（にじみ防止）
+                  if (drag2DMode_ == 2 && sel) {
+                      if (auto* txt = sel->GetComponent<TextRendererComponent>()) {
+                          if (std::fabs(txt->scale - 1.0f) > 1e-3f) {
+                              txt->fontSize = (std::max)(4.0f, std::round(txt->fontSize * txt->scale));
+                              txt->scale = 1.0f;
+                          }
+                      }
+                  }
+                  dragging2D_ = false;
+                  drag2DMode_ = 0;
+              } else if (!sel->IsLocked()) {
+                  auto* tr = sel->GetComponent<TransformComponent>();
+                  if (drag2DMode_ == 1 && tr) {
+                      // 移動（ゲーム解像度のピクセル単位に変換して加算）
+                      tr->position.x += (mouse.x - drag2DLastX_) / sx;
+                      tr->position.y += (mouse.y - drag2DLastY_) / sy;
+                      if (ImGui::GetIO().KeyShift) { // Shift でピクセル吸着
+                          tr->position.x = std::round(tr->position.x);
+                          tr->position.y = std::round(tr->position.y);
+                      }
+                      drag2DLastX_ = mouse.x;
+                      drag2DLastY_ = mouse.y;
+                  } else if (drag2DMode_ == 2 && tr) {
+                      // サイズ変更：固定コーナーとマウス位置で新しい矩形を決める
+                      const float gx = (mouse.x - vMin.x) / sx;
+                      const float gy = (mouse.y - vMin.y) / sy;
+                      float newW = (std::max)(std::fabs(gx - drag2DAnchorX_), 1.0f);
+                      float newH = (std::max)(std::fabs(gy - drag2DAnchorY_), 1.0f);
+                      if (auto* txt = sel->GetComponent<TextRendererComponent>()) {
+                          // 文字は等比：幅と高さのうち大きい方の比率で scale を決める
+                          const float ratio = (std::max)(newW / drag2DBaseW_, newH / drag2DBaseH_);
+                          txt->scale = (std::max)(0.05f, drag2DBaseScale_ * ratio);
+                          newW = drag2DBaseW_ * ratio;
+                          newH = drag2DBaseH_ * ratio;
+                          const float newMinX = (gx < drag2DAnchorX_) ? drag2DAnchorX_ - newW : drag2DAnchorX_;
+                          const float newMinY = (gy < drag2DAnchorY_) ? drag2DAnchorY_ - newH : drag2DAnchorY_;
+                          // 揃えに応じて position.x を矩形から逆算
+                          if (txt->align == TextAlign::Center) tr->position.x = newMinX + newW * 0.5f;
+                          else if (txt->align == TextAlign::Right) tr->position.x = newMinX + newW;
+                          else tr->position.x = newMinX;
+                          tr->position.y = newMinY;
+                      } else if (auto* spr = sel->GetComponent<SpriteRendererComponent>()) {
+                          if (ImGui::GetIO().KeyShift) { // Shift で縦横比維持
+                              const float ratio = (std::max)(newW / drag2DBaseW_, newH / drag2DBaseH_);
+                              newW = drag2DBaseW_ * ratio;
+                              newH = drag2DBaseH_ * ratio;
+                          }
+                          spr->size = { newW, newH };
+                          tr->position.x = (gx < drag2DAnchorX_) ? drag2DAnchorX_ - newW : drag2DAnchorX_;
+                          tr->position.y = (gy < drag2DAnchorY_) ? drag2DAnchorY_ - newH : drag2DAnchorY_;
+                      }
+                  }
+                  if (ImGui::IsMouseDragging(0)) consumed2DClick = true;
+              }
+          }
+
+          // カーソル
+          if (isHoveringImage) {
+              if (hoveredCorner >= 0 || (dragging2D_ && drag2DMode_ == 2)) {
+                  const int c = (hoveredCorner >= 0) ? hoveredCorner : 3;
+                  ImGui::SetMouseCursor((c == 0 || c == 3) ? ImGuiMouseCursor_ResizeNWSE : ImGuiMouseCursor_ResizeNESW);
+              } else if (hovered2D || (dragging2D_ && drag2DMode_ == 1)) {
+                  ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+              }
+          }
+      } else {
+          dragging2D_ = false;
+          drag2DMode_ = 0;
+      }
+
       // ===== Mouse Picking =====
-      if (ImGui::IsMouseClicked(0) && isHoveringImage && !ImGui::IsMouseDragging(0) && currentScene && 
+      if (!consumed2DClick && ImGui::IsMouseClicked(0) && isHoveringImage && !ImGui::IsMouseDragging(0) && currentScene &&
           (!currentScene->GetContext() || !currentScene->GetContext()->isPlaying()) &&
           !ImGuizmo::IsOver()) {
           float mouseX = ImGui::GetMousePos().x - vMin.x;
@@ -991,18 +1735,19 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
               RC::Matrix4x4 view = cam->GetView();
               RC::Matrix4x4 proj = cam->GetProjection();
               RC::Ray ray = RC::CameraMath::ScreenPointToRay(mousePosVec, screenSize, view, proj);
-              
+
               float minHitDistance = 999999.0f;
               std::shared_ptr<Entity> hitEntity = nullptr;
-              
+
               for (const auto& e : currentScene->GetEntities()) {
                   if (!e->IsVisible()) continue;
+                  if (Is2DEntity(*e)) continue; // 2D 要素は上の矩形判定で扱う
                   auto* tr = e->GetComponent<TransformComponent>();
                   if (!tr) continue;
-                  
+
                   float dist = 0.0f;
                   bool hit = false;
-                  
+
                   if (auto* col = e->GetComponent<ColliderComponent>()) {
                       if (col->IsEnabled()) {
                           RC::Vector3 scaledCenter = {
@@ -1037,13 +1782,13 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                           hit = RC::IntersectRaySphere(ray, tr->position, 1.0f, dist);
                       }
                   }
-                  
+
                   if (hit && dist >= 0.0f && dist < minHitDistance) {
                       minHitDistance = dist;
                       hitEntity = e;
                   }
               }
-              
+
               if (hitEntity && !hitEntity->IsLocked()) {
                   selectedEntity_ = hitEntity;
               } else if (!hitEntity) {
@@ -1051,7 +1796,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
               }
           }
       }
-      
+
       // ===== Drop Target =====
       if (ImGui::BeginDragDropTarget()) {
           if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
@@ -1059,36 +1804,36 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
               std::filesystem::path p(droppedPath);
               std::string ext = p.extension().string();
               std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-              
+
               if (currentScene) {
                   auto e = currentScene->CreateEntity(p.stem().string());
                   auto& tr = e->AddComponent<TransformComponent>();
-                  
+
                   // ドラッグ先の座標計算 (Screen to World)
                   float mouseX = ImGui::GetMousePos().x - vMin.x;
                   float mouseY = ImGui::GetMousePos().y - vMin.y;
                   RC::Vector3 dropPos = {0, 0, 0};
-                  
+
                   // エディタ（またはゲーム）の現在のカメラを取得
                   RC::CameraController* cam = RC::GetRenderContext().Ctx()->camera;
                   if (cam) {
                       // NDC座標 (-1.0 ～ 1.0)
                       float ndcX = (2.0f * mouseX) / width - 1.0f;
                       float ndcY = 1.0f - (2.0f * mouseY) / height;
-                      
+
                       // ビュー・プロジェクション行列の計算
                       RC::Matrix4x4 view = cam->GetView();
                       RC::Matrix4x4 proj = cam->GetProjection();
                       RC::Matrix4x4 viewProj = ::Multiply(view, proj);
                       RC::Matrix4x4 invViewProj = ::Inverse(viewProj);
-                      
+
                       // Far平面上の点を計算
                       RC::Vector3 farPoint = ::Vector3Transform({ndcX, ndcY, 1.0f}, invViewProj);
                       RC::Vector3 camPos = cam->GetWorldPos();
-                      
+
                       // カメラからFar点へのレイ
                       RC::Vector3 rayDir = ::Normalize(::Subtract(farPoint, camPos));
-                      
+
                       // Y=0 の平面（地面）との交差を求める
                       if (std::abs(rayDir.y) > 0.001f) {
                           float t = -camPos.y / rayDir.y;
@@ -1102,13 +1847,29 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                       }
                   }
                   tr.position = dropPos;
-                  
+
                   if (ext == ".gltf" || ext == ".obj") {
                       auto& ren = e->AddComponent<ModelRendererComponent>();
                       ren.modelPath = droppedPath;
                       ren.modelHandle = RC::LoadModel(p.string());
+                      // アニメーションを含むモデルには AnimationComponent を自動で付ける。
+                      // モデルのロードは非同期なので、ハンドル経由ではなくファイルを直接見て判定する。
+                      if (RC::GetAnimationCount(p.string()) > 0) {
+                          e->AddComponent<AnimationComponent>();
+                      }
                   } else if (ext == ".png" || ext == ".jpg" || ext == ".dds") {
-                      // Note: SpriteRendererComponent requires SceneContext to load correctly, so we skip auto-loading for now.
+                      // 画像はスプライトとして追加。位置はドロップしたスクリーン座標（ピクセル）
+                      auto& spr = e->AddComponent<SpriteRendererComponent>();
+                      spr.spritePath = droppedPath;
+                      float gameW = width, gameH = height;
+                      if (core) { gameW = core->Viewport().Width; gameH = core->Viewport().Height; }
+                      const float gx = (width > 0.0f) ? mouseX / width * gameW : 0.0f;
+                      const float gy = (height > 0.0f) ? mouseY / height * gameH : 0.0f;
+                      tr.position = { gx - spr.size.x * 0.5f, gy - spr.size.y * 0.5f, 0.0f };
+                      tr.rotation = { 0.0f, 0.0f, 0.0f };
+                      tr.scale = { 1.0f, 1.0f, 1.0f };
+                      // 実際のロードは DataDrivenScene の描画ループで行われる（spritePath を見て遅延ロード）
+                      selectedEntity_ = e;
                   }
               }
           }
@@ -1118,20 +1879,20 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
 
       // シェーディングモードのアイコン群をビューポート右上にオーバーレイ表示
       // 描画開始位置を決定 (上部のバーと重ならないようY座標を少し下げる)
-      ImGui::SetCursorPos(ImVec2(width - 186.0f, 24.0f)); 
+      ImGui::SetCursorScreenPos(ImVec2(vMax.x - 186.0f, vMin.y + 24.0f));
       ImVec2 cursorPos = ImGui::GetCursorScreenPos();
-      
+
       // 幅は「ボタン6個(24px) + 隙間5個(4px) = 164px」に左右余白6pxずつ足して 176px にする
       ImVec2 overlaySize = ImVec2(176.0f, 32.0f);
-      
+
       // 再生中以外の場合のみ、ギズモ描画と各種オーバーレイUIを表示する
       if (playState_ != PlayState::Playing) {
           // ボタン群（高さ24px）の背景として、上下左右に余白を持たせた半透明の枠を描画
           // cursorPos は最初のボタンの左上絶対座標。枠は少し左・上にずらして描画する。
           ImGui::GetWindowDrawList()->AddRectFilled(
-              ImVec2(cursorPos.x - 6.0f, cursorPos.y - 4.0f), 
-              ImVec2(cursorPos.x - 6.0f + overlaySize.x, cursorPos.y - 4.0f + overlaySize.y), 
-              IM_COL32(20, 20, 20, 160), 
+              ImVec2(cursorPos.x - 6.0f, cursorPos.y - 4.0f),
+              ImVec2(cursorPos.x - 6.0f + overlaySize.x, cursorPos.y - 4.0f + overlaySize.y),
+              IM_COL32(20, 20, 20, 160),
               6.0f
           );
 
@@ -1139,13 +1900,13 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           RC::DrawViewShadingModeImGui("");
 
           // ギズモ操作モード用UIを左上に描画
-          ImGui::SetCursorPos(ImVec2(10.0f, 24.0f));
+          ImGui::SetCursorScreenPos(ImVec2(vMin.x + 10.0f, vMin.y + 24.0f));
           ImVec2 leftCursorPos = ImGui::GetCursorScreenPos();
           ImVec2 leftOverlaySize = ImVec2(156.0f, 32.0f); // 枠の幅を少し広げてはみ出しを修正
           ImGui::GetWindowDrawList()->AddRectFilled(
-              ImVec2(leftCursorPos.x - 6.0f, leftCursorPos.y - 4.0f), 
-              ImVec2(leftCursorPos.x - 6.0f + leftOverlaySize.x, leftCursorPos.y - 4.0f + leftOverlaySize.y), 
-              IM_COL32(20, 20, 20, 160), 
+              ImVec2(leftCursorPos.x - 6.0f, leftCursorPos.y - 4.0f),
+              ImVec2(leftCursorPos.x - 6.0f + leftOverlaySize.x, leftCursorPos.y - 4.0f + leftOverlaySize.y),
+              IM_COL32(20, 20, 20, 160),
               6.0f
           );
 
@@ -1173,25 +1934,25 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           ImGuizmo::SetRect(vMin.x, vMin.y, width, height);
 
           // 選択されているオブジェクトがあればギズモを表示
-          if (auto hitEntity = selectedEntity_.lock()) {
+          if (auto hitEntity = selectedEntity_.lock(); hitEntity && !Is2DEntity(*hitEntity)) {
               if (auto* tr = hitEntity->GetComponent<TransformComponent>()) {
                   RC::CameraController* cam = RC::GetRenderContext().Ctx()->camera;
                   if (cam) {
                       RC::Matrix4x4 view = cam->GetView();
                       RC::Matrix4x4 proj = cam->GetProjection();
-                      
+
                       float* viewPtr = reinterpret_cast<float*>(&view);
                       float* projPtr = reinterpret_cast<float*>(&proj);
-                      
+
                       RC::Matrix4x4 worldMat = MakeAffineMatrix(tr->scale, tr->rotation, tr->position);
                       float* matrixPtr = reinterpret_cast<float*>(&worldMat);
-                      
+
                       ImGuizmo::Manipulate(viewPtr, projPtr, (ImGuizmo::OPERATION)gizmoOperation_, (ImGuizmo::MODE)gizmoMode_, matrixPtr);
-                      
+
                       if (ImGuizmo::IsUsing()) {
                           float translation[3], rotation[3], scale[3];
                           ImGuizmo::DecomposeMatrixToComponents(matrixPtr, translation, rotation, scale);
-                          
+
                           tr->position = {translation[0], translation[1], translation[2]};
                           tr->rotation = {rotation[0] * 3.14159265f / 180.0f, rotation[1] * 3.14159265f / 180.0f, rotation[2] * 3.14159265f / 180.0f};
                           tr->scale = {scale[0], scale[1], scale[2]};
@@ -1213,9 +1974,10 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
       // 親子関係のマップを構築
       std::unordered_map<uint64_t, std::vector<std::shared_ptr<Entity>>> childrenMap;
       std::vector<std::shared_ptr<Entity>> rootEntities;
-      
+
       for (const auto& e : currentScene->GetEntities()) {
         if (!e || e->IsPendingDestroy()) continue;
+        if (e->HasTag("transient") || e->HasTag("hide_in_hierarchy")) continue;
         if (e->ParentGuid() == 0 || currentScene->FindEntityByGuid(e->ParentGuid()) == nullptr) {
             rootEntities.push_back(e);
         } else {
@@ -1228,8 +1990,11 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           DrawEntityNode(e, currentScene, childrenMap);
       }
 
-      // 何もない領域での右クリックメニュー（新規フォルダ作成など）
+      // 何もない領域での右クリックメニュー（空オブジェクト・新規フォルダ作成など）
       if (ImGui::BeginPopupContextWindow("HierarchyBgContext", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
+          if (ImGui::MenuItem("Create Empty")) {
+              CreateEmptyEntity(currentScene, 0);
+          }
           if (ImGui::MenuItem("Create Folder")) {
               auto folder = currentScene->CreateEntity("New Folder");
               folder->SetIsFolder(true);
@@ -1261,7 +2026,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         std::function<void()> pendingRemove;
         char nameBuf[256];
         strncpy_s(nameBuf, sizeof(nameBuf), e->Name().c_str(), _TRUNCATE);
-        
+
         bool active = e->IsActive();
         if (ImGui::Checkbox("##InspectorActive", &active)) {
             e->SetActive(active);
@@ -1281,11 +2046,11 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         if (ImGui::CollapsingHeader("Tags (タグ)", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Indent(8.0f);
             auto& tags = e->GetTagsRef();
-            
+
             std::string tagToRemove = "";
             for (auto& [key, val] : tags) {
                 ImGui::PushID(key.c_str());
-                
+
                 // タグ名と削除ボタンのみを表示 (値は隠蔽してシンプルにする)
                 ImGui::AlignTextToFramePadding();
                 ImGui::Text(" %s ", key.c_str());
@@ -1300,7 +2065,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             }
 
             ImGui::Separator();
-            
+
             // Collect known tags
             std::set<std::string> knownTags = { "is_enemy", "is_player", "is_terrain", "pending_damage", "impact_factor", "reused", "Shark", "Enemy" };
             if (currentScene) {
@@ -1311,7 +2076,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                     }
                 }
             }
-            
+
             std::vector<std::string> tagList;
             tagList.push_back("--- Select a tag ---");
             for (const auto& k : knownTags) {
@@ -1325,10 +2090,10 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             if (selectedTagIdx >= tagList.size()) selectedTagIdx = 0;
 
             const char* currentLabel = tagList[selectedTagIdx].c_str();
-            
+
             bool isNewTagMode = (selectedTagIdx == tagList.size() - 1);
             float comboWidth = isNewTagMode ? ImGui::GetContentRegionAvail().x * 0.45f : ImGui::GetContentRegionAvail().x - 50.0f;
-            
+
             ImGui::SetNextItemWidth(comboWidth);
             if (ImGui::BeginCombo("##TagSelector", currentLabel)) {
                 for (int i = 0; i < tagList.size(); ++i) {
@@ -1347,13 +2112,13 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             }
 
             ImGui::SameLine();
-            
+
             if (isNewTagMode) {
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 50.0f);
                 ImGui::InputText("##NewTagKey", newTagKey, sizeof(newTagKey));
                 ImGui::SameLine();
             }
-            
+
             if (ImGui::Button("Add", ImVec2(40.0f, 0.0f))) {
                 std::string tagToAdd = isNewTagMode ? newTagKey : (selectedTagIdx > 0 ? tagList[selectedTagIdx] : "");
                 if (!tagToAdd.empty() && tagToAdd != "--- Select a tag ---" && tagToAdd != "+ New Tag...") {
@@ -1376,14 +2141,21 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                    tr->rotation = {0.0f, 0.0f, 0.0f};
                    tr->scale = {1.0f, 1.0f, 1.0f};
                }
+               const bool is2D = Is2DEntity(*e);
+               if (is2D) {
+                   // Text / Sprite はスクリーン座標 X/Y（ピクセル・左上原点）のみ使用する
+                   ImGui::DragFloat2("Position XY (px)", &tr->position.x, 1.0f);
+                   ImGui::TextDisabled("2D 要素は Position X/Y のみ使用（Viewport 上でドラッグ移動可）");
+               } else {
                ImGui::DragFloat3("Position (位置)", &tr->position.x, 0.1f);
-               
+
                // Euler 変換 (deg <-> rad)
                RC::Vector3 eulerDegrees = { tr->rotation.x * 180.0f / 3.14159265f, tr->rotation.y * 180.0f / 3.14159265f, tr->rotation.z * 180.0f / 3.14159265f };
                if (ImGui::DragFloat3("Rotation (回転)", &eulerDegrees.x, 1.0f)) {
                    tr->rotation = { eulerDegrees.x * 3.14159265f / 180.0f, eulerDegrees.y * 3.14159265f / 180.0f, eulerDegrees.z * 3.14159265f / 180.0f };
                }
                ImGui::DragFloat3("Scale (スケール)", &tr->scale.x, 0.1f);
+               }
                ImGui::Unindent(8.0f);
             }
         }
@@ -1495,13 +2267,22 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
 
                // -- GPU Material properties --
                if (Material* mat = RC::GetModelMaterialPtr(ren->modelHandle)) {
-                   // Lighting Mode
-                   const char* lightingModes[] = { "None", "Lambert", "Half Lambert" };
-                   int lightMode = mat->lightingMode;
+                   // Lighting Mode（Follow Light: シーンの DirectionalLight に追従 / それ以外: 個別固定）
+                   const char* lightingModes[] = { "Follow Light (ライトに従う)", "None", "Lambert", "Half Lambert" };
+                   int lightMode = ren->lightingMode + 1; // -1..2 -> 0..3
                    if (lightMode < 0) lightMode = 0;
-                   if (lightMode > 2) lightMode = 2;
-                   if (ImGui::Combo("Lighting (ライティング)##Model", &lightMode, lightingModes, 3)) {
-                       mat->lightingMode = lightMode;
+                   if (lightMode > 3) lightMode = 3;
+                   if (ImGui::Combo("Lighting (ライティング)##Model", &lightMode, lightingModes, 4)) {
+                       ren->lightingMode = lightMode - 1;
+                       if (ren->lightingMode >= 0) {
+                           RC::SetModelLightingMode(ren->modelHandle, static_cast<LightingMode>(ren->lightingMode));
+                       } else {
+                           RC::ClearModelLightingModeOverride(ren->modelHandle);
+                       }
+                   }
+                   if (ren->lightingMode < 0) {
+                       ImGui::SameLine();
+                       ImGui::TextDisabled("(現在: %s)", (mat->lightingMode >= 0 && mat->lightingMode <= 2) ? lightingModes[mat->lightingMode + 1] : "?");
                    }
 
                    // Shininess
@@ -1655,14 +2436,22 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                        mat->color = pm->color;
                    }
 
-                   // Lighting Mode
-                   const char* lightingModes[] = { "None", "Lambert", "Half Lambert" };
-                   int lightMode = pm->lightingMode;
+                   // Lighting Mode（Follow Light: シーンの DirectionalLight に追従 / それ以外: 個別固定）
+                   const char* lightingModes[] = { "Follow Light (ライトに従う)", "None", "Lambert", "Half Lambert" };
+                   int lightMode = pm->lightingMode + 1; // -1..2 -> 0..3
                    if (lightMode < 0) lightMode = 0;
-                   if (lightMode > 2) lightMode = 2;
-                   if (ImGui::Combo("Lighting (ライティング)##PM", &lightMode, lightingModes, 3)) {
-                       pm->lightingMode = lightMode;
-                       mat->lightingMode = lightMode;
+                   if (lightMode > 3) lightMode = 3;
+                   if (ImGui::Combo("Lighting (ライティング)##PM", &lightMode, lightingModes, 4)) {
+                       pm->lightingMode = lightMode - 1;
+                       if (pm->lightingMode >= 0) {
+                           RC::SetPrimitiveMeshLightingMode(pm->meshHandle, static_cast<LightingMode>(pm->lightingMode));
+                       } else {
+                           RC::ClearPrimitiveMeshLightingModeOverride(pm->meshHandle);
+                       }
+                   }
+                   if (pm->lightingMode < 0) {
+                       ImGui::SameLine();
+                       ImGui::TextDisabled("(現在: %s)", (mat->lightingMode >= 0 && mat->lightingMode <= 2) ? lightingModes[mat->lightingMode + 1] : "?");
                    }
 
                    // Shininess
@@ -1704,9 +2493,136 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                bool enabled = spr->IsEnabled();
                if (ImGui::Checkbox("Enabled (有効化)##Spr", &enabled)) spr->SetEnabled(enabled);
                ImGui::Checkbox("Visible (表示)##Spr", &spr->visible);
-               ImGui::DragFloat2("Size (サイズ)", &spr->size.x, 1.0f, 0.0f, 4096.0f);
+               {
+                   const char* spaceItems[] = {
+                       "Screen (手前・スクリーン座標)",
+                       "Screen Behind (奥・スクリーン座標)",
+                       "World (ワールド座標・深度テストあり)",
+                   };
+                   int spaceIdx = static_cast<int>(spr->space);
+                   if (ImGui::Combo("Space (描画空間)##Spr", &spaceIdx, spaceItems, IM_ARRAYSIZE(spaceItems))) {
+                       spr->space = static_cast<SpriteSpace>(spaceIdx);
+                   }
+                   if (ImGui::IsItemHovered()) {
+                       ImGui::SetTooltip(
+                           "Screen        : 従来通り。常に3Dより手前\n"
+                           "Screen Behind : 常に3Dより奥（背景用）\n"
+                           "World         : Transform をワールド座標として扱い、\n"
+                           "                モデルとモデルの間に挟み込めます");
+                   }
+               }
+               if (spr->IsWorldSpace()) {
+                   ImGui::TextDisabled("大きさは Transform の Scale で指定します");
+               } else {
+                   ImGui::DragFloat2("Size (サイズ)", &spr->size.x, 1.0f, 0.0f, 4096.0f);
+               }
                ImGui::ColorEdit4("Color (色)##Spr", &spr->color.x);
+               {
+                   // 画像パス（Content Browser からドラッグ&ドロップで差し替え）
+                   char pathBuf[512];
+                   strncpy_s(pathBuf, sizeof(pathBuf), spr->spritePath.c_str(), _TRUNCATE);
+                   if (ImGui::InputText("Image (画像)##Spr", pathBuf, sizeof(pathBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                       spr->spritePath = pathBuf;
+                   }
+                   if (ImGui::BeginDragDropTarget()) {
+                       if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                           std::string dropped(static_cast<const char*>(payload->Data));
+                           std::string ext = std::filesystem::path(dropped).extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                           if (ext == ".png" || ext == ".jpg" || ext == ".dds") spr->spritePath = dropped;
+                       }
+                       ImGui::EndDragDropTarget();
+                   }
+                   ImGui::TextDisabled("ここに画像をドロップすると差し替わります");
+               }
                ImGui::Text("Sprite Handle: %d", spr->spriteHandle);
+               ImGui::Unindent(8.0f);
+            }
+        }
+
+        if (auto* txt = e->GetComponent<TextRendererComponent>()) {
+            bool headerOpen = ImGui::CollapsingHeader("Text Renderer (文字描画)", ImGuiTreeNodeFlags_DefaultOpen);
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove Component")) pendingRemove = [e](){ e->RemoveComponent<TextRendererComponent>(); };
+                ImGui::EndPopup();
+            }
+            if (headerOpen) {
+               ImGui::Indent(8.0f);
+               bool enabled = txt->IsEnabled();
+               if (ImGui::Checkbox("Enabled (有効化)##Txt", &enabled)) txt->SetEnabled(enabled);
+               ImGui::Checkbox("Visible (表示)##Txt", &txt->visible);
+
+               // 文字列（複数行）
+               {
+                   static char textBuf[2048];
+                   const size_t n = (std::min)(txt->text.size(), sizeof(textBuf) - 1);
+                   memcpy(textBuf, txt->text.data(), n);
+                   textBuf[n] = '\0';
+                   if (ImGui::InputTextMultiline("Text (文字列)", textBuf, sizeof(textBuf), ImVec2(-1, 80))) {
+                       txt->text = textBuf;
+                   }
+               }
+
+               // フォント選択（Resources/fonts 以下を走査）
+               {
+                   std::vector<std::string> fontFiles;
+                   const std::filesystem::path fontRoot = "Resources/fonts";
+                   if (std::filesystem::exists(fontRoot)) {
+                       for (const auto& entry : std::filesystem::recursive_directory_iterator(fontRoot)) {
+                           if (!entry.is_regular_file()) continue;
+                           std::string ext = entry.path().extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                           if (ext == ".ttf" || ext == ".otf" || ext == ".ttc") {
+                               // 日本語ファイル名（アプリ明朝.otf 等）も正しく扱うため UTF-8 で保持する
+                               const std::u8string u8 = entry.path().generic_u8string();
+                               fontFiles.emplace_back(reinterpret_cast<const char*>(u8.c_str()), u8.size());
+                           }
+                       }
+                       std::sort(fontFiles.begin(), fontFiles.end());
+                   }
+                   // 表示は "Resources/fonts/" を省いた相対パス（例: Kiwi_Maru/KiwiMaru-Regular.ttf）
+                   auto shortName = [](const std::string& path) -> std::string {
+                       static const std::string prefix = "Resources/fonts/";
+                       return (path.rfind(prefix, 0) == 0) ? path.substr(prefix.size()) : path;
+                   };
+                   std::string preview = txt->fontPath.empty() ? "(none)" : shortName(txt->fontPath);
+                   if (ImGui::BeginCombo("Font (フォント)", preview.c_str())) {
+                       for (const auto& f : fontFiles) {
+                           const bool selected = (f == txt->fontPath);
+                           if (ImGui::Selectable(shortName(f).c_str(), selected)) txt->fontPath = f;
+                           if (selected) ImGui::SetItemDefaultFocus();
+                       }
+                       ImGui::EndCombo();
+                   }
+                   // Content Browser からのドラッグ&ドロップも受け付ける
+                   if (ImGui::BeginDragDropTarget()) {
+                       if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                           std::string dropped(static_cast<const char*>(payload->Data));
+                           std::replace(dropped.begin(), dropped.end(), '\\', '/');
+                           std::string ext = std::filesystem::path(dropped).extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                           if (ext == ".ttf" || ext == ".otf" || ext == ".ttc") txt->fontPath = dropped;
+                       }
+                       ImGui::EndDragDropTarget();
+                   }
+               }
+
+               ImGui::DragFloat("Font Size (px)", &txt->fontSize, 1.0f, 4.0f, 512.0f, "%.0f");
+               ImGui::DragFloat("Scale (拡大率)##Txt", &txt->scale, 0.01f, 0.05f, 20.0f);
+               ImGui::ColorEdit4("Color (色)##Txt", &txt->color.x);
+               const char* alignItems[] = { "Left (左揃え)", "Center (中央揃え)", "Right (右揃え)" };
+               int alignIdx = static_cast<int>(txt->align);
+               if (ImGui::Combo("Align (揃え)", &alignIdx, alignItems, 3)) txt->align = static_cast<TextAlign>(alignIdx);
+               ImGui::DragFloat("Line Spacing (行間)", &txt->lineSpacing, 0.01f, 0.5f, 3.0f);
+               int atlas = static_cast<int>(txt->atlasSize);
+               const char* atlasItems[] = { "512", "1024", "2048", "4096" };
+               int atlasIdx = (atlas <= 512) ? 0 : (atlas <= 1024) ? 1 : (atlas <= 2048) ? 2 : 3;
+               if (ImGui::Combo("Atlas Size (アトラス)", &atlasIdx, atlasItems, 4)) {
+                   txt->atlasSize = 512u << atlasIdx;
+                   txt->loadedSize = 0.0f; // 再ロードさせる
+               }
+               ImGui::TextDisabled("位置は Transform の Position X/Y（ピクセル、左上原点）を使用");
+               ImGui::Text("Font Handle: %d", txt->fontHandle);
                ImGui::Unindent(8.0f);
             }
         }
@@ -1719,21 +2635,255 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             }
             if (headerOpen) {
                ImGui::Indent(8.0f);
+               auto* animRen = e->GetComponent<ModelRendererComponent>();
+               if (!animRen) {
+                   ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f),
+                                      "Model Renderer が必要です");
+               }
+
                bool enabled = anim->IsEnabled();
                if (ImGui::Checkbox("Enabled (有効化)##Anim", &enabled)) anim->SetEnabled(enabled);
                ImGui::Checkbox("Playing (再生中)", &anim->playing);
                ImGui::DragFloat("Speed (再生速度)", &anim->speed, 0.05f, 0.0f, 10.0f);
-               // スキンデータがあるモデルのみ Show Skeleton を表示
-               if (auto* ren2 = e->GetComponent<ModelRendererComponent>()) {
-                   if (ren2->HasModel() && RC::HasModelSkinData(ren2->modelHandle)) {
-                       ImGui::Checkbox("Show Skeleton (骨格表示)", &anim->showSkeleton);
+
+               // -- Animation File --
+               // 空ならモデル内蔵のアニメーションを使う。別ファイルを D&D で差し替えられる
+               ImGui::Text("Anim File (アニメ)");
+               ImGui::SameLine();
+               std::string animLabelStr = anim->animationPath.empty()
+                   ? "(Embedded)##AnimFile"
+                   : std::filesystem::path(anim->animationPath).filename().string() + "##AnimFile";
+               ImGui::Button(animLabelStr.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 60.0f, 0));
+               if (ImGui::BeginDragDropTarget()) {
+                   if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                       std::string droppedPath((const char*)payload->Data);
+                       std::filesystem::path ap(droppedPath);
+                       std::string aext = ap.extension().string();
+                       std::transform(aext.begin(), aext.end(), aext.begin(), ::tolower);
+                       if (aext == ".gltf" || aext == ".glb" || aext == ".fbx" || aext == ".obj") {
+                           anim->animationPath = droppedPath;
+                           anim->animIndex = 0;
+                           anim->MarkDirty(); // 次の更新で再アタッチさせる
+                       }
                    }
+                   ImGui::EndDragDropTarget();
                }
                if (!anim->animationPath.empty()) {
-                   ImGui::Text("Anim File: %s", anim->animationPath.c_str());
-               } else {
-                   ImGui::TextDisabled("Anim: Embedded");
+                   ImGui::SameLine();
+                   if (ImGui::Button("X##AnimFile", ImVec2(22, 0))) {
+                       anim->animationPath.clear();
+                       anim->animIndex = 0;
+                       anim->MarkDirty();
+                   }
                }
+
+               // -- Clip index (glTF は 1 ファイルに複数アニメーションを持てる) --
+               // GetAnimationCount は assimp でファイルを開くため、変更時のみ取得してキャッシュする
+               const std::string animEffPath = anim->animationPath.empty()
+                   ? (animRen ? animRen->modelPath : std::string())
+                   : anim->animationPath;
+               if (anim->clipCount_ < 0 && !animEffPath.empty()) {
+                   anim->clipCount_ = RC::GetAnimationCount(animEffPath);
+               }
+               if (anim->clipCount_ > 1) {
+                   int clip = anim->animIndex;
+                   if (ImGui::SliderInt("Clip (クリップ番号)", &clip, 0, anim->clipCount_ - 1)) {
+                       anim->animIndex = clip;
+                       // パスは変わらないので clipCount_ のキャッシュは保持したままにする
+                       anim->attached_ = false;
+                   }
+               } else if (anim->clipCount_ == 1) {
+                   ImGui::TextDisabled("Clip: 1 / 1");
+               } else if (anim->clipCount_ == 0) {
+                   ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f),
+                                      "このファイルにアニメーションがありません");
+               }
+
+               // -- Clips (名前付きクリップ) --
+               // ここに登録した名前をスクリプトから anim->PlayClip("Walk") のように指定する
+               ImGui::Separator();
+               ImGui::Text("Clips (名前付きクリップ)");
+               ImGui::SameLine();
+               if (ImGui::SmallButton("+##AddClip")) {
+                   AnimationClip newClip;
+                   newClip.name = "Clip" + std::to_string(anim->clips.size());
+                   newClip.path = anim->animationPath; // 今表示中のファイルを初期値にする
+                   newClip.index = anim->animIndex;
+                   anim->clips.push_back(newClip);
+               }
+               ImGui::TextDisabled("Default: %s",
+                                   anim->defaultClip.empty() ? "(None)" : anim->defaultClip.c_str());
+               if (!anim->currentClip.empty()) {
+                   ImGui::TextDisabled("Now Playing: %s", anim->currentClip.c_str());
+               }
+
+               int clipRemoveIdx = -1;
+               for (int ci = 0; ci < static_cast<int>(anim->clips.size()); ++ci) {
+                   AnimationClip& c = anim->clips[ci];
+                   ImGui::PushID(ci);
+                   const std::string clipHeader =
+                       (c.name.empty() ? std::string("(Unnamed)") : c.name)
+                       + (c.name == anim->defaultClip && !c.name.empty() ? "  [Default]" : "");
+                   if (ImGui::TreeNode(clipHeader.c_str())) {
+                       char clipNameBuf[64];
+                       snprintf(clipNameBuf, sizeof(clipNameBuf), "%s", c.name.c_str());
+                       if (ImGui::InputText("Name (名前)", clipNameBuf, sizeof(clipNameBuf))) {
+                           c.name = clipNameBuf;
+                       }
+
+                       // ファイル。空ならモデル内蔵のアニメーションを使う
+                       ImGui::Text("File");
+                       ImGui::SameLine();
+                       const std::string clipFileLabel = c.path.empty()
+                           ? "(Embedded)##ClipFile"
+                           : std::filesystem::path(c.path).filename().string() + "##ClipFile";
+                       ImGui::Button(clipFileLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 60.0f, 0));
+                       if (ImGui::BeginDragDropTarget()) {
+                           if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                               std::string droppedPath((const char*)payload->Data);
+                               std::filesystem::path cp(droppedPath);
+                               std::string cext = cp.extension().string();
+                               std::transform(cext.begin(), cext.end(), cext.begin(), ::tolower);
+                               if (cext == ".gltf" || cext == ".glb" || cext == ".fbx" || cext == ".obj") {
+                                   c.path = droppedPath;
+                                   c.index = 0;
+                               }
+                           }
+                           ImGui::EndDragDropTarget();
+                       }
+                       if (!c.path.empty()) {
+                           ImGui::SameLine();
+                           if (ImGui::Button("X##ClipFile", ImVec2(22, 0))) {
+                               c.path.clear();
+                               c.index = 0;
+                           }
+                       }
+
+                       ImGui::InputInt("Index (クリップ番号)", &c.index);
+                       if (c.index < 0) c.index = 0;
+                       ImGui::Checkbox("Loop (ループ)", &c.loop);
+                       if (!c.loop) {
+                           ImGui::SameLine();
+                           ImGui::TextDisabled("(終了後 Default へ戻る)");
+                       }
+                       ImGui::DragFloat("Speed (速度)", &c.speed, 0.05f, 0.0f, 10.0f);
+
+                       if (ImGui::SmallButton("Play (試し再生)")) anim->PlayClip(c.name, 0.15f, true);
+                       ImGui::SameLine();
+                       if (ImGui::SmallButton("Set Default")) anim->defaultClip = c.name;
+                       ImGui::SameLine();
+                       if (ImGui::SmallButton("Remove")) clipRemoveIdx = ci;
+                       ImGui::TreePop();
+                   }
+                   ImGui::PopID();
+               }
+               if (clipRemoveIdx >= 0) {
+                   // 消したクリップが再生中／既定だった場合は参照を外しておく
+                   const std::string removedName = anim->clips[clipRemoveIdx].name;
+                   anim->clips.erase(anim->clips.begin() + clipRemoveIdx);
+                   if (anim->defaultClip == removedName) anim->defaultClip.clear();
+                   if (anim->currentClip == removedName) anim->currentClip.clear();
+               }
+               ImGui::Separator();
+
+               // スキンデータがあるモデルのみ Show Skeleton を表示
+               if (animRen && animRen->HasModel() && RC::HasModelSkinData(animRen->modelHandle)) {
+                   ImGui::Checkbox("Show Skeleton (骨格表示)", &anim->showSkeleton);
+               }
+               ImGui::Unindent(8.0f);
+            }
+        }
+
+        if (auto* ba = e->GetComponent<BoneAttachmentComponent>()) {
+            bool headerOpen = ImGui::CollapsingHeader("Bone Attachment (ボーン追従)", ImGuiTreeNodeFlags_DefaultOpen);
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove Component")) pendingRemove = [e](){
+                    // 上書きしたまま外すとモデルがその場に固定されるので、先に解除する
+                    if (auto* r = e->GetComponent<ModelRendererComponent>()) {
+                        if (r->HasModel()) RC::ClearModelWorldOverride(r->modelHandle);
+                    }
+                    e->RemoveComponent<BoneAttachmentComponent>();
+                };
+                ImGui::EndPopup();
+            }
+            if (headerOpen) {
+               ImGui::Indent(8.0f);
+               if (!e->GetComponent<ModelRendererComponent>()) {
+                   ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f),
+                                      "Model Renderer が必要です");
+               }
+               bool baEnabled = ba->IsEnabled();
+               if (ImGui::Checkbox("Enabled (有効化)##BoneAtt", &baEnabled)) ba->SetEnabled(baEnabled);
+
+               // -- Target (追従先エンティティ) --
+               auto baTarget = (ba->targetGuid != 0 && currentScene)
+                   ? currentScene->FindEntityByGuid(ba->targetGuid)
+                   : nullptr;
+               ImGui::Text("Target (追従先)");
+               ImGui::SameLine();
+               std::string baTargetLabel = baTarget
+                   ? baTarget->Name() + "##BoneTarget"
+                   : std::string("(None)##BoneTarget");
+               ImGui::Button(baTargetLabel.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 60.0f, 0));
+               if (ImGui::BeginDragDropTarget()) {
+                   if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("HIERARCHY_ENTITY")) {
+                       uint64_t draggedGuid = *(const uint64_t*)payload->Data;
+                       if (draggedGuid != e->Guid()) { // 自分自身への追従は無限ループになるので弾く
+                           ba->targetGuid = draggedGuid;
+                           ba->jointName.clear();
+                           ba->MarkTargetDirty();
+                       }
+                   }
+                   ImGui::EndDragDropTarget();
+               }
+               if (ba->targetGuid != 0) {
+                   ImGui::SameLine();
+                   if (ImGui::Button("X##BoneTarget", ImVec2(22, 0))) {
+                       ba->targetGuid = 0;
+                       ba->jointName.clear();
+                       ba->MarkTargetDirty();
+                   }
+               }
+               ImGui::TextDisabled("Hierarchy からドラッグ&ドロップ");
+
+               // -- Joint (追従先のボーン名) --
+               // GetModelJointNames は毎フレーム呼ぶと重いので、対象変更時のみ取得してキャッシュする
+               if (baTarget) {
+                   auto* baTRen = baTarget->GetComponent<ModelRendererComponent>();
+                   if (baTRen && baTRen->HasModel() && RC::IsModelReady(baTRen->modelHandle)) {
+                       if (ba->jointNamesDirty_) {
+                           ba->jointNamesCache_ = RC::GetModelJointNames(baTRen->modelHandle);
+                           ba->jointNamesDirty_ = false;
+                       }
+                       if (ba->jointNamesCache_.empty()) {
+                           ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f),
+                                              "追従先にスケルトンがありません");
+                       } else {
+                           const char* jointPreview = ba->jointName.empty()
+                               ? "(Model Root)" : ba->jointName.c_str();
+                           if (ImGui::BeginCombo("Joint (ボーン)", jointPreview)) {
+                               if (ImGui::Selectable("(Model Root)", ba->jointName.empty())) {
+                                   ba->jointName.clear();
+                               }
+                               for (const auto& jn : ba->jointNamesCache_) {
+                                   const bool selected = (jn == ba->jointName);
+                                   if (ImGui::Selectable(jn.c_str(), selected)) ba->jointName = jn;
+                                   if (selected) ImGui::SetItemDefaultFocus();
+                               }
+                               ImGui::EndCombo();
+                           }
+                           if (ImGui::Button("Refresh Joints##BoneAtt")) ba->MarkTargetDirty();
+                       }
+                   } else {
+                       ImGui::TextDisabled("追従先のモデルを読み込み中...");
+                   }
+               }
+
+               // -- Offset (Joint からのずらし) --
+               ImGui::DragFloat3("Offset Pos (位置)", &ba->offsetPosition.x, 0.01f);
+               ImGui::DragFloat3("Offset Rot (回転)", &ba->offsetRotation.x, 0.01f);
+               ImGui::DragFloat3("Offset Scale (拡縮)", &ba->offsetScale.x, 0.01f);
+               ImGui::TextDisabled("追従中は Transform の値は描画に使われません");
                ImGui::Unindent(8.0f);
             }
         }
@@ -1905,6 +3055,9 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::ColorEdit4("Color (色)##DirLight", &dirLight->color.x);
                ImGui::DragFloat3("Direction (方向)##DirLight", &dirLight->direction.x, 0.05f);
                ImGui::DragFloat("Intensity (強度)##DirLight", &dirLight->intensity, 0.1f, 0.0f, 100.0f);
+               ImGui::ColorEdit3("Ambient Color (環境光の色)##DirLight", &dirLight->ambientColor.x);
+               ImGui::DragFloat("Ambient Intensity (環境光の強さ)##DirLight", &dirLight->ambientIntensity, 0.005f, 0.0f, 2.0f, "%.3f");
+               ImGui::TextDisabled("(0 = ライトが当たった所だけ見える / 旧仕様の固定値は 0.2)");
                ImGui::Text("Handle: %d", dirLight->lightHandle);
                ImGui::Unindent(8.0f);
             }
@@ -1925,6 +3078,14 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::DragFloat("Intensity (強度)##PtLight", &ptLight->intensity, 0.1f, 0.0f, 100.0f);
                ImGui::DragFloat("Radius (半径)##PtLight", &ptLight->radius, 0.5f, 0.0f, 1000.0f);
                ImGui::DragFloat("Decay (減衰)##PtLight", &ptLight->decay, 0.1f, 0.0f, 10.0f);
+               ImGui::Checkbox("Cast Shadow (影を落とす)##PtLight", &ptLight->castShadow);
+               if (ImGui::IsItemHovered()) {
+                   ImGui::SetTooltip("真下向きの広角シャドウ1枚で遮蔽を判定する（壁が垂直な前提）。\nOFF にすると壁を素通りする");
+               }
+               if (ptLight->castShadow) {
+                   ImGui::DragFloat("Shadow Near (影の手前カット)##PtLight", &ptLight->shadowNear, 0.01f, 0.01f, 10.0f);
+                   ImGui::Checkbox("Exclude Self (自分は遮らない)##PtLight", &ptLight->shadowExcludeSelf);
+               }
                ImGui::Text("Handle: %d", ptLight->lightHandle);
                ImGui::Unindent(8.0f);
             }
@@ -1943,10 +3104,19 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::Checkbox("Visible (表示)##SpLight", &spLight->visible);
                ImGui::ColorEdit4("Color (色)##SpLight", &spLight->color.x);
                ImGui::DragFloat3("Direction (方向)##SpLight", &spLight->direction.x, 0.05f);
+               ImGui::DragFloat3("Offset (位置ずらし)##SpLight", &spLight->offset.x, 0.05f);
+               if (ImGui::IsItemHovered()) {
+                 ImGui::SetTooltip("エンティティ中心からのローカルオフセット。\nエンティティの回転に追従する。\n例: 足元なら Y をマイナスに。");
+               }
                ImGui::DragFloat("Intensity (強度)##SpLight", &spLight->intensity, 0.1f, 0.0f, 100.0f);
                ImGui::DragFloat("Distance (距離)##SpLight", &spLight->distance, 0.5f, 0.0f, 1000.0f);
                ImGui::DragFloat("Decay (減衰)##SpLight", &spLight->decay, 0.1f, 0.0f, 10.0f);
                ImGui::DragFloat("CosAngle (角度)##SpLight", &spLight->cosAngle, 0.01f, 0.0f, 1.0f);
+               ImGui::Checkbox("Cast Shadow (影を落とす)##SpLight", &spLight->castShadow);
+               if (spLight->castShadow) {
+                   ImGui::DragFloat("Shadow Near (影の手前カット)##SpLight", &spLight->shadowNear, 0.01f, 0.01f, 10.0f);
+                   ImGui::Checkbox("Exclude Self (自分は遮らない)##SpLight", &spLight->shadowExcludeSelf);
+               }
                ImGui::Text("Handle: %d", spLight->lightHandle);
                ImGui::Unindent(8.0f);
             }
@@ -1969,8 +3139,19 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::DragFloat("Decay (減衰)##ArLight", &arLight->decay, 0.1f, 0.0f, 10.0f);
                ImGui::DragFloat("Half Width (幅/2)##ArLight", &arLight->halfWidth, 0.1f, 0.0f, 100.0f);
                ImGui::DragFloat("Half Height (高さ/2)##ArLight", &arLight->halfHeight, 0.1f, 0.0f, 100.0f);
+               ImGui::TextDisabled("(Half Height = 0 で線光源(Tube)。right 方向に ±Half Width 伸びる)");
+               ImGui::DragFloat3("Right (幅方向)##ArLight", &arLight->right.x, 0.05f);
+               ImGui::DragFloat3("Up (高さ方向)##ArLight", &arLight->up.x, 0.05f);
                bool twoSided = arLight->twoSided;
                if (ImGui::Checkbox("Two Sided (両面)##ArLight", &twoSided)) arLight->twoSided = twoSided;
+               ImGui::Checkbox("Cast Shadow (影を落とす)##ArLight", &arLight->castShadow);
+               if (ImGui::IsItemHovered()) {
+                   ImGui::SetTooltip("真下向きの広角シャドウ1枚で遮蔽を判定する（壁が垂直な前提）。\nOFF にすると壁を素通りする");
+               }
+               if (arLight->castShadow) {
+                   ImGui::DragFloat("Shadow Near (影の手前カット)##ArLight", &arLight->shadowNear, 0.01f, 0.01f, 10.0f);
+                   ImGui::Checkbox("Exclude Self (自分は遮らない)##ArLight", &arLight->shadowExcludeSelf);
+               }
                ImGui::Text("Handle: %d", arLight->lightHandle);
                ImGui::Unindent(8.0f);
             }
@@ -2000,7 +3181,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::Unindent(8.0f);
             }
         }
-        
+
         // ============================================
         // Collider
         // ============================================
@@ -2059,7 +3240,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                 ImGui::Indent(8.0f);
                 bool enabled = script->IsEnabled();
                 if (ImGui::Checkbox("Enabled (有効化)##Script", &enabled)) script->SetEnabled(enabled);
-                
+
                 for (size_t i = 0; i < script->scripts.size(); ++i) {
                     ImGui::PushID(static_cast<int>(i));
                     ImGui::Separator();
@@ -2094,17 +3275,296 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                 ImGui::Unindent(8.0f);
             }
         }
-        
+
+        if (auto* audio = e->GetComponent<AudioSourceComponent>()) {
+            bool headerOpen = ImGui::CollapsingHeader("Audio Source (音源)", ImGuiTreeNodeFlags_DefaultOpen);
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove Component")) pendingRemove = [e](){ e->RemoveComponent<AudioSourceComponent>(); };
+                ImGui::EndPopup();
+            }
+            if (headerOpen) {
+                ImGui::Indent(8.0f);
+                bool enabled = audio->IsEnabled();
+                if (ImGui::Checkbox("Enabled (有効化)##Audio", &enabled)) audio->SetEnabled(enabled);
+
+                {
+                    const char* busItems[] = {
+                        "BGM (1本だけ・シーンをまたいで継続)",
+                        "SE (重ね再生)",
+                    };
+                    int busIdx = static_cast<int>(audio->bus);
+                    if (ImGui::Combo("Bus (バス)##Audio", &busIdx, busItems, IM_ARRAYSIZE(busItems))) {
+                        audio->Stop(); // 鳴っている音は旧バスのものなので止める
+                        audio->bus = static_cast<AudioBus>(busIdx);
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(
+                            "BGM : 常に1本だけ鳴ります。同じ曲なら再要求しても継続、\n"
+                            "      次のシーンにも同じ曲を置いておけば途切れません\n"
+                            "SE  : Play() のたびに重ねて鳴り、鳴り終わると自動で回収されます");
+                    }
+                }
+                ImGui::SliderFloat("Volume (音量)##Audio", &audio->volume, 0.0f, 1.0f, "%.2f");
+
+                {
+                    // 再生開始時に自動で鳴らすスロット
+                    const char* noneLabel = "(なし)";
+                    const std::string preview = audio->playOnAwake.empty() ? noneLabel : audio->playOnAwake;
+                    if (ImGui::BeginCombo("Play On Awake (開始時に再生)##Audio", preview.c_str())) {
+                        if (ImGui::Selectable(noneLabel, audio->playOnAwake.empty())) audio->playOnAwake.clear();
+                        for (size_t i = 0; i < audio->clips.size(); ++i) {
+                            const auto& s = audio->clips[i];
+                            ImGui::PushID(static_cast<int>(i));
+                            const bool selected = (!s.name.empty() && s.name == audio->playOnAwake);
+                            if (ImGui::Selectable(s.name.empty() ? "(名前なし)" : s.name.c_str(), selected)) {
+                                audio->playOnAwake = s.name;
+                            }
+                            ImGui::PopID();
+                        }
+                        ImGui::EndCombo();
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("再生ボタンで Playing になった瞬間に鳴らすスロット。BGM は通常これを設定します");
+                    }
+                }
+
+                // ============================================
+                // 3D 音響（SE バスのみ）
+                // ============================================
+                if (!audio->IsBgm()) {
+                    ImGui::SeparatorText("3D Sound (3D 音響)");
+                    ImGui::SliderFloat("Spatial Blend (0=2D, 1=3D)##Audio", &audio->spatialBlend, 0.0f, 1.0f, "%.2f");
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip(
+                            "0 = 2D（位置に関係なく鳴る。従来通り）\n"
+                            "1 = 3D（このエンティティの位置から聞こえる。左右の定位・距離減衰・ドップラー）\n"
+                            "聞き手は Audio Listener を付けたエンティティ、無ければ描画中のカメラ\n"
+                            "スロットごとの Spatial で「常に 2D」「常に 3D」に上書きできます");
+                    }
+                    if (audio->Any3D()) {
+                        if (!audio->Is3D()) {
+                            ImGui::TextDisabled("Spatial Blend は 0 ですが、3D 指定のスロットがあるので距離設定が使われます");
+                        }
+                        if (!audio->HasTransform()) {
+                            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f),
+                                               "Transform がありません。位置が取れないため 2D で鳴ります");
+                        }
+                        if (!AudioEngine::Get().Is3DAvailable()) {
+                            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f),
+                                               "この環境では 3D 音響を初期化できませんでした（2D で鳴ります。Console 参照）");
+                        }
+                        ImGui::DragFloat("Min Distance (最大音量の距離)##Audio", &audio->minDistance, 0.1f, 0.0f, 10000.0f, "%.1f");
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("この距離までは減衰しません。この内側では音が全方向から聞こえます（真横を通過してもパンが暴れない）");
+                        }
+                        ImGui::DragFloat("Max Distance (無音になる距離)##Audio", &audio->maxDistance, 0.5f, 0.0f, 10000.0f, "%.1f");
+                        if (audio->maxDistance < audio->minDistance) audio->maxDistance = audio->minDistance;
+                        {
+                            const char* rolloffItems[] = {
+                                "Logarithmic (距離に反比例・現実的)",
+                                "Linear (直線的に減衰)",
+                            };
+                            int rolloffIdx = static_cast<int>(audio->rolloff);
+                            if (ImGui::Combo("Rolloff (減衰カーブ)##Audio", &rolloffIdx, rolloffItems, IM_ARRAYSIZE(rolloffItems))) {
+                                audio->rolloff = static_cast<AudioRolloff>(rolloffIdx);
+                            }
+                            if (ImGui::IsItemHovered()) {
+                                ImGui::SetTooltip(
+                                    "Logarithmic: 距離が 2 倍で約半分の音量（-6dB）。Max Distance で 0 に着地\n"
+                                    "Linear     : Min → Max で 1 → 0 に直線的に減衰");
+                            }
+                        }
+                        ImGui::SliderFloat("Doppler Level (ドップラー)##Audio", &audio->dopplerLevel, 0.0f, 5.0f, "%.2f");
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("動く音源のピッチ変化。0 で無効、1 で物理的に正しい値（音速 343.5 ワールド単位/秒）");
+                        }
+
+                        // 減衰カーブのプレビュー（横軸 = 距離 0 ~ Max、縦軸 = 音量）
+                        {
+                            float curve[64];
+                            const float maxD = (std::max)(audio->maxDistance, 0.01f);
+                            for (int i = 0; i < IM_ARRAYSIZE(curve); ++i) {
+                                const float d = maxD * static_cast<float>(i) / static_cast<float>(IM_ARRAYSIZE(curve) - 1);
+                                curve[i] = AudioEngine::ComputeRolloff(d, audio->minDistance, audio->maxDistance, audio->rolloff);
+                            }
+                            ImGui::PlotLines("##AudioRolloffCurve", curve, IM_ARRAYSIZE(curve), 0, "Volume / Distance", 0.0f, 1.0f,
+                                             ImVec2(0.0f, 50.0f));
+                        }
+                        if (audio->HasTransform()) {
+                            const float dist = audio->DistanceToListener();
+                            const float gain = audio->CurrentRolloffGain();
+                            const RC::Vector3& v = audio->CurrentVelocity();
+                            ImGui::TextDisabled("Listener: %.1f 先 / 減衰 %.0f%% / 速度 %.1f",
+                                                dist, gain * 100.0f, std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z));
+                        }
+                        ImGui::TextDisabled("モノラルの音源が最も自然に定位します（ステレオは L/R を音源の左右に配置）");
+                    }
+                }
+
+                ImGui::SeparatorText("Clips (音の一覧)");
+                int removeIndex = -1;
+                for (size_t i = 0; i < audio->clips.size(); ++i) {
+                    auto& s = audio->clips[i];
+                    ImGui::PushID(static_cast<int>(i));
+
+                    // 名前（スクリプトから Play("名前") で指定する）。Enter か確定で反映
+                    char clipNameBuf[64];
+                    strncpy_s(clipNameBuf, sizeof(clipNameBuf), s.name.c_str(), _TRUNCATE);
+                    ImGui::SetNextItemWidth(140.0f);
+                    bool nameCommitted = ImGui::InputText("Name (名前)", clipNameBuf, sizeof(clipNameBuf), ImGuiInputTextFlags_EnterReturnsTrue);
+                    nameCommitted = nameCommitted || ImGui::IsItemDeactivatedAfterEdit();
+                    if (nameCommitted) {
+                        const std::string newName = clipNameBuf;
+                        const AudioClipSlot* dup = audio->FindSlot(newName);
+                        if (dup && dup != &s) {
+                            Log::Print("[Editor] Audio Source: 同じ名前のクリップが既にあります: " + newName);
+                        } else {
+                            audio->RenameClip(i, newName);
+                        }
+                    }
+
+                    // ファイルパス（Content Browser からドラッグ&ドロップで差し替え）
+                    char clipPathBuf[512];
+                    strncpy_s(clipPathBuf, sizeof(clipPathBuf), s.path.c_str(), _TRUNCATE);
+                    if (ImGui::InputText("File (音声ファイル)", clipPathBuf, sizeof(clipPathBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+                        s.path = clipPathBuf;
+                    }
+                    if (ImGui::BeginDragDropTarget()) {
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                            std::string dropped(static_cast<const char*>(payload->Data));
+                            std::string ext = std::filesystem::path(dropped).extension().string();
+                            std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                            if (ext == ".wav" || ext == ".mp3" || ext == ".m4a" || ext == ".aac" || ext == ".wma") {
+                                s.path = dropped;
+                            }
+                        }
+                        ImGui::EndDragDropTarget();
+                    }
+
+                    ImGui::SetNextItemWidth(140.0f);
+                    ImGui::SliderFloat("Vol", &s.volume, 0.0f, 1.0f, "%.2f");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Loop (ループ)", &s.loop);
+
+                    // スロットごとの 2D / 3D 上書き（SE バスのみ。再生中の音にもその場で反映される）
+                    if (!audio->IsBgm()) {
+                        const char* spatialItems[] = {
+                            "Component (コンポーネント設定に従う)",
+                            "2D (常に通常)",
+                            "3D (常に 3D)",
+                        };
+                        int spatialIdx = static_cast<int>(s.spatial);
+                        ImGui::SetNextItemWidth(230.0f);
+                        if (ImGui::Combo("Spatial (2D/3D)", &spatialIdx, spatialItems, IM_ARRAYSIZE(spatialItems))) {
+                            s.spatial = static_cast<AudioSpatialMode>(spatialIdx);
+                        }
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip(
+                                "Component: 上の Spatial Blend に従う\n"
+                                "2D       : 位置に関係なく鳴る（UI 音・自分の足音など）\n"
+                                "3D       : Spatial Blend が 0 でも位置から聞こえる\n"
+                                "鳴っている音にもその場で反映されます");
+                        }
+                        ImGui::SameLine();
+                        const float eff = audio->EffectiveBlend(s);
+                        if (eff <= 0.0f) {
+                            ImGui::TextDisabled("→ 2D");
+                        } else if (eff >= 1.0f) {
+                            ImGui::TextDisabled("→ 3D");
+                        } else {
+                            ImGui::TextDisabled("→ 3D %.0f%%", eff * 100.0f);
+                        }
+                    }
+
+                    // 状態表示と試聴
+                    if (s.path.empty()) {
+                        ImGui::TextDisabled("ここに .wav / .mp3 をドロップしてください");
+                    } else if (s.IsLoaded()) {
+                        const int ch = AudioEngine::Get().ClipChannels(s.clipHandle);
+                        ImGui::TextDisabled("Loaded: %.1f sec / %s", AudioEngine::Get().ClipDuration(s.clipHandle),
+                                            ch == 1 ? "mono" : (ch == 2 ? "stereo" : "multi-ch"));
+                        if (audio->EffectiveBlend(s) > 0.0f && ch > 1 && ImGui::IsItemHovered()) {
+                            ImGui::SetTooltip("3D 音響ではモノラル音源のほうが自然に定位します（ステレオでも鳴ります）");
+                        }
+                    } else {
+                        ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "ロード失敗（パスや形式を確認。Console 参照）");
+                    }
+                    if (ImGui::Button("Play (試聴)")) audio->Play(s.name);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Stop (停止)")) audio->Stop();
+                    ImGui::SameLine();
+                    if (ImGui::Button("Remove (削除)")) removeIndex = static_cast<int>(i);
+
+                    ImGui::PopID();
+                    ImGui::Separator();
+                }
+                if (removeIndex >= 0) {
+                    audio->RemoveClip(static_cast<size_t>(removeIndex));
+                }
+                if (ImGui::Button("+ Add Clip (音を追加)")) {
+                    audio->AddClip(audio->MakeUniqueClipName(), "");
+                }
+
+                ImGui::Spacing();
+                if (audio->IsBgm()) {
+                    ImGui::Text("State: %s", audio->IsPlaying() ? "Playing (BGM)" : "Stopped");
+                } else {
+                    ImGui::Text("State: %zu voice(s) playing (3D: %zu)", audio->ActiveSeCount(), audio->ActiveSpatialCount());
+                }
+                ImGui::TextDisabled("Script: GetComponent<AudioSourceComponent>()->Play(\"name\")");
+                ImGui::Unindent(8.0f);
+            }
+        }
+
+        // ============================================
+        // Audio Listener（3D 音響の聞き手）
+        // ============================================
+        if (auto* listener = e->GetComponent<AudioListenerComponent>()) {
+            bool headerOpen = ImGui::CollapsingHeader("Audio Listener (3D 音響の聞き手)", ImGuiTreeNodeFlags_DefaultOpen);
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove Component")) pendingRemove = [e](){ e->RemoveComponent<AudioListenerComponent>(); };
+                ImGui::EndPopup();
+            }
+            if (headerOpen) {
+                ImGui::Indent(8.0f);
+                bool enabled = listener->IsEnabled();
+                if (ImGui::Checkbox("Enabled (有効化)##AudioListener", &enabled)) listener->SetEnabled(enabled);
+                ImGui::Checkbox("Orient To Camera (向きはカメラに合わせる)##AudioListener", &listener->orientToCamera);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(
+                        "ON : 位置はこのエンティティ、向きはカメラ（三人称視点で画面の左右とスピーカーの左右が一致する）\n"
+                        "OFF: 位置も向きもこのエンティティの Transform（+Z が正面）");
+                }
+                if (!e->GetComponent<TransformComponent>()) {
+                    ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f), "Transform がありません。カメラが聞き手になります");
+                }
+                const auto& pose = listener->LastPose();
+                ImGui::TextDisabled("Pos (%.1f, %.1f, %.1f)  Fwd (%.2f, %.2f, %.2f)", pose.position.x, pose.position.y,
+                                    pose.position.z, pose.forward.x, pose.forward.y, pose.forward.z);
+                ImGui::TextDisabled("このコンポーネントが無いシーンでは描画中のカメラが聞き手になります");
+                ImGui::Unindent(8.0f);
+            }
+        }
+
         ImGui::Separator();
         ImGui::Spacing();
         if (ImGui::Button("Add Component", ImVec2(-1, 30))) {
             ImGui::OpenPopup("AddComponentPopup");
         }
         if (ImGui::BeginPopup("AddComponentPopup")) {
+            // Transform を持たないエンティティ（フォルダ等）にも後から付けられるようにする
+            if (!e->GetComponent<TransformComponent>() && ImGui::MenuItem("Transform (変形)")) e->AddComponent<TransformComponent>();
             if (ImGui::MenuItem("Camera") && !e->GetComponent<CameraComponent>()) e->AddComponent<CameraComponent>();
             if (ImGui::MenuItem("Collider (当たり判定)") && !e->GetComponent<ColliderComponent>()) e->AddComponent<ColliderComponent>();
             if (ImGui::MenuItem("Rigidbody (物理演算)") && !e->GetComponent<RigidbodyComponent>()) e->AddComponent<RigidbodyComponent>();
             if (ImGui::MenuItem("Native Script") && !e->GetComponent<NativeScriptComponent>()) e->AddComponent<NativeScriptComponent>();
+            if (ImGui::MenuItem("Text Renderer (文字描画)") && !e->GetComponent<TextRendererComponent>()) e->AddComponent<TextRendererComponent>();
+            if (ImGui::MenuItem("Audio Source (音源)") && !e->GetComponent<AudioSourceComponent>()) e->AddComponent<AudioSourceComponent>();
+            if (ImGui::MenuItem("Audio Listener (3D 音響の聞き手)") && !e->GetComponent<AudioListenerComponent>()) e->AddComponent<AudioListenerComponent>();
+            // Animation は ModelRenderer と組で使う。既に持っている場合は出さない
+            if (!e->GetComponent<AnimationComponent>() && ImGui::MenuItem("Animation (アニメーション)")) e->AddComponent<AnimationComponent>();
+            // 他エンティティのボーンに貼り付ける（武器を手に持たせる等）
+            if (!e->GetComponent<BoneAttachmentComponent>() && ImGui::MenuItem("Bone Attachment (ボーン追従)")) e->AddComponent<BoneAttachmentComponent>();
             ImGui::EndPopup();
         }
 
@@ -2123,7 +3583,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
     std::replace(currentPathStr.begin(), currentPathStr.end(), '\\', '/');
     ImGui::Text("Assets: %s", currentPathStr.c_str());
     ImGui::SameLine();
-    
+
     // 上の階層へ戻るボタン (Resourcesより上には行かないようにする簡易制御)
     if (ImGui::Button("Up") && currentDirectory_ != "Resources" && currentDirectory_ != "Resources/") {
       currentDirectory_ = currentDirectory_.parent_path();
@@ -2142,7 +3602,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           ImGui::TableNextColumn();
           const auto& path = entry.path();
           std::string filename = path.filename().string();
-          
+
           if (entry.is_directory()) {
             // ディレクトリをアイコンで表示
             ImTextureID iconId = (ImTextureID)RC::GetRenderContext().Textures().GetSrv(folderIconTex_).ptr;
@@ -2150,7 +3610,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             bool clicked = ImGui::ImageButton(filename.c_str(), iconId, ImVec2(cellSize - 30, cellSize - 30));
             ImGui::TextWrapped("%s", filename.c_str());
             ImGui::EndGroup();
-            
+
             if (clicked) {
               currentDirectory_ /= path.filename();
             }
@@ -2158,18 +3618,18 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             // ファイルをアイコンで表示し、ドラッグ可能にする
             std::string ext = path.extension().string();
             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            
+
             int iconTexId = fileIconTex_;
             if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") iconTexId = fileImageTex_;
             else if (ext == ".obj" || ext == ".blend" || ext == ".fbx" || ext == ".gltf") iconTexId = file3DTex_;
             else if (ext == ".mtl" || ext == ".mat") iconTexId = fileMaterialTex_;
             else if (ext == ".md" || ext == ".txt" || ext == ".json") iconTexId = fileDocTex_;
             else if (ext == ".ttf" || ext == ".otf") iconTexId = fileFontTex_;
-            
+
             ImTextureID iconId = (ImTextureID)RC::GetRenderContext().Textures().GetSrv(iconTexId).ptr;
             ImGui::BeginGroup();
             ImGui::ImageButton(filename.c_str(), iconId, ImVec2(cellSize - 30, cellSize - 30));
-            
+
             if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID)) {
               std::string payloadPath = path.string();
               // Windowsのバックスラッシュをスラッシュに置換してペイロードに渡す
@@ -2178,7 +3638,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
               ImGui::Text("Dragging: %s", filename.c_str());
               ImGui::EndDragDropSource();
             }
-            
+
             ImGui::TextWrapped("%s", filename.c_str());
             ImGui::EndGroup();
           }
@@ -2204,13 +3664,13 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
       std::string lowerMsg = msg;
       std::transform(lowerMsg.begin(), lowerMsg.end(), lowerMsg.begin(), ::tolower);
 
-      if (lowerMsg.find("error") != std::string::npos || lowerMsg.find("fail") != std::string::npos || 
+      if (lowerMsg.find("error") != std::string::npos || lowerMsg.find("fail") != std::string::npos ||
           lowerMsg.find("exception") != std::string::npos || lowerMsg.find("fatal") != std::string::npos) {
         color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f); // 赤 (エラー)
       } else if (lowerMsg.find("warn") != std::string::npos) {
         color = ImVec4(1.0f, 0.8f, 0.2f, 1.0f); // 黄 (警告)
-      } else if (lowerMsg.find("success") != std::string::npos || lowerMsg.find("init") != std::string::npos || 
-                 lowerMsg.find("create") != std::string::npos || lowerMsg.find("load") != std::string::npos || 
+      } else if (lowerMsg.find("success") != std::string::npos || lowerMsg.find("init") != std::string::npos ||
+                 lowerMsg.find("create") != std::string::npos || lowerMsg.find("load") != std::string::npos ||
                  lowerMsg.find("save") != std::string::npos || lowerMsg.find("start") != std::string::npos) {
         color = ImVec4(0.5f, 1.0f, 0.5f, 1.0f); // 緑 (成功/初期化系)
       } else if (msg.find("[") == 0) {
@@ -2221,7 +3681,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
       ImGui::TextUnformatted(msg.c_str());
       ImGui::PopStyleColor();
     }
-    
+
     // オートスクロール（一番下にいる場合のみ追従）
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
       ImGui::SetScrollHereY(1.0f);
@@ -2283,6 +3743,18 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           ImGui::DragFloat3("Box Size", &peParticle_->shapeBoxSize_.x, 0.1f, 0.0f, 50.0f);
         }
 
+        // 殻（Electric 専用: 箱の丸み / 表面からの浮き / Y 軸回転）
+        if (peParticle_->GetParticleType() == ParticleType::Electric) {
+          if (peParticle_->emitterShape_ == EmitterShape::Box) {
+            ImGui::SliderFloat("Shell Roundness", &peParticle_->shellRoundness_, 0.0f, 1.0f);
+          }
+          ImGui::DragFloat("Shell Margin", &peParticle_->shellMargin_, 0.005f, 0.0f, 2.0f, "%.3f m");
+          float shellYawDeg = peParticle_->shellYaw_ * 180.0f / 3.14159265f;
+          if (ImGui::DragFloat("Shell Yaw (deg)", &shellYawDeg, 1.0f, -360.0f, 360.0f)) {
+            peParticle_->shellYaw_ = shellYawDeg * 3.14159265f / 180.0f;
+          }
+        }
+
         ImGui::Separator();
         ImGui::Text("Emission");
         int emit = static_cast<int>(peParticle_->GetEmitCount());
@@ -2310,6 +3782,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         ImGui::Separator();
         ImGui::Text("Position");
         ImGui::DragFloat3("Emitter Position", &peParticle_->emitterPosition_.x, 0.1f);
+        ImGui::DragFloat3("Emitter Offset", &peParticle_->emitterOffset_.x, 0.05f);
 
         ImGui::Separator();
         ImGui::Text("Color");
@@ -2319,7 +3792,9 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         // ParticleType と BlendMode
         ImGui::Separator();
         ImGui::Text("Rendering");
-        const char* typeNames[] = {"Default", "Explosion", "Rain", "Fire"};
+        const char* typeNames[] = {"Default", "Explosion", "Rain", "Fire", "Electric"};
+        static_assert(IM_ARRAYSIZE(typeNames) == static_cast<int>(ParticleType::Count),
+                      "typeNames と ParticleType の数を揃えること");
         int currentTypeInt = static_cast<int>(peParticle_->GetParticleType());
         if (ImGui::Combo("Particle Type", &currentTypeInt, typeNames, IM_ARRAYSIZE(typeNames))) {
           peParticle_->SetParticleType(static_cast<ParticleType>(currentTypeInt));
@@ -2333,15 +3808,26 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         // Pipeline Prefix
         ImGui::Separator();
         ImGui::Text("Pipeline");
-        const char* pipelineNames[] = {"gpu_particle", "gpu_particle_bubble", "gpu_particle_fire"};
+        const char* pipelineNames[] = {"gpu_particle", "gpu_particle_bubble", "gpu_particle_fire", "gpu_particle_electric"};
         int currentPipelineInt = 0;
-        if (peParticle_->GetPipelinePrefix() == "gpu_particle_bubble") {
-            currentPipelineInt = 1;
-        } else if (peParticle_->GetPipelinePrefix() == "gpu_particle_fire") {
-            currentPipelineInt = 2;
+        for (int i = 0; i < IM_ARRAYSIZE(pipelineNames); ++i) {
+            if (peParticle_->GetPipelinePrefix() == pipelineNames[i]) {
+                currentPipelineInt = i;
+                break;
+            }
         }
         if (ImGui::Combo("Pipeline Prefix", &currentPipelineInt, pipelineNames, IM_ARRAYSIZE(pipelineNames))) {
             peParticle_->SetPipelinePrefix(pipelineNames[currentPipelineInt]);
+        }
+
+        // プリセット（タイプ・パイプライン・寿命・色などをまとめて設定）
+        ImGui::Separator();
+        ImGui::Text("Presets");
+        if (ImGui::Button("Electric (帯電)", ImVec2(-1, 0))) {
+            peParticle_->ApplyElectricPreset();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("モデルの周りを電流がビリビリと這うプリセット。\n殻の大きさは Box Size（直径）と Emitter Offset で対象モデルに合わせる。");
         }
 
         // テクスチャ変更
@@ -2380,7 +3866,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
         if (contentSize.x > 0 && contentSize.y > 0) {
           float size = std::min(contentSize.x, contentSize.y);
           // 中央に配置
-          ImGui::SetCursorPos(ImVec2((contentSize.x - size) * 0.5f + ImGui::GetCursorPosX(), 
+          ImGui::SetCursorPos(ImVec2((contentSize.x - size) * 0.5f + ImGui::GetCursorPosX(),
                                      (contentSize.y - size) * 0.5f + ImGui::GetCursorPosY()));
           ImGui::Image((ImTextureID)peRenderTexture_.GetSRVGPU().ptr, ImVec2(size, size));
         }
@@ -2390,8 +3876,6 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
   }
 
   // === 実装確認 (Verify) パネル ===
-  // 直近に実装した機能を、ゲームを動かしたままその場で確かめるためのパネル。
-  // 中身は VerifyPanel.cpp 側にある（このファイルがこれ以上伸びないように）。
   if (showVerifyWindow_) {
     VerifyPanel::Draw(&showVerifyWindow_, currentScene, core);
   }
@@ -2416,10 +3900,10 @@ void EditorManager::ExportRenderQueueDump() {
   const auto& queue = RC::GetRenderContext().GetLastCommandHistory();
   auto now = std::chrono::system_clock::now();
   std::string timeStr = std::format("{:%Y-%m-%d_%H-%M-%S}", std::chrono::current_zone()->to_local(now));
-  
+
   std::error_code ec;
   std::filesystem::create_directories("../logs/render_queue", ec);
-  
+
   std::string filename = "../logs/render_queue/dump_" + timeStr + ".txt";
   std::ofstream ofs(filename);
   if (ofs) {
@@ -2427,7 +3911,7 @@ void EditorManager::ExportRenderQueueDump() {
     ofs << "Total Commands: " << queue.size() << "\n\n";
     for (size_t i = 0; i < queue.size(); ++i) {
       const auto& cmd = queue[i];
-      std::string displayName = cmd.debugName;
+      std::string displayName(cmd.debugName); // debugName は string_view
       if (cmd.debugIndex >= 0) {
         std::string resourceName = "";
         if (cmd.debugName.find("Model") != std::string::npos) {
@@ -2452,7 +3936,7 @@ void EditorManager::ExportRenderQueueDump() {
         uint32_t depth24 = static_cast<uint32_t>(cmd.sortKey & 0x00FFFFFF);
         uint16_t psoHash = static_cast<uint16_t>((cmd.sortKey >> 40) & 0xFFFF);
         uint16_t texHash = static_cast<uint16_t>((cmd.sortKey >> 24) & 0xFFFF);
-        
+
         ofs << std::format("[{}] {} (Index: {}) - Layer: {}({}), Depth24: {}, PSO: {:04X}, Tex: {:04X}, SortKey: {:016X}\n",
           i, displayName, cmd.debugIndex, layer, layerStr, depth24, psoHash, texHash, cmd.sortKey);
       }

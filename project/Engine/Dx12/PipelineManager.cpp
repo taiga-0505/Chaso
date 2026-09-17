@@ -439,6 +439,20 @@ PipelineManager::MakeInputLayout(InputLayoutType type) {
          D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
 
+  case InputLayoutType::Font:
+    // struct FontVertex (struct.h) と一致させる
+    return {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
+         D3D12_APPEND_ALIGNED_ELEMENT,
+         D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
+
   case InputLayoutType::Particle:
     return {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,
@@ -611,6 +625,23 @@ void PipelineManager::RegisterDefaultPipelines() {
   regSet("sprite", sprVs, sprPs, InputLayoutType::Sprite,
          RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_BACK);
 
+  // sprite3d：ワールド空間スプライト。深度テストON・書き込みON。
+  //   シェーダ／ルートシグネチャは sprite と共通で、渡す WVP がカメラ行列になるだけ。
+  //   Sprite.PS.hlsl が α<=0.5 を discard するアルファテスト方式なので、
+  //   深度書き込みONでもフチが破綻せず、モデルとモデルの間に挟み込める。
+  //   クアッドを Y 反転して使う（＝面の巻き方向が裏返る）ため CULL_NONE。
+  regSet("sprite3d", sprVs, sprPs, InputLayoutType::Sprite,
+         RootSignatureType::Sprite, true, true, D3D12_CULL_MODE_NONE);
+
+  // font：文字描画。Sprite と同じルートシグネチャ、頂点カラー付きレイアウト、
+  //       深度OFF、カリング無し（R8 アトラスのカバレッジをαとして合成）
+  {
+    const std::wstring fontVs = L"Resources/Shader/Font/Font.VS.hlsl";
+    const std::wstring fontPs = L"Resources/Shader/Font/Font.PS.hlsl";
+    regSet("font", fontVs, fontPs, InputLayoutType::Font,
+           RootSignatureType::Sprite, false, false, D3D12_CULL_MODE_NONE);
+  }
+
 
 
   // 汎用2D：基本は画面オーバーレイ想定
@@ -640,6 +671,21 @@ void PipelineManager::RegisterDefaultPipelines() {
 
     CreateFromFiles(MakeKey("skybox", kBlendModeNone), skyboxVs, skyboxPs,
                     InputLayoutType::Object3D, opt);
+  }
+
+  // object3d_skydome：天球。深度テストON・書き込みOFF、カリング無し（内側を見る）
+  //   VS（Skydome.VS.hlsl）が深度を最遠 (z/w = 1) に固定するので、カメラの Far や
+  //   天球の半径に関係なく背景として描かれる（object3d 流用時は Far 100 に対して
+  //   半径 100 の天球が丸ごとクリップされて描画されなかった）。
+  //   PS は Object3D と共通（Material.lightingMode = 0 で無ライティング）。
+  //   prefix に "object3d" を含めるのは BindPipeline で ShadowMap / ShadowParams を
+  //   バインドさせるため（VS が gShadowParams を参照する）。
+  {
+    const std::wstring skydomeVs =
+        L"Resources/Shader/Skydome/Skydome.VS.hlsl";
+    regSet("object3d_skydome", skydomeVs, objPs, InputLayoutType::Object3D,
+           RootSignatureType::Object3D, /*depth*/ true, /*depthWrite*/ false,
+           D3D12_CULL_MODE_NONE);
   }
 
   // fog overlay：深度OFF、αブレンドON、InputLayout無し、Rootは FogOverlay
@@ -679,7 +725,7 @@ void PipelineManager::RegisterDefaultPipelines() {
     const std::wstring shadowSkinVs = L"Resources/Shader/Shadow/Shadow_Skin.VS.hlsl";
     const std::wstring shadowPs = L"Resources/Shader/Shadow/Shadow.PS.hlsl";
     GPipelineOptions opt{};
-    
+
     // 基本 (Object3D)
     opt.rootType = RootSignatureType::Object3D;
     opt.enableDepth = true;
@@ -692,15 +738,52 @@ void PipelineManager::RegisterDefaultPipelines() {
 
     CreateFromFiles(MakeKey("shadow", kBlendModeNone), shadowVs, shadowPs,
                     InputLayoutType::Object3D, opt);
-                    
+
     // インスタンシング (Object3DInstancing)
     opt.rootType = RootSignatureType::Object3DInstancing;
     CreateFromFiles(MakeKey("shadow_inst", kBlendModeNone), shadowInstVs, shadowPs,
                     InputLayoutType::Object3D, opt); // インスタンス用レイアウトは通常と同じか確認（Object3DInstancingの場合はSRVで受け取るので通常と同じでOK）
-                    
+
     // スキニング (Object3DSkin)
     opt.rootType = RootSignatureType::Object3DSkin;
     CreateFromFiles(MakeKey("shadow_skin", kBlendModeNone), shadowSkinVs, shadowPs,
+                    InputLayoutType::Object3DSkin, opt);
+  }
+
+  // mask : 強調したいオブジェクトのシルエットを白一色で別RTへ書くパス
+  //
+  // ルートシグネチャ・入力レイアウト・VS は object3d と同じで、PS だけ「白を返す」
+  // ものに差し替えてある。そのため RenderContext がマスクパス中に PSO を振り替える
+  // だけで、既存の DrawModel 系がそのままマスクを書ける（追加バインドは不要）。
+  //
+  // ★ 深度は使わない（enableDepth = false）。マスクパスはメイン3D描画より前に走る
+  //    ので、この時点の深度バッファは空（クリア直後）で比較する相手が居ない。
+  //    結果として壁の向こうの対象にも輪郭が出る＝インタラクト対象の道案内になる。
+  //    遮蔽させたい場合はメイン3Dの発行後にパスを移し、主DSVを読み取り専用で
+  //    バインドする必要がある（DSVヒープが1枚しかない点に注意）。
+  {
+    const std::wstring maskPs = L"Resources/Shader/Mask/Mask.PS.hlsl";
+    GPipelineOptions opt{};
+
+    // 基本 (Object3D)
+    opt.rootType = RootSignatureType::Object3D;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.blendMode = kBlendModeNone;
+    opt.cull = D3D12_CULL_MODE_BACK;
+
+    CreateFromFiles(MakeKey("mask", kBlendModeNone), objVs, maskPs,
+                    InputLayoutType::Object3D, opt);
+
+    // インスタンシング (Object3DInstancing)
+    opt.rootType = RootSignatureType::Object3DInstancing;
+    CreateFromFiles(MakeKey("mask_inst", kBlendModeNone), objVsInst, maskPs,
+                    InputLayoutType::Object3D, opt);
+
+    // スキニング (Object3DSkin)
+    opt.rootType = RootSignatureType::Object3DSkin;
+    CreateFromFiles(MakeKey("mask_skin", kBlendModeNone), objVsSkin, maskPs,
                     InputLayoutType::Object3DSkin, opt);
   }
 
@@ -829,6 +912,33 @@ void PipelineManager::RegisterDefaultPipelines() {
                     objVs, waterColumnPs, InputLayoutType::Object3D, opt);
   }
 
+  // ====================
+  // Scan Ring / Scan Beam Shader（場所指定ホログラム用エフェクト）
+  //   床に置くリングデカールと、そこへ伸びる接続ビームの2種。
+  //   加算合成・深度テストON・深度書き込みOFF・カリング無し。
+  //   prefix に "object3d" を含めるのは BindPipeline に ShadowMap /
+  //   ShadowParams をバインドさせるため（VS が gShadowParams を参照する）。
+  // ====================
+  {
+    const std::wstring scanRingPs =
+        L"Resources/Shader/Object3d/Object3D_ScanRing.PS.hlsl";
+    const std::wstring scanBeamPs =
+        L"Resources/Shader/Object3d/Object3D_ScanBeam.PS.hlsl";
+
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::Object3D;
+    opt.enableDepth = true;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = true;
+    opt.blendMode = kBlendModeAdd;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles(MakeKey("object3d_scanring", kBlendModeAdd), objVs,
+                    scanRingPs, InputLayoutType::Object3D, opt);
+    CreateFromFiles(MakeKey("object3d_scanbeam", kBlendModeAdd), objVs,
+                    scanBeamPs, InputLayoutType::Object3D, opt);
+  }
+
   // ワイヤーフレーム用
   {
     for (int m = (int)kBlendModeNone; m <= (int)kBlendModePremultiplied; ++m) {
@@ -857,7 +967,7 @@ void PipelineManager::RegisterDefaultPipelines() {
                       objVsSkin, wirePs, InputLayoutType::Object3DSkin, opt);
     }
   }
-  
+
   // ============================================================
   // View Shading デバッグパイプライン
   // ============================================================
@@ -1076,6 +1186,77 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // ssao：深度から接地感の陰を落とす（t1 に深度、b1 に projectionInverse とパラメータ）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("ssao.none", fullscreenVs,
+                    L"Resources/Shader/Ssao/Ssao.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // bloom：明部のにじみ（1パス近似。b0 に閾値・強さ・半径・柔らかさ）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("bloom.none", fullscreenVs,
+                    L"Resources/Shader/Bloom/Bloom.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // colorgrade：露出・コントラスト・彩度・色温度（b1 に専用CBuffer）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("colorgrade.none", fullscreenVs,
+                    L"Resources/Shader/ColorGrade/ColorGrade.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // fxaa：エッジのアンチエイリアス（パラメータなし。積む順は一番最後）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("fxaa.none", fullscreenVs,
+                    L"Resources/Shader/Fxaa/Fxaa.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
+  // maskoutline：マスクされたオブジェクトだけの輪郭（t1 にマスクRTが入る）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("maskoutline.none",
+                    fullscreenVs,
+                    L"Resources/Shader/MaskOutline/MaskOutline.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   // radialblur：ラジアルブラー
   {
     GPipelineOptions opt{};
@@ -1181,6 +1362,21 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // bloodoverlay：被弾・瀕死のときに画面の周辺へ付く血（手続き型。テクスチャ不要）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("bloodoverlay.none",
+                    fullscreenVs,
+                    L"Resources/Shader/BloodOverlay/BloodOverlay.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   // ====================
   // Compute Shader
   // ====================
@@ -1227,6 +1423,16 @@ void PipelineManager::RegisterDefaultPipelines() {
   // update_fire_cs: GPU Particle 炎更新用 Compute Shader
   CreateCompute("update_fire_cs",
                 L"Resources/Shader/Compute/UpdateFire.CS.hlsl",
+                RootSignatureType::UpdateParticleCS);
+
+  // emit_electric_cs: GPU Particle 電撃射出用 Compute Shader（殻の表面に発生）
+  CreateCompute("emit_electric_cs",
+                L"Resources/Shader/Compute/EmitElectric.CS.hlsl",
+                RootSignatureType::EmitParticleCS);
+
+  // update_electric_cs: GPU Particle 電撃更新用 Compute Shader（殻の表面を這う）
+  CreateCompute("update_electric_cs",
+                L"Resources/Shader/Compute/UpdateElectric.CS.hlsl",
                 RootSignatureType::UpdateParticleCS);
 
   // gpu_particle: GPU Particle 描画用（ブレンドモード別）
@@ -1310,6 +1516,35 @@ void PipelineManager::RegisterDefaultPipelines() {
       GPipelineOptions optNoDepth = opt;
       optNoDepth.enableDepth = false;
       CreateFromFiles(MakeKey("gpu_particle_fire_nodepth", mode), firePtlVs, firePtlPs,
+                      InputLayoutType::Particle, optNoDepth);
+    }
+  }
+
+  // gpu_particle_electric: GPU Particle 電撃描画用（ブレンドモード別）
+  // VS は共通。PS だけ電撃用に差し替える（手続き的に稲妻と発光の芯を描く）
+  {
+    const std::wstring electricPtlVs = L"Resources/Shader/Particle/GPUParticle.VS.hlsl";
+    const std::wstring electricPtlPs = L"Resources/Shader/Particle/ElectricParticle.PS.hlsl";
+
+    for (int m = (int)kBlendModeNone; m <= (int)kBlendModePremultiplied; ++m) {
+      const BlendMode mode = (BlendMode)m;
+
+      // 通常版（深度テストON: モデルの裏側に回った火花は隠れる＝「まとっている」ように見える）
+      GPipelineOptions opt{};
+      opt.rootType = RootSignatureType::GPUParticle;
+      opt.enableDepth = true;
+      opt.enableDepthWrite = false;
+      opt.enableAlphaBlend = (mode != kBlendModeNone);
+      opt.blendMode = mode;
+      opt.cull = D3D12_CULL_MODE_NONE;
+
+      CreateFromFiles(MakeKey("gpu_particle_electric", mode), electricPtlVs, electricPtlPs,
+                      InputLayoutType::Particle, opt);
+
+      // プレビュー版（深度テストOFF）
+      GPipelineOptions optNoDepth = opt;
+      optNoDepth.enableDepth = false;
+      CreateFromFiles(MakeKey("gpu_particle_electric_nodepth", mode), electricPtlVs, electricPtlPs,
                       InputLayoutType::Particle, optNoDepth);
     }
   }

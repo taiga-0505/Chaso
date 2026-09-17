@@ -1,6 +1,8 @@
 #include "SkyboxManager.h"
 #include "Skybox/Skybox.h"
 #include "Texture/TextureManager/TextureManager.h"
+#include "Common/Log/Log.h"
+#include <format>
 
 namespace RC {
 
@@ -35,6 +37,20 @@ int SkyboxManager::Create(const std::string &ddsPath) {
 
   // テクスチャのロード（DDS cubemap）
   D3D12_GPU_DESCRIPTOR_HANDLE srv = texman_->Load(ddsPath, false);
+
+  // Skybox.PS は TextureCube でサンプリングする。
+  // ファイルが見つからないと TextureManager は白1x1 の Texture2D で代替するが、
+  // Texture2D の SRV を TextureCube として読むのは D3D12 では未定義動作で、
+  // GPU が無関係な VRAM（前フレームのレンダーターゲット等）を読んでしまい
+  // 空の部分に残像・縞模様が出る。ここで弾いて絶対に描かせない。
+  const Texture2D *tex = texman_->Get(ddsPath);
+  if (!tex || !tex->IsLoaded() || !tex->Metadata().IsCubemap()) {
+    Log::Print(std::format(
+        "[Skybox] キューブマップとして読めないため生成を中止: {} "
+        "(ファイルの有無とパス、DDS が cubemap かを確認してください)",
+        ddsPath));
+    return -1;
+  }
 
   const int handle = AllocSlot_();
 

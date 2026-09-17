@@ -199,6 +199,15 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrv(TextureID id) const {
   return itTex->second.GpuSrv();
 }
 
+bool TextureManager::IsLoaded(TextureID id) const {
+  std::lock_guard lock(mtx_);
+  auto it = idToPath_.find(id);
+  if (it == idToPath_.end())
+    return false;
+  auto itTex = cache_.find(it->second);
+  return (itTex != cache_.end() && itTex->second.IsLoaded());
+}
+
 const DirectX::TexMetadata *TextureManager::GetMeta(TextureID id) const {
   std::lock_guard lock(mtx_);
   auto it = idToPath_.find(id);

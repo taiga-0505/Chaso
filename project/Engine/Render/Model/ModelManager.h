@@ -69,7 +69,7 @@ public:
   /// @param handle モデルハンドル
   /// @return ModelObjectへのポインタ。無効なハンドルの場合は nullptr
   ::ModelObject *Get(int handle);
-  
+
   /// @brief ハンドルからモデルオブジェクトの実体を取得する (const)
   /// @param handle モデルハンドル
   /// @return ModelObjectへのconstポインタ
@@ -85,10 +85,20 @@ public:
   /// @param color 乗算するRGBAカラー
   void SetColor(int handle, const Vector4 &color);
 
+  /// @brief モデルの光沢度（Shininess）を設定する
+  /// @param handle モデルハンドル
+  /// @param shininess 光沢度 (0.0: 鏡面反射なし)
+  void SetShininess(int handle, float shininess);
+
   /// @brief モデルのライティングモードを設定する
   /// @param handle モデルハンドル
   /// @param m ライティングモード (Phong, Lambert, なし等)
   void SetLightingMode(int handle, LightingMode m);
+
+  /// @brief ライティングモードの個別オーバーライドを解除し、
+  ///        シーンの DirectionalLight のモードに追従させる
+  /// @param handle モデルハンドル
+  void ClearLightingModeOverride(int handle);
 
   /// @brief 指定したモデルハンドルのメッシュを別のファイルで差し替える
   /// @param handle モデルハンドル

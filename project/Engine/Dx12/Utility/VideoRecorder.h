@@ -60,7 +60,7 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Device> device_;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue_;
-    
+
     // Media Foundation
     Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter_;
     DWORD streamIndex_ = 0;
@@ -76,6 +76,7 @@ private:
     struct ReadbackBuffer {
         Microsoft::WRL::ComPtr<ID3D12Resource> resource;
         Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator; // バッファごとに専用 (GPU実行中のResetを防ぐ)
         HANDLE fenceEvent = nullptr;
         UINT64 fenceValue = 0;
         bool inUse = false;
@@ -84,7 +85,6 @@ private:
     UINT currentBufferIndex_ = 0;
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint_{};
-    Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator_;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_;
 
     void ProcessReadbackBuffer(ReadbackBuffer& buffer);

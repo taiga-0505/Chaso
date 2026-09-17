@@ -4,6 +4,7 @@
 #include "function/function.h"
 #include "Dx12/CommandContext/CommandContext.h"
 #include "Common/Log/Log.h"
+#include <format>
 #include <vector>
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::LoadFromFile(SRVManager &srv, CommandContext &cmd, const std::string &path, bool srgb) {
@@ -33,6 +34,10 @@ bool Texture2D::LoadCPU(const std::string &path, bool srgb) {
   }
 
   if (FAILED(hr)) {
+    // 代替で白1x1を返すので呼び出し側からは成功に見える。
+    // 黙って差し替えるとパス違いに気付けないため、ここで必ず残す。
+    Log::Print(std::format("[Texture] ロード失敗 → 白1x1で代替: {} (HRESULT={:08X})",
+                           path, static_cast<uint32_t>(hr)));
     // 白1x1を生成
     DirectX::ScratchImage white;
     white.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, 1);

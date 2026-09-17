@@ -162,12 +162,14 @@
     <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp" />
     <ClCompile Include="..\Engine\Particle\GPUParticle.cpp" />
     <ClCompile Include="..\Engine\Audio\Sound.cpp" />
+    <ClCompile Include="..\Engine\Audio\AudioEngine.cpp" />
     <ClCompile Include="..\Engine\Graphics\Skydome\Skydome.cpp" />
     <ClCompile Include="..\Engine\Graphics\Skybox\Skybox.cpp" />
     <ClCompile Include="..\Engine\Graphics\Mesh\MeshGenerator.cpp" />
     <ClCompile Include="..\Engine\Graphics\Mesh\PrimitiveMesh.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Font\FontAtlas.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
     <!-- ImGui Manager -->
@@ -190,6 +192,7 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderWater.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderInteractiveWater.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSprite.cpp" />
+    <ClCompile Include="..\Engine\Render\Systems\RenderFont.cpp" />
     <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp" />
     <ClCompile Include="..\Engine\Render\Skybox\SkyboxManager.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp" />
@@ -197,6 +200,7 @@
     <ClCompile Include="..\Engine\Render\Systems\FrameResource.cpp" />
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
+    <ClCompile Include="..\Engine\Render\Font\FontManager.cpp" />
     <!-- Window -->
     <ClCompile Include="..\Engine\Window\Window.cpp" />
     <ClCompile Include="Dx12\Dx12Core.cpp" />
@@ -255,14 +259,14 @@
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h" />
     <ClInclude Include="..\Engine\Particle\GPUParticle.h" />
-    <ClInclude Include="..\Engine\Audio\BgmManager.h" />
-    <ClInclude Include="..\Engine\Audio\SeManager.h" />
+    <ClInclude Include="..\Engine\Audio\AudioEngine.h" />
     <ClInclude Include="..\Engine\Audio\Sound.h" />
     <ClInclude Include="..\Engine\Graphics\Skydome\Skydome.h" />
     <ClInclude Include="..\Engine\Graphics\Mesh\MeshGenerator.h" />
     <ClInclude Include="..\Engine\Graphics\Mesh\PrimitiveMesh.h" />
     <ClInclude Include="..\Engine\Graphics\Sprite\Sprite2D.h" />
     <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h" />
+    <ClInclude Include="..\Engine\Graphics\Font\FontAtlas.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.h" />
     <!-- ImGui Manager -->
@@ -285,6 +289,7 @@
     <ClInclude Include="..\Engine\Graphics\Skybox\Skybox.h" />
     <ClInclude Include="..\Engine\Render\Mesh\PrimitiveMeshManager.h" />
     <ClInclude Include="..\Engine\Render\Sprite\SpriteManager.h" />
+    <ClInclude Include="..\Engine\Render\Font\FontManager.h" />
     <!-- Window -->
     <ClInclude Include="..\Engine\Window\Window.h" />
     <ClInclude Include="Common\EngineConfig.h" />
@@ -300,6 +305,10 @@
     <ClInclude Include="..\Engine\ECS\ModelRendererComponent.h" />
     <ClInclude Include="..\Engine\ECS\ColliderComponent.h" />
     <ClInclude Include="..\Engine\ECS\WaterComponent.h" />
+    <ClInclude Include="..\Engine\ECS\AudioSourceComponent.h" />
+    <ClInclude Include="..\Engine\ECS\AudioListenerComponent.h" />
+    <ClInclude Include="..\Engine\ECS\TextRendererComponent.h" />
+    <ClInclude Include="..\Engine\ECS\BoneAttachmentComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

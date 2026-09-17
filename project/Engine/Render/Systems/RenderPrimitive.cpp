@@ -119,6 +119,18 @@ static void AddPrimitiveCommand_(RenderContext &ctx, Primitive3D *prim,
     ctx.PushPrimitive3DCommand(depth, prevCount, added, sortKey);
   }
 }
+
+/// <summary>
+/// 現在のモード（BeginOverlay3D 〜 EndOverlay3D の内側か）に応じたソートキーを返す
+/// </summary>
+/// <remarks>
+/// sortKey==0 のコマンドは安定ソートで先頭（モデル描画の前）に回るため、
+/// オーバーレイ中に 0 のまま積むと地形・モデルに塗り潰されて見えなくなる。
+/// 3D プリミティブ描画は必ずこれを経由して sortKey を決めること。
+/// </remarks>
+static uint64_t CurrentPrimitiveSortKey_(const RenderContext &ctx) {
+  return ctx.IsOverlayMode() ? SortKey::Make(SortKey::kLayerOverlay, 0, 0) : 0;
+}
 } // namespace
 
 // ============================================================================
@@ -253,7 +265,7 @@ void DrawGridXZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridXZ(halfSize, step, color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawGridXY3D(int halfSize, float step, const Vector4 &color, bool depth) {
@@ -267,7 +279,7 @@ void DrawGridXY3D(int halfSize, float step, const Vector4 &color, bool depth) {
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridXY(halfSize, step, color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawGridYZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
@@ -281,7 +293,7 @@ void DrawGridYZ3D(int halfSize, float step, const Vector4 &color, bool depth) {
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddGridYZ(halfSize, step, color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawWireSphere3D(const Vector3 &center, float radius,
@@ -336,7 +348,7 @@ void DrawArc3D(const Vector3 &center, const Vector3 &normal,
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddArc(center, normal, fromDir, radius, startRad, endRad, color,
                segments, depth, drawToCenter);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawCapsule3D(const Vector3 &p0, const Vector3 &p1, float radius,
@@ -351,7 +363,7 @@ void DrawCapsule3D(const Vector3 &p0, const Vector3 &p1, float radius,
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddCapsule(p0, p1, radius, color, segments, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawOBB3D(const Vector3 &center, const Vector3 &axisX,
@@ -367,7 +379,7 @@ void DrawOBB3D(const Vector3 &center, const Vector3 &axisX,
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddOBB(center, axisX, axisY, axisZ, halfExtents, color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
@@ -382,7 +394,7 @@ void DrawFrustumCorners3D(const Vector3 corners[8], const Vector4 &color,
   }
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddFrustum(corners, color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
@@ -399,7 +411,7 @@ void DrawFrustum3D(const Vector3 &camPos, const Vector3 &forward,
   uint32_t prev = prim->GetVertexCount(depth);
   prim->AddFrustumCamera(camPos, forward, up, fovYRad, aspect, nearZ, farZ,
                          color, depth);
-  AddPrimitiveCommand_(ctx, prim, depth, prev);
+  AddPrimitiveCommand_(ctx, prim, depth, prev, CurrentPrimitiveSortKey_(ctx));
 }
 
 void FlushPrimitive3D() {

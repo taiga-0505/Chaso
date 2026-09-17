@@ -16,6 +16,7 @@ enum class InputLayoutType {
   Object3D,      ///< 標準的な3Dオブジェクト (Pos, Normal, UV)
   Object3DSkin,  ///< スキニング付き3Dオブジェクト (Pos, UV, Normal, BlendIndices, BlendWeight)
   Sprite,        ///< 2Dスプライト (Pos, UV, Color)
+  Font,          ///< 文字描画 (Pos, UV, Color) ※頂点カラー付き
   Particle,      ///< パーティクル (Pos, Scale, Color)
   Primitive3D,   ///< 3Dプリミティブ (Pos, Color)
   None,          ///< 入力レイアウトなし（SV_VertexID 等を使用する場合）

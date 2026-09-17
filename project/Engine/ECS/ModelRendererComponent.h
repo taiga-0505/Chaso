@@ -16,6 +16,7 @@ public:
   int blendMode = 0;      ///< Blend mode
   RC::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f}; ///< Multiply color
   float environmentCoeff = 0.0f; ///< Environment map reflection coefficient
+  int lightingMode = -1;  ///< -1: follow DirectionalLight / 0:None 1:Lambert 2:Half Lambert
 
   /// @brief Check if a valid model is assigned
   bool HasModel() const { return modelHandle >= 0; }
@@ -36,7 +37,8 @@ public:
       {"visible", visible},
       {"blendMode", blendMode},
       {"color", {color.x, color.y, color.z, color.w}},
-      {"environmentCoeff", environmentCoeff}
+      {"environmentCoeff", environmentCoeff},
+      {"lightingMode", lightingMode}
     };
   }
 
@@ -53,5 +55,6 @@ public:
       color = {c[0].get<float>(), c[1].get<float>(), c[2].get<float>(), c[3].get<float>()};
     }
     if (j.contains("environmentCoeff")) environmentCoeff = j["environmentCoeff"].get<float>();
+    if (j.contains("lightingMode")) lightingMode = j["lightingMode"].get<int>();
   }
 };

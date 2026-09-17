@@ -60,6 +60,12 @@ public:
   /// @return GPU 記述子ハンドル
   D3D12_GPU_DESCRIPTOR_HANDLE GetSrv(TextureID id) const;
 
+  /// @brief ID のテクスチャが GPU へのロードまで完了しているか
+  /// @details GetSrv はロード前でも代替（白）を返すため、「本物の SRV が取れたか」を知りたいときに使う
+  /// @param id テクスチャ ID
+  /// @return ロード完了なら true
+  bool IsLoaded(TextureID id) const;
+
   /// @brief ID からテクスチャのメタデータを取得する
   /// @param id テクスチャ ID
   /// @return TexMetadata へのポインタ
