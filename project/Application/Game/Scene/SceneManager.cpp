@@ -21,6 +21,34 @@ class LoadingState;
 
 // For PostEffectType
 #include "Graphics/PostProcess/PostProcess.h"
+// Dive 遷移で抜ける「深海の画面色」（Title の潜水・Game の浮上と同じ定義を使う）
+#include "Application/Game/Framework/UnderwaterLook.h"
+
+namespace {
+
+/// @brief 遷移演出ごとのフェード時間（秒）
+float FadeTimeFor(SceneTransition transition) {
+  return (transition == SceneTransition::Dive) ? Scene::SceneManager::kDiveFadeTime
+                                               : Scene::SceneManager::kFadeTime;
+}
+
+/// @brief Dissolve の「抜けた部分の色」と縁の色を遷移演出に合わせる
+/// @details Dissolve のパラメータは PostProcess に残り続けるので、
+///          どちらの遷移でも毎回明示的に設定する（前回の Dive の色を引きずらない）。
+void ApplyDissolveLook(SceneTransition transition) {
+  if (transition == SceneTransition::Dive) {
+    // 飛び込み側は画面をこの色まで暗くしてから要求してくるので、
+    // 同じ色へ抜けると継ぎ目が見えない。縁も光らせない（暗い水の中で橙は浮く）。
+    const RC::Vector4 c = UnderwaterLook::kAbyssScreenColor;
+    RC::SetDissolveBaseColor(c.x, c.y, c.z, 1.0f);
+    RC::SetDissolveEdgeColor(c.x, c.y, c.z);
+  } else {
+    RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
+    RC::SetDissolveEdgeColor(1.0f, 0.4f, 0.3f);       // PostProcess の既定の縁色
+  }
+}
+
+} // namespace
 
 // =================================================================
 // 状態インタフェース
@@ -92,17 +120,18 @@ void NormalState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
   }
 
   if (!sm.requested_.empty()) {
-    Log::Print("[SceneState] NormalState -> FadeOutState (requested: " + sm.requested_ + ")");
-    
+    Log::Print("[SceneState] NormalState -> FadeOutState (requested: " + sm.requested_ +
+               (sm.transition_ == SceneTransition::Dive ? ", dive)" : ")"));
+
     // Dissolveエフェクトを開始
     RC::AddPostEffect(PostEffectType::Dissolve);
-    
+
     // 固定ノイズ (インデックス0) を使用する
     RC::SetDissolveNoiseIndex(0);
 
     RC::SetDissolveThreshold(0.0f);
-    RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
-    
+    ApplyDissolveLook(sm.transition_); // Dissolve は黒、Dive は深海色へ抜く
+
     sm.ChangeState(std::make_unique<FadeOutState>());
   }
 }
@@ -117,18 +146,19 @@ void NormalState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // FadeOutState 実装
 // =================================================================
 void FadeOutState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  const float fadeTime = FadeTimeFor(sm.transition_);
   counter_ += 1.0f / 60.0f;
-  if (counter_ > sm.kFadeTime) counter_ = sm.kFadeTime;
+  if (counter_ > fadeTime) counter_ = fadeTime;
 
-  float threshold = counter_ / sm.kFadeTime;
+  float threshold = counter_ / fadeTime;
   RC::SetDissolveThreshold(threshold);
 
   // フェードアウト中は旧シーンの Update も継続
-  if (sm.current_ && counter_ < sm.kFadeTime) {
+  if (sm.current_ && counter_ < fadeTime) {
     sm.current_->Update(sm, ctx);
   }
 
-  if (counter_ >= sm.kFadeTime) {
+  if (counter_ >= fadeTime) {
     Log::Print("[SceneState] FadeOutState -> LoadingState");
     sm.ChangeState(std::make_unique<LoadingState>());
   }
@@ -157,10 +187,11 @@ void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     // ChangeImmediately内でClearPostEffectsが呼ばれるため、再度Dissolveを適用
     RC::AddPostEffect(PostEffectType::Dissolve);
     RC::SetDissolveThreshold(1.0f);
-    RC::SetDissolveBaseColor(0.0f, 0.0f, 0.0f, 1.0f); // トランジションは黒で抜く
+    ApplyDissolveLook(sm.transition_);
 
-    // シークエンシャルなオープニング演出準備：初期を白黒状態にセットして静止させる
-    if (ctx.postProcess) {
+    // シークエンシャルなオープニング演出準備：初期を白黒状態にセットして静止させる。
+    // Dive 遷移は Game 側の「深海から浮上」がそのままオープニングになるので挟まない。
+    if (ctx.postProcess && sm.transition_ != SceneTransition::Dive) {
       ctx.postProcess->AddEffect(PostEffectType::Grayscale);
       ctx.postProcess->SetGrayscaleLerpFactor(1.0f);
     }
@@ -171,6 +202,15 @@ void LoadingState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     // 新しいシーンの初期位置構成のため1回目だけUpdateを呼び、各オブジェクトの位置を決定
     if (sm.current_) {
       sm.current_->Update(sm, ctx);
+
+      // この Update でスクリプトの OnCreate が走り、シーン側のポストエフェクト
+      // （輪郭・水中など）が Dissolve の後ろに積まれる。Dissolve は「画面全体を
+      // 隠す幕」なので、いったん外して末尾へ積み直し、必ず最後に掛かるようにする。
+      // パラメータ（閾値・色）は PostProcess 側に残るので積み直しても消えない。
+      if (RC::HasPostEffect(PostEffectType::Dissolve)) {
+        RC::RemovePostEffect(PostEffectType::Dissolve);
+        RC::AddPostEffect(PostEffectType::Dissolve);
+      }
     }
   }
 }
@@ -185,16 +225,25 @@ void LoadingState::Render(Scene::SceneManager &sm, SceneContext &ctx,
 // FadeInState 実装 (Dissolveがノイズより開ける期間：ゲーム進行は止めておく)
 // =================================================================
 void FadeInState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
+  const float fadeTime = FadeTimeFor(sm.transition_);
   counter_ += 1.0f / 60.0f;
-  if (counter_ > sm.kFadeTime) counter_ = sm.kFadeTime;
+  if (counter_ > fadeTime) counter_ = fadeTime;
 
-  float threshold = 1.0f - (counter_ / sm.kFadeTime);
+  float threshold = 1.0f - (counter_ / fadeTime);
   RC::SetDissolveThreshold(threshold);
 
   // 【ゲーム完全停止】演出完了までシーン更新 (sm.current_->Update) を飛ばし、時間とアクションをフリーズ！
 
-  if (counter_ >= sm.kFadeTime) {
+  if (counter_ >= fadeTime) {
     RC::RemovePostEffect(PostEffectType::Dissolve);
+    if (sm.transition_ == SceneTransition::Dive) {
+      // 飛び込み遷移はここで終わり。深海に置かれたカメラを Game 側のスクリプト
+      // （DeepRiseIntroScript）が浮上させるので、すぐにシーンを動かし始める。
+      Log::Print("[SceneState] FadeInState -> NormalState (dive)");
+      sm.transition_ = SceneTransition::None;
+      sm.ChangeState(std::make_unique<NormalState>());
+      return;
+    }
     // Dissolveが完全に明けきった後、静止したモノクロ世界にカラーが満ちる GrayscaleIntroState へバトンタッチ！
     sm.ChangeState(std::make_unique<GrayscaleIntroState>(1.8f));
   }
@@ -230,6 +279,7 @@ void GrayscaleIntroState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     }
     Log::Print("[SceneState] All intro sequences complete! GAME START!");
     // すべてのオープニングの終わり、かつゲーム本番（NormalState）への覚醒！ここから時が動き始める！
+    sm.transition_ = SceneTransition::None;
     sm.ChangeState(std::make_unique<NormalState>());
   }
 }
@@ -269,8 +319,8 @@ void Scene::SceneManager::Init(SceneContext &ctx) {
   // RequestChange のみを公開し、ChangeImmediately は意図的に渡さない。
   // ChangeImmediately をスクリプトの OnUpdate から呼ぶと OnExit ～ エンティティ破棄が
   // その場で走り、呼び出し元スクリプト自身が解放されて use-after-free になる。
-  ctx.requestSceneChange = [this](const std::string &name) {
-    return RequestChange(name);
+  ctx.requestSceneChange = [this](const std::string &name, SceneTransition transition) {
+    return RequestChange(name, transition);
   };
 
   // Fadeコンポーネントを初期化
@@ -297,7 +347,8 @@ void Scene::SceneManager::Register(std::unique_ptr<Scene> scene) {
   scenes_[key] = std::move(scene);
 }
 
-bool Scene::SceneManager::RequestChange(const std::string &name) {
+bool Scene::SceneManager::RequestChange(const std::string &name,
+                                        SceneTransition transition) {
   if (name.empty()) {
     Log::Print("[SceneManager] RequestChange: シーン名が空のため無視しました");
     return false;
@@ -334,6 +385,8 @@ bool Scene::SceneManager::RequestChange(const std::string &name) {
   // 同名シーンへの要求は通す。OnExit -> OnEnter が走るため「リトライ」として機能する。
 
   requested_ = name;
+  // None は「演出なし」の意味なので要求としては受けない（既定の Dissolve に丸める）
+  transition_ = (transition == SceneTransition::None) ? SceneTransition::Dissolve : transition;
   return true;
 }
 
@@ -342,12 +395,15 @@ void Scene::SceneManager::ChangeImmediately(const std::string &name,
   Log::Print("[Scene] シーン切り替え: " + (currentName_.empty() ? "None" : currentName_) + " -> " + name);
   
   RC::ClearPostEffects();
-  
+
   auto start = std::chrono::high_resolution_clock::now();
 
   if (current_) {
     current_->OnExit(ctx);
   }
+  // 次のシーンが「どう入って来たか」を OnEnter より前に知らせる。
+  // 演出付きの要求（RequestChange）以外は None（起動直後・エディタからの切り替え）。
+  ctx.lastTransition = transition_;
   current_ = get_(name);
   if (current_) {
     current_->OnEnter(ctx);

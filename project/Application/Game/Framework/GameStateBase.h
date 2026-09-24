@@ -19,6 +19,11 @@ public:
         score_ = 0;
     }
 
+    /// @brief 経過時間だけを 0 に戻す
+    /// @details 開始演出（深海からの浮上）のあいだ Tick は回り続けるので、演出が終わって
+    ///          実際に操作できるようになった時点で呼び、演出の時間をプレイ時間に含めない。
+    void ResetElapsedTime() { elapsedTime_ = 0.0f; }
+
     /// @brief 毎フレームの更新処理
     /// @param deltaTime 経過時間
     virtual void Tick(float deltaTime) {

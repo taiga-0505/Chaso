@@ -103,6 +103,8 @@ struct Waypoint {
 //     rail_wp          : いま向かっているウェイポイント番号。毎フレーム更新する
 //     rail_branch_to   : 直近に分岐で飛んだ先の番号（直進なら -1）
 //     rail_branch_count: 分岐が成立した回数。増えた瞬間がルートを逸れた瞬間
+//     intro_playing    : 読むだけ。DeepRiseIntroScript が開始演出（深海からの浮上）の
+//                        あいだ 1 を立てる。1 のあいだレールは出発しない
 //
 // rail_wp / rail_branch_* は動作確認のために外へ出しているだけで、
 // レールの挙動そのものには使っていない。T-20 の「分岐して合流した」ことは
@@ -525,6 +527,12 @@ protected:
         GameSession::Get().SetWaypointProgress(reachedCount_, reachedCount_ + RemainingCount());
 
         if (waypoints.empty()) return;
+
+        // 開始演出（DeepRiseIntroScript が深海から浮上させている）のあいだは出発しない。
+        // タグは同じエンティティに立つ。演出が終わると外れるので、そこからレールが動く。
+        if (Entity* self = GetEntity()) {
+            if (self->GetTagInt("intro_playing", 0) == 1) return;
+        }
 
         // ゲームオーバー判定
         // ウェーブ待機の解除より先に見る。プレイヤーが力尽きたあとに

@@ -29,6 +29,32 @@ enum class PlayState {
   Paused   // 一時停止中
 };
 
+/// @enum SceneTransition
+/// @brief シーン切り替えに使う演出の種類
+/// @details SceneManager::RequestChange に渡す。演出ごとに「何色へ抜けるか」
+///          「切り替え後に GrayscaleIntro を挟むか」が変わる。
+enum class SceneTransition {
+  None,     ///< 演出なし（起動直後の ChangeImmediately やエディタ操作）
+  Dissolve, ///< 既定。黒へノイズディゾルブ → 切り替え → 白黒から色が戻る
+  Dive,     ///< 水面へ飛び込む遷移。暗い深海色へ短く抜け、切り替え後は演出を挟まず
+            ///< すぐにシーンを動かす（Game 側の「深海から浮上」がそのまま続く）
+};
+
+/// @brief スクリプトから文字列で遷移演出を指定するときの名前
+/// @details ScriptableEntity::RequestSceneChange(name, transition) はエンジン層の
+///          ヘッダなので SceneTransition を型として持てない。文字列で受けて
+///          ParseSceneTransition で変換する。
+namespace SceneTransitions {
+inline constexpr const char *kDissolve = "dissolve";
+inline constexpr const char *kDive = "dive";
+} // namespace SceneTransitions
+
+/// @brief 遷移演出の名前を SceneTransition へ変換する（不明な名前は Dissolve）
+inline SceneTransition ParseSceneTransition(const std::string &name) {
+  if (name == SceneTransitions::kDive) return SceneTransition::Dive;
+  return SceneTransition::Dissolve;
+}
+
 /// @struct SceneContext
 /// @brief シーン間で共有されるエンジンコンポーネントへの参照を保持する構造体
 /// @details 各シーンの Update/Render に渡され、グラフィックスデバイス、入力、デバッグツールなどへのアクセスを提供します。
@@ -44,12 +70,19 @@ struct SceneContext {
   float deltaTime = 1.0f / 60.0f;        ///< 前フレームからの経過時間 (秒)
 
   /// @brief シーン遷移を要求するコールバック（SceneManager::Init で結線される）
-  /// @details 引数は遷移先のシーン名、戻り値は要求が受理されたか。
+  /// @details 引数は遷移先のシーン名と遷移演出、戻り値は要求が受理されたか。
   ///          SceneManager は Scene の入れ子クラスのため型として前方宣言できない。
   ///          ここを関数オブジェクトにしておくことで、SceneContext から
   ///          SceneManager への型依存を持たずに遷移要求だけを公開できる。
   ///          スクリプトからは ScriptableEntity::RequestSceneChange() 経由で使う。
-  std::function<bool(const std::string &)> requestSceneChange;
+  std::function<bool(const std::string &, SceneTransition)> requestSceneChange;
+
+  /// @brief いま表示しているシーンへ入ったときの遷移演出
+  /// @details SceneManager が ChangeImmediately の直前（OnEnter より前）に書く。
+  ///          起動直後やエディタからの直接切り替えは None。
+  ///          「タイトルから飛び込んで来たときだけ浮上演出を再生する」といった、
+  ///          入り方で分岐したいスクリプトが OnCreate で読む。
+  SceneTransition lastTransition = SceneTransition::None;
 
   PlayState playState = PlayState::Playing; ///< 現在の再生状態
 

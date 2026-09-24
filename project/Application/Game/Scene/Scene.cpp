@@ -484,6 +484,11 @@ RC::Vector3 ScriptableEntity::MoveAndSlide(const RC::Vector3& delta, float maxSt
 // 経路は ScriptableEntity -> SceneContext::requestSceneChange -> SceneManager::RequestChange
 // の一方向。エンジン層（ECS）がアプリ層（SceneManager）を型として知らずに済む。
 bool ScriptableEntity::RequestSceneChange(const std::string& name) {
+    return RequestSceneChange(name, SceneTransitions::kDissolve);
+}
+
+bool ScriptableEntity::RequestSceneChange(const std::string& name,
+                                          const std::string& transition) {
     SceneContext* ctx = GetSceneContext();
     if (!ctx) {
         Log::Print("[Script] RequestSceneChange: SceneContext が未設定です (" + name + ")");
@@ -502,7 +507,8 @@ bool ScriptableEntity::RequestSceneChange(const std::string& name) {
         return false;
     }
 
-    return ctx->requestSceneChange(name);
+    // 演出名はここで型へ変換する（不明な名前は既定の Dissolve）
+    return ctx->requestSceneChange(name, ParseSceneTransition(transition));
 }
 
 void Scene::ResolveCollisions() {

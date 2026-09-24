@@ -295,7 +295,42 @@
         {
           "data": {
             "scriptDataList": [
-              {},
+              {
+                "alwaysPlay": false,
+                "riseDepth": 26.0,
+                "riseDuration": 3.2,
+                "riseEase": 2.2,
+                "risePitchStart": -0.35,
+                "bubbles": true,
+                "showStartText": true,
+                "startText": "GAME START",
+                "startTextDuration": 1.4,
+                "startBandAlpha": 0.72,
+                "startFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "startFontSize": 72.0
+              },
+              {
+                "underwater": {
+                  "shallowFogColor": [0.0, 0.3, 0.6, 1.0],
+                  "shallowFogStart": 10.0,
+                  "shallowFogEnd": 150.0,
+                  "deepFogColor": [0.0, 0.012, 0.03, 1.0],
+                  "deepFogStart": 0.0,
+                  "deepFogEnd": 7.0,
+                  "deepDepth": 24.0,
+                  "deepBias": 1.35,
+                  "tintColor": [0.2, 0.5, 1.0, 1.0],
+                  "distortionForce": 0.01,
+                  "causticsFadeDepth": 20.0,
+                  "causticsScale": 0.3,
+                  "causticsIntensity": 1.2,
+                  "causticsDistanceFadeStart": 25.0,
+                  "causticsDistanceFadeEnd": 70.0,
+                  "lightShaftIntensity": 1.0,
+                  "lightShaftDensity": 0.08,
+                  "lightShaftMaxDistance": 80.0
+                }
+              },
               {
                 "branchColor": [
                   0.0,
@@ -432,8 +467,9 @@
                 ]
               }
             ],
-            "scriptTypeName": "RailShooterController",
+            "scriptTypeName": "DeepRiseIntroScript",
             "scriptTypeNames": [
+              "DeepRiseIntroScript",
               "RailShooterController",
               "RailMovementScript"
             ]

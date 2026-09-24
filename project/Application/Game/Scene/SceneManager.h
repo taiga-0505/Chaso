@@ -21,7 +21,11 @@ public:
   ~SceneManager();
 
   std::unique_ptr<Fade> fade_ = nullptr; ///< フェード演出用オブジェクト
-  static inline const float kFadeTime = 1.0f; ///< デフォルトのフェード時間（秒）
+  static inline const float kFadeTime = 1.0f; ///< デフォルト（Dissolve）のフェード時間（秒）
+  /// @brief Dive 遷移のフェード時間（秒）
+  /// @details 飛び込み側（Title）が画面を深海色まで暗くしてから要求してくるので、
+  ///          ここでは切り替えの継ぎ目を隠すぶんだけ短く抜ける。
+  static inline const float kDiveFadeTime = 0.35f;
 
 public:
   /// @brief 初期化
@@ -37,11 +41,16 @@ public:
 
   /// @brief 次のフレームでのシーン切り替えをリクエストする（フェード演出を伴う）
   /// @param name 遷移先のシーン名
+  /// @param transition 遷移演出。既定は黒へのディゾルブ（SceneTransition::Dissolve）
   /// @return 要求が受理されたら true
   /// @note 未登録のシーン名は受理しない。受理してしまうと ChangeImmediately が
   ///       current_ = nullptr にしてしまい、画面が真っ黒なまま復帰できなくなる。
   /// @note 既に別の遷移要求が処理待ちの場合も受理しない（フェード中の上書き防止）。
-  bool RequestChange(const std::string &name);
+  bool RequestChange(const std::string &name,
+                     SceneTransition transition = SceneTransition::Dissolve);
+
+  /// @brief 処理中（要求済み〜フェードイン完了まで）の遷移演出
+  SceneTransition ActiveTransition() const { return transition_; }
 
   /// @brief シーンを即座に切り替える（演出なし）
   /// @param name 遷移先のシーン名
@@ -112,6 +121,9 @@ private:
   Scene *current_ = nullptr;        ///< 現在アクティブなシーンのポインタ
   std::string currentName_;        ///< 現在アクティブなシーンの名前
   std::string requested_;          ///< 遷移リクエストされたシーン名
+  /// @brief 進行中の遷移演出。RequestChange で決まり、演出が終わって NormalState に
+  ///        戻るまで保持する。演出なしの直接切り替え（起動時など）は None
+  SceneTransition transition_ = SceneTransition::None;
 
   std::unique_ptr<ISceneState> state_; ///< 現在のマネージャー状態（Normal, FadeOut, etc.）
   std::unique_ptr<RC::CameraController> camera_; ///< エディタカメラ（全シーン共有）

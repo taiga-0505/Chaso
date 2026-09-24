@@ -19,8 +19,10 @@
 #include "ECS/CameraComponent.h"
 #include "ECS/PrimitiveMeshComponent.h"
 #include "ECS/ColliderComponent.h"
+#include "ECS/WaterComponent.h"
 #include "Scene.h"
 #include "Application/Game/Framework/GameSession.h"
+#include "Application/Game/Framework/UnderwaterLook.h"
 #include <algorithm>
 #include <utility>
 #include <cmath>
@@ -150,10 +152,20 @@ public:
     bool isUnderwater = false;
     float transitionTimer = 0.0f;
     float transitionSpeed = 2.0f; // 0.5秒で完全に切り替わる
-    
-    RC::Vector4 underwaterFogColor = { 0.0f, 0.3f, 0.6f, 1.0f };
-    float underwaterFogStart = 10.0f;
-    float underwaterFogEnd = 150.0f;
+
+    /// @brief 水中の見た目（フォグ・光）。深さに応じて浅い色 → 深海色へ変わる。
+    /// @details Title の飛び込み・Game 開始時の浮上（DeepRiseIntroScript）と同じ定義。
+    ///          JSON の "underwater" キーで上書きできる。
+    UnderwaterLook::Params look;
+    float waterHeight = 0.0f; ///< 水面の高さ（OnCreate でシーンの WaterComponent から拾う）
+
+    nlohmann::json Serialize() override {
+        return {{"underwater", look.ToJson()}};
+    }
+
+    void Deserialize(const nlohmann::json& j) override {
+        if (j.contains("underwater")) look.FromJson(j["underwater"]);
+    }
 
     // 水滴演出（ Screen Droplets ）タイマーと設定
     float dropletTimer = 0.0f;
@@ -197,6 +209,37 @@ protected:
             postProcess->SetOutlineColor(outlineColor);
             postProcess->SetOutlineThickness(1.0f);
         }
+
+        // 水面の高さはシーンの WaterComponent から拾う（無ければ 0）
+        waterHeight = 0.0f;
+        if (Scene* scene = GetScene()) {
+            for (auto& e : scene->GetEntities()) {
+                if (!e || !e->GetComponent<WaterComponent>()) continue;
+                if (auto* wtr = e->GetComponent<TransformComponent>()) waterHeight = wtr->position.y;
+                break;
+            }
+        }
+
+        // 最初から水中に置かれている場合（DeepRiseIntroScript が深海から始めるとき）は、
+        // 着水の演出（ラジアルブラー・水滴）を出さずに、水中エフェクトだけ静かに積んで
+        // 「ずっと水中にいた」状態から始める。ここでやらないと最初の Update で
+        // 「水上 → 水中」と誤検出して、暗いはずの画面が一瞬明るく抜ける。
+        if (auto* tr = GetComponent<TransformComponent>()) {
+            isUnderwater = (tr->position.y < waterHeight);
+            transitionTimer = isUnderwater ? 1.0f : 0.0f;
+            if (Entity* self = GetEntity()) {
+                self->SetTag("is_underwater", isUnderwater ? 1 : 0);
+            }
+            if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
+                UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+                if (isUnderwater) {
+                    UnderwaterLook::AddStack(postProcess);
+                    UnderwaterLook::SetLerp(postProcess, 1.0f);
+                    UnderwaterLook::ApplyFogByDepth(postProcess, look, waterHeight - tr->position.y);
+                    Log::Print("[RailShooterController] starts underwater (silent)");
+                }
+            }
+        }
     }
 
     void OnUpdate(float deltaTime) override {
@@ -205,6 +248,9 @@ protected:
         auto* input = Input::GetInstance();
         if (!input) return;
 
+        // 開始演出（DeepRiseIntroScript の浮上）中は、水中判定と HUD 以外を止める
+        const bool introPlaying = (GetEntity() && GetEntity()->GetTagInt("intro_playing", 0) == 1);
+
         // === 無敵タイマー ===
         if (invincibleTimer > 0.0f) {
             invincibleTimer -= deltaTime;
@@ -212,8 +258,10 @@ protected:
 
         // === 水中判定とトランジション ===
 
+        float depth = 0.0f; // 水面からの深さ（m）。水上なら 0
         if (auto* tr = GetComponent<TransformComponent>()) {
-            bool currentUnderwater = (tr->position.y < 0.0f);
+            depth = (std::max)(waterHeight - tr->position.y, 0.0f);
+            bool currentUnderwater = (tr->position.y < waterHeight);
             if (currentUnderwater != isUnderwater) {
                 isUnderwater = currentUnderwater;
                 if (Entity* self = GetEntity()) {
@@ -227,13 +275,11 @@ protected:
                         // LightShaft を乗せるとジオメトリと模様の位置がズレる。
                         // 先に光を乗せてから Underwater でまとめて歪めることで
                         // 位置が一致し、かつ模様自体も水で揺らぐようになる。
-                        postProcess->AddEffect(PostEffectType::LightShaft);
-                        postProcess->AddEffect(PostEffectType::Caustics);
-                        postProcess->AddEffect(PostEffectType::Underwater);
-                        
-                        // 推奨2: 水中での「密閉感・深海感・水圧」演出としての Vignette 追加
-                        postProcess->AddEffect(PostEffectType::Vignette);
-                        
+                        // （LightShaft → Caustics → Underwater → Vignette。Vignette は
+                        //   水中での「密閉感・深海感・水圧」の演出）
+                        UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+                        UnderwaterLook::AddStack(postProcess);
+
                         // 推奨1: 水中突入（ダイブ）時の強烈な勢い・スピード感演出としての RadialBlur スタック
                         postProcess->AddEffect(PostEffectType::RadialBlur);
                         radialBlurTimer = radialBlurDuration;
@@ -275,23 +321,21 @@ protected:
             }
 
             if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
-                // S字カーブ(SmoothStep)をかけても良いが、とりあえずLinear
-                float smoothedLerp = transitionTimer * transitionTimer * (3.0f - 2.0f * transitionTimer);
-                postProcess->SetUnderwaterLerpFactor(smoothedLerp);
-                postProcess->SetUnderwaterFogColor(underwaterFogColor.x, underwaterFogColor.y, underwaterFogColor.z, underwaterFogColor.w);
-                postProcess->SetUnderwaterFogRange(underwaterFogStart, underwaterFogEnd);
-
-                // 水中光の演出も同じカーブでフェードさせる
-                postProcess->SetCausticsLerpFactor(smoothedLerp);
-                postProcess->SetLightShaftLerpFactor(smoothedLerp);
+                // 水上⇔水中は S 字カーブでブレンド（Underwater / Caustics / LightShaft を同じ値で）
+                UnderwaterLook::SetLerp(postProcess, UnderwaterLook::SmoothStep01(transitionTimer));
 
                 // 完全に水上に戻りきったらエフェクト自体をRemoveする
                 if (transitionTimer == 0.0f && !isUnderwater) {
-                    postProcess->RemoveEffect(PostEffectType::Underwater);
-                    postProcess->RemoveEffect(PostEffectType::Caustics);
-                    postProcess->RemoveEffect(PostEffectType::LightShaft);
-                    postProcess->RemoveEffect(PostEffectType::Vignette); // 水上に上がったら Vignette 解除
+                    UnderwaterLook::RemoveStack(postProcess);
                 }
+            }
+        }
+
+        // 水中にいる（または出入りの途中の）あいだは、深さに応じてフォグの色と距離を変える。
+        // 水面直下は青く遠くまで見え、深くなるほど暗く近くしか見えない（深海）。
+        if (isUnderwater || transitionTimer > 0.0f) {
+            if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
+                UnderwaterLook::ApplyFogByDepth(postProcess, look, depth);
             }
         }
 
@@ -373,6 +417,9 @@ protected:
                 }
             }
         }
+
+        // 開始演出中は操作を受け付けない（浮上が終わって GAME START が出てから）
+        if (introPlaying) return;
 
         // Weapon Switching
         long wheel = input->GetMouseZ();
@@ -607,6 +654,9 @@ protected:
     }
     
     void OnRender() override {
+        // 開始演出（深海からの浮上）中は HUD を出さない
+        if (GetEntity() && GetEntity()->GetTagInt("intro_playing", 0) == 1) return;
+
         // Primitive 2D描画を用いてレティクルを描画する
         RC::DrawCircle(cursorPosition, reticleSize + currentRecoil, reticleColor, kFill, 1.0f);
         
@@ -819,10 +869,15 @@ public:
 
         ImGui::Separator();
         ImGui::Text("Underwater Settings");
+        ImGui::Text("Underwater: %s  blend=%.2f  water Y=%.1f", isUnderwater ? "yes" : "no",
+                    transitionTimer, waterHeight);
         ImGui::DragFloat("Transition Speed", &transitionSpeed, 0.1f, 0.1f, 10.0f);
-        ImGui::ColorEdit4("Fog Color", &underwaterFogColor.x);
-        ImGui::DragFloat("Fog Start", &underwaterFogStart, 1.0f, 0.0f, 50.0f);
-        ImGui::DragFloat("Fog End", &underwaterFogEnd, 1.0f, 50.0f, 500.0f);
+        if (UnderwaterLook::DrawImGui(look)) {
+            // 光の設定は水中に入る瞬間にしか流し込まないので、いじった値をその場で反映する
+            if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
+                UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+            }
+        }
 
         ImGui::Separator();
         ImGui::Text("Screen Droplets Settings (レンズ水滴・気泡演出)");

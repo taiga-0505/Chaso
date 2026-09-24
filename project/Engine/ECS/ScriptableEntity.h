@@ -108,6 +108,15 @@ public:
   /// @note 実体は Application 側の Scene.cpp で定義している（SceneContext の完全型が必要なため）
   bool RequestSceneChange(const std::string& name);
 
+  /// @brief 遷移演出を指定してシーン遷移を要求する
+  /// @param name 遷移先のシーン名
+  /// @param transition 演出名。"dissolve"（既定の黒ディゾルブ）/ "dive"（水面へ飛び込む遷移）。
+  ///                   名前の定義は Application/Game/Scene/Scene.h の SceneTransitions。
+  ///                   不明な名前は "dissolve" として扱う。
+  /// @details エンジン層のこのヘッダはアプリ層の SceneTransition 型を知らないため、
+  ///          文字列で受けて Scene.cpp 側で変換する。その他の挙動は 1 引数版と同じ。
+  bool RequestSceneChange(const std::string& name, const std::string& transition);
+
 protected:
   /// @brief Called when the script is created
   virtual void OnCreate() {}
