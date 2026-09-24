@@ -108,6 +108,36 @@ int GenerateEffectCylinder(float topRadius, float bottomRadius, float height,
   return ctx.PrimitiveMeshes().Create(data, texHandle, "EffectCylinder");
 }
 
+int GenerateTextMesh(const TextMeshDesc &desc, int texHandle,
+                     TextMeshInfo *outInfo) {
+  auto &ctx = GetRenderContext();
+  ModelData data;
+  if (!TextMeshGenerator::Generate(desc, data, outInfo)) {
+    return -1;
+  }
+  return ctx.PrimitiveMeshes().Create(data, texHandle, "TextMesh");
+}
+
+int GenerateTextMeshOutline(const TextMeshDesc &desc, float outlineWidth,
+                            const Vector4 &color, bool unlit,
+                            TextMeshInfo *outInfo) {
+  auto &ctx = GetRenderContext();
+  ModelData data;
+  if (!TextMeshGenerator::GenerateOutline(desc, outlineWidth, data, outInfo)) {
+    return -1;
+  }
+  const int handle = ctx.PrimitiveMeshes().Create(data, -1, "TextMeshOutline");
+  if (auto *m = ctx.PrimitiveMeshes().Get(handle)) {
+    if (Material *mat = m->Mat()) {
+      mat->color = color;
+    }
+    if (unlit) {
+      m->SetLightingMode(LightingMode::None);
+    }
+  }
+  return handle;
+}
+
 void DrawPrimitiveMesh(int meshHandle, int texHandle) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return;

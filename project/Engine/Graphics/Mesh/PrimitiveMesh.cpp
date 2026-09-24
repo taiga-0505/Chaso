@@ -1,5 +1,8 @@
 #include "PrimitiveMesh.h"
 #include "RenderContext.h"
+#include "../../../Application/Game/Scene/Scene.h"
+#include "../../Dx12/Dx12Core.h"
+#include "../../Dx12/DeferredReleaseQueue/DeferredReleaseQueue.h"
 #include "Math/Math.h"
 #include "imgui/imgui.h"
 #include <cassert>
@@ -9,10 +12,27 @@
 using namespace RC;
 
 PrimitiveMesh::~PrimitiveMesh() {
-  vb_.resource.Reset();
-  ib_.resource.Reset();
-  cbWvp_.resource.Reset();
-  cbMat_.resource.Reset();
+  // 実行中フレームがまだこのメッシュを参照している可能性があるため、
+  // GPU リソースは即時解放せず「現在記録中のコマンドが完了するフェンス値」で遅延解放する。
+  // （TextMesh の再生成のように、描画中のメッシュをフレーム途中で作り直すケースの安全策）
+  SceneContext *ctx = GetRenderContext().Ctx();
+  if (ctx && ctx->core) {
+    auto &dq = ctx->core->DeferredRelease();
+    const uint64_t fence = ctx->core->GetNextFenceValue();
+    if (cbWvp_.resource && cbWvp_.mapped) cbWvp_.resource->Unmap(0, nullptr);
+    if (cbMat_.resource && cbMat_.mapped) cbMat_.resource->Unmap(0, nullptr);
+    cbWvp_.mapped = nullptr;
+    cbMat_.mapped = nullptr;
+    if (vb_.resource) dq.Enqueue(std::move(vb_.resource), fence);
+    if (ib_.resource) dq.Enqueue(std::move(ib_.resource), fence);
+    if (cbWvp_.resource) dq.Enqueue(std::move(cbWvp_.resource), fence);
+    if (cbMat_.resource) dq.Enqueue(std::move(cbMat_.resource), fence);
+  } else {
+    vb_.resource.Reset();
+    ib_.resource.Reset();
+    cbWvp_.resource.Reset();
+    cbMat_.resource.Reset();
+  }
 }
 
 void PrimitiveMesh::Initialize(ID3D12Device *device, const ModelData &data) {

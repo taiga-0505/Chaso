@@ -137,11 +137,29 @@ protected:
         // dotXZ > 0.2f は前方約150度以内。見えない横や後ろから攻撃されないようにする。
         bool isInFront = (dotXZ > 0.2f);
 
+        // カメラの前方ベクトル・右方向ベクトル
+        RC::Vector3 camForward = { camSy, 0.0f, camCy };
+        RC::Vector3 camRight = { camCy, 0.0f, -camSy };
+
+        // 敵が自機から見て左右どちら側にいるかを算出
+        float camToEnemyX = tr->position.x - camTr->position.x;
+        float camToEnemyZ = tr->position.z - camTr->position.z;
+        float sideDot = camToEnemyX * camRight.x + camToEnemyZ * camRight.z;
+        float sideSign = (sideDot >= 0.0f) ? 1.0f : -1.0f;
+
+        // 自機の前方エリアにある再突入・復帰目標地点（前方約18m、横約8m）
+        RC::Vector3 frontTarget = {
+            camTr->position.x + camForward.x * 18.0f + camRight.x * (sideSign * 8.0f),
+            camTr->position.y,
+            camTr->position.z + camForward.z * 18.0f + camRight.z * (sideSign * 8.0f)
+        };
+
         // State Machine
         switch (state_) {
             case SharkState::Wait:
-                // プレイヤーが一定距離に入り、かつカメラの視界内にいる場合のみアクティブ(Approach)になる
-                if (distToCam <= detectDistance && isInFront) {
+                // プレイヤーが検知範囲内に入ったらApproachへ
+                // 背後にいる場合でも、背後でスタックせず前方へ回り込むためApproachへ移行させる
+                if (distToCam <= detectDistance) {
                     state_ = SharkState::Approach;
                     Log::Print("[SharkEnemyScript] Detected player! Switching to Approach.");
                 } else {
@@ -154,53 +172,58 @@ protected:
                     tr->position.z += std::cos(realAngleY) * patrolSpeed * deltaTime;
                 }
                 break;
+
             case SharkState::Approach:
-                // アクティブ時にプレイヤーの方向を向く（LookAt計算）
-                if (distToCam > 0.01f) {
-                    float targetAngleY = std::atan2(toCam.x, toCam.z);
-                    tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
-                    // xとzはOnCreateで設定したオフセットを維持
-                    
-                    // 進行方向（補正前）のベクトル
-                    RC::Vector3 forward = { toCam.x / distToCam, 0.0f, toCam.z / distToCam };
-                    // Right vector for sine wave (perpendicular to forward in XZ plane)
-                    RC::Vector3 right = { forward.z, 0.0f, -forward.x };
-
-                    swimTime_ += deltaTime;
-                    
-                    // Base forward movement
-                    RC::Vector3 velocity = {
-                        forward.x * swimSpeed,
-                        0.0f,
-                        forward.z * swimSpeed
+                // 目標地点の選定：
+                // 前方にいるなら自機へ向かって接近、背後にいる（!isInFront）なら自機の前方へ回り込む
+                {
+                    RC::Vector3 targetPos = isInFront ? camTr->position : frontTarget;
+                    RC::Vector3 toTarget = {
+                        targetPos.x - tr->position.x,
+                        targetPos.y - tr->position.y,
+                        targetPos.z - tr->position.z
                     };
+                    float distToTarget = std::sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
 
-                    // Add lateral sine wave movement (derivative of sin(t * freq) * amp)
-                    float lateralVel = std::cos(swimTime_ * swimSineFrequency) * swimSineAmplitude * swimSineFrequency;
-                    velocity.x += right.x * lateralVel;
-                    velocity.z += right.z * lateralVel;
+                    if (distToTarget > 0.01f) {
+                        float targetAngleY = std::atan2(toTarget.x, toTarget.z);
+                        tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
+                        
+                        RC::Vector3 forward = { toTarget.x / distToTarget, 0.0f, toTarget.z / distToTarget };
+                        RC::Vector3 right = { forward.z, 0.0f, -forward.x };
 
-                    tr->position.x += velocity.x * deltaTime;
-                    tr->position.z += velocity.z * deltaTime;
+                        swimTime_ += deltaTime;
+                        
+                        // 背後から回り込む際は少し速めに前方に復帰する
+                        float currentSpeed = isInFront ? swimSpeed : (swimSpeed * 1.3f);
+                        RC::Vector3 velocity = {
+                            forward.x * currentSpeed,
+                            0.0f,
+                            forward.z * currentSpeed
+                        };
+
+                        // Add lateral sine wave movement
+                        float lateralVel = std::cos(swimTime_ * swimSineFrequency) * swimSineAmplitude * swimSineFrequency;
+                        velocity.x += right.x * lateralVel;
+                        velocity.z += right.z * lateralVel;
+
+                        tr->position.x += velocity.x * deltaTime;
+                        tr->position.z += velocity.z * deltaTime;
+                    }
                 }
 
-                // 攻撃開始距離に入り、かつ視界内にいるならAttack状態へ
+                // 攻撃開始条件：自機の前方（isInFront）にいて、かつ攻撃開始距離に入った時のみ突進開始！
                 if (distToCam <= attackStartDistance && isInFront) {
                     state_ = SharkState::Attack;
                     attackTimer_ = 0.0f;
                     hasHit_ = false;
                     Log::Print("[SharkEnemyScript] Approaching -> Attack!");
-                } else if (distToCam <= attackStartDistance && !isInFront) {
-                    // 近づいたが視界外の場合、理不尽な攻撃を避けるためにクールダウン（逃げる）状態へ移行
-                    state_ = SharkState::Cooldown;
-                    cooldownTimer_ = cooldownDuration;
-                    Log::Print("[SharkEnemyScript] Player looking away. Switching to Cooldown.");
                 }
                 break;
+
             case SharkState::Attack:
                 // 追尾（回転）をやめ、現在の向きに直進して突進する
                 {
-                    // 実際の進行方向ベクトルをrotation.yから逆算（モデルのオフセット分を引く）
                     float realAngleY = tr->rotation.y - (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
                     float s = std::sin(realAngleY);
                     float c = std::cos(realAngleY);
@@ -219,33 +242,47 @@ protected:
                     hasHit_ = true;
                 }
                 
-                // タイムアウトでクールダウンへ（通り過ぎるのを待つ）
-                if (attackTimer_ >= maxAttackDuration) {
-                    Log::Print("[SharkEnemyScript] Attack Finished! To Cooldown.");
-                    state_ = SharkState::Cooldown;
-                    cooldownTimer_ = cooldownDuration;
+                // 攻撃終了（クールダウン移行）判定：
+                // 1. 自機の真横〜背後に抜けた（dotXZ < -0.05f）
+                // 2. ダメージを与えて少しすれ違った（hit後 0.25秒経過）
+                // 3. 最大突進時間（maxAttackDuration）経過
+                {
+                    bool passedPlayer = (dotXZ < -0.05f);
+                    bool hitAndPast = (hasHit_ && attackTimer_ >= 0.25f);
+                    if (passedPlayer || hitAndPast || attackTimer_ >= maxAttackDuration) {
+                        Log::Print("[SharkEnemyScript] Attack Finished! To Cooldown.");
+                        state_ = SharkState::Cooldown;
+                        cooldownTimer_ = cooldownDuration;
+                    }
                 }
                 break;
-            case SharkState::Cooldown:
-                // クールダウン中は高速で逃げる（距離をとり直すため）
-                if (distToCam > 0.01f) {
-                    RC::Vector3 backward = { -toCam.x / distToCam, 0.0f, -toCam.z / distToCam };
-                    tr->position.x += backward.x * (swimSpeed * 1.5f) * deltaTime;
-                    tr->position.z += backward.z * (swimSpeed * 1.5f) * deltaTime;
 
-                    // 逃げる方向を向かせる
-                    float targetAngleY = std::atan2(-toCam.x, -toCam.z);
-                    tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
+            case SharkState::Cooldown:
+                // クールダウン中は、自機前方再突入ポイント（frontTarget）へ向かって泳ぐ
+                // これにより、自機を通り過ぎて背後に抜けても即座にUターンして前方に復帰する
+                {
+                    RC::Vector3 toTarget = {
+                        frontTarget.x - tr->position.x,
+                        frontTarget.y - tr->position.y,
+                        frontTarget.z - tr->position.z
+                    };
+                    float distToTarget = std::sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
+
+                    if (distToTarget > 0.5f) {
+                        RC::Vector3 forward = { toTarget.x / distToTarget, 0.0f, toTarget.z / distToTarget };
+                        tr->position.x += forward.x * (swimSpeed * 1.5f) * deltaTime;
+                        tr->position.z += forward.z * (swimSpeed * 1.5f) * deltaTime;
+
+                        // 移動方向を向かせる
+                        float targetAngleY = std::atan2(toTarget.x, toTarget.z);
+                        tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
+                    }
                 }
                 
                 cooldownTimer_ -= deltaTime;
                 if (cooldownTimer_ <= 0.0f) {
-                    // クールダウン終了後、再びApproachに戻るか距離を見て判断
-                    if (distToCam <= detectDistance) {
-                        state_ = SharkState::Approach;
-                    } else {
-                        state_ = SharkState::Wait;
-                    }
+                    // クールダウン終了後、再びApproachに戻る
+                    state_ = SharkState::Approach;
                 }
                 break;
         }

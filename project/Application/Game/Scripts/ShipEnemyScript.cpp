@@ -204,12 +204,21 @@ protected:
         lastDistance_ = dist;
 
         // --- 状態遷移 ---
+        // 自機の前方方向
+        const float tCy = std::cos(targetTr->rotation.y);
+        const float tSy = std::sin(targetTr->rotation.y);
+        const float forwardOffset = preferredDistance * 0.7f;
+        const RC::Vector3 engageCenter = {
+            targetTr->position.x + tSy * forwardOffset,
+            targetTr->position.y,
+            targetTr->position.z + tCy * forwardOffset
+        };
+
         switch (state_) {
         case ShipState::Patrol:
             if (dist <= detectDistance && IsSeenBy(targetTr, dx, dz, dist)) {
                 // 回り込む向きは「今の船首から見て旋回量が少ないほう」を選ぶ。
-                // 逆を選ぶと最初にほぼ 180 度回すことになり、その間ずっと棒立ちになる。
-                circleSign_ = ChooseCircleSign(tr->position, targetTr->position);
+                circleSign_ = ChooseCircleSign(tr->position, engageCenter);
                 state_ = ShipState::Engage;
                 Log::Print("[ShipEnemyScript] engaging");
             }
@@ -245,11 +254,26 @@ protected:
 
         // --- 操船（どの状態でも動き続ける。止まる船は的でしかない） ---
         const bool engaged = (state_ != ShipState::Patrol);
-        const RC::Vector3 center = engaged ? targetTr->position : spawnPos_;
+        // 交戦時は自機の真後ろへ回り込まないよう、旋回中心を自機前方（engageCenter）にする
+        const RC::Vector3 center = engaged ? engageCenter : spawnPos_;
         const float radius = engaged ? preferredDistance : patrolRadius;
         const float speed = engaged ? engageSpeed : cruiseSpeed;
 
-        const RC::Vector3 desired = OrbitDirection(tr->position, center, radius, circleSign_);
+        RC::Vector3 desired = OrbitDirection(tr->position, center, radius, circleSign_);
+
+        // 自機の背後（または真横後方）に入った場合のリカバリ：自機前方（engageCenter）へ直接舵を切る
+        if (engaged) {
+            const float forwardDist = (-dx) * tSy + (-dz) * tCy;
+            if (forwardDist < 3.0f) { // 自機の前方3m未満（真横〜背後）
+                float toCenterX = engageCenter.x - tr->position.x;
+                float toCenterZ = engageCenter.z - tr->position.z;
+                float lenCenter = std::sqrt(toCenterX * toCenterX + toCenterZ * toCenterZ);
+                if (lenCenter > 1e-3f) {
+                    desired = { toCenterX / lenCenter, 0.0f, toCenterZ / lenCenter };
+                }
+            }
+        }
+
         SteerTowards(desired, deltaTime);
 
         const float fx = std::sin(headingY_);

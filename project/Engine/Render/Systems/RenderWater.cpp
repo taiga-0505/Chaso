@@ -269,6 +269,14 @@ void SetWaterEnvironmentCoefficient(int meshHandle, float coeff) {
   }
 }
 
+void SetWaterCrestTint(float crestTint) {
+  EnsureWaterCB();
+  if (!s_waterCBMapped) return;
+  // gFoamParams.z（未使用だった枠）を波の高さによる色付けの強さに使う。
+  // x: FoamDepth / y: FoamScale は触らない。
+  s_waterCBMapped->foamParams.z = (crestTint > 0.0f) ? crestTint : 0.0f;
+}
+
 void SetWaterTime(float timeSec) {
   EnsureWaterCB();
   if (s_waterCBMapped) {

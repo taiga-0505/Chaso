@@ -185,6 +185,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="..\Application\Game\Scripts\SplashParticle.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\BuoyancyScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\SceneFlowUI.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\TitleScreenScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\ShipEnemyScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\WaterObstacleScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\WaveManagerScript.cpp" />

@@ -214,6 +214,23 @@ PixelShaderOutput main(VertexShaderOutput input)
     waterColor *= gMaterial.color; // マテリアル色を乗算
 
     // =========================
+    // 波の高さによる色付け（gFoamParams.z = crestTint、0 で無効）
+    // =========================
+    // 上の lerp は視線と法線の角度だけで色を決めるため、真上から見下ろすと
+    // NdotV がほぼ 1 で固定され、うねりが色にまったく出ない（一枚のベタ塗りになる）。
+    // 真上視点のシーン（タイトル）では頂点の変位で谷を深海色へ、山を明るく振る。
+    float crestTint = gFoamParams.z;
+    float crestT = 0.0;
+    if (crestTint > 0.0)
+    {
+        float amplitude = max(gWaveHeight + gWaveHeight2 + gWaveHeight * 0.25, 0.001);
+        crestT = smoothstep(0.0, 1.0, saturate(input.waveHeight / amplitude * 0.5 + 0.5)); // 0: 谷, 1: 山
+        float3 troughColor = lerp(waterColor.rgb, gWaterDeepColor.rgb, crestTint * 0.85);
+        float3 crestColor  = waterColor.rgb * (1.0 + crestTint * 0.35);
+        waterColor.rgb = lerp(troughColor, crestColor, crestT);
+    }
+
+    // =========================
     // 環境マップ反射
     // =========================
     float3 reflectedDir = reflect(-V, N);
@@ -242,6 +259,13 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 finalColor = waterColor.rgb * lightColor * diffuse;
     finalColor = lerp(finalColor, envColor.rgb, fresnel * gMaterial.environmentCoefficient);
     finalColor += lightColor * specular * 0.5;
+
+    // 山のいちばん高いところだけ薄く白を乗せる（白波）。crestTint が 0 なら何もしない
+    if (crestTint > 0.0)
+    {
+        float whitecap = pow(crestT, 8.0) * crestTint * 0.35;
+        finalColor = lerp(finalColor, gFoamColor.rgb, whitecap);
+    }
 
     // =========================
     // 波打ち際（フォーム）の計算

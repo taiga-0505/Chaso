@@ -24,6 +24,7 @@
 #include "ECS/AnimationComponent.h"
 #include "ECS/BoneAttachmentComponent.h"
 #include "ECS/PrimitiveMeshComponent.h"
+#include "ECS/TextMeshComponent.h"
 #include "ECS/SkyboxComponent.h"
 #include "ECS/SkydomeComponent.h"
 #include "ECS/WaterComponent.h"
@@ -326,12 +327,34 @@ public:
                     RC::SetPrimitiveMeshRoughnessMap(pm->meshHandle, pm->roughnessMapOverride);
                 }
             }
+            if (auto* tm = e->GetComponent<TextMeshComponent>()) {
+                // 文字列・厚さ・フォント等が変わっていればメッシュを再生成（エディタ編集にも追従）
+                EnsureTextMesh(*tm);
+                if (tm->HasMesh()) {
+                    if (auto* tmTr = RC::GetPrimitiveMeshTransformPtr(tm->meshHandle)) {
+                        *tmTr = tr->ToTransform();
+                    }
+                    if (tm->lightingMode >= 0) {
+                        RC::SetPrimitiveMeshLightingMode(tm->meshHandle, static_cast<LightingMode>(tm->lightingMode));
+                    }
+                    RC::SetPrimitiveMeshEnvironmentCoefficient(tm->meshHandle, tm->environmentCoeff);
+                    RC::SetPrimitiveMeshNormalMap(tm->meshHandle, tm->normalMapOverride);
+                    RC::SetPrimitiveMeshRoughnessMap(tm->meshHandle, tm->roughnessMapOverride);
+                }
+                if (tm->HasOutlineMesh()) {
+                    if (auto* olTr = RC::GetPrimitiveMeshTransformPtr(tm->outlineMeshHandle)) {
+                        *olTr = tr->ToTransform();
+                    }
+                    ApplyTextMeshOutlineMaterial(*tm); // 色・ライティングの変更を即時反映
+                }
+            }
             if (auto* water = e->GetComponent<WaterComponent>()) {
                 if (water->HasMesh()) {
                     if (auto* wTr = RC::GetWaterTransformPtr(water->meshHandle)) {
                         *wTr = tr->ToTransform();
                     }
                     RC::SetWaterEnvironmentCoefficient(water->meshHandle, water->environmentCoeff);
+                    RC::SetWaterCrestTint(water->crestTint);
                     RC::SetWaterParams(
                         water->waveHeight, water->waveSpeed, water->waveFreq,
                         water->waveHeight2, water->waveSpeed2, water->waveFreq2,
@@ -419,17 +442,17 @@ public:
     // === ゲーム結果判定（プレイ中のみ） ===
     if (ctx.isPlaying() && !resultTriggered_) {
         if (sceneName_ != "Game") {
-            // スペースキーで次へ進むのはタイトル〜リザルトの導線シーンだけに限定する。
+            // スペースキーで次へ進むのはセレクト〜リザルトの導線シーンだけに限定する。
             // CG4 など導線外のシーンでは Space をゲーム操作（ジャンプ）に使うため、
             // 名前が一致しないシーンをまとめて Title へ送らないこと。
+            // Title は TitleScreenScript がメニュー（スタート／ゲーム終了）で
+            // 自前に遷移・終了を扱うため、ここでは判定しない（二重判定になる）。
             const bool isFlowScene =
-                (sceneName_ == "Title" || sceneName_ == "Select" ||
+                (sceneName_ == "Select" ||
                  sceneName_ == "Result" || sceneName_ == "GameOver");
             if (isFlowScene && ctx.input->IsKeyTrigger(DIK_SPACE)) {
                 resultTriggered_ = true;
-                if (sceneName_ == "Title") {
-                    resultTarget_ = "Select";
-                } else if (sceneName_ == "Select") {
+                if (sceneName_ == "Select") {
                     resultTarget_ = "Game";
                 } else {
                     resultTarget_ = "Title";
@@ -642,6 +665,7 @@ public:
         uint32_t entityId = 0;
         ModelRendererComponent* ren = nullptr;   ///< 描くモデル（無ければ nullptr）
         PrimitiveMeshComponent* pm = nullptr;    ///< 描くプリミティブメッシュ（無ければ nullptr）
+        TextMeshComponent* tm = nullptr;         ///< 描く 3D 文字メッシュ（無ければ nullptr）
         NativeScriptComponent* nsc = nullptr;    ///< OnShadowRender を持つスクリプト群（無ければ nullptr）
     };
     static std::vector<ShadowCasterEntry> s_shadowCasters; // 毎フレーム clear して使い回す（再確保しない）
@@ -665,6 +689,11 @@ public:
                 entry.pm = pm;
             }
         }
+        if (auto* tm = e->GetComponent<TextMeshComponent>()) {
+            if (tm->lightingMode != 0 && tm->HasMesh() && tm->visible && tm->IsEnabled()) {
+                entry.tm = tm;
+            }
+        }
         // スクリプトが自前で描いている 3D ジオメトリ（マップの壁・床、ドアなど）
         if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
             if (!nsc->scripts.empty()) {
@@ -672,7 +701,7 @@ public:
             }
         }
 
-        if (entry.ren || entry.pm || entry.nsc) {
+        if (entry.ren || entry.pm || entry.tm || entry.nsc) {
             s_shadowCasters.push_back(entry);
         }
     }
@@ -686,6 +715,13 @@ public:
             }
             if (c.pm) {
                 RC::DrawPrimitiveMesh(c.pm->meshHandle, c.pm->texOverride);
+            }
+            if (c.tm) {
+                RC::DrawPrimitiveMesh(c.tm->meshHandle, c.tm->texOverride);
+                // 縁取り分だけ太ったシルエットで影を落とす（Unlit でも形状としては存在するため）
+                if (c.tm->HasOutlineMesh()) {
+                    RC::DrawPrimitiveMesh(c.tm->outlineMeshHandle, -1);
+                }
             }
             if (c.nsc) {
                 for (auto& entry : c.nsc->scripts) {
@@ -1039,6 +1075,14 @@ public:
                 }
             }
         }
+        if (auto* tm = e->GetComponent<TextMeshComponent>()) {
+            if (tm->HasMesh() && tm->visible && tm->IsEnabled()) {
+                RC::DrawPrimitiveMesh(tm->meshHandle, tm->texOverride);
+                if (tm->HasOutlineMesh()) {
+                    RC::DrawPrimitiveMesh(tm->outlineMeshHandle, -1);
+                }
+            }
+        }
         if (auto* water = e->GetComponent<WaterComponent>()) {
             if (water->HasMesh() && water->visible && water->IsEnabled()) {
                 RC::DrawWater(water->meshHandle, water->normalMapHandle);
@@ -1373,6 +1417,81 @@ private:
       // 失敗しても loadedPath/Size を更新済みなので毎フレーム再試行はしない
   }
 
+  /// @brief TextMeshComponent の生成済みメッシュへマテリアル設定（色・光沢・UV 等）を書き込む
+  static void ApplyTextMeshMaterial(TextMeshComponent& tm) {
+      if (!tm.HasMesh()) return;
+      if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(tm.meshHandle)) {
+          mat->color = tm.color;
+          if (tm.lightingMode >= 0) {
+              RC::SetPrimitiveMeshLightingMode(tm.meshHandle, static_cast<LightingMode>(tm.lightingMode));
+          } else {
+              RC::ClearPrimitiveMeshLightingModeOverride(tm.meshHandle);
+          }
+          mat->shininess = tm.shininess;
+          mat->environmentCoefficient = tm.environmentCoeff;
+          mat->uvTransform = MakeIdentity4x4();
+          mat->uvTransform.m[0][0] = tm.uvTiling.x;
+          mat->uvTransform.m[1][1] = tm.uvTiling.y;
+          mat->uvTransform.m[3][0] = tm.uvOffset.x;
+          mat->uvTransform.m[3][1] = tm.uvOffset.y;
+      }
+      RC::SetPrimitiveMeshNormalMap(tm.meshHandle, tm.normalMapOverride);
+      RC::SetPrimitiveMeshRoughnessMap(tm.meshHandle, tm.roughnessMapOverride);
+      ApplyTextMeshOutlineMaterial(tm);
+  }
+
+  /// @brief 縁取りシェルのマテリアル（色・ライティング）を書き込む
+  static void ApplyTextMeshOutlineMaterial(TextMeshComponent& tm) {
+      if (!tm.HasOutlineMesh()) return;
+      if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(tm.outlineMeshHandle)) {
+          mat->color = tm.outlineColor;
+          mat->shininess = tm.shininess;
+          mat->environmentCoefficient = 0.0f;
+          mat->uvTransform = MakeIdentity4x4();
+      }
+      if (tm.outlineUnlit) {
+          RC::SetPrimitiveMeshLightingMode(tm.outlineMeshHandle, LightingMode::None);
+      } else if (tm.lightingMode >= 0) {
+          RC::SetPrimitiveMeshLightingMode(tm.outlineMeshHandle, static_cast<LightingMode>(tm.lightingMode));
+      } else {
+          RC::ClearPrimitiveMeshLightingModeOverride(tm.outlineMeshHandle);
+      }
+  }
+
+  /// @brief TextMeshComponent のメッシュを設定に合わせて（再）生成する
+  /// @details 文字列・フォント・サイズ・厚さ・許容誤差・揃え・行間のいずれかが
+  ///          生成時と異なる場合のみ作り直す。失敗しても builtDesc を更新するので
+  ///          毎フレーム再試行はしない（設定を変えれば再度試みる）。
+  static void EnsureTextMesh(TextMeshComponent& tm) {
+      const bool rebuildMain = tm.NeedsRebuild();
+      if (!rebuildMain && !tm.NeedsOutlineRebuild()) return;
+
+      if (rebuildMain) {
+          if (tm.meshHandle >= 0) {
+              RC::UnloadPrimitiveMesh(tm.meshHandle);
+              tm.meshHandle = -1;
+          }
+          tm.builtDesc = tm.MakeDesc();
+          tm.built = true;
+          tm.info = {};
+          tm.meshHandle = RC::GenerateTextMesh(tm.builtDesc, tm.texOverride, &tm.info);
+      }
+
+      // 縁取りシェルは本体と同じ desc から作るので、本体を作り直したときも必ず作り直す
+      if (tm.outlineMeshHandle >= 0) {
+          RC::UnloadPrimitiveMesh(tm.outlineMeshHandle);
+          tm.outlineMeshHandle = -1;
+      }
+      tm.builtOutlineEnabled = tm.outlineEnabled;
+      tm.builtOutlineWidth = tm.outlineWidth;
+      tm.outlineInfo = {};
+      if (tm.meshHandle >= 0 && tm.outlineEnabled && tm.outlineWidth > 0.0f) {
+          tm.outlineMeshHandle = RC::GenerateTextMeshOutline(
+              tm.builtDesc, tm.outlineWidth, tm.outlineColor, tm.outlineUnlit, &tm.outlineInfo);
+      }
+      ApplyTextMeshMaterial(tm);
+  }
+
   /// @brief PlayClip() で要求されたクリップ切り替えを適用する
   /// @param anim 対象の AnimationComponent
   /// @param ren 同じエンティティの ModelRendererComponent（モデル未ロードでないこと）
@@ -1474,6 +1593,7 @@ private:
     Entity::ComponentFactory::Register<AnimationComponent>("AnimationComponent");
     Entity::ComponentFactory::Register<BoneAttachmentComponent>("BoneAttachmentComponent");
     Entity::ComponentFactory::Register<PrimitiveMeshComponent>("PrimitiveMeshComponent");
+    Entity::ComponentFactory::Register<TextMeshComponent>("TextMeshComponent");
     Entity::ComponentFactory::Register<SkyboxComponent>("SkyboxComponent");
     Entity::ComponentFactory::Register<SkydomeComponent>("SkydomeComponent");
     Entity::ComponentFactory::Register<WaterComponent>("WaterComponent");
@@ -1519,6 +1639,13 @@ private:
                   mat->uvTransform.m[3][1] = pm->uvOffset.y;
               }
           }
+      }
+      if (auto* tm = e.GetComponent<TextMeshComponent>()) {
+          if (!tm->texturePath.empty()) tm->texOverride = RC::LoadTex(tm->texturePath);
+          if (!tm->normalMapPath.empty()) tm->normalMapOverride = RC::LoadTex(tm->normalMapPath);
+          if (!tm->roughnessMapPath.empty()) tm->roughnessMapOverride = RC::LoadTex(tm->roughnessMapPath);
+          tm->built = false;
+          EnsureTextMesh(*tm);
       }
       if (auto* dl = e.GetComponent<DirectionalLightComponent>()) {
           dl->lightHandle = RC::CreateDirectionalLight(RC::LightActivateMode::Add);
@@ -1593,7 +1720,10 @@ private:
       if (auto* water = e.GetComponent<WaterComponent>()) {
           int normalMap = -1;
           if (!water->normalMapPath.empty()) {
-              normalMap = RC::LoadTex(water->normalMapPath);
+              // 法線マップは色ではなく方向ベクトルなので sRGB 変換を掛けてはいけない。
+              // 既定の srgb=true で読むと 0.5（=法線 0）が 0.21 に化け、水面全体の法線が
+              // 一方向へ傾いてしまう。
+              normalMap = RC::LoadTex(water->normalMapPath, /*srgb=*/false);
               water->normalMapHandle = normalMap;
           }
           water->meshHandle = RC::GenerateWaterPlane(
@@ -1681,6 +1811,11 @@ private:
       }
       if (auto* pm = e.GetComponent<PrimitiveMeshComponent>()) {
           if (pm->meshHandle >= 0) { RC::UnloadPrimitiveMesh(pm->meshHandle); pm->meshHandle = -1; }
+      }
+      if (auto* tm = e.GetComponent<TextMeshComponent>()) {
+          if (tm->meshHandle >= 0) { RC::UnloadPrimitiveMesh(tm->meshHandle); tm->meshHandle = -1; }
+          if (tm->outlineMeshHandle >= 0) { RC::UnloadPrimitiveMesh(tm->outlineMeshHandle); tm->outlineMeshHandle = -1; }
+          tm->built = false;
       }
       if (auto* dl = e.GetComponent<DirectionalLightComponent>()) {
           if (dl->lightHandle >= 0) { RC::DestroyDirectionalLight(dl->lightHandle); dl->lightHandle = -1; }

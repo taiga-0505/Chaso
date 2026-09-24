@@ -170,6 +170,7 @@
     <ClCompile Include="..\Engine\Graphics\Sprite\Sprite2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Sprite\SpriteMesh2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Font\FontAtlas.cpp" />
+    <ClCompile Include="..\Engine\Graphics\Font\TextMeshGenerator.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.cpp" />
     <!-- ImGui Manager -->
@@ -267,6 +268,7 @@
     <ClInclude Include="..\Engine\Graphics\Sprite\Sprite2D.h" />
     <ClInclude Include="..\Engine\Graphics\Sprite\SpriteMesh2D.h" />
     <ClInclude Include="..\Engine\Graphics\Font\FontAtlas.h" />
+    <ClInclude Include="..\Engine\Graphics\Font\TextMeshGenerator.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h" />
     <ClInclude Include="..\Engine\Graphics\Texture\TextureManager\TextureManager.h" />
     <!-- ImGui Manager -->
@@ -308,6 +310,7 @@
     <ClInclude Include="..\Engine\ECS\AudioSourceComponent.h" />
     <ClInclude Include="..\Engine\ECS\AudioListenerComponent.h" />
     <ClInclude Include="..\Engine\ECS\TextRendererComponent.h" />
+    <ClInclude Include="..\Engine\ECS\TextMeshComponent.h" />
     <ClInclude Include="..\Engine\ECS\BoneAttachmentComponent.h" />
   </ItemGroup>
   <ItemGroup>

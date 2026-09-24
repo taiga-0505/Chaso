@@ -1,5 +1,6 @@
 #pragma once
 #include "GraphicsPipeline/GraphicsPipeline.h"
+#include "Font/TextMeshGenerator.h"
 #include "Math/Math.h"
 #include "Scene.h"
 #include <d3d12.h>
@@ -971,6 +972,29 @@ int GenerateEffectCylinder(float topRadius = 1.0f, float bottomRadius = 1.0f,
                            bool isVerticalUV = true, bool flipV = false,
                            int texHandle = -1);
 
+/// @brief 3D 文字メッシュ（押し出し文字）を生成
+/// @param desc 文字列・フォント・サイズ・厚さなどの生成パラメータ（Font/TextMeshGenerator.h）
+/// @param texHandle テクスチャハンドル（-1 でデフォルトの白）
+/// @param outInfo 生成されたメッシュのローカル AABB（不要なら nullptr）
+/// @return メッシュハンドル（フォントが開けない・描く文字が無い場合は -1）
+/// @note 生成物は通常の PrimitiveMesh なので DrawPrimitiveMesh / UnloadPrimitiveMesh /
+///       GetPrimitiveMeshMaterialPtr 等がそのまま使える。文字列や厚さを変えたい場合は
+///       Unload して再生成する。
+int GenerateTextMesh(const TextMeshDesc &desc, int texHandle = -1,
+                     TextMeshInfo *outInfo = nullptr);
+
+/// @brief 3D 文字メッシュの縁取り（アウトライン）シェルを生成
+/// @param desc 本体と同じ生成パラメータ
+/// @param outlineWidth 縁取りの太さ（em 比）
+/// @param color 縁取り色（マテリアルに書き込む）
+/// @param unlit true なら非ライティング（単色）で固定
+/// @param outInfo 生成されたメッシュのローカル AABB（不要なら nullptr）
+/// @return メッシュハンドル（生成できなければ -1）
+/// @note 本体の GenerateTextMesh と同じ Transform を与えて DrawPrimitiveMesh で重ね描きする。
+int GenerateTextMeshOutline(const TextMeshDesc &desc, float outlineWidth,
+                            const Vector4 &color, bool unlit = true,
+                            TextMeshInfo *outInfo = nullptr);
+
 /// @brief 汎用プリミティブメッシュを描画
 /// @param meshHandle メッシュハンドル
 /// @param texHandle 一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ）
@@ -1103,6 +1127,14 @@ void SetWaterParams(float waveHeight, float waveSpeed, float waveFreq,
 /// @param meshHandle メッシュハンドル
 /// @param coeff 映り込み係数（0=映り込みなし、1=完全鏡面）
 void SetWaterEnvironmentCoefficient(int meshHandle, float coeff);
+
+/// @brief 波の高さによる色付け（山を明るく・谷を暗く）の強さを設定する
+/// @param crestTint 0 で無効（従来どおり）。0.5〜1.0 で真上から見ても波のうねりが色で分かる
+/// @details 水面の色は視線と法線の角度（フレネル）で浅瀬色⇔深海色を切り替えているため、
+///          真上から見下ろすと角度がほぼ一定になり、うねりがまったく色に出ない。
+///          これを補うために、頂点の高さ（静水面からの変位）で色を振る。
+///          値は WaterParamsCB の未使用フィールド gFoamParams.z へ載せるため CB レイアウトは不変。
+void SetWaterCrestTint(float crestTint);
 
 /// @brief 水面用のフレーム時間を設定する
 /// @param timeSec 累積時間（秒）

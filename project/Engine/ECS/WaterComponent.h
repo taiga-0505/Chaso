@@ -34,6 +34,7 @@ public:
   float normalStrength = 0.6f;    ///< Normal map intensity
 
   float environmentCoeff = 0.5f;  ///< Environment map reflection coefficient
+  float crestTint = 0.0f;         ///< 波の高さによる色付けの強さ（0 で無効。真上視点で山と谷を色で見せる）
 
   // --- Mesh Generation ---
   float planeWidth  = 100.0f;  ///< Water plane width
@@ -64,6 +65,7 @@ public:
       {"normalScrollSpeed", normalScrollSpeed},
       {"normalStrength", normalStrength},
       {"environmentCoeff", environmentCoeff},
+      {"crestTint", crestTint},
       {"planeWidth", planeWidth},
       {"planeHeight", planeHeight},
       {"segments", segments},
@@ -93,6 +95,7 @@ public:
     if (j.contains("normalScrollSpeed")) normalScrollSpeed = j["normalScrollSpeed"].get<float>();
     if (j.contains("normalStrength")) normalStrength = j["normalStrength"].get<float>();
     if (j.contains("environmentCoeff")) environmentCoeff = j["environmentCoeff"].get<float>();
+    if (j.contains("crestTint")) crestTint = j["crestTint"].get<float>();
     if (j.contains("planeWidth")) planeWidth = j["planeWidth"].get<float>();
     if (j.contains("planeHeight")) planeHeight = j["planeHeight"].get<float>();
     if (j.contains("segments")) segments = j["segments"].get<uint32_t>();

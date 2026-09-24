@@ -583,9 +583,9 @@
               27.0
             ],
             "rotation": [
-              3.1415927410125732,
-              1.3962633609771729,
-              3.1415927410125732
+              0.0,
+              0.0,
+              0.0
             ],
             "scale": [
               3.99999737739563,
@@ -606,9 +606,9 @@
                 "cooldownDuration": 2.0,
                 "detectDistance": 30.0,
                 "modelRotOffset": [
-                  180.0,
-                  80.0,
-                  180.0
+                  0.0,
+                  0.0,
+                  0.0
                 ],
                 "swimSineAmplitude": 3.0,
                 "swimSineFrequency": 2.0,
@@ -645,22 +645,31 @@
         },
         {
           "data": {
-            "blendMode": 0,
             "color": [
-              1.0,
-              1.0,
-              1.0,
+              0.9,
+              0.25,
+              0.25,
               1.0
             ],
             "environmentCoeff": 0.0,
-            "modelPath": "Resources/model/shark/shark.obj",
+            "lightingMode": -1,
             "normalMapPath": "",
             "roughnessMapPath": "",
+            "shininess": 32.0,
             "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
             "visible": true
           },
           "enabled": true,
-          "type": "ModelRendererComponent"
+          "type": "PrimitiveMeshComponent"
         }
       ],
       "guid": 7482451223708769765,
@@ -935,9 +944,9 @@
               -5.0
             ],
             "rotation": [
-              3.1415927410125732,
-              1.3962633609771729,
-              3.1415927410125732
+              0.0,
+              0.0,
+              0.0
             ],
             "scale": [
               3.99999737739563,
@@ -958,9 +967,9 @@
                 "cooldownDuration": 2.0,
                 "detectDistance": 30.0,
                 "modelRotOffset": [
-                  180.0,
-                  80.0,
-                  180.0
+                  0.0,
+                  0.0,
+                  0.0
                 ],
                 "swimSineAmplitude": 3.0,
                 "swimSineFrequency": 2.0,
@@ -997,22 +1006,31 @@
         },
         {
           "data": {
-            "blendMode": 0,
             "color": [
-              1.0,
-              1.0,
-              1.0,
+              0.9,
+              0.25,
+              0.25,
               1.0
             ],
             "environmentCoeff": 0.0,
-            "modelPath": "Resources/model/shark/shark.obj",
+            "lightingMode": -1,
             "normalMapPath": "",
             "roughnessMapPath": "",
+            "shininess": 32.0,
             "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
             "visible": true
           },
           "enabled": true,
-          "type": "ModelRendererComponent"
+          "type": "PrimitiveMeshComponent"
         }
       ],
       "guid": 8367239994704043667,
@@ -1676,7 +1694,12 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 20
+                  "maxHp": 20,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
                 },
                 "enemyScale": [
                   4.0,
@@ -1684,12 +1707,19 @@
                   4.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "Resources/model/shark/shark.obj",
+                "modelPath": "",
                 "spawnInterval": 0.35,
                 "spreadRadius": 8.0,
                 "startDelay": 0.0,
                 "waveId": 1,
-                "waveManagerName": "WaveManager"
+                "waveManagerName": "WaveManager",
+                "primitiveShape": "box",
+                "primitiveColor": [
+                  0.9,
+                  0.25,
+                  0.25,
+                  1.0
+                ]
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",
@@ -1745,7 +1775,12 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 15
+                  "maxHp": 15,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
                 },
                 "enemyScale": [
                   4.0,
@@ -1753,12 +1788,19 @@
                   4.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "Resources/model/shark/shark.obj",
+                "modelPath": "",
                 "spawnInterval": 0.35,
                 "spreadRadius": 9.0,
                 "startDelay": 0.0,
                 "waveId": 2,
-                "waveManagerName": "WaveManager"
+                "waveManagerName": "WaveManager",
+                "primitiveShape": "box",
+                "primitiveColor": [
+                  0.9,
+                  0.25,
+                  0.25,
+                  1.0
+                ]
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",
@@ -1814,7 +1856,12 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 30
+                  "maxHp": 30,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
                 },
                 "enemyScale": [
                   4.0,
@@ -1822,12 +1869,19 @@
                   4.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "Resources/model/shark/shark.obj",
+                "modelPath": "",
                 "spawnInterval": 0.35,
                 "spreadRadius": 6.0,
                 "startDelay": 0.0,
                 "waveId": 3,
-                "waveManagerName": "WaveManager"
+                "waveManagerName": "WaveManager",
+                "primitiveShape": "box",
+                "primitiveColor": [
+                  0.9,
+                  0.25,
+                  0.25,
+                  1.0
+                ]
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",

@@ -156,6 +156,7 @@ void RenderContext::Term() {
   primitiveMeshMan_.Term();
   spriteMan_.Term();
   fontMan_.Term();
+  TextMeshGenerator::ClearCache(); // 3D 文字用にキャッシュした DWrite / D2D オブジェクトを解放
 
   dirLightMan_.Term();
   ptLightMan_.Term();

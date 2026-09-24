@@ -345,6 +345,9 @@
     <ClCompile Include="..\Engine\Graphics\Font\FontAtlas.cpp">
       <Filter>Graphics\Font</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Graphics\Font\TextMeshGenerator.cpp">
+      <Filter>Graphics\Font</Filter>
+    </ClCompile>
     <ClCompile Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.cpp">
       <Filter>Graphics\Texture\Texture2D</Filter>
     </ClCompile>
@@ -623,6 +626,9 @@
     <ClInclude Include="..\Engine\Graphics\Font\FontAtlas.h">
       <Filter>Graphics\Font</Filter>
     </ClInclude>
+    <ClInclude Include="..\Engine\Graphics\Font\TextMeshGenerator.h">
+      <Filter>Graphics\Font</Filter>
+    </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Texture\Texture2D\Texture2D.h">
       <Filter>Graphics\Texture\Texture2D</Filter>
     </ClInclude>
@@ -766,6 +772,9 @@
       <Filter>ECS</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\ECS\TextRendererComponent.h">
+      <Filter>ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\ECS\TextMeshComponent.h">
       <Filter>ECS</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\ECS\BoneAttachmentComponent.h">

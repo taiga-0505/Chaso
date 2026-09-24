@@ -44,6 +44,13 @@ public:
   /// @return 完了済みのフェンス値
   uint64_t GetCompletedFenceValue() const;
 
+  /// @brief 次にシグナルされるフェンス値を取得する
+  /// @return 現在記録中のコマンドが完了したときに到達するフェンス値
+  /// @note 「今フレームまでに参照したリソース」を DeferredReleaseQueue に
+  ///       登録する際のフェンス値として使う（UINT64_MAX のように終了時まで
+  ///       溜め込まず、GPU が使い終わった時点で解放される）。
+  uint64_t GetNextFenceValue() const { return globalFenceValue_ + 1; }
+
   /// @brief 現在のコマンドを実行し、リストをリセットして次の記録を即座に開始する
   /// @return 実行完了時に期待されるフェンス値
   uint64_t ExecuteAndReset();

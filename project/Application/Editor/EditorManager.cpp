@@ -23,6 +23,7 @@
 #include "ECS/BoneAttachmentComponent.h"
 #include "Graphics/Model/Animation.h" // RC::GetAnimationCount
 #include "ECS/PrimitiveMeshComponent.h"
+#include "ECS/TextMeshComponent.h"
 #include "ECS/SpriteRendererComponent.h"
 #include "ECS/TextRendererComponent.h"
 #include "ECS/WaterComponent.h"
@@ -699,6 +700,14 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
             auto& pm = e->AddComponent<PrimitiveMeshComponent>();
             pm.type = PrimitiveType::Cone;
             pm.meshHandle = RC::GenerateCone();
+          }
+          ImGui::Separator();
+          if (ImGui::MenuItem("3D Text (立体文字)")) {
+            auto e = currentScene->CreateEntity("TextMesh");
+            e->AddComponent<TransformComponent>();
+            auto& tm = e->AddComponent<TextMeshComponent>();
+            tm.text = "Text";
+            // メッシュはシーンの更新ループ（EnsureTextMesh）で設定から自動生成される
           }
           ImGui::EndMenu();
         }
@@ -1781,6 +1790,16 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                       if (pm->visible && pm->IsEnabled()) {
                           hit = RC::IntersectRaySphere(ray, tr->position, 1.0f, dist);
                       }
+                  } else if (auto* tm = e->GetComponent<TextMeshComponent>()) {
+                      if (tm->visible && tm->IsEnabled() && tm->HasMesh()) {
+                          // 生成時のローカル AABB を位置・スケールに合わせて拡げた箱で判定（回転は無視）
+                          const RC::Vector3 sc = { std::abs(tr->scale.x), std::abs(tr->scale.y), std::abs(tr->scale.z) };
+                          RC::Vector3 lo = { tm->info.min.x * sc.x, tm->info.min.y * sc.y, tm->info.min.z * sc.z };
+                          RC::Vector3 hi = { tm->info.max.x * sc.x, tm->info.max.y * sc.y, tm->info.max.z * sc.z };
+                          // 厚さ 0 でも掴めるように最小厚を確保
+                          if (hi.z - lo.z < 0.1f) { lo.z -= 0.05f; hi.z += 0.05f; }
+                          hit = RC::IntersectRayAABB(ray, ::Add(tr->position, lo), ::Add(tr->position, hi), dist);
+                      }
                   }
 
                   if (hit && dist >= 0.0f && dist < minHitDistance) {
@@ -2482,6 +2501,208 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             }
         }
 
+        if (auto* tm = e->GetComponent<TextMeshComponent>()) {
+            bool headerOpen = ImGui::CollapsingHeader("Text Mesh (立体文字)", ImGuiTreeNodeFlags_DefaultOpen);
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Remove Component")) pendingRemove = [e, tm](){
+                    if (tm->meshHandle >= 0) RC::UnloadPrimitiveMesh(tm->meshHandle);
+                    if (tm->outlineMeshHandle >= 0) RC::UnloadPrimitiveMesh(tm->outlineMeshHandle);
+                    e->RemoveComponent<TextMeshComponent>();
+                };
+                ImGui::EndPopup();
+            }
+            if (headerOpen) {
+               ImGui::Indent(8.0f);
+               bool enabled = tm->IsEnabled();
+               if (ImGui::Checkbox("Enabled (有効化)##TM", &enabled)) tm->SetEnabled(enabled);
+               ImGui::Checkbox("Visible (表示)##TM", &tm->visible);
+
+               // 文字列（複数行）。変更はシーン更新時に EnsureTextMesh が検知して再生成する
+               {
+                   static char textBuf[2048];
+                   const size_t n = (std::min)(tm->text.size(), sizeof(textBuf) - 1);
+                   memcpy(textBuf, tm->text.data(), n);
+                   textBuf[n] = '\0';
+                   if (ImGui::InputTextMultiline("Text (文字列)##TM", textBuf, sizeof(textBuf), ImVec2(-1, 80))) {
+                       tm->text = textBuf;
+                   }
+               }
+
+               // フォント選択（Resources/fonts 以下を走査）
+               {
+                   std::vector<std::string> fontFiles;
+                   const std::filesystem::path fontRoot = "Resources/fonts";
+                   if (std::filesystem::exists(fontRoot)) {
+                       for (const auto& entry : std::filesystem::recursive_directory_iterator(fontRoot)) {
+                           if (!entry.is_regular_file()) continue;
+                           std::string ext = entry.path().extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                           if (ext == ".ttf" || ext == ".otf" || ext == ".ttc") {
+                               const std::u8string u8 = entry.path().generic_u8string();
+                               fontFiles.emplace_back(reinterpret_cast<const char*>(u8.c_str()), u8.size());
+                           }
+                       }
+                       std::sort(fontFiles.begin(), fontFiles.end());
+                   }
+                   auto shortName = [](const std::string& path) -> std::string {
+                       static const std::string prefix = "Resources/fonts/";
+                       return (path.rfind(prefix, 0) == 0) ? path.substr(prefix.size()) : path;
+                   };
+                   std::string preview = tm->fontPath.empty() ? "(none)" : shortName(tm->fontPath);
+                   if (ImGui::BeginCombo("Font (フォント)##TM", preview.c_str())) {
+                       for (const auto& f : fontFiles) {
+                           const bool selected = (f == tm->fontPath);
+                           if (ImGui::Selectable(shortName(f).c_str(), selected)) tm->fontPath = f;
+                           if (selected) ImGui::SetItemDefaultFocus();
+                       }
+                       ImGui::EndCombo();
+                   }
+                   if (ImGui::BeginDragDropTarget()) {
+                       if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                           std::string dropped(static_cast<const char*>(payload->Data));
+                           std::replace(dropped.begin(), dropped.end(), '\\', '/');
+                           std::string ext = std::filesystem::path(dropped).extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c){ return (char)std::tolower(c); });
+                           if (ext == ".ttf" || ext == ".otf" || ext == ".ttc") tm->fontPath = dropped;
+                       }
+                       ImGui::EndDragDropTarget();
+                   }
+               }
+
+               // ── 形状 ──
+               ImGui::SeparatorText("Shape (形状)");
+               ImGui::DragFloat("Size (1em の高さ)##TM", &tm->size, 0.01f, 0.01f, 100.0f, "%.2f");
+               ImGui::DragFloat("Depth (厚さ)##TM", &tm->depth, 0.01f, 0.0f, 100.0f, "%.3f");
+               ImGui::DragFloat("Curve Tolerance (曲線精度)##TM", &tm->curveTolerance, 0.0005f, 0.0005f, 0.05f, "%.4f");
+               ImGui::SameLine();
+               ImGui::TextDisabled("(?)");
+               if (ImGui::IsItemHovered()) ImGui::SetTooltip("小さいほど曲線が滑らかになりますが頂点数が増えます（em 比）");
+               {
+                   const char* alignItems[] = { "Left (左揃え)", "Center (中央揃え)", "Right (右揃え)" };
+                   int alignIdx = static_cast<int>(tm->align);
+                   if (ImGui::Combo("Align (揃え)##TM", &alignIdx, alignItems, 3)) tm->align = static_cast<TextAlign>(alignIdx);
+               }
+               ImGui::DragFloat("Line Spacing (行間)##TM", &tm->lineSpacing, 0.01f, 0.5f, 3.0f);
+
+               // ── 縁取り ──
+               ImGui::SeparatorText("Outline (縁取り)");
+               ImGui::Checkbox("Enabled (縁取りを描く)##OL", &tm->outlineEnabled);
+               if (tm->outlineEnabled) {
+                   ImGui::DragFloat("Width (太さ, em比)##OL", &tm->outlineWidth, 0.001f, 0.001f, 0.5f, "%.3f");
+                   ImGui::SameLine();
+                   ImGui::TextDisabled("(?)");
+                   if (ImGui::IsItemHovered()) ImGui::SetTooltip("文字の高さ(1em)に対する比率。0.05 なら 1em の 5%% の幅で縁が付きます。\n太さの変更はメッシュを再生成します（色は即時反映）。");
+                   ImGui::ColorEdit4("Color (縁取り色)##OL", &tm->outlineColor.x);
+                   ImGui::Checkbox("Unlit (単色・ライティングなし)##OL", &tm->outlineUnlit);
+                   if (tm->HasOutlineMesh()) {
+                       ImGui::TextDisabled("Outline Mesh: %d  /  %u verts, %u tris", tm->outlineMeshHandle, tm->outlineInfo.vertexCount, tm->outlineInfo.triangleCount);
+                   } else if (tm->built && tm->HasMesh()) {
+                       ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f), "縁取りメッシュ未生成");
+                   }
+               }
+
+               ImGui::SeparatorText("Info (情報)");
+               if (tm->HasMesh()) {
+                   ImGui::TextDisabled("Mesh Handle: %d  /  %u verts, %u tris", tm->meshHandle, tm->info.vertexCount, tm->info.triangleCount);
+                   ImGui::TextDisabled("Bounds: (%.2f, %.2f, %.2f) - (%.2f, %.2f, %.2f)",
+                                       tm->info.min.x, tm->info.min.y, tm->info.min.z,
+                                       tm->info.max.x, tm->info.max.y, tm->info.max.z);
+               } else if (tm->built) {
+                   ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.3f, 1.0f), "メッシュ未生成（フォントが開けない／描く文字が無い）");
+               }
+               if (ImGui::Button("Rebuild (再生成)##TM")) tm->built = false;
+               ImGui::Unindent(8.0f);
+            }
+
+            // ── Material セクション（PrimitiveMesh と同じ GPU Material を編集） ──
+            if (ImGui::CollapsingHeader("Material (マテリアル)##TM", ImGuiTreeNodeFlags_DefaultOpen)) {
+               ImGui::Indent(8.0f);
+
+               // テクスチャスロット共通 UI（ドラッグ＆ドロップ＋クリアボタン）
+               auto textureSlot = [&](const char* label, const char* id, std::string& path, int& handle, auto&& onChanged) {
+                   ImGui::Text("%s", label);
+                   ImGui::SameLine();
+                   std::string btn = (path.empty() ? std::string("(None)") : std::filesystem::path(path).filename().string()) + "##" + id;
+                   ImGui::Button(btn.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 60.0f, 0));
+                   if (ImGui::BeginDragDropTarget()) {
+                       if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM")) {
+                           std::string droppedPath((const char*)payload->Data);
+                           std::string ext = std::filesystem::path(droppedPath).extension().string();
+                           std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                           if (ext == ".png" || ext == ".jpg" || ext == ".dds") {
+                               path = droppedPath;
+                               handle = RC::LoadTex(droppedPath);
+                               onChanged();
+                           }
+                       }
+                       ImGui::EndDragDropTarget();
+                   }
+                   if (!path.empty()) {
+                       ImGui::SameLine();
+                       std::string clr = std::string("X##") + id;
+                       if (ImGui::Button(clr.c_str(), ImVec2(22, 0))) {
+                           path.clear();
+                           handle = -1;
+                           onChanged();
+                       }
+                   }
+               };
+
+               // Texture は描画時に texOverride として毎フレーム渡されるので差し替えは即時反映（再生成不要）
+               textureSlot("Texture (テクスチャ)", "TexTM", tm->texturePath, tm->texOverride, []() {});
+               textureSlot("Normal Map (法線マップ)", "NmapTM", tm->normalMapPath, tm->normalMapOverride, [&]() {
+                   if (tm->HasMesh()) RC::SetPrimitiveMeshNormalMap(tm->meshHandle, tm->normalMapOverride);
+               });
+               textureSlot("Roughness Map (粗さマップ)", "RmapTM", tm->roughnessMapPath, tm->roughnessMapOverride, [&]() {
+                   if (tm->HasMesh()) RC::SetPrimitiveMeshRoughnessMap(tm->meshHandle, tm->roughnessMapOverride);
+               });
+
+               ImGui::Separator();
+
+               // GPU Material（メッシュ未生成でもコンポーネント側の値は編集でき、生成時に反映される）
+               Material* mat = tm->HasMesh() ? RC::GetPrimitiveMeshMaterialPtr(tm->meshHandle) : nullptr;
+
+               if (ImGui::ColorEdit4("Base Color (基本色)##TM", &tm->color.x)) {
+                   if (mat) mat->color = tm->color;
+               }
+
+               const char* lightingModes[] = { "Follow Light (ライトに従う)", "None", "Lambert", "Half Lambert" };
+               int lightMode = std::clamp(tm->lightingMode + 1, 0, 3);
+               if (ImGui::Combo("Lighting (ライティング)##TM", &lightMode, lightingModes, 4)) {
+                   tm->lightingMode = lightMode - 1;
+                   if (tm->HasMesh()) {
+                       if (tm->lightingMode >= 0) RC::SetPrimitiveMeshLightingMode(tm->meshHandle, static_cast<LightingMode>(tm->lightingMode));
+                       else RC::ClearPrimitiveMeshLightingModeOverride(tm->meshHandle);
+                   }
+               }
+               if (tm->lightingMode < 0 && mat) {
+                   ImGui::SameLine();
+                   ImGui::TextDisabled("(現在: %s)", (mat->lightingMode >= 0 && mat->lightingMode <= 2) ? lightingModes[mat->lightingMode + 1] : "?");
+               }
+
+               if (ImGui::DragFloat("Shininess (光沢)##TM", &tm->shininess, 1.0f, 0.0f, 512.0f)) {
+                   if (mat) mat->shininess = tm->shininess;
+               }
+               if (ImGui::DragFloat("Env Reflection (環境反射)##TM", &tm->environmentCoeff, 0.01f, 0.0f, 1.0f)) {
+                   if (mat) mat->environmentCoefficient = tm->environmentCoeff;
+               }
+
+               ImGui::Separator();
+               ImGui::Text("UV Transform (UV変換)");
+               ImGui::SameLine();
+               ImGui::TextDisabled("(?)");
+               if (ImGui::IsItemHovered()) ImGui::SetTooltip("表面・裏面は文字列全体に 0..1 で平面投影\n側面は輪郭に沿った周長 u（1em=1.0）/ 厚さ方向 v（表面側 0 → 裏面側 1）");
+               if (ImGui::DragFloat2("Tiling (タイリング)##TM", &tm->uvTiling.x, 0.01f)) {
+                   if (mat) { mat->uvTransform.m[0][0] = tm->uvTiling.x; mat->uvTransform.m[1][1] = tm->uvTiling.y; }
+               }
+               if (ImGui::DragFloat2("Offset (オフセット)##TM", &tm->uvOffset.x, 0.01f)) {
+                   if (mat) { mat->uvTransform.m[3][0] = tm->uvOffset.x; mat->uvTransform.m[3][1] = tm->uvOffset.y; }
+               }
+
+               ImGui::Unindent(8.0f);
+            }
+        }
+
         if (auto* spr = e->GetComponent<SpriteRendererComponent>()) {
             bool headerOpen = ImGui::CollapsingHeader("Sprite Renderer (スプライト描画)", ImGuiTreeNodeFlags_DefaultOpen);
             if (ImGui::BeginPopupContextItem()) {
@@ -3029,6 +3250,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
                ImGui::DragFloat("Normal Scroll", &water->normalScrollSpeed, 0.001f, 0.0f, 0.5f);
                ImGui::DragFloat("Normal Strength", &water->normalStrength, 0.01f, 0.0f, 2.0f);
                ImGui::DragFloat("Env Reflection (環境反射)##Water", &water->environmentCoeff, 0.01f, 0.0f, 1.0f);
+               ImGui::DragFloat("Crest Tint (高さで色付け)##Water", &water->crestTint, 0.01f, 0.0f, 1.0f);
                ImGui::Separator();
                ImGui::Text("Mesh Handle: %d", water->meshHandle);
                ImGui::Unindent(8.0f);
@@ -3559,6 +3781,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             if (ImGui::MenuItem("Rigidbody (物理演算)") && !e->GetComponent<RigidbodyComponent>()) e->AddComponent<RigidbodyComponent>();
             if (ImGui::MenuItem("Native Script") && !e->GetComponent<NativeScriptComponent>()) e->AddComponent<NativeScriptComponent>();
             if (ImGui::MenuItem("Text Renderer (文字描画)") && !e->GetComponent<TextRendererComponent>()) e->AddComponent<TextRendererComponent>();
+            if (ImGui::MenuItem("Text Mesh (立体文字)") && !e->GetComponent<TextMeshComponent>()) e->AddComponent<TextMeshComponent>();
             if (ImGui::MenuItem("Audio Source (音源)") && !e->GetComponent<AudioSourceComponent>()) e->AddComponent<AudioSourceComponent>();
             if (ImGui::MenuItem("Audio Listener (3D 音響の聞き手)") && !e->GetComponent<AudioListenerComponent>()) e->AddComponent<AudioListenerComponent>();
             // Animation は ModelRenderer と組で使う。既に持っている場合は出さない

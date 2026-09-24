@@ -294,6 +294,7 @@ VertexShaderOutput main(VertexShaderInput input)
     output.normal = N;
     output.worldPosition = worldPos.xyz;
     output.instColor = float4(1, 1, 1, 1);
+    output.waveHeight = wave.offset.y + interactiveHeight;
 
     return output;
 }

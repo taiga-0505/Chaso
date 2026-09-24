@@ -124,6 +124,10 @@ public:
   /// @return 完了済みフェンス値
   uint64_t GetCompletedFenceValue() const { return cmd_.GetCompletedFenceValue(); }
 
+  /// @brief 次にシグナルされるフェンス値を取得（遅延解放の登録用）
+  /// @return 現在記録中のコマンドが完了したときに到達するフェンス値
+  uint64_t GetNextFenceValue() const { return cmd_.GetNextFenceValue(); }
+
   /// @brief 画面をクリアする
   /// @param r 赤
   /// @param g 緑
