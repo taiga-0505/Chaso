@@ -121,9 +121,10 @@ const Step kSteps[] = {
      "次のシーンへ進む", Kind::SceneFlow},
     {"第2週", "D-05",
      "スプライトの切り出し矩形が効かない不具合",
-     "スコアを 1234567 にして Result へ飛ぶ。各桁が別々の数字として出ていれば直っている。"
-     "全桁が同じ数字なら、1ハンドル1フレーム1回の制約に触れている。",
-     "スコアを 1234567 にして Result へ飛ぶ", Kind::SpriteDigits},
+     "修正当時は Result のスコア桁（number.png の切り出し）で確認していたが、"
+     "いまの Result はフォント描画（DrawString）なので桁スプライトは出ない。"
+     "Result へ飛んで達成率・撃破数・被ダメージが GameSession の値どおりかを見る。",
+     "値を入れて Result へ飛ぶ", Kind::SpriteDigits},
     {"第2週", "D-04",
      "死亡エンティティのハンドル解放漏れ",
      "基準を記録してから敵を倒す、またはシーンを一周する。"
@@ -525,7 +526,10 @@ void LiveSceneFlow(Scene *scene) {
   Row("HP", "%d / %d", s.PlayerHp(), s.PlayerMaxHp());
   Row("経過時間", "%.2f 秒", s.ElapsedTime());
   Row("決着", "%s", outcome);
-  Row("評価ランク", "%c  （バーの本数 S=4 / A=3 / B=2 / C=1）", s.Rank());
+  Row("航路達成率", "%d / %d 地点 (%.0f%%)", s.WaypointsReached(), s.WaypointsTotal(),
+      s.WaypointRate() * 100.0f);
+  Row("撃破数", "%d", s.EnemiesDefeated());
+  Row("被ダメージ", "%d", s.DamageTaken());
   Row("プレイ回数", "%d", s.PlayCount());
 
   ImGui::TextColored(kDim, "F7 で次のシーンへ： %s",
@@ -535,11 +539,12 @@ void LiveSceneFlow(Scene *scene) {
 void LiveSpriteDigits() {
   auto &s = GameSession::Get();
   Row("スコア", "%d", s.Score());
-  Row("期待される見え方", "%s", "1 2 3 4 5 6 7 が桁ごとに違う数字で出る");
+  Row("航路達成率", "%d / %d 地点", s.WaypointsReached(), s.WaypointsTotal());
+  Row("撃破数", "%d", s.EnemiesDefeated());
+  Row("被ダメージ", "%d", s.DamageTaken());
   ImGui::TextColored(kDim,
-                     "1 ハンドルにつき 1 フレーム 1 回しか描けないため、"
-                     "桁ごとに別ハンドルを確保している。全桁が同じ数字なら"
-                     "そこを踏んでいる。");
+                     "Result の数字はフォント描画（RC::DrawString）。"
+                     "スプライトの切り出し矩形（DrawSpriteRect）は SceneFlowUI にだけ残っている。");
 }
 
 void LiveResources(Scene *scene) {
@@ -953,7 +958,10 @@ void RunStepAction(Scene *scene) {
   case Kind::SpriteDigits: {
     auto &s = GameSession::Get();
     s.SetScore(1234567);
-    s.SetPlayerHp(5, 5);
+    s.SetPlayerHp(3, 5);
+    s.SetWaypointProgress(6, 8);
+    s.SetEnemiesDefeated(12);
+    s.SetDamageTaken(2);
     s.Finish(GameSession::Outcome::Cleared);
     DebugBridge::RequestScene("Result");
     break;

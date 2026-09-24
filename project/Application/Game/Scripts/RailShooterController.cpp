@@ -343,7 +343,7 @@ protected:
             }
         }
 
-        // Result / GameOver シーンから読めるように、現在の成績を GameSession へ写す。
+        // Result シーンから読めるように、現在の成績を GameSession へ写す。
         // score / hp はこのスクリプトのメンバなので、シーンを抜けると失われるため。
         GameSession::Get().SetScore(score);
         GameSession::Get().SetPlayerHp(hp, maxHp);
@@ -733,6 +733,9 @@ protected:
 public:
     void TakeDamage(int damage) {
         if (invincibleTimer > 0.0f || isDead) return;
+        // リザルトの「被ダメージ」。無敵中に弾いたぶんは上の早期 return で除外され、
+        // HP を割り込んだぶん（オーバーキル）は数えない。
+        GameSession::Get().AddDamageTaken((std::min)(damage, hp));
         hp -= damage;
         invincibleTimer = invincibleDuration;
         

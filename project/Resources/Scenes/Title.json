@@ -162,11 +162,25 @@
                 "driftRadius": 0.35,
                 "driftPeriod": 9.0,
                 "tiltScale": 0.7,
-                "menuFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Regular.ttf",
-                "menuFontSize": 40.0,
-                "menuBottomMargin": 90.0,
+                "menuFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "menuSize": 1.5,
+                "menuDepth": 0.3,
+                "menuPositions": [
+                  [0.0, -4.4],
+                  [0.0, -7.0]
+                ],
+                "menuColor": [0.62, 0.72, 0.82, 1.0],
+                "menuSelectedColor": [1.0, 0.92, 0.62, 1.0],
+                "menuOutlineColor": [0.04, 0.10, 0.22, 1.0],
+                "menuSelectedScale": 1.18,
+                "menuSelectedLift": 0.12,
+                "menuBobAmplitude": 0.04,
+                "menuTiltScale": 0.5,
                 "startScene": "Game",
-                "quitEnabled": true
+                "quitEnabled": true,
+                "showHint": true,
+                "hintFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Regular.ttf",
+                "hintFontSize": 20.0
               }
             ],
             "scriptTypeName": "TitleScreenScript"

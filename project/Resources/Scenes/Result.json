@@ -11,38 +11,17 @@
         {
           "type": "TransformComponent",
           "data": {
-            "position": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
           }
         },
         {
           "type": "DirectionalLightComponent",
           "data": {
             "visible": true,
-            "color": [
-              1.0,
-              1.0,
-              1.0,
-              1.0
-            ],
-            "direction": [
-              0.0,
-              -1.0,
-              0.5
-            ],
+            "color": [1.0, 1.0, 1.0, 1.0],
+            "direction": [0.3, -1.0, 0.35],
             "intensity": 1.0
           }
         }
@@ -58,21 +37,9 @@
         {
           "type": "TransformComponent",
           "data": {
-            "position": [
-              0.0,
-              1.0,
-              -10.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
+            "position": [0.0, 42.0, 0.0],
+            "rotation": [1.5707963, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
           }
         },
         {
@@ -80,8 +47,75 @@
           "data": {
             "fovY": 0.45,
             "nearZ": 0.1,
-            "farZ": 100.0,
+            "farZ": 300.0,
             "isMain": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "6d3f8a21-9c47-4b0e-a5d2-1f7e3c9b8a40",
+      "name": "Skybox",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [100.0, 100.0, 100.0]
+          }
+        },
+        {
+          "type": "SkyboxComponent",
+          "data": {
+            "color": [1.0, 1.0, 1.0, 1.0],
+            "skyboxPath": "Resources/SkyBox/skybox.dds",
+            "visible": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "a8c1d4e7-2b5f-4c9a-8e31-7d0b6f2a4c19",
+      "name": "Water",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
+          }
+        },
+        {
+          "type": "WaterComponent",
+          "data": {
+            "visible": true,
+            "planeWidth": 160.0,
+            "planeHeight": 160.0,
+            "segments": 384,
+            "waveHeight": 0.16,
+            "waveSpeed": 1.2,
+            "waveFreq": 0.9,
+            "waveHeight2": 0.09,
+            "waveSpeed2": 1.0,
+            "waveFreq2": 1.5,
+            "waveSteepness": 0.32,
+            "shallowColor": [0.08, 0.30, 0.46, 0.92],
+            "deepColor": [0.01, 0.05, 0.17, 0.97],
+            "fresnelPower": 3.0,
+            "specularPower": 90.0,
+            "normalScrollSpeed": 0.05,
+            "normalStrength": 1.0,
+            "environmentCoeff": 0.55,
+            "crestTint": 0.8,
+            "normalMapPath": "Resources/Water/water_normal.png"
           }
         }
       ]
@@ -96,43 +130,37 @@
         {
           "type": "TransformComponent",
           "data": {
-            "position": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
           }
         },
         {
           "type": "NativeScriptComponent",
           "data": {
-            "scriptTypeNames": [
-              "SceneFlowUI"
-            ],
+            "scriptTypeNames": ["ResultScreenScript"],
             "scriptDataList": [
               {
-                "bannerPath": "Resources/UI/clear.png",
-                "showScore": true,
-                "showPrompt": true,
-                "panelColor": [
-                  0.92,
-                  0.95,
-                  1.0,
-                  0.82
-                ]
+                "titleText": "戦果",
+                "subtitleText": "RESULT",
+                "failSubtitleText": "GAME OVER",
+                "clearText": "航路 踏破",
+                "failText": "航路 途絶",
+                "retryLabel": "もう一度",
+                "titleLabel": "タイトルへ",
+                "retryScene": "Game",
+                "titleScene": "Title",
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "showScore": false,
+                "showHint": true,
+                "animate": true,
+                "dimAlpha": 0.22,
+                "panelColor": [0.05, 0.06, 0.09, 0.74],
+                "accentColor": [0.42, 0.76, 0.88, 1.0],
+                "selectedColor": [0.12, 0.27, 0.50, 0.96]
               }
             ],
-            "scriptTypeName": "SceneFlowUI"
+            "scriptTypeName": "ResultScreenScript"
           }
         }
       ]

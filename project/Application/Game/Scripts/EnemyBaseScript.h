@@ -21,6 +21,7 @@
 #include "ECS/CameraComponent.h"
 #include "ECS/ColliderComponent.h"
 #include "Engine/Render/RenderContext.h"
+#include "Application/Game/Framework/GameSession.h"
 
 
 /// @brief Base class for enemies handling HP, damage, and death state
@@ -192,6 +193,10 @@ public:
             hp = 0;
             isDead = true;
             deathTimer = 0.0f;
+            // リザルトの「撃破数」。派生クラスが TakeDamage を上書きしていても
+            // 基底のこの処理を通る（ShipEnemyScript も EnemyBaseScript::TakeDamage を呼ぶ）ので、
+            // 撃破の数え上げはここ 1 箇所に置く。
+            GameSession::Get().AddEnemyDefeated();
             // タグでシーン側に撃破を通知
             if (Entity* self = GetEntity()) {
                 self->SetTag("enemy_defeated", 1);

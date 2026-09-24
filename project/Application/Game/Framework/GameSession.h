@@ -4,13 +4,15 @@
 /// @brief シーンをまたいで 1 プレイ分の結果を保持する
 /// @details Scene が持つ GameMode / GameState はシーンごとのインスタンスなので、
 ///          Game シーンで積んだスコアを Result シーンから読むことができない。
-///          そこでプレイ結果だけをここに集約し、Result / GameOver から参照する。
+///          そこでプレイ結果だけをここに集約し、Result から参照する。
 ///
 ///          値の流れ:
 ///            Game シーン OnEnter    -> BeginRun()   （前回のプレイ結果を捨てる）
-///            プレイ中               -> RailShooterController が score / hp を書き込む
+///            プレイ中               -> RailShooterController が score / hp / 被ダメージを書き込む
+///                                      RailMovementScript がウェイポイントの通過数を書き込む
+///                                      EnemyBaseScript が撃破のたびに AddEnemyDefeated() を呼ぶ
 ///            クリア or 死亡         -> Finish(Outcome) をシーン側が呼ぶ
-///            Result / GameOver      -> Score() 等を読んで表示する
+///            Result                 -> Score() 等を読んで表示する（クリア／ゲームオーバー共通）
 class GameSession {
 public:
   /// @brief 1 プレイの決着のつき方
@@ -35,6 +37,10 @@ public:
     playerMaxHp_ = 0;
     elapsedTime_ = 0.0f;
     outcome_ = Outcome::InProgress;
+    waypointsReached_ = 0;
+    waypointsTotal_ = 0;
+    enemiesDefeated_ = 0;
+    damageTaken_ = 0;
     ++playCount_;
   }
 
@@ -49,13 +55,55 @@ public:
   }
   void SetElapsedTime(float seconds) { elapsedTime_ = seconds; }
 
-  // --- Result / GameOver から読む値 ---
+  /// @brief ウェイポイントの進捗を書き込む（RailMovementScript が毎フレーム呼ぶ）
+  /// @param reached このプレイで到達したウェイポイントの数
+  /// @param total   到達済み ＋ 終点までに残っている数（＝このルートで通る予定の総数）
+  /// @details total は「配列の長さ」ではない。分岐で通らないウェイポイントを
+  ///          分母に入れると、本線を走りきっても 100% にならないため、
+  ///          レール側が「いまのルートで終点までに通る数」を都度数え直して渡す。
+  void SetWaypointProgress(int reached, int total) {
+    waypointsReached_ = (reached < 0) ? 0 : reached;
+    waypointsTotal_ = (total < waypointsReached_) ? waypointsReached_ : total;
+  }
+
+  /// @brief 敵を撃破した（EnemyBaseScript が HP 0 になった瞬間に呼ぶ）
+  void AddEnemyDefeated(int count = 1) { enemiesDefeated_ += count; }
+
+  /// @brief プレイヤーが被弾した（RailShooterController::TakeDamage が呼ぶ）
+  /// @param amount 実際に減った HP の量（無敵中に弾かれたぶんは含めない）
+  void AddDamageTaken(int amount) {
+    if (amount > 0) damageTaken_ += amount;
+  }
+
+  /// @brief 撃破数・被ダメージを直接書く（撮影モードの仕込み用。プレイ中は Add 系を使うこと）
+  void SetEnemiesDefeated(int count) { enemiesDefeated_ = (count < 0) ? 0 : count; }
+  void SetDamageTaken(int amount) { damageTaken_ = (amount < 0) ? 0 : amount; }
+
+  // --- Result から読む値 ---
   int Score() const { return score_; }
   int PlayerHp() const { return playerHp_; }
   int PlayerMaxHp() const { return playerMaxHp_; }
   float ElapsedTime() const { return elapsedTime_; }
   Outcome GetOutcome() const { return outcome_; }
   bool IsCleared() const { return outcome_ == Outcome::Cleared; }
+
+  /// @brief 到達したウェイポイントの数
+  int WaypointsReached() const { return waypointsReached_; }
+  /// @brief このルートで通る予定だったウェイポイントの総数（0 ならレールが無いシーン）
+  int WaypointsTotal() const { return waypointsTotal_; }
+  /// @brief ウェイポイント達成率（0.0〜1.0）
+  /// @details レールの無いシーンやデータが無い場合はクリアなら 1.0、それ以外 0.0 を返す。
+  float WaypointRate() const {
+    if (waypointsTotal_ <= 0) return IsCleared() ? 1.0f : 0.0f;
+    float rate = static_cast<float>(waypointsReached_) / static_cast<float>(waypointsTotal_);
+    if (rate < 0.0f) rate = 0.0f;
+    if (rate > 1.0f) rate = 1.0f;
+    return rate;
+  }
+  /// @brief 撃破した敵の数
+  int EnemiesDefeated() const { return enemiesDefeated_; }
+  /// @brief 被弾した合計ダメージ
+  int DamageTaken() const { return damageTaken_; }
 
   /// @brief 何回プレイしたか（1 周目なら 1）
   int PlayCount() const { return playCount_; }
@@ -82,4 +130,8 @@ private:
   float elapsedTime_ = 0.0f;
   Outcome outcome_ = Outcome::InProgress;
   int playCount_ = 0;
+  int waypointsReached_ = 0;
+  int waypointsTotal_ = 0;
+  int enemiesDefeated_ = 0;
+  int damageTaken_ = 0;
 };

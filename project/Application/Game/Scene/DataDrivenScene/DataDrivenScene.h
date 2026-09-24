@@ -445,31 +445,29 @@ public:
             // スペースキーで次へ進むのはセレクト〜リザルトの導線シーンだけに限定する。
             // CG4 など導線外のシーンでは Space をゲーム操作（ジャンプ）に使うため、
             // 名前が一致しないシーンをまとめて Title へ送らないこと。
-            // Title は TitleScreenScript がメニュー（スタート／ゲーム終了）で
-            // 自前に遷移・終了を扱うため、ここでは判定しない（二重判定になる）。
-            const bool isFlowScene =
-                (sceneName_ == "Select" ||
-                 sceneName_ == "Result" || sceneName_ == "GameOver");
+            // Title は TitleScreenScript がメニュー（スタート／ゲーム終了）で、
+            // Result は ResultScreenScript が「もう一度／タイトルへ」で
+            // 自前に遷移を扱うため、ここでは判定しない（二重判定になる）。
+            // GameOver シーンは廃止し、死亡時も Result へ送る（Result 側が決着を見て表示を変える）。
+            const bool isFlowScene = (sceneName_ == "Select");
             if (isFlowScene && ctx.input->IsKeyTrigger(DIK_SPACE)) {
                 resultTriggered_ = true;
-                if (sceneName_ == "Select") {
-                    resultTarget_ = "Game";
-                } else {
-                    resultTarget_ = "Title";
-                }
+                resultTarget_ = "Game";
                 // 即座に遷移させるためディレイを最大値にする
                 resultDelayTimer_ = kResultDelay_;
             }
         } else {
             // プレイヤー死亡チェック
+            // レールシューターの自機はカメラに乗っていて名前が "player" ではないため、
+            // 名前だけでなく is_player タグ（RailShooterController が OnCreate で立てる）でも拾う。
             for (auto& e : entities_) {
-                if (e && e->GetName() == "player" && e->HasTag("game_over")) {
-                    resultTriggered_ = true;
-                    resultTarget_ = "GameOver";
-                    resultDelayTimer_ = 0.0f;
-                    GameSession::Get().Finish(GameSession::Outcome::GameOver);
-                    break;
-                }
+                if (!e || !e->HasTag("game_over")) continue;
+                if (e->GetName() != "player" && !e->HasTag("is_player")) continue;
+                resultTriggered_ = true;
+                resultTarget_ = "Result";
+                resultDelayTimer_ = 0.0f;
+                GameSession::Get().Finish(GameSession::Outcome::GameOver);
+                break;
             }
             // クリアチェック（プレイヤーが生きている場合のみ）
             //
@@ -518,7 +516,7 @@ public:
                 }
             }
 
-            // 決着がついた時点の経過時間を確定させ、Result / GameOver へ引き渡す。
+            // 決着がついた時点の経過時間を確定させ、Result へ引き渡す。
             // 1 プレイにつき 1 回だけ（statsFinalized_）。決着後もリザルト遷移待ちの
             // 2.5 秒のあいだ GameState は Tick し続けるため、毎フレーム上書きすると
             // 表示される時間が伸びてしまう。

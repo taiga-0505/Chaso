@@ -1,0 +1,769 @@
+#include "ECS/ScriptableEntity.h"
+#include "ECS/ScriptRegistry.h"
+#include "Common/Log/Log.h"
+#include "Input/Input.h"
+#include "RenderCommon.h"
+#include "Engine/Render/RenderContext.h"
+#include "Application/Framework/App.h"
+#include "Application/Game/Framework/GameSession.h"
+#include "Scene.h"
+
+#include <Windows.h>
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <vector>
+
+/// @class ResultScreenScript
+/// @brief リザルト画面（波の上に「戦果」を掲げる）。クリア時もゲームオーバー時も同じ画面を使う
+/// @details
+///   構成:
+///     - 背景の波は Result.json 側の WaterComponent と真上視点のカメラ（Title と同じ作り）。
+///       このスクリプトは 2D の HUD だけを描く。
+///     - 画面中央に墨色のパネルを敷き、上から順に
+///         見出し（戦果 / RESULT または GAME OVER / 航路 踏破 or 途絶）
+///         ウェイポイント達成率（大きな％ ＋ 通過数 ＋ 地点を並べた航路ゲージ）
+///         撃破数 / 被ダメージ（被ダメージには HP のコマも並べる）
+///       を置く。下段に「もう一度」「タイトルへ」の 2 つのボタン。
+///     - 値はすべて GameSession から読む（Game シーンが書き込んだもの）。
+///       クリアかゲームオーバーかは GameSession::IsCleared() で見分け、見出し下の一言と欧文を切り替える。
+///     - 入力: ←→ / A D / ↑↓ / W S / 十字キー / 左スティックで選択、
+///             Space / Enter / A ボタン / 左クリックで決定。マウスを動かすとホバーで選択が移る。
+///       演出中に決定を押すと演出をスキップし、もう一度押すと決定になる。
+///     - 演出（カウントアップ、ゲージ、行のフェード、ボタンのフェード）は OnUpdate の時間で進める。
+///       シーン切替直後の Dissolve / Grayscale 演出中は Update が止まっているので、
+///       その間はパネルと見出しだけが静止して見え、色が戻ってから数字が動き出す。
+///
+///   注意:
+///     - DataDrivenScene 側の「導線シーンで Space → 次へ」判定から Result を外してあること。
+///       残っていると Space で決定した瞬間に Title へも飛び、二重判定になる。
+///     - 画面サイズは 1280x720 を基準にレイアウトし、実解像度に合わせて等倍スケールする
+///       （Debug は 1920x1080）。フォントも基準サイズ × スケールでロードする。
+///     - フォントは Title の 3D 文字（TextMesh）と同じ KiwiMaru-Medium を使う。
+///
+///   JSON (scriptDataList) で設定できる項目:
+///     "titleText"       : 見出し（既定 "戦果"）
+///     "subtitleText"    : クリア時に見出しの下へ出す欧文（既定 "RESULT"）
+///     "failSubtitleText": 未クリア時に見出しの下へ出す欧文（既定 "GAME OVER"）
+///     "clearText"       : クリア時の一言（既定 "航路 踏破"）
+///     "failText"        : 未クリア時の一言（既定 "航路 途絶"）
+///     "retryLabel" / "titleLabel"   : ボタンの文字
+///     "retryScene" / "titleScene"   : 各ボタンの遷移先シーン名
+///     "fontPath"        : 画面全体で使うフォント（既定は Title の 3D 文字と同じ KiwiMaru-Medium）
+///     "showScore"       : 得点の行を足すか
+///     "showHint"        : 画面下の操作ヒントを出すか
+///     "animate"         : 演出を行うか（false なら最初から確定表示）
+///     "dimAlpha"        : 水面全体に掛ける墨の濃さ（0 で掛けない）
+///     "panelColor"      : パネルの色 RGBA
+///     "accentColor"     : 強調色（達成率ラベル・ゲージ・選択マーカー）RGBA
+///     "selectedColor"   : 選択中ボタンの塗り RGBA
+class ResultScreenScript : public ScriptableEntity {
+public:
+  // ---- 文言 ----
+  std::string titleText = "戦果";
+  std::string subtitleText = "RESULT";
+  std::string failSubtitleText = "GAME OVER";
+  std::string clearText = "航路 踏破";
+  std::string failText = "航路 途絶";
+  std::string retryLabel = "もう一度";
+  std::string titleLabel = "タイトルへ";
+  std::string retryScene = "Game";
+  std::string titleScene = "Title";
+
+  // ---- フォント（Title の 3D 文字と同じもの）----
+  std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
+
+  // ---- 表示の切り替え ----
+  bool showScore = false;
+  bool showHint = true;
+  bool animate = true;
+
+  // ---- 色（藍と墨）----
+  float dimAlpha = 0.22f;
+  RC::Vector4 panelColor = {0.05f, 0.06f, 0.09f, 0.74f};    ///< 墨
+  RC::Vector4 accentColor = {0.42f, 0.76f, 0.88f, 1.0f};    ///< 浅葱
+  RC::Vector4 selectedColor = {0.12f, 0.27f, 0.50f, 0.96f}; ///< 藍
+
+  nlohmann::json Serialize() override {
+    auto v4 = [](const RC::Vector4 &c) { return nlohmann::json{c.x, c.y, c.z, c.w}; };
+    return {
+        {"titleText", titleText},
+        {"subtitleText", subtitleText},
+        {"failSubtitleText", failSubtitleText},
+        {"clearText", clearText},
+        {"failText", failText},
+        {"retryLabel", retryLabel},
+        {"titleLabel", titleLabel},
+        {"retryScene", retryScene},
+        {"titleScene", titleScene},
+        {"fontPath", fontPath},
+        {"showScore", showScore},
+        {"showHint", showHint},
+        {"animate", animate},
+        {"dimAlpha", dimAlpha},
+        {"panelColor", v4(panelColor)},
+        {"accentColor", v4(accentColor)},
+        {"selectedColor", v4(selectedColor)},
+    };
+  }
+
+  void Deserialize(const nlohmann::json &j) override {
+    auto readF = [&](const char *key, float &out) {
+      if (j.contains(key) && j[key].is_number()) out = j[key].get<float>();
+    };
+    auto readB = [&](const char *key, bool &out) {
+      if (j.contains(key) && j[key].is_boolean()) out = j[key].get<bool>();
+    };
+    auto readS = [&](const char *key, std::string &out) {
+      if (j.contains(key) && j[key].is_string()) out = j[key].get<std::string>();
+    };
+    auto readVec4 = [&](const char *key, RC::Vector4 &out) {
+      if (!j.contains(key)) return;
+      const auto &c = j[key];
+      if (c.is_array() && c.size() >= 4) {
+        out = {c[0].get<float>(), c[1].get<float>(), c[2].get<float>(), c[3].get<float>()};
+      }
+    };
+
+    readS("titleText", titleText);
+    readS("subtitleText", subtitleText);
+    readS("failSubtitleText", failSubtitleText);
+    readS("clearText", clearText);
+    readS("failText", failText);
+    readS("retryLabel", retryLabel);
+    readS("titleLabel", titleLabel);
+    readS("retryScene", retryScene);
+    readS("titleScene", titleScene);
+    readS("fontPath", fontPath);
+    readB("showScore", showScore);
+    readB("showHint", showHint);
+    readB("animate", animate);
+    readF("dimAlpha", dimAlpha);
+    readVec4("panelColor", panelColor);
+    readVec4("accentColor", accentColor);
+    readVec4("selectedColor", selectedColor);
+  }
+
+protected:
+  void OnCreate() override {
+    // 前のシーン（Game）の障害物が水面の定数バッファに残っていると、
+    // ここの水面にも岩の反射波が出てしまう。障害物は無いので空にする。
+    RC::SetWaterObstacles(nullptr, 0);
+
+    // 表示に使う値をログへ残す（ImGui を使わないので、Release でもここで突き合わせられる）
+    {
+      const GameSession &s = GameSession::Get();
+      Log::Print("[ResultScreenScript] " + std::string(s.IsCleared() ? "cleared" : "game over") +
+                 "  waypoints " + std::to_string(s.WaypointsReached()) + "/" +
+                 std::to_string(s.WaypointsTotal()) + "  defeated " +
+                 std::to_string(s.EnemiesDefeated()) + "  damage " +
+                 std::to_string(s.DamageTaken()) + "  hp " + std::to_string(s.PlayerHp()) + "/" +
+                 std::to_string(s.PlayerMaxHp()) + "  score " + std::to_string(s.Score()));
+    }
+
+    // フォントは基準解像度（1280x720）のサイズ × 実解像度のスケールでロードする。
+    // DrawString の scale で拡大するとにじむので、最初から実寸で作る。
+    float w = 1280.0f, h = 720.0f;
+    if (SceneContext *ctx = GetSceneContext()) {
+      if (ctx->app && ctx->app->width > 0 && ctx->app->height > 0) {
+        w = static_cast<float>(ctx->app->width);
+        h = static_cast<float>(ctx->app->height);
+      }
+    }
+    fontScale_ = (std::min)(w / kDesignW, h / kDesignH);
+    if (fontScale_ <= 0.0f) fontScale_ = 1.0f;
+
+    auto load = [&](const std::string &path, float designPx, uint32_t atlas) {
+      const int handle = RC::LoadFont(path, std::round(designPx * fontScale_), atlas);
+      if (handle < 0) {
+        Log::Print("[ResultScreenScript] failed to load font: " + path);
+      }
+      return handle;
+    };
+    // すべて同じフォントファイル（Title の 3D 文字と同じ）をサイズ違いでロードする
+    headingFont_ = load(fontPath, kHeadingPx, 1024);
+    numberFont_ = load(fontPath, kNumberPx, 2048);
+    valueFont_ = load(fontPath, kValuePx, 1024);
+    buttonFont_ = load(fontPath, kButtonPx, 1024);
+    labelFont_ = load(fontPath, kLabelPx, 1024);
+
+    anim_ = animate ? 0.0f : kAnimEnd;
+    selected_ = kRetry;
+    decided_ = false;
+
+    if (Input *in = Input::GetInstance()) {
+      in->GetGameMousePosition(lastMouseX_, lastMouseY_);
+    }
+  }
+
+  void OnUpdate(float deltaTime) override {
+    if (deltaTime <= 0.0f) return; // 一時停止・編集中は演出も入力も止める
+    pulse_ += deltaTime;
+    if (anim_ < kAnimEnd) anim_ = (std::min)(anim_ + deltaTime, kAnimEnd);
+    if (bump_ > 0.0f) bump_ = (std::max)(0.0f, bump_ - deltaTime / kBumpTime);
+
+    if (!decided_) {
+      HandleInput();
+    }
+  }
+
+  void OnDestroy() override {
+    auto unload = [](int &handle) {
+      if (handle >= 0) {
+        RC::UnloadFont(handle);
+        handle = -1;
+      }
+    };
+    unload(headingFont_);
+    unload(numberFont_);
+    unload(valueFont_);
+    unload(buttonFont_);
+    unload(labelFont_);
+  }
+
+  void OnRender() override {
+    float screenW = 1280.0f;
+    float screenH = 720.0f;
+    auto &rc = RC::GetRenderContext();
+    if (rc.Ctx() && rc.Ctx()->app) {
+      screenW = static_cast<float>(rc.Ctx()->app->width);
+      screenH = static_cast<float>(rc.Ctx()->app->height);
+    }
+    // 1280x720 基準のレイアウトを等倍スケールして中央に置く
+    L_.s = (std::min)(screenW / kDesignW, screenH / kDesignH);
+    if (L_.s <= 0.0f) L_.s = 1.0f;
+    L_.ox = (screenW - kDesignW * L_.s) * 0.5f;
+    L_.oy = (screenH - kDesignH * L_.s) * 0.5f;
+    // フォントはロード時のスケールで作ってあるので、差分だけ DrawString の scale で吸収する
+    L_.fs = (fontScale_ > 0.0f) ? (L_.s / fontScale_) : 1.0f;
+
+    const GameSession &session = GameSession::Get();
+
+    // 水面全体を少し沈めて文字を読みやすくする
+    if (dimAlpha > 0.0f) {
+      RC::DrawBox({0.0f, 0.0f}, {screenW, screenH}, {0.02f, 0.03f, 0.06f, dimAlpha});
+    }
+
+    DrawPanel();
+    DrawHeading(session);
+    DrawWaypointBlock(session);
+    DrawStatRows(session);
+    DrawButtons();
+    if (showHint) DrawHint();
+  }
+
+private:
+  enum Choice { kRetry = 0, kTitle = 1, kChoiceCount = 2 };
+
+  // ------------------------------------------------------------------
+  // レイアウト（1280x720 基準）
+  // ------------------------------------------------------------------
+  static constexpr float kDesignW = 1280.0f;
+  static constexpr float kDesignH = 720.0f;
+
+  // パネル
+  static constexpr float kPanelL = 250.0f;
+  static constexpr float kPanelT = 150.0f;
+  static constexpr float kPanelR = 1030.0f;
+  static constexpr float kPanelPad = 48.0f;
+  static constexpr float kRowsTop = 250.0f;  ///< パネル上端から成績の行が始まるまで
+  static constexpr float kRowH = 46.0f;      ///< 成績 1 行の高さ
+  static constexpr float kButtonGap = 72.0f; ///< パネル下端からボタン中心までの距離
+  /// @brief パネル下端（行数で伸び縮みする）
+  float PanelBottom() const {
+    const float rows = showScore ? 3.0f : 2.0f;
+    return kPanelT + kRowsTop + kRowH * rows + 18.0f;
+  }
+
+  // フォント（基準 px）
+  static constexpr float kHeadingPx = 44.0f; ///< 見出し・％記号
+  static constexpr float kNumberPx = 84.0f;  ///< 達成率の大きな数字
+  static constexpr float kValuePx = 32.0f;   ///< 撃破数・被ダメージの数字
+  static constexpr float kButtonPx = 28.0f;  ///< ボタン
+  static constexpr float kLabelPx = 22.0f;   ///< ラベル・補足
+
+  // 演出タイムライン（秒）
+  static constexpr float kCountDuration = 1.1f;  ///< ％のカウントアップとゲージ
+  static constexpr float kRowStart = 0.5f;       ///< 1 行目が出始める時刻
+  static constexpr float kRowStep = 0.25f;       ///< 行ごとの遅れ
+  static constexpr float kRowFade = 0.3f;        ///< 行のフェード時間
+  static constexpr float kButtonStart = 1.3f;    ///< ボタンが出始める時刻
+  static constexpr float kButtonFade = 0.3f;
+  static constexpr float kAnimEnd = 1.7f;        ///< ここまで進んだら演出終了
+  static constexpr float kPulsePeriod = 1.4f;    ///< 選択中ボタンの明滅周期
+  static constexpr float kBumpTime = 0.16f;      ///< 選択切替時の弾み
+  static constexpr SHORT kStickThreshold = 16000;
+
+  // 色
+  static constexpr RC::Vector4 kInk = {0.95f, 0.93f, 0.87f, 1.0f};     ///< 生成り（文字）
+  static constexpr RC::Vector4 kMuted = {0.66f, 0.70f, 0.76f, 1.0f};   ///< 鼠（補足文字）
+  static constexpr RC::Vector4 kDim = {0.40f, 0.44f, 0.50f, 1.0f};     ///< 未到達・非選択
+  static constexpr RC::Vector4 kShu = {0.80f, 0.19f, 0.13f, 1.0f};     ///< 朱（被弾・未クリアの一言）
+  static constexpr RC::Vector4 kGold = {0.88f, 0.74f, 0.38f, 1.0f};    ///< 金（終点到達の芯）
+
+  struct Layout {
+    float s = 1.0f;  ///< 基準 → 実ピクセルの倍率
+    float ox = 0.0f; ///< 左右の余白（レターボックス）
+    float oy = 0.0f; ///< 上下の余白
+    float fs = 1.0f; ///< DrawString に渡す補正スケール
+  };
+  Layout L_;
+
+  float X(float x) const { return L_.ox + x * L_.s; }
+  float Y(float y) const { return L_.oy + y * L_.s; }
+  float S(float v) const { return v * L_.s; }
+  RC::Vector2 P(float x, float y) const { return {X(x), Y(y)}; }
+
+  static RC::Vector4 WithAlpha(const RC::Vector4 &c, float a) { return {c.x, c.y, c.z, c.w * a}; }
+  static float Clamp01(float v) { return (std::min)(1.0f, (std::max)(0.0f, v)); }
+  static float EaseOutCubic(float t) {
+    t = Clamp01(t);
+    const float u = 1.0f - t;
+    return 1.0f - u * u * u;
+  }
+  /// @brief start から dur 秒かけて 0→1 になる進行度
+  float Phase(float start, float dur) const {
+    if (dur <= 0.0f) return anim_ >= start ? 1.0f : 0.0f;
+    return Clamp01((anim_ - start) / dur);
+  }
+  bool InputReady() const { return anim_ >= kButtonStart; }
+
+  /// @brief 文字を 1px の影付きで描く（水面の上でも読めるように）
+  void Text(int font, const std::string &text, float x, float y, const RC::Vector4 &color,
+            TextAlign align = TextAlign::Left, float scale = 1.0f) const {
+    if (font < 0 || text.empty()) return;
+    const float sc = scale * L_.fs;
+    const float sh = (std::max)(1.0f, S(1.0f));
+    RC::DrawString(font, text, {x + sh, y + sh}, {0.0f, 0.02f, 0.05f, 0.55f * color.w}, sc, align);
+    RC::DrawString(font, text, {x, y}, color, sc, align);
+  }
+  float LineH(int font, float scale = 1.0f) const {
+    return (font >= 0) ? RC::GetFontLineHeight(font, scale * L_.fs) : S(kLabelPx) * scale;
+  }
+  float TextW(int font, const std::string &text, float scale = 1.0f) const {
+    return (font >= 0) ? RC::MeasureString(font, text, scale * L_.fs).x : 0.0f;
+  }
+
+  // ------------------------------------------------------------------
+  // 描画
+  // ------------------------------------------------------------------
+
+  /// @brief 墨のパネル（二重の細枠 ＋ 四隅の飾り）
+  void DrawPanel() const {
+    const RC::Vector2 tl = P(kPanelL, kPanelT);
+    const RC::Vector2 br = P(kPanelR, PanelBottom());
+    RC::DrawBox(tl, br, panelColor);
+
+    // 内側と外側の細い枠。和綴じの表紙のように 2 本引く
+    const float in1 = S(6.0f), in2 = S(11.0f);
+    RC::DrawBox({tl.x + in1, tl.y + in1}, {br.x - in1, br.y - in1}, WithAlpha(kInk, 0.55f), kWire);
+    RC::DrawBox({tl.x + in2, tl.y + in2}, {br.x - in2, br.y - in2}, WithAlpha(kInk, 0.22f), kWire);
+
+    // 四隅の飾り（L 字）
+    const float arm = S(22.0f);
+    const float th = (std::max)(1.0f, S(2.0f));
+    const RC::Vector4 c = WithAlpha(accentColor, 0.9f);
+    const float o = S(2.0f);
+    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o + arm, tl.y + o}, c, th);
+    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o, tl.y + o + arm}, c, th);
+    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o - arm, tl.y + o}, c, th);
+    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o, tl.y + o + arm}, c, th);
+    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o + arm, br.y - o}, c, th);
+    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o, br.y - o - arm}, c, th);
+    RC::DrawLine({br.x - o, br.y - o}, {br.x - o - arm, br.y - o}, c, th);
+    RC::DrawLine({br.x - o, br.y - o}, {br.x - o, br.y - o - arm}, c, th);
+  }
+
+  /// @brief 見出し（戦果）と欧文、クリア／未クリアの一言。パネルの上に置く
+  void DrawHeading(const GameSession &session) const {
+    const float cx = X(kDesignW * 0.5f);
+
+    // 見出し：左右に細い罫を伸ばす
+    const float headTop = Y(58.0f);
+    const float headH = LineH(headingFont_);
+    Text(headingFont_, titleText, cx, headTop, kInk, TextAlign::Center);
+    const float halfW = TextW(headingFont_, titleText) * 0.5f + S(28.0f);
+    const float ruleY = headTop + headH * 0.56f;
+    const float ruleLen = S(150.0f);
+    RC::DrawLine({cx - halfW - ruleLen, ruleY}, {cx - halfW, ruleY}, WithAlpha(kInk, 0.5f),
+                 (std::max)(1.0f, S(1.0f)));
+    RC::DrawLine({cx + halfW, ruleY}, {cx + halfW + ruleLen, ruleY}, WithAlpha(kInk, 0.5f),
+                 (std::max)(1.0f, S(1.0f)));
+    // 罫の外端に小さな点
+    RC::DrawCircle({cx - halfW - ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
+    RC::DrawCircle({cx + halfW + ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
+
+    // 欧文（小さく、控えめに）。ゲームオーバー時は GAME OVER に差し替える
+    const bool cleared = session.IsCleared();
+    const std::string &subtitle = cleared ? subtitleText : failSubtitleText;
+    if (!subtitle.empty()) {
+      Text(labelFont_, subtitle, cx, headTop + headH - S(2.0f),
+           cleared ? WithAlpha(kMuted, 0.85f) : WithAlpha(kShu, 0.95f), TextAlign::Center, 0.75f);
+    }
+
+    // クリア／未クリアの一言（パネル内の最上段）
+    const std::string &line = cleared ? clearText : failText;
+    const RC::Vector4 col = cleared ? accentColor : WithAlpha(kShu, 0.9f);
+    Text(labelFont_, line, cx, Y(kPanelT + 22.0f), col, TextAlign::Center, 1.05f);
+  }
+
+  /// @brief ウェイポイント達成率：ラベル・大きな％・通過数・航路ゲージ
+  void DrawWaypointBlock(const GameSession &session) const {
+    const float left = X(kPanelL + kPanelPad);
+    const float right = X(kPanelR - kPanelPad);
+    const float t = EaseOutCubic(Phase(0.0f, kCountDuration));
+
+    const int total = session.WaypointsTotal();
+    const int reached = (std::min)(session.WaypointsReached(), (std::max)(total, 0));
+    const float rate = session.WaypointRate();
+
+    // ラベル
+    const float labelY = Y(kPanelT + 62.0f);
+    Text(labelFont_, "航路達成率", left, labelY, accentColor);
+    Text(labelFont_, "WAYPOINT", left + TextW(labelFont_, "航路達成率") + S(14.0f),
+         labelY + S(4.0f), WithAlpha(kMuted, 0.7f), TextAlign::Left, 0.7f);
+
+    // 大きな％（カウントアップ）
+    const int shown = static_cast<int>(std::floor(rate * 100.0f * t + 0.5f));
+    const float numY = Y(kPanelT + 94.0f);
+    const std::string num = std::to_string(shown);
+    Text(numberFont_, num, left, numY, kInk);
+    const float numW = TextW(numberFont_, num);
+    const float numH = LineH(numberFont_);
+    Text(headingFont_, "%", left + numW + S(6.0f), numY + numH - LineH(headingFont_) - S(10.0f),
+         WithAlpha(kInk, 0.9f));
+
+    // 通過数（％の右に添える）
+    {
+      std::string sub;
+      if (total > 0) {
+        const int shownReached = static_cast<int>(std::floor(static_cast<float>(reached) * t + 0.5f));
+        sub = "通過 " + std::to_string(shownReached) + " / " + std::to_string(total) + " 地点";
+      } else {
+        sub = session.IsCleared() ? "航路の記録なし（クリア扱い）" : "航路の記録なし";
+      }
+      const float subX = left + numW + S(6.0f) + TextW(headingFont_, "%") + S(28.0f);
+      Text(labelFont_, sub, subX, numY + numH - LineH(labelFont_) - S(16.0f), kMuted);
+    }
+
+    // 航路ゲージ：出発点 → 各地点 → 終点。到達したところまで浅葱で塗る
+    const float gy = Y(kPanelT + 212.0f);
+    const float gx0 = left + S(8.0f);
+    const float gx1 = right - S(8.0f);
+    const float thin = (std::max)(1.0f, S(3.0f));
+    const float thick = (std::max)(1.0f, S(4.0f));
+    RC::DrawLine({gx0, gy}, {gx1, gy}, WithAlpha(kDim, 0.55f), thin);
+
+    const float fill = (total > 0) ? (static_cast<float>(reached) / static_cast<float>(total)) * t
+                                   : rate * t;
+    if (fill > 0.0f) {
+      RC::DrawLine({gx0, gy}, {gx0 + (gx1 - gx0) * fill, gy}, accentColor, thick);
+    }
+
+    // 出発点（小さな中空の丸）
+    RC::DrawCircle({gx0, gy}, S(5.0f), WithAlpha(kInk, 0.9f));
+    RC::DrawCircle({gx0, gy}, S(2.5f), panelColorOpaque());
+
+    // 地点。多すぎるときは丸を間引く（線の塗りだけで割合は分かる）
+    if (total > 0) {
+      const int maxDots = 24;
+      const int step = (total > maxDots) ? ((total + maxDots - 1) / maxDots) : 1;
+      for (int i = 0; i < total; ++i) {
+        const bool last = (i == total - 1);
+        if (!last && (i % step) != 0) continue;
+        const float pos = static_cast<float>(i + 1) / static_cast<float>(total);
+        const float dx = gx0 + (gx1 - gx0) * pos;
+        const bool lit = (i < reached) && (pos <= fill + 1e-4f);
+        if (last) {
+          // 終点：ひと回り大きく、到達していれば金色の芯を入れる
+          RC::DrawCircle({dx, gy}, S(9.0f), lit ? kInk : WithAlpha(kDim, 0.9f));
+          RC::DrawCircle({dx, gy}, S(5.5f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
+          if (lit) RC::DrawCircle({dx, gy}, S(2.5f), kGold);
+        } else {
+          RC::DrawCircle({dx, gy}, S(6.0f), lit ? kInk : WithAlpha(kDim, 0.8f));
+          RC::DrawCircle({dx, gy}, S(3.0f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
+        }
+      }
+    }
+    // 到達点のいちばん先に、いま塗っている先端の光
+    if (fill > 0.0f && fill < 1.0f) {
+      RC::DrawCircle({gx0 + (gx1 - gx0) * fill, gy}, S(4.0f), WithAlpha(kInk, 0.9f));
+    }
+  }
+
+  /// @brief 撃破数・被ダメージ（・得点）の行
+  void DrawStatRows(const GameSession &session) const {
+    const float left = X(kPanelL + kPanelPad);
+    const float right = X(kPanelR - kPanelPad);
+    const float rowH = S(kRowH);
+    float rowY = Y(kPanelT + kRowsTop);
+    int rowIndex = 0;
+
+    auto rowAlpha = [&](int index) {
+      return EaseOutCubic(Phase(kRowStart + kRowStep * static_cast<float>(index), kRowFade));
+    };
+
+    auto drawRule = [&](float y, float a) {
+      RC::DrawLine({left, y}, {right, y}, WithAlpha(kInk, 0.18f * a), (std::max)(1.0f, S(1.0f)));
+    };
+
+    // 行のラベル（和文 ＋ 小さな欧文）を左に置く
+    auto drawLabel = [&](const std::string &jp, const std::string &en, float y, float a) {
+      Text(labelFont_, jp, left, y, WithAlpha(kInk, a));
+      Text(labelFont_, en, left + TextW(labelFont_, jp) + S(14.0f), y + S(4.0f),
+           WithAlpha(kMuted, 0.7f * a), TextAlign::Left, 0.7f);
+    };
+    // 行の数値を右端に置き、その左端の x を返す（単位やコマを続けて置くため）
+    const float valueY = (rowH - LineH(valueFont_)) * 0.5f;
+    auto drawValue = [&](const std::string &value, float rightX, float y, const RC::Vector4 &color,
+                         float a) {
+      Text(valueFont_, value, rightX, y + valueY, WithAlpha(color, a), TextAlign::Right);
+      return rightX - TextW(valueFont_, value);
+    };
+
+    // --- 撃破数 ---
+    {
+      const float a = rowAlpha(rowIndex);
+      const float ty = rowY + (rowH - LineH(labelFont_)) * 0.5f;
+      drawLabel("撃破数", "DEFEATED", ty, a);
+      const std::string unit = "体";
+      const float unitW = TextW(labelFont_, unit);
+      Text(labelFont_, unit, right, ty, WithAlpha(kMuted, a), TextAlign::Right);
+      drawValue(std::to_string(session.EnemiesDefeated()), right - unitW - S(8.0f), rowY, kInk, a);
+      drawRule(rowY + rowH, a);
+      rowY += rowH;
+      ++rowIndex;
+    }
+
+    // --- 被ダメージ ---
+    {
+      const float a = rowAlpha(rowIndex);
+      const float ty = rowY + (rowH - LineH(labelFont_)) * 0.5f;
+      drawLabel("被ダメージ", "DAMAGE", ty, a);
+
+      const int damage = session.DamageTaken();
+      const int maxHp = session.PlayerMaxHp();
+      const float valueLeft =
+          drawValue(std::to_string(damage), right, rowY, damage > 0 ? kInk : kMuted, a);
+
+      // HP のコマ：残った分は浅葱、削られた分は朱。maxHp が分からなければ出さない
+      if (maxHp > 0 && maxHp <= 40) {
+        const float pipW = S(12.0f), pipH = S(16.0f), gap = S(4.0f);
+        const int lost = (std::min)(damage, maxHp);
+        float px = valueLeft - S(20.0f) - (pipW + gap) * static_cast<float>(maxHp) + gap;
+        const float py = rowY + (rowH - pipH) * 0.5f;
+        for (int i = 0; i < maxHp; ++i) {
+          const bool remain = i < (maxHp - lost);
+          const RC::Vector4 c = remain ? WithAlpha(accentColor, 0.95f * a) : WithAlpha(kShu, 0.95f * a);
+          RC::DrawBox({px, py}, {px + pipW, py + pipH}, c);
+          if (!remain) {
+            // 削られたコマは中を抜いて「欠け」に見せる
+            RC::DrawBox({px + S(3.0f), py + S(3.0f)}, {px + pipW - S(3.0f), py + pipH - S(3.0f)},
+                        WithAlpha(panelColorOpaque(), a));
+          }
+          px += pipW + gap;
+        }
+      }
+      drawRule(rowY + rowH, a);
+      rowY += rowH;
+      ++rowIndex;
+    }
+
+    // --- 得点（任意）---
+    if (showScore) {
+      const float a = rowAlpha(rowIndex);
+      const float ty = rowY + (rowH - LineH(labelFont_)) * 0.5f;
+      drawLabel("得点", "SCORE", ty, a);
+      drawValue(std::to_string(session.Score()), right, rowY, kInk, a);
+      drawRule(rowY + rowH, a);
+      rowY += rowH;
+      ++rowIndex;
+    }
+  }
+
+  /// @brief ボタンの矩形（基準座標）
+  void ButtonRect(int index, float &l, float &t, float &r, float &b) const {
+    const float w = 240.0f, h = 54.0f, gap = 56.0f;
+    const float cx = kDesignW * 0.5f + (index == kRetry ? -1.0f : 1.0f) * (w + gap) * 0.5f;
+    const float cy = PanelBottom() + kButtonGap; // パネルの丈に合わせて追従する
+    l = cx - w * 0.5f;
+    r = cx + w * 0.5f;
+    t = cy - h * 0.5f;
+    b = cy + h * 0.5f;
+  }
+
+  /// @brief 「もう一度」「タイトルへ」
+  void DrawButtons() const {
+    const float a = EaseOutCubic(Phase(kButtonStart, kButtonFade));
+    if (a <= 0.0f) return;
+
+    const float pulse = 0.5f + 0.5f * std::sin(pulse_ * (6.28318530718f / kPulsePeriod));
+    for (int i = 0; i < kChoiceCount; ++i) {
+      float l, t, r, b;
+      ButtonRect(i, l, t, r, b);
+      const bool sel = (i == selected_);
+
+      // 選択切替の瞬間だけ少し膨らむ
+      if (sel && bump_ > 0.0f) {
+        const float k = 1.0f + 0.05f * bump_;
+        const float cx = (l + r) * 0.5f, cy = (t + b) * 0.5f;
+        l = cx + (l - cx) * k;
+        r = cx + (r - cx) * k;
+        t = cy + (t - cy) * k;
+        b = cy + (b - cy) * k;
+      }
+      const RC::Vector2 tl = P(l, t);
+      const RC::Vector2 br = P(r, b);
+
+      if (sel) {
+        RC::DrawBox(tl, br, WithAlpha(selectedColor, a));
+        const float borderA = (0.6f + 0.4f * pulse) * a;
+        RC::DrawBox(tl, br, WithAlpha(kInk, borderA), kWire);
+        const float o = S(4.0f);
+        RC::DrawBox({tl.x - o, tl.y - o}, {br.x + o, br.y + o}, WithAlpha(accentColor, 0.5f * borderA),
+                    kWire);
+        // 左端の三角マーカー
+        const float mx = tl.x - S(18.0f);
+        const float my = (tl.y + br.y) * 0.5f;
+        RC::DrawTriangle({mx - S(6.0f), my - S(7.0f)}, {mx + S(6.0f), my}, {mx - S(6.0f), my + S(7.0f)},
+                         WithAlpha(accentColor, a));
+      } else {
+        RC::DrawBox(tl, br, WithAlpha(panelColor, a));
+        RC::DrawBox(tl, br, WithAlpha(kDim, 0.8f * a), kWire);
+      }
+
+      const std::string &label = (i == kRetry) ? retryLabel : titleLabel;
+      const float lh = LineH(buttonFont_);
+      Text(buttonFont_, label, (tl.x + br.x) * 0.5f, (tl.y + br.y) * 0.5f - lh * 0.5f,
+           WithAlpha(sel ? kInk : kMuted, a), TextAlign::Center);
+    }
+  }
+
+  /// @brief 操作ヒント（画面下）
+  void DrawHint() const {
+    const float a = EaseOutCubic(Phase(kButtonStart, kButtonFade));
+    if (a <= 0.0f) return;
+    const char *text = InputReady() ? "←→ 選択　　SPACE / Enter 決定" : "";
+    Text(labelFont_, text, X(kDesignW * 0.5f), Y(PanelBottom() + kButtonGap + 54.0f),
+         WithAlpha(kMuted, 0.8f * a), TextAlign::Center, 0.85f);
+  }
+
+  RC::Vector4 panelColorOpaque() const { return {panelColor.x, panelColor.y, panelColor.z, 1.0f}; }
+
+  // ------------------------------------------------------------------
+  // 入力
+  // ------------------------------------------------------------------
+
+  void HandleInput() {
+    SceneContext *ctx = GetSceneContext();
+    if (!ctx || !ctx->input) return;
+    Input *in = ctx->input;
+
+    // 決定系の入力をまとめる（演出中はスキップに使う）
+    bool confirm = in->IsKeyTrigger(DIK_SPACE) || in->IsKeyTrigger(DIK_RETURN);
+    if (in->IsXInputConnected() && in->IsXInputButtonTrigger(XINPUT_GAMEPAD_A)) confirm = true;
+
+    if (!InputReady()) {
+      if (confirm || in->IsMouseTrigger(0)) {
+        // 演出をスキップして確定表示にする（このフレームの押下は決定に使わない）
+        anim_ = kAnimEnd;
+      }
+      return;
+    }
+
+    // 左右（上下でも切り替えられるようにしておく）
+    int move = 0;
+    if (in->IsKeyTrigger(DIK_LEFT) || in->IsKeyTrigger(DIK_A) || in->IsKeyTrigger(DIK_UP) ||
+        in->IsKeyTrigger(DIK_W)) {
+      move -= 1;
+    }
+    if (in->IsKeyTrigger(DIK_RIGHT) || in->IsKeyTrigger(DIK_D) || in->IsKeyTrigger(DIK_DOWN) ||
+        in->IsKeyTrigger(DIK_S)) {
+      move += 1;
+    }
+    if (in->IsXInputConnected()) {
+      if (in->IsXInputButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
+          in->IsXInputButtonTrigger(XINPUT_GAMEPAD_DPAD_UP)) {
+        move -= 1;
+      }
+      if (in->IsXInputButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT) ||
+          in->IsXInputButtonTrigger(XINPUT_GAMEPAD_DPAD_DOWN)) {
+        move += 1;
+      }
+      const SHORT lx = in->GetXInputThumbLX();
+      int stickDir = 0;
+      if (lx > kStickThreshold) stickDir = 1;
+      else if (lx < -kStickThreshold) stickDir = -1;
+      if (stickDir != 0 && stickDir != prevStickDir_) move += stickDir;
+      prevStickDir_ = stickDir;
+    }
+
+    // マウス：動かしたときだけホバーで選択を移す（キー操作を邪魔しない）
+    float mx = lastMouseX_, my = lastMouseY_;
+    in->GetGameMousePosition(mx, my);
+    const bool mouseMoved = (std::fabs(mx - lastMouseX_) > 0.5f || std::fabs(my - lastMouseY_) > 0.5f);
+    lastMouseX_ = mx;
+    lastMouseY_ = my;
+    const int hovered = HitTestButtons(mx, my);
+    if (mouseMoved && hovered >= 0 && hovered != selected_) {
+      SetSelected(hovered);
+      move = 0;
+    }
+    if (in->IsMouseTrigger(0) && hovered >= 0) {
+      SetSelected(hovered);
+      confirm = true;
+    }
+
+    if (move != 0) {
+      SetSelected((selected_ + move + kChoiceCount) % kChoiceCount);
+    }
+
+    if (!confirm) return;
+    const std::string &target = (selected_ == kRetry) ? retryScene : titleScene;
+    if (RequestSceneChange(target)) {
+      decided_ = true;
+      Log::Print("[ResultScreenScript] " + std::string(selected_ == kRetry ? "retry" : "title") +
+                 " -> " + target);
+    } else {
+      Log::Print("[ResultScreenScript] scene change refused: " + target);
+    }
+  }
+
+  void SetSelected(int index) {
+    if (index == selected_) return;
+    selected_ = index;
+    pulse_ = 0.0f;
+    bump_ = 1.0f;
+  }
+
+  /// @brief マウス座標（ゲーム解像度基準）がどのボタンの上か。無ければ -1
+  int HitTestButtons(float mx, float my) const {
+    for (int i = 0; i < kChoiceCount; ++i) {
+      float l, t, r, b;
+      ButtonRect(i, l, t, r, b);
+      if (mx >= X(l) && mx <= X(r) && my >= Y(t) && my <= Y(b)) return i;
+    }
+    return -1;
+  }
+
+  // ------------------------------------------------------------------
+  // 状態
+  // ------------------------------------------------------------------
+  int headingFont_ = -1;
+  int numberFont_ = -1;
+  int valueFont_ = -1;
+  int buttonFont_ = -1;
+  int labelFont_ = -1;
+  float fontScale_ = 1.0f;
+
+  float anim_ = 0.0f;
+  float pulse_ = 0.0f;
+  float bump_ = 0.0f;
+  bool decided_ = false;
+  int selected_ = kRetry;
+  int prevStickDir_ = 0;
+  float lastMouseX_ = 0.0f;
+  float lastMouseY_ = 0.0f;
+};
+
+REGISTER_SCRIPT(ResultScreenScript)

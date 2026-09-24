@@ -2,7 +2,7 @@
 #include "RC.h"
 #include "SceneManager.h"
 #include "Audio/AudioEngine.h"
-#include "../Editor/VerifyPanel.h"
+#include "../Editor/DebugBridge.h"
 #include <cassert>
 #include <chrono>
 #include <format>
@@ -121,9 +121,9 @@ bool App::Init() {
   // Game (Initial Scene Load)
   game_.Init(sceneCtx_);
 
-  // 実装確認パネルからシーンを飛ばせるようにする。
+  // 撮影モード（F9）からシーンを飛ばせるようにする。
   // Scene からは SceneManager へ辿れないため、ここで一度だけ口を渡す。
-  VerifyPanel::SetSceneRequest(
+  DebugBridge::SetSceneRequest(
       [this](const std::string &name) { game_.RequestChange(name); });
 
   auto totalEnd = std::chrono::high_resolution_clock::now();

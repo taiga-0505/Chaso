@@ -1,6 +1,5 @@
 #include "EditorManager.h"
 #include "CaptureMode.h"
-#include "VerifyPanel.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/ImGuizmo.h"
@@ -644,7 +643,6 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
       ImGui::MenuItem("Environment Settings", nullptr, &showEnvironmentWindow_);
       ImGui::MenuItem("Post Effect Settings", nullptr, &showPostEffectWindow_);
       ImGui::Separator();
-      ImGui::MenuItem("実装確認 (Verify)", nullptr, &showVerifyWindow_);
       if (ImGui::MenuItem("撮影モード (F9)")) {
         CaptureMode::SetActive(true);
       }
@@ -973,8 +971,6 @@ void EditorManager::SetupDockingLayout() {
   ImGui::DockBuilderDockWindow("Inspector", dock_id_right);
   ImGui::DockBuilderDockWindow("Content Browser", dock_id_bottom);
   ImGui::DockBuilderDockWindow("Console", dock_id_bottom);
-  // 確認パネルは Inspector と同じ右側へ。見ながら値を動かす使い方になるため。
-  ImGui::DockBuilderDockWindow("実装確認 (Verify)", dock_id_right);
 
   ImGui::DockBuilderFinish(dockspace_id);
 #endif
@@ -4098,11 +4094,6 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
     }
   }
 
-  // === 実装確認 (Verify) パネル ===
-  if (showVerifyWindow_) {
-    VerifyPanel::Draw(&showVerifyWindow_, currentScene, core);
-  }
-
   // === Screenshot Pop-out ===
   if (core) {
     ScreenCapture::DrawImGui(deltaTime, core);
@@ -4176,10 +4167,6 @@ void EditorManager::SaveConfig() {
   j["showRenderQueue"] = showRenderQueue_;
   j["showDemoWindow"] = showDemoWindow_;
   j["showParticleEditor"] = showParticleEditor_;
-  j["showVerifyWindow"] = showVerifyWindow_;
-
-  // チェックリストの状態は別ファイルへ（項目ごとのメモを持つため）
-  VerifyPanel::SaveChecklist();
 
   std::ofstream ofs("../project/EditorConfig.json");
   if (ofs) {
@@ -4197,7 +4184,6 @@ void EditorManager::LoadConfig() {
       if (j.contains("showRenderQueue")) showRenderQueue_ = j["showRenderQueue"];
       if (j.contains("showDemoWindow")) showDemoWindow_ = j["showDemoWindow"];
       if (j.contains("showParticleEditor")) showParticleEditor_ = j["showParticleEditor"];
-      if (j.contains("showVerifyWindow")) showVerifyWindow_ = j["showVerifyWindow"];
     } catch (...) {
       Log::Print("[Editor] Failed to parse EditorConfig.json");
     }

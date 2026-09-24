@@ -6,6 +6,7 @@
 #include "Input/Input.h"
 #include "Scene.h"
 #include "RenderCommon.h"
+#include "Application/Game/Framework/GameSession.h"
 #include <vector>
 #include <string>
 #include <random>
@@ -160,9 +161,45 @@ public:
     /// @brief ウェーブのクリア待ちで停止しているか（0 なら待っていない）
     int WaitingWaveId() const { return waitingWaveId_; }
 
+    /// @brief このラップで到達したウェイポイントの数（リザルトの達成率の分子）
+    int ReachedCount() const { return reachedCount_; }
+
+    /// @brief いま向かっている地点から終点までに、あと何地点通る予定か
+    /// @details 分岐は「無条件（always）の分岐があればそれ、無ければ直進」とみなして数える。
+    ///          条件付き分岐の行き先は走ってみるまで分からないので、本線を進む前提で見積もり、
+    ///          実際に分岐した時点で数え直す（達成率が途中で少し跳ねるのは許容する）。
+    ///          終点（isEnd）か配列の末尾で止める。ループ検出のために訪問済みを覚えておく。
+    int RemainingCount() const {
+        const int n = static_cast<int>(waypoints.size());
+        if (n == 0) return 0;
+        int index = currentWaypointIndex;
+        if (index < 0 || index >= n) return 0; // 終点到達後は index が配列の外に出ている
+
+        std::vector<char> visited(static_cast<size_t>(n), 0);
+        int count = 0;
+        while (index >= 0 && index < n && !visited[static_cast<size_t>(index)]) {
+            visited[static_cast<size_t>(index)] = 1;
+            ++count;
+            const Waypoint& wp = waypoints[static_cast<size_t>(index)];
+            if (wp.isEnd) break;
+
+            int next = index + 1;
+            for (const auto& b : wp.branches) {
+                if (b.condition == BranchCondition::Always &&
+                    b.target >= 0 && b.target < n && b.target != index) {
+                    next = b.target;
+                    break;
+                }
+            }
+            index = next;
+        }
+        return count;
+    }
+
 private:
     float currentWaitTimer = 0.0f;
     std::string lastBranchLog_; ///< 直近に選ばれた分岐（ImGui 表示用）
+    int reachedCount_ = 0;      ///< このラップで到達したウェイポイントの数（達成率用）
 
     // --- A-03 ウェーブ待機の状態 ---
     /// @brief クリアを待っているウェーブ id（0 なら待機していない）
@@ -244,6 +281,7 @@ private:
             if (loop) {
                 currentWaypointIndex = 0; // ループする場合
                 clearedWaves_.clear();    // 次のラップではウェーブをやり直す
+                reachedCount_ = 0;        // 達成率もラップごとに数え直す
             } else {
                 isMoving = false; // 終点に到達して停止
                 NotifyRailFinished();
@@ -467,6 +505,7 @@ protected:
         waitingWaveId_ = 0;
         waveWaypointIndex_ = -1;
         clearedWaves_.clear();
+        reachedCount_ = 0;
     }
 
     void OnUpdate(float deltaTime) override {
@@ -478,6 +517,12 @@ protected:
         if (Entity* self = GetEntity()) {
             self->SetTag("rail_wp", currentWaypointIndex);
         }
+
+        // リザルトの「ウェイポイント達成率」を GameSession へ写す。
+        // 到達数はこのスクリプトのメンバなのでシーンを抜けると失われる。
+        // RailShooterController の score / hp と同じく毎フレーム上書きしておけば、
+        // ゲームオーバーで途中終了しても最後の値が残る。
+        GameSession::Get().SetWaypointProgress(reachedCount_, reachedCount_ + RemainingCount());
 
         if (waypoints.empty()) return;
 
@@ -534,6 +579,7 @@ protected:
             tr->position = targetPos;
 
             const int arrivedIndex = currentWaypointIndex;
+            ++reachedCount_; // 達成率の分子。ウェーブ待機に入っても到達は到達として数える
 
             // ウェーブ地点なら、次の行き先を決める前に止まって決着を待つ。
             // 先に分岐を解決してしまうとウェーブの結果を条件に使えなくなるため、
@@ -610,6 +656,7 @@ public:
             waitingWaveId_ = 0;
             waveWaypointIndex_ = -1;
             clearedWaves_.clear();
+            reachedCount_ = 0;
             railFinishedNotified_ = false;
             isMoving = true;
             if (Entity* self = GetEntity()) self->ClearTag("rail_finished");
