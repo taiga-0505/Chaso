@@ -34,6 +34,7 @@ const char* ToString(PostEffectType type) {
   case PostEffectType::LightShaft:return "LightShaft";
   case PostEffectType::ScreenDroplets:return "ScreenDroplets";
   case PostEffectType::BloodOverlay:return "BloodOverlay";
+  case PostEffectType::InkOverlay:  return "InkOverlay";
   case PostEffectType::None:      return "None";
   default:                        return "Unknown";
   }
@@ -122,6 +123,9 @@ void PostProcess::Initialize(Dx12Core *dxCore,
 
   pipelineBloodOverlay_ = pipelineManager_->Get("bloodoverlay.none");
   assert(pipelineBloodOverlay_ && "Failed to get bloodoverlay pipeline");
+
+  pipelineInkOverlay_ = pipelineManager_->Get("inkoverlay.none");
+  assert(pipelineInkOverlay_ && "Failed to get inkoverlay pipeline");
 
   // CBuffer 初期化
   D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
@@ -537,6 +541,35 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedBloodOverlay_->padding[2] = 0.0f;
     }
   }
+
+  // InkOverlay CBuffer 初期化
+  {
+    D3D12_HEAP_PROPERTIES uploadHeap{D3D12_HEAP_TYPE_UPLOAD};
+    D3D12_RESOURCE_DESC cbDescInk{};
+    cbDescInk.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    cbDescInk.Width = (sizeof(InkOverlayData) + 255) & ~255;
+    cbDescInk.Height = 1;
+    cbDescInk.DepthOrArraySize = 1;
+    cbDescInk.MipLevels = 1;
+    cbDescInk.Format = DXGI_FORMAT_UNKNOWN;
+    cbDescInk.SampleDesc.Count = 1;
+    cbDescInk.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    cbDescInk.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    hr = dxCore_->GetDevice()->CreateCommittedResource(
+        &uploadHeap, D3D12_HEAP_FLAG_NONE, &cbDescInk,
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS(&cbufferInkOverlay_));
+    assert(SUCCEEDED(hr));
+    cbufferInkOverlay_->Map(0, nullptr, reinterpret_cast<void **>(&mappedInkOverlay_));
+
+    if (mappedInkOverlay_) {
+      *mappedInkOverlay_ = InkOverlayData{};
+      mappedInkOverlay_->aspectRatio =
+          (height_ > 0) ? (static_cast<float>(width_) / static_cast<float>(height_)) : 1.777f;
+      for (int i = 0; i < 4; ++i) mappedInkOverlay_->inkColor[i] = inkColor_[i];
+    }
+  }
 }
 
 void PostProcess::Resize(uint32_t width, uint32_t height) {
@@ -549,6 +582,10 @@ void PostProcess::Resize(uint32_t width, uint32_t height) {
   if (mappedBloodOverlay_) {
     // 血の形が縦横に潰れないよう、こちらも同じアスペクト比を流す
     mappedBloodOverlay_->aspectRatio = screenDropletsAspectRatio_;
+  }
+  if (mappedInkOverlay_) {
+    // 墨が縦横に潰れないよう、同じアスペクト比を流す
+    mappedInkOverlay_->aspectRatio = screenDropletsAspectRatio_;
   }
 
   // DepthStencil::Resize は深度リソース自体を作り直すため、
@@ -590,6 +627,10 @@ void PostProcess::UpdateTime(float deltaTime) {
   if (mappedBloodOverlay_) {
     // time は心拍の位相にしか使わない（飛沫パターンは seed 固定でチラつかせない）
     mappedBloodOverlay_->time = randomTime_;
+  }
+  if (mappedInkOverlay_) {
+    // time は艶の揺らぎにしか使わない（墨の形は seed 固定でチラつかせない）
+    mappedInkOverlay_->time = randomTime_;
   }
 }
 
@@ -1132,6 +1173,46 @@ void PostProcess::RerollBloodOverlaySplatter() {
 }
 
 // ============================================================================
+// InkOverlay パラメータ
+// ============================================================================
+
+void PostProcess::SetInkOverlaySplats(const InkSplat *splats, int count) {
+  inkSplatCount_ = std::clamp(count, 0, kMaxInkSplats);
+  if (!splats) inkSplatCount_ = 0;
+  if (!mappedInkOverlay_) return;
+  mappedInkOverlay_->splatCount = inkSplatCount_;
+  for (int i = 0; i < inkSplatCount_; ++i) {
+    const InkSplat &s = splats[i];
+    mappedInkOverlay_->splatA[i][0] = s.centerX;
+    mappedInkOverlay_->splatA[i][1] = s.centerY;
+    mappedInkOverlay_->splatA[i][2] = (std::max)(s.radius, 0.001f);
+    mappedInkOverlay_->splatA[i][3] = std::clamp(s.strength, 0.0f, 1.0f);
+    mappedInkOverlay_->splatB[i][0] = (std::max)(s.age, 0.0f);
+    // [0, 1) に折り返す（大きな値だとシェーダーのハッシュの刻みが粗くなる）
+    mappedInkOverlay_->splatB[i][1] = s.seed - std::floor(s.seed);
+    mappedInkOverlay_->splatB[i][2] = 0.0f;
+    mappedInkOverlay_->splatB[i][3] = 0.0f;
+  }
+}
+
+void PostProcess::SetInkOverlayMurk(float murk) {
+  inkMurk_ = std::clamp(murk, 0.0f, 1.0f);
+  if (mappedInkOverlay_) {
+    mappedInkOverlay_->murk = inkMurk_;
+  }
+}
+
+void PostProcess::SetInkOverlayColor(float r, float g, float b, float opacity) {
+  inkColor_[0] = r;
+  inkColor_[1] = g;
+  inkColor_[2] = b;
+  inkColor_[3] = std::clamp(opacity, 0.0f, 1.0f);
+  if (mappedInkOverlay_) {
+    for (int i = 0; i < 4; ++i) mappedInkOverlay_->inkColor[i] = inkColor_[i];
+  }
+}
+
+// ============================================================================
 void PostProcess::InitDissolveNoiseTextures() {
   if (dissolveNoiseInitialized_) return;
   dissolveNoiseInitialized_ = true;
@@ -1269,6 +1350,8 @@ GraphicsPipeline *PostProcess::GetPipelineForEffect(PostEffectType type) {
     return pipelineScreenDroplets_;
   case PostEffectType::BloodOverlay:
     return pipelineBloodOverlay_;
+  case PostEffectType::InkOverlay:
+    return pipelineInkOverlay_;
   case PostEffectType::None:
   default:
     return pipelineCopy_;
@@ -1429,6 +1512,11 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
   if (effectType == PostEffectType::BloodOverlay) {
     // params[3]: b1 (BloodOverlay CBuffer)
     cmdList->SetGraphicsRootConstantBufferView(3, cbufferBloodOverlay_->GetGPUVirtualAddress());
+  }
+
+  if (effectType == PostEffectType::InkOverlay) {
+    // params[3]: b1 (InkOverlay CBuffer)
+    cmdList->SetGraphicsRootConstantBufferView(3, cbufferInkOverlay_->GetGPUVirtualAddress());
   }
 
   // 全画面三角形（頂点バッファなし、SV_VertexID 使用）
@@ -2101,6 +2189,47 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
       }
       if (ImGui::Button("Reroll Splatter (飛沫を振り直す)")) {
         RerollBloodOverlaySplatter();
+      }
+      ImGui::Unindent();
+    }
+
+    bool inkOverlay = HasEffect(PostEffectType::InkOverlay);
+    if (ImGui::Checkbox("InkOverlay (タコの墨)", &inkOverlay)) {
+      if (inkOverlay) {
+        AddEffect(PostEffectType::InkOverlay);
+      } else {
+        RemoveEffect(PostEffectType::InkOverlay);
+      }
+    }
+    if (inkOverlay) {
+      ImGui::Indent();
+      ImGui::TextDisabled("ゲーム中は InkScreenFx が毎フレーム上書きします");
+      ImGui::Text("Splats: %d / %d", inkSplatCount_, kMaxInkSplats);
+      bool dirty = false;
+      dirty |= ImGui::SliderFloat("Test Strength (強さ)", &inkDebugStrength_, 0.0f, 1.0f);
+      dirty |= ImGui::SliderFloat("Test Age (経過秒・垂れ)", &inkDebugAge_, 0.0f, 6.0f);
+      dirty |= ImGui::SliderFloat("Test Radius (大きさ)", &inkDebugRadius_, 0.05f, 0.8f);
+      dirty |= ImGui::SliderFloat("Test Seed (形)", &inkDebugSeed_, 0.0f, 1.0f);
+      if (ImGui::Button("Show Test Splat (中央に1つ貼る)") || (dirty && inkSplatCount_ == 1)) {
+        InkSplat s{};
+        s.radius = inkDebugRadius_;
+        s.strength = inkDebugStrength_;
+        s.age = inkDebugAge_;
+        s.seed = inkDebugSeed_;
+        SetInkOverlaySplats(&s, 1);
+      }
+      ImGui::SameLine();
+      if (ImGui::Button("Clear")) {
+        SetInkOverlaySplats(nullptr, 0);
+      }
+      if (ImGui::SliderFloat("Murk (画面の濁り)", &inkMurk_, 0.0f, 1.0f)) {
+        SetInkOverlayMurk(inkMurk_);
+      }
+      if (ImGui::ColorEdit3("Ink Color (墨の色)", inkColor_)) {
+        SetInkOverlayColor(inkColor_[0], inkColor_[1], inkColor_[2], inkColor_[3]);
+      }
+      if (ImGui::SliderFloat("Ink Opacity (不透明度)", &inkColor_[3], 0.0f, 1.0f)) {
+        SetInkOverlayColor(inkColor_[0], inkColor_[1], inkColor_[2], inkColor_[3]);
       }
       ImGui::Unindent();
     }

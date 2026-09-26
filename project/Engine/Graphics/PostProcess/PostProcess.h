@@ -34,6 +34,7 @@ enum class PostEffectType {
   LightShaft, ///< 水中の降り注ぐ光（レイマーチ型 volumetric light shaft）
   ScreenDroplets, ///< レンズ水滴（水上・水中の遷移や着水時にレンズへ付いて流れる水滴）
   BloodOverlay, ///< 被弾・瀕死のときに画面の周辺へ付く血（手続き型。テクスチャ不要）
+  InkOverlay,   ///< タコの墨がレンズに貼り付いて視界を塞ぐ（手続き型。テクスチャ不要）
 };
 
 /// @class PostProcess
@@ -319,6 +320,35 @@ public:
   void SetScreenDropletsScale(float scale);
 
   // ===========================
+  // InkOverlay パラメータ
+  // ===========================
+
+  /// @brief 同時に貼れる墨の最大数（HLSL 側 kMaxSplats と揃えること）
+  static constexpr int kMaxInkSplats = 6;
+
+  /// @brief 墨 1 個ぶんの状態（ホスト側で寿命を管理して毎フレーム流し込む）
+  struct InkSplat {
+    float centerX = 0.5f;  ///< 中心 UV
+    float centerY = 0.5f;
+    float radius = 0.3f;   ///< 半径（画面の高さを 1 とした長さ）
+    float strength = 1.0f; ///< 強さ 0..1。下げると縁から崩れて縮む
+    float age = 0.0f;      ///< 貼り付いてからの秒数（垂れ筋が伸びる）
+    float seed = 0.0f;     ///< 形の種 0..1
+  };
+
+  /// @brief 貼り付いている墨をまとめて設定する（count=0 で全消去）
+  void SetInkOverlaySplats(const InkSplat *splats, int count);
+
+  /// @brief 画面全体の濁り（墨が水に溶けた感じ）0.0 ~ 1.0
+  void SetInkOverlayMurk(float murk);
+
+  /// @brief 墨の色と、最も濃いところの不透明度
+  void SetInkOverlayColor(float r, float g, float b, float opacity);
+
+  /// @brief 貼り付いている墨の数（0 ならエフェクトを外してよい）
+  int GetInkOverlaySplatCount() const { return inkSplatCount_; }
+
+  // ===========================
   // BloodOverlay パラメータ
   // ===========================
 
@@ -451,6 +481,7 @@ private:
   GraphicsPipeline *pipelineLightShaft_ = nullptr;
   GraphicsPipeline *pipelineScreenDroplets_ = nullptr;
   GraphicsPipeline *pipelineBloodOverlay_ = nullptr;
+  GraphicsPipeline *pipelineInkOverlay_ = nullptr;
 
   std::vector<PostEffectType> activeEffects_; ///< アクティブなエフェクトスタック（適用順）
 
@@ -731,6 +762,31 @@ private:
     float padding[3] = {0.0f, 0.0f, 0.0f};
   };
   BloodOverlayData *mappedBloodOverlay_ = nullptr;
+
+  // InkOverlay パラメータ
+  // NOTE: HLSL 側 cbuffer InkOverlayParams (b1) と 1:1 で対応する。
+  //       header 8 float + splatA/B 各 kMaxInkSplats 個の float4 = 224 byte。
+  Microsoft::WRL::ComPtr<ID3D12Resource> cbufferInkOverlay_;
+  struct InkOverlayData {
+    float time = 0.0f;
+    float aspectRatio = 1.777f;
+    int splatCount = 0;
+    float murk = 0.0f;
+    float inkColor[4] = {0.03f, 0.02f, 0.05f, 0.96f};
+    float splatA[kMaxInkSplats][4] = {};
+    float splatB[kMaxInkSplats][4] = {};
+  };
+  static_assert(sizeof(InkOverlayData) == 32 + 32 * kMaxInkSplats,
+                "InkOverlayData must match cbuffer InkOverlayParams");
+  InkOverlayData *mappedInkOverlay_ = nullptr;
+  int inkSplatCount_ = 0;
+  float inkMurk_ = 0.0f;
+  float inkColor_[4] = {0.03f, 0.02f, 0.05f, 0.96f};
+  // ImGui のテスト用（ゲーム中は InkScreenFx が毎フレーム上書きする）
+  float inkDebugStrength_ = 1.0f;
+  float inkDebugAge_ = 1.5f;
+  float inkDebugRadius_ = 0.30f;
+  float inkDebugSeed_ = 0.0f;
   float bloodHitFlash_ = 0.0f;
   float bloodLowHealth_ = 0.0f;
   float bloodPulseSpeed_ = 1.15f;

@@ -5,6 +5,7 @@
 #include "ECS/PrimitiveMeshComponent.h"
 #include "ECS/ColliderComponent.h"
 #include "ECS/NativeScriptComponent.h"
+#include "ECS/CameraComponent.h"
 #include "Scene.h"
 #include "RenderCommon.h"
 #include "Common/Log/Log.h"
@@ -73,6 +74,17 @@ public:
   RC::Vector4 primitiveColor = {0.9f, 0.3f, 0.3f, 1.0f};
   /// @brief 配置確認用のギズモを出すか
   bool drawGizmo = true;
+  /// @brief 出現地点を「スポナーの位置」ではなく「自機の前方遠く」にする
+  /// @details ウェーブ開始時の自機（カメラ）位置から前方 aheadDistance の地点を
+  ///          中心に spreadRadius で散らす。スポナーを自機の近くに置いていると
+  ///          湧いた瞬間に攻撃圏内へ入って一斉に突進してくるため、その対策。
+  ///          高さ（y）はスポナー自身の y を使う（＝水面の高さとして置いておく）。
+  bool spawnAheadOfPlayer = false;
+  /// @brief spawnAheadOfPlayer 時、自機の前方どれだけ先に出すか（m）
+  float aheadDistance = 50.0f;
+  /// @brief spawnAheadOfPlayer 時、1 体ごとに左右交互へずらす幅（m）
+  /// @details 同じ方向から縦一列に来ると連続で当たるので、左右に振り分ける。
+  float aheadSideStep = 8.0f;
 
   nlohmann::json Serialize() override {
     nlohmann::json j;
@@ -92,6 +104,9 @@ public:
     j["primitiveColor"] = {primitiveColor.x, primitiveColor.y, primitiveColor.z, primitiveColor.w};
     if (!enemyParams.is_null()) j["enemyParams"] = enemyParams;
     if (scripts.is_array() && !scripts.empty()) j["scripts"] = scripts;
+    j["spawnAheadOfPlayer"] = spawnAheadOfPlayer;
+    j["aheadDistance"] = aheadDistance;
+    j["aheadSideStep"] = aheadSideStep;
     return j;
   }
 
@@ -113,6 +128,9 @@ public:
     }
     if (j.contains("enemyParams")) enemyParams = j["enemyParams"];
     if (j.contains("scripts")) scripts = j["scripts"];
+    if (j.contains("spawnAheadOfPlayer")) spawnAheadOfPlayer = j["spawnAheadOfPlayer"].get<bool>();
+    if (j.contains("aheadDistance")) aheadDistance = j["aheadDistance"].get<float>();
+    if (j.contains("aheadSideStep")) aheadSideStep = j["aheadSideStep"].get<float>();
     if (j.contains("primitiveShape")) primitiveShape = j["primitiveShape"].get<std::string>();
     if (j.contains("primitiveColor") && j["primitiveColor"].is_array() &&
         j["primitiveColor"].size() >= 4) {
@@ -216,6 +234,11 @@ public:
     ImGui::DragFloat3("Enemy Scale", &enemyScale.x, 0.1f);
     ImGui::DragFloat("Collider Radius", &colliderRadius, 0.05f, 0.05f, 20.0f);
     ImGui::Checkbox("Draw Gizmo", &drawGizmo);
+    ImGui::Checkbox("Spawn Ahead Of Player", &spawnAheadOfPlayer);
+    if (spawnAheadOfPlayer) {
+      ImGui::DragFloat("Ahead Distance", &aheadDistance, 0.5f, 0.0f, 200.0f);
+      ImGui::DragFloat("Ahead Side Step", &aheadSideStep, 0.1f, 0.0f, 50.0f);
+    }
 
     DrawTextField("Wave Manager", waveManagerName);
     DrawTextField("Enemy Script", enemyScript);
@@ -274,10 +297,43 @@ private:
     return pos;
   }
 
+  /// @brief 自機（カメラ）の前方遠くの出現中心を求める
+  /// @details 1 体ごとに現在のカメラ位置から計算するので、レール移動中でも
+  ///          「いつも前方 aheadDistance 先」から湧く。左右は index で交互に振る
+  ///          （0:左 1:右 2:さらに左 …）。カメラが見つからなければ fallback を返す。
+  ///          前方ベクトルの取り方は SharkEnemyScript と揃えている。
+  RC::Vector3 AheadOfPlayerPosition(Scene *scene, const RC::Vector3 &fallback, int index) const {
+    const TransformComponent *camTr = nullptr;
+    for (auto &e : scene->GetEntities()) {
+      if (e && e->HasComponent<CameraComponent>()) {
+        camTr = e->GetComponent<TransformComponent>();
+        break;
+      }
+    }
+    if (!camTr) return fallback;
+
+    const float sy = std::sin(camTr->rotation.y);
+    const float cy = std::cos(camTr->rotation.y);
+    const RC::Vector3 fwd = {sy, 0.0f, cy};
+    const RC::Vector3 right = {cy, 0.0f, -sy};
+
+    const float sign = (index % 2 == 0) ? -1.0f : 1.0f;
+    const float side = sign * aheadSideStep * static_cast<float>(index / 2 + 1);
+
+    RC::Vector3 pos = fallback;
+    pos.x = camTr->position.x + fwd.x * aheadDistance + right.x * side;
+    pos.y = fallback.y; // 高さはスポナーの y（水面）を使う
+    pos.z = camTr->position.z + fwd.z * aheadDistance + right.z * side;
+    return pos;
+  }
+
   /// @brief 敵を 1 体生成する
   void SpawnOne(Scene *scene, int index) {
     auto *selfTr = GetComponent<TransformComponent>();
-    const RC::Vector3 base = selfTr ? selfTr->position : RC::Vector3{0.0f, 0.0f, 0.0f};
+    RC::Vector3 base = selfTr ? selfTr->position : RC::Vector3{0.0f, 0.0f, 0.0f};
+    if (spawnAheadOfPlayer) {
+      base = AheadOfPlayerPosition(scene, base, index);
+    }
 
     const std::string name =
         enemyName + "_w" + std::to_string(waveId) + "_" + std::to_string(index);

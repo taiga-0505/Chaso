@@ -26,6 +26,7 @@
 #include "Application/Game/Framework/GameSession.h"
 #include "Application/Game/Framework/GameSettings.h"
 #include "Application/Game/Framework/UnderwaterLook.h"
+#include "Application/Game/Framework/InkScreenFx.h"
 #include <algorithm>
 #include <utility>
 #include <cmath>
@@ -175,6 +176,10 @@ public:
     /// @details Title の飛び込み・Game 開始時の浮上（DeepRiseIntroScript）と同じ定義。
     ///          JSON の "underwater" キーで上書きできる。
     UnderwaterLook::Params look;
+
+    /// @brief タコの墨で視界が塞がる演出（InkOverlay）。JSON の "ink" キーで上書きできる。
+    /// @details 墨玉（InkBlobScript）が自分に `pending_ink` タグを積むので、それを拾って貼る。
+    InkScreenFx ink;
     float waterHeight = 0.0f; ///< 水面の高さ（OnCreate でシーンの WaterComponent から拾う）
     RC::Vector3 sunDir_ = {-0.5f, -0.8f, 0.5f}; ///< 光の向き（OnCreate でシーンの DirectionalLight から拾う）
     bool hasSunDir_ = false;
@@ -194,6 +199,7 @@ public:
     nlohmann::json Serialize() override {
         return {
             {"underwater", look.ToJson()},
+            {"ink", ink.ToJson()},
             {"look", {
                 {"lookSensitivity", lookSensitivity},
                 {"controllerLookSpeed", controllerLookSpeed},
@@ -207,6 +213,7 @@ public:
 
     void Deserialize(const nlohmann::json& j) override {
         if (j.contains("underwater")) look.FromJson(j["underwater"]);
+        if (j.contains("ink")) ink.FromJson(j["ink"]);
         if (j.contains("look")) {
             const auto& l = j["look"];
             if (l.contains("lookSensitivity"))     lookSensitivity     = l["lookSensitivity"].get<float>();
@@ -543,7 +550,21 @@ protected:
                 self->ClearTag("score_add");
                 score += scoreAdd;
             }
+            // タコの墨（強さ×100 の整数。1 フレームに複数当たったら 1 発ずつ貼る）
+            int inkHit = self->GetTagInt("pending_ink", 0);
+            if (inkHit > 0) {
+                self->ClearTag("pending_ink");
+                if (!isDead) {
+                    while (inkHit > 0) {
+                        const int one = (std::min)(inkHit, 100);
+                        ink.AddHit(static_cast<float>(one) / 100.0f);
+                        inkHit -= one;
+                    }
+                    currentCameraShake = (std::max)(currentCameraShake, shakeMax * 0.6f);
+                }
+            }
         }
+        ink.Update(RC::GetRenderContext().GetPostProcess(), deltaTime, isUnderwater);
 
         // Result シーンから読めるように、現在の成績を GameSession へ写す。
         // score / hp はこのスクリプトのメンバなので、シーンを抜けると失われるため。
@@ -830,6 +851,8 @@ protected:
         if (auto* input = Input::GetInstance()) {
             input->SetCursorLocked(false);
         }
+        // 墨はポストエフェクトに残るので、シーンを抜けるときに必ず剥がす
+        ink.Clear(RC::GetRenderContext().GetPostProcess());
         if (scoreFont_ >= 0) { RC::UnloadFont(scoreFont_); scoreFont_ = -1; }
         if (gameOverFont_ >= 0) { RC::UnloadFont(gameOverFont_); gameOverFont_ = -1; }
     }
@@ -1080,6 +1103,10 @@ public:
                 UnderwaterLook::SetupLight(postProcess, look, waterHeight, hasSunDir_ ? &sunDir_ : nullptr);
             }
         }
+
+        ImGui::Separator();
+        ImGui::Text("Ink Settings (タコの墨)");
+        ink.DrawImGui();
 
         ImGui::Separator();
         ImGui::Text("Screen Droplets Settings (レンズ水滴・気泡演出)");

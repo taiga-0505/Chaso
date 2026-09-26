@@ -1377,6 +1377,21 @@ void PipelineManager::RegisterDefaultPipelines() {
                     InputLayoutType::None, opt);
   }
 
+  // inkoverlay：タコの墨がレンズに貼り付いて視界を塞ぐ（手続き型。テクスチャ不要）
+  {
+    GPipelineOptions opt{};
+    opt.rootType = RootSignatureType::PostProcess;
+    opt.enableDepth = false;
+    opt.enableDepthWrite = false;
+    opt.enableAlphaBlend = false;
+    opt.cull = D3D12_CULL_MODE_NONE;
+
+    CreateFromFiles("inkoverlay.none",
+                    fullscreenVs,
+                    L"Resources/Shader/InkOverlay/InkOverlay.PS.hlsl",
+                    InputLayoutType::None, opt);
+  }
+
   // ====================
   // Compute Shader
   // ====================
