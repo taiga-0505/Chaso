@@ -620,6 +620,15 @@ void DrawModelGlassTwoPassBatchColored(int modelHandle,
 /// @note この関数を呼んだ後に DrawSprite / DrawLine などを呼んでください。
 void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+/// @brief ポストプロセス後の 2D オーバーレイ描画を再開する
+/// @param ctx SceneContext
+/// @param cl このフレームで使うコマンドリスト
+/// @details ポストプロセスの最終出力（画面）の上に、輪郭・水中・ビネットなどの効果を受けない
+///          UI（ポーズメニュー等）を描くためのもの。App がポストプロセスの直後に
+///          Scene::RenderOverlay を呼び、その中で使う。スクリプトは OnOverlayRender で描く。
+/// @note PreDraw2D と違い BeginFrame を行わないので、同じフレームの PreDraw2D の後に呼ぶこと。
+void ResumeDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
 /// @brief 2D 描画のあとに積んだ 3D コマンドをその場で実行する（UI より手前に出すオーバーレイ用）
 /// @details 通常 3D コマンドは PreDraw2D で一括実行されるため、そのあとに DrawModel を
 ///          呼んでも今フレームには出ない。この関数を呼ぶとその場で実行され、

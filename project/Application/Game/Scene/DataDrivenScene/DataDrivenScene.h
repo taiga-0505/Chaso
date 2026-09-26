@@ -177,7 +177,7 @@ public:
           clipLoop = cur->loop;
         }
 
-        const float dt = (ctx.isPlaying() && anim->playing)
+        const float dt = (ctx.isSimulating() && anim->playing)
             ? ctx.deltaTime * anim->speed * clipSpeed : 0.0f;
         RC::UpdateModelAnimation(ren->modelHandle, dt);
 
@@ -391,15 +391,19 @@ public:
                     gpu->particleSystem->emitterPosition_ = tr->position;
                 }
                 if (ctx.camera) {
-                    gpu->particleSystem->Update(ctx.camera->GetView(), ctx.camera->GetProjection(), ctx.deltaTime);
+                    // 編集モードでもパーティクルは動かして見せるが、ゲーム内ポーズ中は止める
+                    const float particleDt = ctx.gamePaused ? 0.0f : ctx.deltaTime;
+                    gpu->particleSystem->Update(ctx.camera->GetView(), ctx.camera->GetProjection(), particleDt);
                 }
             }
         }
     }
 
-    float updateDt = ctx.isPlaying() ? ctx.deltaTime : 0.0f;
+    // ゲーム内ポーズ中は 0 で回す（停止・一時停止と同じ扱い）。
+    // ポーズメニューのスクリプトだけは ctx.deltaTime を直接読んで動く。
+    float updateDt = ctx.isSimulating() ? ctx.deltaTime : 0.0f;
 
-    if (ctx.isPlaying()) {
+    if (ctx.isSimulating()) {
         if (gameMode_ && !gameMode_->HasBegunPlay()) {
             gameMode_->BeginPlay(ctx);
             gameMode_->MarkBegunPlay();
@@ -440,7 +444,7 @@ public:
     UpdateBoneAttachments();
 
     // === ゲーム結果判定（プレイ中のみ） ===
-    if (ctx.isPlaying() && !resultTriggered_) {
+    if (ctx.isSimulating() && !resultTriggered_) {
         if (sceneName_ != "Game") {
             // スペースキーで次へ進むのはセレクト〜リザルトの導線シーンだけに限定する。
             // CG4 など導線外のシーンでは Space をゲーム操作（ジャンプ）に使うため、
@@ -532,10 +536,17 @@ public:
     RemoveDeadEntities();
 
     // シーン遷移ディレイ処理
-    if (resultTriggered_ && ctx.isPlaying()) {
+    if (resultTriggered_ && ctx.isSimulating()) {
         resultDelayTimer_ += ctx.deltaTime;
         if (!resultChangeRequested_ && resultDelayTimer_ >= kResultDelay_) {
-            sm.RequestChange(resultTarget_);
+            // スクリプトが自前の演出で遷移する（例: DeathSinkScript が沈みきってから "dive" で
+            // Result へ送る）ときは、ここからは要求しない。目印はエンティティの
+            // "result_transition_owner" タグ。演出側が失敗したときは演出側が素の遷移へ倒す。
+            bool ownedByScript = false;
+            for (auto& e : entities_) {
+                if (e && e->GetTagInt("result_transition_owner", 0) == 1) { ownedByScript = true; break; }
+            }
+            if (!ownedByScript) sm.RequestChange(resultTarget_);
             resultChangeRequested_ = true; // 遷移要求を一度だけ送信（決着演出はフェードアウト中も描画継続！）
         }
     }
@@ -1186,6 +1197,32 @@ public:
                     if (entry.instance) {
                         entry.instance->OnRender();
                     }
+                }
+            }
+        }
+    }
+  }
+
+  /// @brief ポストプロセス後のオーバーレイ（ポーズメニュー等）。スクリプトの OnOverlayRender を呼ぶ
+  /// @details Render() と同じフレームの続きなので BeginFrame はせず、2D 用のステートだけ張り直す。
+  void RenderOverlay(SceneContext& ctx, ID3D12GraphicsCommandList* cl) override {
+    if (!ctx.isPlaying()) return;
+
+    // 描くものが無ければステートも触らない（ポストプロセスの出力をそのまま残す）
+    bool any = false;
+    for (auto& e : entities_) {
+        if (!e || e->IsPendingDestroy() || !e->IsActive()) continue;
+        if (e->GetComponent<NativeScriptComponent>()) { any = true; break; }
+    }
+    if (!any) return;
+
+    RC::ResumeDraw2D(ctx, cl);
+    for (auto& e : entities_) {
+        if (!e || e->IsPendingDestroy() || !e->IsActive()) continue;
+        if (auto* nsc = e->GetComponent<NativeScriptComponent>()) {
+            for (auto& entry : nsc->scripts) {
+                if (entry.instance) {
+                    entry.instance->OnOverlayRender();
                 }
             }
         }

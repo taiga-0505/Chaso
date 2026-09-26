@@ -111,6 +111,19 @@ public:
   /// @param cl コマンドリスト
   void PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+  /// @brief ポストプロセス後の 2D オーバーレイ描画を再開する
+  /// @param ctx シーンコンテキスト
+  /// @param cl コマンドリスト
+  /// @details ポストプロセス（輪郭・水中・ビネット・ディゾルブ等）が掛かった最終画像の上に、
+  ///          ポーズメニューのような「効果を受けたくない UI」を描くために使う。
+  ///          呼び出し側が最終出力先（バックバッファ or ビューポート用テクスチャ）を
+  ///          レンダーターゲットに設定してから呼ぶこと。
+  ///          PreDraw2D と違い 3D コマンドの実行や Primitive2D / FontManager の BeginFrame は
+  ///          行わない（同じフレームで二度 BeginFrame すると、先に描いた HUD の頂点・定数を
+  ///          上書きしてしまう）。ビューポートと 2D 用のパイプラインだけを張り直す。
+  /// @note 同じフレームで PreDraw2D が呼ばれたあとに使うこと。
+  void ResumeDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
   /// @brief 背景2D（モデルより後ろ）描画パスの開始前処理
   /// @param ctx シーンコンテキスト
   /// @param cl コマンドリスト

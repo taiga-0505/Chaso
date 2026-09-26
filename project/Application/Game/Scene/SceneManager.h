@@ -77,6 +77,13 @@ public:
   /// @param cl グラフィックスコマンドリスト
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+  /// @brief ポストプロセス後のオーバーレイ描画（現在のシーンの RenderOverlay を呼び出す）
+  /// @param ctx シーンコンテキスト
+  /// @param cl グラフィックスコマンドリスト
+  /// @details 遷移の状態（フェード中など）に関わらず現在のシーンへ委譲する。
+  ///          ディゾルブはポストプロセス側なので、ここで描いたものはフェードの影響を受けない。
+  void RenderOverlay(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
   /// @brief マネージャーの状態（ISceneState）を遷移させる
   /// @param newState 新しい状態オブジェクト
   void ChangeState(std::unique_ptr<ISceneState> newState);

@@ -6,6 +6,8 @@
 #include "ECS/ColliderComponent.h"
 #include "Scene.h"
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -15,17 +17,39 @@ enum class SharkState {
     Wait,
     Approach,
     Attack,
-    Cooldown
+    Retreat
 };
 
-/// @brief Shark AI: waits in the distance for now
+/// @brief Shark AI
+/// @details 水中に潜んでいて、接近しながら水面へ浮き上がり、突進したあとは
+///          潜って自機の前方遠くまで引き返す。引き返し先に着くまでは次の突進をしない。
+///          （以前は自機前方 18m で折り返していたため、画面いっぱいのまま
+///            2 秒おきに突進してきて逃げ場が無かった。）
 class SharkEnemyScript : public EnemyBaseScript {
 public:
     float detectDistance = 30.0f;
     float attackStartDistance = 10.0f;
     float attackHitDistance = 2.5f;
-    float attackSpeed = 25.0f;
+    float attackSpeed = 18.0f;
     float cooldownDuration = 2.0f;
+
+    /// @brief 突進後に引き返す地点（自機前方）の距離と横のずれ
+    float retreatDistance = 45.0f;
+    float retreatSide = 14.0f;
+    /// @brief 引き返し地点に「着いた」と見なす半径
+    float retreatArriveRadius = 4.0f;
+    /// @brief 引き返しに掛けてよい最大秒数（着けなくてもこれで次の接近に移る）
+    float retreatMaxDuration = 8.0f;
+
+    /// @brief 潜る深さ（水面からの距離）
+    float diveDepth = 6.0f;
+    /// @brief 浮上・潜行の速さ（m/s）
+    float verticalSpeed = 5.0f;
+    /// @brief この距離から浮上を始め、attackStartDistance で水面に出そろう
+    float emergeStartDistance = 24.0f;
+    /// @brief 生成時に水中から始めるか
+    bool startSubmerged = true;
+
     RC::Vector3 modelRotationOffsetDeg = { 180.0f, 80.0f, 180.0f }; // モデルの初期回転・向き補正（度数法）
 
 protected:
@@ -39,6 +63,14 @@ protected:
         j["attackHitDistance"] = attackHitDistance;
         j["attackSpeed"] = attackSpeed;
         j["cooldownDuration"] = cooldownDuration;
+        j["retreatDistance"] = retreatDistance;
+        j["retreatSide"] = retreatSide;
+        j["retreatArriveRadius"] = retreatArriveRadius;
+        j["retreatMaxDuration"] = retreatMaxDuration;
+        j["diveDepth"] = diveDepth;
+        j["verticalSpeed"] = verticalSpeed;
+        j["emergeStartDistance"] = emergeStartDistance;
+        j["startSubmerged"] = startSubmerged;
         j["modelRotOffset"] = { modelRotationOffsetDeg.x, modelRotationOffsetDeg.y, modelRotationOffsetDeg.z };
         return j;
     }
@@ -53,6 +85,14 @@ protected:
         if (j.contains("attackHitDistance")) attackHitDistance = j["attackHitDistance"].get<float>();
         if (j.contains("attackSpeed")) attackSpeed = j["attackSpeed"].get<float>();
         if (j.contains("cooldownDuration")) cooldownDuration = j["cooldownDuration"].get<float>();
+        if (j.contains("retreatDistance")) retreatDistance = j["retreatDistance"].get<float>();
+        if (j.contains("retreatSide")) retreatSide = j["retreatSide"].get<float>();
+        if (j.contains("retreatArriveRadius")) retreatArriveRadius = j["retreatArriveRadius"].get<float>();
+        if (j.contains("retreatMaxDuration")) retreatMaxDuration = j["retreatMaxDuration"].get<float>();
+        if (j.contains("diveDepth")) diveDepth = j["diveDepth"].get<float>();
+        if (j.contains("verticalSpeed")) verticalSpeed = j["verticalSpeed"].get<float>();
+        if (j.contains("emergeStartDistance")) emergeStartDistance = j["emergeStartDistance"].get<float>();
+        if (j.contains("startSubmerged")) startSubmerged = j["startSubmerged"].get<bool>();
         if (j.contains("modelRotOffset") && j["modelRotOffset"].size() == 3) {
             modelRotationOffsetDeg.x = j["modelRotOffset"][0].get<float>();
             modelRotationOffsetDeg.y = j["modelRotOffset"][1].get<float>();
@@ -64,17 +104,22 @@ protected:
         EnemyBaseScript::OnCreate();
         Log::Print("[SharkEnemyScript] OnCreate");
         state_ = SharkState::Wait;
-        // サメの既定 HP。JSON やウェーブのスポナーから指定があればそちらを尊重する
-        // （無条件に代入していたため、これまでデータ側で硬さを変えられなかった）。
+        // サメの既定 HP（通常弾 3 発）。JSON やウェーブのスポナーから指定があればそちらを尊重する。
         if (!hpFromData) {
-            hp = 20;
-            maxHp = 20;
+            hp = 3;
+            maxHp = 3;
         }
 
         if (auto* tr = GetComponent<TransformComponent>()) {
             tr->rotation.x = modelRotationOffsetDeg.x * (3.14159265f / 180.0f);
             tr->rotation.y = modelRotationOffsetDeg.y * (3.14159265f / 180.0f);
             tr->rotation.z = modelRotationOffsetDeg.z * (3.14159265f / 180.0f);
+
+            // 置かれた高さを「水面の高さ」として覚えておき、潜る／浮く基準にする
+            surfaceY_ = tr->position.y;
+            if (startSubmerged) {
+                tr->position.y = surfaceY_ - diveDepth;
+            }
         }
 
         // コライダーがなければ追加
@@ -147,18 +192,23 @@ protected:
         float sideDot = camToEnemyX * camRight.x + camToEnemyZ * camRight.z;
         float sideSign = (sideDot >= 0.0f) ? 1.0f : -1.0f;
 
-        // 自機の前方エリアにある再突入・復帰目標地点（前方約18m、横約8m）
+        // 自機の前方エリアにある再突入・復帰目標地点（前方 retreatDistance、横 retreatSide）
         RC::Vector3 frontTarget = {
-            camTr->position.x + camForward.x * 18.0f + camRight.x * (sideSign * 8.0f),
+            camTr->position.x + camForward.x * retreatDistance + camRight.x * (sideSign * retreatSide),
             camTr->position.y,
-            camTr->position.z + camForward.z * 18.0f + camRight.z * (sideSign * 8.0f)
+            camTr->position.z + camForward.z * retreatDistance + camRight.z * (sideSign * retreatSide)
         };
+
+        // 高さの目標。状態ごとに決めて、最後にまとめて verticalSpeed で寄せる
+        const float deepY = surfaceY_ - diveDepth;
+        float targetY = tr->position.y;
 
         // State Machine
         switch (state_) {
             case SharkState::Wait:
-                // プレイヤーが検知範囲内に入ったらApproachへ
+                // 水中で待機。プレイヤーが検知範囲内に入ったらApproachへ
                 // 背後にいる場合でも、背後でスタックせず前方へ回り込むためApproachへ移行させる
+                targetY = startSubmerged ? deepY : surfaceY_;
                 if (distToCam <= detectDistance) {
                     state_ = SharkState::Approach;
                     Log::Print("[SharkEnemyScript] Detected player! Switching to Approach.");
@@ -166,7 +216,7 @@ protected:
                     // 待機中はその場で円を描いてパトロール
                     swimTime_ += deltaTime;
                     float patrolSpeed = swimSpeed * 0.5f;
-                    tr->rotation.y += patrolSpeed * 0.1f * deltaTime; 
+                    tr->rotation.y += patrolSpeed * 0.1f * deltaTime;
                     float realAngleY = tr->rotation.y - (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
                     tr->position.x += std::sin(realAngleY) * patrolSpeed * deltaTime;
                     tr->position.z += std::cos(realAngleY) * patrolSpeed * deltaTime;
@@ -188,12 +238,12 @@ protected:
                     if (distToTarget > 0.01f) {
                         float targetAngleY = std::atan2(toTarget.x, toTarget.z);
                         tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
-                        
+
                         RC::Vector3 forward = { toTarget.x / distToTarget, 0.0f, toTarget.z / distToTarget };
                         RC::Vector3 right = { forward.z, 0.0f, -forward.x };
 
                         swimTime_ += deltaTime;
-                        
+
                         // 背後から回り込む際は少し速めに前方に復帰する
                         float currentSpeed = isInFront ? swimSpeed : (swimSpeed * 1.3f);
                         RC::Vector3 velocity = {
@@ -212,6 +262,17 @@ protected:
                     }
                 }
 
+                // 浮上：前方にいて emergeStartDistance を切ったら、近づくにつれて水面へ上がる。
+                // attackStartDistance に着く頃には水面に出そろう。背後にいる間は潜ったまま回り込む。
+                if (isInFront) {
+                    float span = (std::max)(emergeStartDistance - attackStartDistance, 0.01f);
+                    float t = (emergeStartDistance - distToCam) / span;
+                    t = std::clamp(t, 0.0f, 1.0f);
+                    targetY = deepY + (surfaceY_ - deepY) * t;
+                } else {
+                    targetY = deepY;
+                }
+
                 // 攻撃開始条件：自機の前方（isInFront）にいて、かつ攻撃開始距離に入った時のみ突進開始！
                 if (distToCam <= attackStartDistance && isInFront) {
                     state_ = SharkState::Attack;
@@ -228,11 +289,12 @@ protected:
                     float s = std::sin(realAngleY);
                     float c = std::cos(realAngleY);
                     RC::Vector3 forward = { s, 0.0f, c };
-                    
+
                     tr->position.x += forward.x * attackSpeed * deltaTime;
                     tr->position.z += forward.z * attackSpeed * deltaTime;
                 }
-                
+                targetY = surfaceY_;
+
                 attackTimer_ += deltaTime;
 
                 // 攻撃ヒット距離に入ったらダメージ処理（1回のみ）
@@ -241,8 +303,8 @@ protected:
                     mainCamera->SetTag("pending_damage", 1);
                     hasHit_ = true;
                 }
-                
-                // 攻撃終了（クールダウン移行）判定：
+
+                // 攻撃終了（引き返し移行）判定：
                 // 1. 自機の真横〜背後に抜けた（dotXZ < -0.05f）
                 // 2. ダメージを与えて少しすれ違った（hit後 0.25秒経過）
                 // 3. 最大突進時間（maxAttackDuration）経過
@@ -250,16 +312,18 @@ protected:
                     bool passedPlayer = (dotXZ < -0.05f);
                     bool hitAndPast = (hasHit_ && attackTimer_ >= 0.25f);
                     if (passedPlayer || hitAndPast || attackTimer_ >= maxAttackDuration) {
-                        Log::Print("[SharkEnemyScript] Attack Finished! To Cooldown.");
-                        state_ = SharkState::Cooldown;
+                        Log::Print("[SharkEnemyScript] Attack Finished! To Retreat.");
+                        state_ = SharkState::Retreat;
                         cooldownTimer_ = cooldownDuration;
+                        retreatTimer_ = 0.0f;
                     }
                 }
                 break;
 
-            case SharkState::Cooldown:
-                // クールダウン中は、自機前方再突入ポイント（frontTarget）へ向かって泳ぐ
-                // これにより、自機を通り過ぎて背後に抜けても即座にUターンして前方に復帰する
+            case SharkState::Retreat:
+                // 潜って、自機前方の遠い再突入ポイント（frontTarget）へ引き返す。
+                // 着くまで（または retreatMaxDuration 経過まで）は次の接近に入らないので、
+                // 突進のたびに一度きちんと距離が開く。
                 {
                     RC::Vector3 toTarget = {
                         frontTarget.x - tr->position.x,
@@ -277,14 +341,30 @@ protected:
                         float targetAngleY = std::atan2(toTarget.x, toTarget.z);
                         tr->rotation.y = targetAngleY + (modelRotationOffsetDeg.y * (3.14159265f / 180.0f));
                     }
-                }
-                
-                cooldownTimer_ -= deltaTime;
-                if (cooldownTimer_ <= 0.0f) {
-                    // クールダウン終了後、再びApproachに戻る
-                    state_ = SharkState::Approach;
+                    targetY = deepY;
+
+                    cooldownTimer_ -= deltaTime;
+                    retreatTimer_ += deltaTime;
+                    bool arrived = (distToTarget <= retreatArriveRadius);
+                    bool timedOut = (retreatTimer_ >= retreatMaxDuration);
+                    if (cooldownTimer_ <= 0.0f && (arrived || timedOut)) {
+                        // 引き返し完了。再び Approach に戻り、近づきながら浮上する
+                        state_ = SharkState::Approach;
+                        Log::Print("[SharkEnemyScript] Retreat done. Back to Approach.");
+                    }
                 }
                 break;
+        }
+
+        // 高さを目標へ寄せる（潜る／浮き上がる）
+        {
+            float dy = targetY - tr->position.y;
+            float step = verticalSpeed * deltaTime;
+            if (std::fabs(dy) <= step) {
+                tr->position.y = targetY;
+            } else {
+                tr->position.y += (dy > 0.0f ? step : -step);
+            }
         }
     }
 
@@ -304,23 +384,46 @@ public:
         ImGui::DragFloat("Attack Hit Dist##Shark", &attackHitDistance, 0.1f, 0.5f, 10.0f);
         ImGui::DragFloat("Attack Speed##Shark", &attackSpeed, 0.5f, 1.0f, 100.0f);
         ImGui::DragFloat("Cooldown Dur##Shark", &cooldownDuration, 0.1f, 0.5f, 10.0f);
+        ImGui::Separator();
+        ImGui::DragFloat("Retreat Dist##Shark", &retreatDistance, 0.5f, 10.0f, 120.0f);
+        ImGui::DragFloat("Retreat Side##Shark", &retreatSide, 0.5f, 0.0f, 40.0f);
+        ImGui::DragFloat("Retreat Arrive R##Shark", &retreatArriveRadius, 0.5f, 0.5f, 20.0f);
+        ImGui::DragFloat("Retreat Max Dur##Shark", &retreatMaxDuration, 0.1f, 1.0f, 30.0f);
+        ImGui::Separator();
+        ImGui::DragFloat("Dive Depth##Shark", &diveDepth, 0.1f, 0.0f, 30.0f);
+        ImGui::DragFloat("Vertical Speed##Shark", &verticalSpeed, 0.1f, 0.5f, 30.0f);
+        ImGui::DragFloat("Emerge Start Dist##Shark", &emergeStartDistance, 0.5f, 2.0f, 80.0f);
+        ImGui::Checkbox("Start Submerged##Shark", &startSubmerged);
+        ImGui::Text("State: %s  surfaceY: %.2f", StateName(state_), surfaceY_);
         ImGui::DragFloat3("Model Rot Offset##Shark", &modelRotationOffsetDeg.x, 1.0f, -360.0f, 360.0f);
 #endif
     }
 
 private:
+    static const char* StateName(SharkState s) {
+        switch (s) {
+            case SharkState::Wait: return "Wait";
+            case SharkState::Approach: return "Approach";
+            case SharkState::Attack: return "Attack";
+            case SharkState::Retreat: return "Retreat";
+        }
+        return "?";
+    }
+
     SharkState state_ = SharkState::Wait;
     std::weak_ptr<Entity> cachedTarget_;
-    
+
     // Swim parameters
-    float swimSpeed = 8.0f;
+    float swimSpeed = 6.0f;
     float swimSineAmplitude = 3.0f;
     float swimSineFrequency = 2.0f;
     float swimTime_ = 0.0f;
     float cooldownTimer_ = 0.0f;
+    float retreatTimer_ = 0.0f;
     float attackTimer_ = 0.0f;
     float maxAttackDuration = 2.0f;
     bool hasHit_ = false;
+    float surfaceY_ = 0.0f; ///< 生成時の高さ＝水面の高さとして扱う
 };
 
 REGISTER_SCRIPT(SharkEnemyScript)

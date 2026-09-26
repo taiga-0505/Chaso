@@ -1,0 +1,208 @@
+#include "ECS/ScriptableEntity.h"
+#include "ECS/ScriptRegistry.h"
+#include "ECS/TransformComponent.h"
+#include "Common/Log/Log.h"
+#include "Scene.h"
+#include "Application/Game/Framework/WaterCameraFx.h"
+
+#if RC_ENABLE_IMGUI
+#include "imgui/imgui.h"
+#endif
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+
+/// @class DeathSinkScript
+/// @brief 力尽きたとき、その視点のまま水へ沈み、水面を見上げながら暗くなって Result へ遷移する
+/// @details
+///   置き場所: Game の Camera エンティティ（RailShooterController と同じエンティティ）。
+///
+///   流れ:
+///     1. 自エンティティに game_over タグが立ったら（RailShooterController::TakeDamage）開始。
+///        "result_transition_owner" タグを立てて、DataDrivenScene の自動遷移（2.5 秒後の
+///        Dissolve）を止める。
+///     2. delay 秒だけその場で止まる（GAME OVER の表示を見せる）。
+///     3. 水面より上にいれば、力が抜けたように水面へ落ちる（fallTime 秒）。
+///        着水の演出（ラジアルブラー・水滴・水中エフェクト）は RailShooterController の
+///        水中判定がそのまま出す。
+///     4. 沈む（sinkTime 秒で depth m）。並行して水面を見上げる向きへ傾き（lookUpPitch）、
+///        少しだけ横に傾く（roll）。深さに応じたフォグは RailShooterController が掛けるので、
+///        深くなるほど暗くなる。
+///     5. 深さが darkDepth（UnderwaterLook の deepDepth と揃える）に達したら
+///        RequestSceneChange(resultScene, "dive")。Result 側は深海から浮上して始まる。
+///
+///   JSON (scriptDataList):
+///     "enabled" / "delay" / "fallTime" / "sinkTime" / "depth" / "lookUpPitch" / "tiltTime" /
+///     "roll" / "darkDepth" / "bubbles" / "resultScene"
+class DeathSinkScript : public ScriptableEntity {
+public:
+  bool enabled = true;
+  float delay = 0.6f;         ///< 力尽きてから沈み始めるまで（秒）
+  float fallTime = 0.8f;      ///< 水面より上にいたとき、水面まで落ちる時間（秒）
+  float sinkTime = 3.2f;      ///< 着水から depth まで沈む時間（秒）
+  float depth = 30.0f;        ///< 沈む深さ（m）
+  float lookUpPitch = -1.05f; ///< 沈みながら向く角度（rad。負で見上げ。-π/2 で真上）
+  float tiltTime = 2.2f;      ///< 見上げる向きへ傾くのにかける時間（秒）
+  float roll = 0.18f;         ///< 沈みながら横に傾く量（rad）
+  float darkDepth = 24.0f;    ///< この深さで遷移する（UnderwaterLook の deepDepth と揃える）
+  bool bubbles = true;
+  std::string resultScene = "Result";
+
+  nlohmann::json Serialize() override {
+    return {{"enabled", enabled},   {"delay", delay},       {"fallTime", fallTime},
+            {"sinkTime", sinkTime}, {"depth", depth},       {"lookUpPitch", lookUpPitch},
+            {"tiltTime", tiltTime}, {"roll", roll},         {"darkDepth", darkDepth},
+            {"bubbles", bubbles},   {"resultScene", resultScene}};
+  }
+
+  void Deserialize(const nlohmann::json &j) override {
+    auto f = [&](const char *k, float &o) { if (j.contains(k) && j[k].is_number()) o = j[k].get<float>(); };
+    auto b = [&](const char *k, bool &o) { if (j.contains(k) && j[k].is_boolean()) o = j[k].get<bool>(); };
+    b("enabled", enabled);
+    f("delay", delay);
+    f("fallTime", fallTime);
+    f("sinkTime", sinkTime);
+    f("depth", depth);
+    f("lookUpPitch", lookUpPitch);
+    f("tiltTime", tiltTime);
+    f("roll", roll);
+    f("darkDepth", darkDepth);
+    b("bubbles", bubbles);
+    if (j.contains("resultScene") && j["resultScene"].is_string()) resultScene = j["resultScene"].get<std::string>();
+  }
+
+#if RC_ENABLE_IMGUI
+  void OnImGui() override {
+    static const char *kNames[] = {"idle", "wait", "fall", "sink", "done"};
+    ImGui::Text("State: %s  t=%.2f", kNames[static_cast<int>(phase_)], t_);
+    ImGui::Checkbox("Enabled", &enabled);
+    ImGui::DragFloat("Delay (s)", &delay, 0.05f, 0.0f, 5.0f);
+    ImGui::DragFloat("Fall (s)", &fallTime, 0.05f, 0.1f, 5.0f);
+    ImGui::DragFloat("Sink (s)", &sinkTime, 0.05f, 0.2f, 10.0f);
+    ImGui::DragFloat("Depth (m)", &depth, 0.5f, 1.0f, 200.0f);
+    ImGui::DragFloat("Look Up Pitch", &lookUpPitch, 0.01f, -1.55f, 0.5f);
+    ImGui::DragFloat("Tilt (s)", &tiltTime, 0.05f, 0.0f, 10.0f);
+    ImGui::DragFloat("Roll", &roll, 0.01f, -1.0f, 1.0f);
+    ImGui::DragFloat("Dark Depth (m)", &darkDepth, 0.5f, 1.0f, 200.0f);
+    ImGui::Checkbox("Bubbles", &bubbles);
+  }
+#endif
+
+protected:
+  void OnCreate() override {
+    phase_ = Phase::Idle;
+    if (Entity *self = GetEntity()) self->ClearTag(kOwnerTag); // 前回のプレイで保存された分を消す
+    if (enabled && bubbles) bubbles_.Spawn(GetScene(), "DeathBubbles");
+  }
+
+  void OnUpdate(float dt) override {
+    if (dt <= 0.0f || !enabled) return;
+    Entity *self = GetEntity();
+    auto *tr = GetComponent<TransformComponent>();
+    if (!self || !tr) return;
+
+    if (phase_ == Phase::Idle) {
+      if (self->GetTagInt("game_over", 0) != 1) return;
+      SceneContext *ctx = GetSceneContext();
+      if (!ctx || !ctx->isPlaying()) return;
+      self->SetTag(kOwnerTag, 1); // DataDrivenScene の自動遷移を止める
+      waterY_ = WaterCameraFx::FindWaterY(GetScene());
+      phase_ = Phase::Wait;
+      t_ = 0.0f;
+      Log::Print("[DeathSinkScript] begin");
+    }
+
+    t_ += dt;
+    switch (phase_) {
+    case Phase::Wait:
+      if (t_ >= delay) {
+        startPos_ = tr->position;
+        startRot_ = tr->rotation;
+        phase_ = (tr->position.y > waterY_) ? Phase::Fall : Phase::Sink;
+        sinkStartY_ = (std::min)(tr->position.y, waterY_);
+        sinkT_ = 0.0f;
+        t_ = 0.0f;
+        tiltT_ = 0.0f;
+      }
+      break;
+    case Phase::Fall: {
+      // 力が抜けたように、加速しながら水面へ
+      const float u = t_ / (std::max)(fallTime, 1e-3f);
+      tr->position.y = startPos_.y + (waterY_ - startPos_.y) * WaterCameraFx::EaseInQuad(u);
+      UpdateTilt(*tr, dt);
+      if (u >= 1.0f) {
+        tr->position.y = waterY_ - 0.05f;
+        sinkStartY_ = tr->position.y;
+        phase_ = Phase::Sink;
+        t_ = 0.0f;
+      }
+      break;
+    }
+    case Phase::Sink: {
+      // 着水の勢いのまま沈み、水の抵抗でゆっくりになっていく
+      if (t_ <= dt * 1.5f && bubbles) bubbles_.SetEmission(WaterCameraFx::Bubbles::kEmitPerFrame);
+      const float u = t_ / (std::max)(sinkTime, 1e-3f);
+      const float targetY = waterY_ - depth;
+      tr->position.y = sinkStartY_ + (targetY - sinkStartY_) * WaterCameraFx::EaseOutQuad(u);
+      UpdateTilt(*tr, dt);
+      if ((waterY_ - tr->position.y) >= darkDepth || u >= 1.0f) {
+        phase_ = Phase::Done;
+        t_ = 0.0f;
+      }
+      break;
+    }
+    case Phase::Done: {
+      tr->position.y -= 2.0f * dt; // 遷移が始まるまで止まって見えないように
+      UpdateTilt(*tr, dt);
+      if (!requested_) {
+        requested_ = RequestSceneChange(resultScene, SceneTransitions::kDive);
+        if (!requested_ && t_ > 1.5f) {
+          // 何らかの理由で通らない（遷移中など）。素の遷移で送る
+          Log::Print("[DeathSinkScript] dive transition refused, falling back");
+          requested_ = RequestSceneChange(resultScene);
+          if (!requested_ && t_ > 3.0f) {
+            self->ClearTag(kOwnerTag);
+            requested_ = true; // 諦める（DataDrivenScene 側の要求はもう出ないので、ここで止める）
+          }
+        }
+      }
+      break;
+    }
+    case Phase::Idle:
+      break;
+    }
+
+    if (phase_ != Phase::Wait) bubbles_.Follow(*tr, waterY_);
+  }
+
+  void OnDestroy() override {
+    if (Entity *self = GetEntity()) self->ClearTag(kOwnerTag);
+    bubbles_.Destroy();
+  }
+
+private:
+  enum class Phase { Idle = 0, Wait, Fall, Sink, Done };
+  static constexpr const char *kOwnerTag = "result_transition_owner";
+
+  /// @brief 水面を見上げる向きへ、少し横に傾きながらゆっくり回す
+  void UpdateTilt(TransformComponent &tr, float dt) {
+    tiltT_ += dt;
+    const float r = (tiltTime > 0.0f) ? WaterCameraFx::Smooth01(tiltT_ / tiltTime) : 1.0f;
+    tr.rotation.x = startRot_.x + (lookUpPitch - startRot_.x) * r;
+    tr.rotation.z = startRot_.z + roll * r;
+  }
+
+  Phase phase_ = Phase::Idle;
+  float t_ = 0.0f;
+  float tiltT_ = 0.0f;
+  float sinkT_ = 0.0f;
+  float waterY_ = 0.0f;
+  float sinkStartY_ = 0.0f;
+  RC::Vector3 startPos_{};
+  RC::Vector3 startRot_{};
+  bool requested_ = false;
+  WaterCameraFx::Bubbles bubbles_;
+};
+
+REGISTER_SCRIPT(DeathSinkScript)

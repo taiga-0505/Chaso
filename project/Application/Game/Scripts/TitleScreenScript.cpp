@@ -15,6 +15,7 @@
 #include "Engine/Render/RenderContext.h"
 #include "Application/Framework/App.h"
 #include "Application/Game/Framework/UnderwaterLook.h"
+#include "Application/Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
 
 #if RC_ENABLE_IMGUI
@@ -101,6 +102,15 @@
 ///     "diveTilt"          : 真下向きから diveLookUpPitch へ傾くのにかける時間（秒）
 ///     "diveSurfaceBlend"  : 着水後、水中エフェクトが完全に掛かるまでの時間（秒）
 ///     "diveBubbles"       : 沈降中に泡（GPU パーティクル）を流すか
+///     [浮上]  Dive 遷移（Result の「タイトルへ」など）で入ってきたときだけ、深海から浮上して始まる
+///     "riseEnabled"       : false なら浮上せずにいつもの真上視点から始める
+///     "riseDepth"         : 浮上を始める深さ（m）
+///     "riseUnderwaterTime": 水面の直下まで上がる時間（秒） / "riseEase" : その速度カーブ
+///     "risePitchStart"    : 浮上開始時に見上げる角度（rad）
+///     "riseClimbTime"     : 水面を抜けてから真上視点の位置まで上がる時間（秒）
+///     "riseSurfaceBlend"  : 水面を抜けてから水中エフェクトが消えきるまで（秒）
+///     "riseBubbles"       : 浮上中に泡を流すか
+///     ※ 実装は Application/Game/Framework/WaterCameraFx.h（Result と共通）
 ///     "underwater"        : 水中の見た目（UnderwaterLook::Params。Game 側と同じキー）
 class TitleScreenScript : public ScriptableEntity {
 public:
@@ -141,21 +151,19 @@ public:
   std::string hintFontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Regular.ttf";
   float hintFontSize = 20.0f;
 
-  // ---- 飛び込み（スタート → Game）----
-  bool diveEnabled = true;
-  float diveAnticipation = 0.35f; ///< ため（秒）
-  float diveLift = 1.5f;          ///< ための持ち上がり（m）
-  float divePlunge = 0.85f;       ///< 水面までの落下（秒）
-  float diveFovBoost = 1.35f;     ///< 落下中の画角の広がり（倍率）
-  float diveSink = 1.7f;          ///< 着水から沈みきるまで（秒）
-  float diveDepth = 30.0f;        ///< 沈む深さ（m）。UnderwaterLook の deepDepth より深くしておく
-  float diveLookUpPitch = -0.45f; ///< 沈みながら向く角度（rad。負で見上げ）
-  float diveTilt = 0.9f;          ///< 真下向き → diveLookUpPitch にかける時間（秒）
-  float diveSurfaceBlend = 0.25f; ///< 着水後、水中エフェクトが掛かりきるまで（秒）
-  bool diveBubbles = true;        ///< 泡を流すか
+  // ---- 飛び込み（スタート → Game）/ 浮上（Dive 遷移で入ってきたとき）----
+  WaterCameraFx::DiveParams dive; ///< JSON キーは "dive*"
+  WaterCameraFx::RiseParams rise; ///< JSON キーは "rise*"
   UnderwaterLook::Params look;    ///< 水中の見た目（Game 側と共通）
 
   nlohmann::json Serialize() override {
+    nlohmann::json j = SerializeBase();
+    dive.WriteJson(j);
+    rise.WriteJson(j);
+    return j;
+  }
+
+  nlohmann::json SerializeBase() const {
     nlohmann::json positions = nlohmann::json::array();
     for (const auto &p : letterPositions) positions.push_back({p.x, p.y, p.z});
     nlohmann::json menuPos = nlohmann::json::array();
@@ -193,17 +201,6 @@ public:
         {"showHint", showHint},
         {"hintFontPath", hintFontPath},
         {"hintFontSize", hintFontSize},
-        {"diveEnabled", diveEnabled},
-        {"diveAnticipation", diveAnticipation},
-        {"diveLift", diveLift},
-        {"divePlunge", divePlunge},
-        {"diveFovBoost", diveFovBoost},
-        {"diveSink", diveSink},
-        {"diveDepth", diveDepth},
-        {"diveLookUpPitch", diveLookUpPitch},
-        {"diveTilt", diveTilt},
-        {"diveSurfaceBlend", diveSurfaceBlend},
-        {"diveBubbles", diveBubbles},
         {"underwater", look.ToJson()},
     };
   }
@@ -274,17 +271,8 @@ public:
     readS("hintFontPath", hintFontPath);
     readF("hintFontSize", hintFontSize);
 
-    readB("diveEnabled", diveEnabled);
-    readF("diveAnticipation", diveAnticipation);
-    readF("diveLift", diveLift);
-    readF("divePlunge", divePlunge);
-    readF("diveFovBoost", diveFovBoost);
-    readF("diveSink", diveSink);
-    readF("diveDepth", diveDepth);
-    readF("diveLookUpPitch", diveLookUpPitch);
-    readF("diveTilt", diveTilt);
-    readF("diveSurfaceBlend", diveSurfaceBlend);
-    readB("diveBubbles", diveBubbles);
+    dive.ReadJson(j);
+    rise.ReadJson(j);
     if (j.contains("underwater")) look.FromJson(j["underwater"]);
   }
 
@@ -313,19 +301,10 @@ public:
     ImGui::TextDisabled("menuSize / menuPositions / fonts are applied on scene reload");
 
     ImGui::SeparatorText("Dive (Start -> Game)");
-    ImGui::Checkbox("Dive Enabled", &diveEnabled);
-    ImGui::Text("Phase: %s  t=%.2f  depth=%.1f", DivePhaseName(dive_.phase), dive_.t,
-                dive_.depth);
-    ImGui::DragFloat("Anticipation (s)", &diveAnticipation, 0.01f, 0.0f, 2.0f);
-    ImGui::DragFloat("Lift (m)", &diveLift, 0.05f, 0.0f, 10.0f);
-    ImGui::DragFloat("Plunge (s)", &divePlunge, 0.01f, 0.1f, 5.0f);
-    ImGui::DragFloat("FOV Boost", &diveFovBoost, 0.01f, 1.0f, 2.0f);
-    ImGui::DragFloat("Sink (s)", &diveSink, 0.01f, 0.1f, 10.0f);
-    ImGui::DragFloat("Depth (m)", &diveDepth, 0.5f, 1.0f, 200.0f);
-    ImGui::DragFloat("Look Up Pitch (rad)", &diveLookUpPitch, 0.01f, -1.5f, 1.5708f);
-    ImGui::DragFloat("Tilt (s)", &diveTilt, 0.01f, 0.0f, 5.0f);
-    ImGui::DragFloat("Surface Blend (s)", &diveSurfaceBlend, 0.01f, 0.0f, 2.0f);
-    ImGui::Checkbox("Bubbles", &diveBubbles);
+    ImGui::Text("Dive: %s  depth=%.1f   Rise: %s",
+                WaterCameraFx::DiveSequence::PhaseName(dive_.GetPhase()), dive_.Depth(),
+                rise_.IsMoving() ? "moving" : (rise_.IsActive() ? "fx" : "idle"));
+    dive.DrawImGui();
     if (ImGui::Button("Test Dive (no scene change)")) {
       diveTestOnly_ = true;
       BeginDive();
@@ -333,6 +312,11 @@ public:
     ImGui::SameLine();
     if (ImGui::Button("Reset Camera")) {
       EndDive(/*restoreCamera=*/true);
+    }
+    ImGui::SeparatorText("Rise (entered by dive transition)");
+    rise.DrawImGui();
+    if (ImGui::Button("Test Rise")) {
+      if (!dive_.IsActive() && !rise_.IsActive()) BeginRise();
     }
     UnderwaterLook::DrawImGui(look);
   }
@@ -359,9 +343,17 @@ protected:
     UpdateFloaters(0.0f);
 
     // 泡のエミッタはここで作っておく（GPU パーティクルの初期化を飛び込みの瞬間に
-    // 走らせるとそこで一瞬止まる）。射出数 0 で寝かせておき、着水で起こす。
-    if (diveEnabled && diveBubbles) {
-      SpawnBubbleEmitter();
+    // 走らせるとそこで一瞬止まる）。射出数 0 で寝かせておき、着水／浮上で起こす。
+    if ((dive.enabled && dive.bubbles) || (rise.enabled && rise.bubbles)) {
+      bubbles_.Spawn(GetScene(), "TitleBubbles");
+    }
+
+    // 飛び込み遷移（Result の「タイトルへ」など）で入ってきたときは、深海から浮上して始まる。
+    // 編集モードでもスクリプトは作られるので、再生中だけ（カメラ位置が保存に焼き付かないように）
+    if (SceneContext *ctx = GetSceneContext()) {
+      if (rise.enabled && ctx->isPlaying() && ctx->lastTransition == SceneTransition::Dive) {
+        BeginRise();
+      }
     }
   }
 
@@ -371,7 +363,13 @@ protected:
 
     UpdateFloaters(deltaTime);
 
-    if (dive_.phase != DivePhase::None) {
+    if (deltaTime > 0.0f && rise_.IsActive()) {
+      rise_.Update(deltaTime);
+    }
+    // 浮上でカメラが動いているあいだはメニューを操作させない
+    if (rise_.IsMoving()) return;
+
+    if (dive_.IsActive()) {
       if (deltaTime > 0.0f) UpdateDive(deltaTime);
       return;
     }
@@ -392,15 +390,12 @@ protected:
     }
     letters_.clear();
     menu_.clear();
-    if (auto e = bubbles_.lock()) e->Destroy();
-    bubbles_.reset();
-
-    // 飛び込みの途中でエディタから停止された場合は、カメラと画面を元へ戻す。
+    // 飛び込み／浮上の途中でエディタから停止された場合は、カメラと画面を元へ戻す。
     // シーン遷移で抜ける通常の経路では、切り替え側が ClearPostEffects するので
     // ここで戻しても二重にはならない。
-    if (dive_.phase != DivePhase::None) {
-      EndDive(/*restoreCamera=*/true);
-    }
+    if (dive_.IsActive()) EndDive(/*restoreCamera=*/true);
+    if (rise_.IsActive()) rise_.End();
+    bubbles_.Destroy();
 
     if (hintFont_ >= 0) {
       RC::UnloadFont(hintFont_);
@@ -409,8 +404,8 @@ protected:
   }
 
   void OnRender() override {
-    // 飛び込みが始まったら操作ヒントは消す
-    if (!showHint || hintFont_ < 0 || dive_.phase != DivePhase::None) return;
+    // 飛び込み中・浮上中は操作ヒントを出さない
+    if (!showHint || hintFont_ < 0 || dive_.IsActive() || rise_.IsMoving()) return;
 
     float screenW = 1280.0f;
     float screenH = 720.0f;
@@ -792,7 +787,7 @@ private:
       SceneContext *sc = GetSceneContext();
       if (sc && !sc->isPlaying()) return; // 編集モードでは飛ばない（RequestSceneChange と同じ）
 
-      if (diveEnabled && BeginDive()) {
+      if (dive.enabled && BeginDive()) {
         // 遷移要求は沈みきったあと UpdateDive が出す
         decided_ = true;
         Log::Print("[TitleScreenScript] start -> dive -> " + startScene);
@@ -818,337 +813,61 @@ private:
   // 飛び込み（スタート → 水面 → 深海 → Game）
   // ------------------------------------------------------------------
 
-  enum class DivePhase { None, Anticipate, Plunge, Sink, Done };
-
-  static const char *DivePhaseName(DivePhase p) {
-    switch (p) {
-    case DivePhase::None: return "none";
-    case DivePhase::Anticipate: return "anticipate";
-    case DivePhase::Plunge: return "plunge";
-    case DivePhase::Sink: return "sink";
-    case DivePhase::Done: return "done";
-    }
-    return "?";
-  }
-
-  struct DiveState {
-    DivePhase phase = DivePhase::None;
-    float t = 0.0f;               ///< フェーズ内の経過時間（秒）
-    std::weak_ptr<Entity> camera; ///< 動かすカメラ（シーンのメインカメラ）
-    RC::Vector3 basePos{};        ///< 開始時のカメラ位置
-    RC::Vector3 baseRot{};        ///< 開始時のカメラ回転（x = +π/2 で真下）
-    float baseFov = 0.45f;        ///< 開始時の画角
-    float waterY = 0.0f;          ///< 水面の高さ
-    float depth = 0.0f;           ///< いまの深さ（m。水面より上なら負）
-    float submergedTime = 0.0f;   ///< 着水からの経過（秒）
-    float radialTimer = 0.0f;     ///< ラジアルブラーの残り時間
-    float dropletTimer = 0.0f;    ///< 水滴の残り時間
-    bool effectsOn = false;       ///< 水中エフェクト一式を積んだか
-    bool requested = false;       ///< 遷移要求が受理されたか（Done 以降）
-  };
-
-  static constexpr float kRadialBlurDuration = 0.45f;
-  static constexpr float kRadialBlurMaxWidth = 0.035f;
-  static constexpr float kDropletDuration = 2.2f;
-  static constexpr float kDropletSpeed = -1.3f; ///< 負で上へ昇る（着水時の泡）
-  static constexpr float kDropletDistortion = 0.06f;
-  static constexpr float kDropletScale = 1.5f;
-  static constexpr float kDoneSinkSpeed = 4.0f; ///< 沈みきったあと遷移までの緩い沈降（m/s）
   static constexpr float kDoneRetrySeconds = 1.0f; ///< 遷移要求が通らないとき諦めるまでの秒数
-
-  /// @brief シーンのメインカメラ（CameraComponent::isMain）を探す
-  std::shared_ptr<Entity> FindMainCameraEntity() const {
-    Scene *scene = GetScene();
-    if (!scene) return nullptr;
-    for (const auto &e : scene->GetEntities()) {
-      if (!e) continue;
-      auto *cam = e->GetComponent<CameraComponent>();
-      if (cam && cam->isMain && e->GetComponent<TransformComponent>()) return e;
-    }
-    return nullptr;
-  }
 
   /// @brief 飛び込みを始める
   /// @return カメラが見つからない等で始められなければ false（呼び出し側は即遷移へ倒す）
   bool BeginDive() {
-    if (dive_.phase != DivePhase::None) return true;
-
-    auto cam = FindMainCameraEntity();
+    if (dive_.IsActive()) return true;
+    Scene *scene = GetScene();
+    auto cam = WaterCameraFx::FindMainCamera(scene);
     if (!cam) {
       Log::Print("[TitleScreenScript] dive: main camera not found");
       return false;
     }
-    auto *tr = cam->GetComponent<TransformComponent>();
-    auto *cc = cam->GetComponent<CameraComponent>();
-    if (!tr || !cc) return false;
-
-    dive_ = DiveState{};
-    dive_.camera = cam;
-    dive_.basePos = tr->position;
-    dive_.baseRot = tr->rotation;
-    dive_.baseFov = cc->fovY;
-
-    RC::WaterWaveParams wp;
-    dive_.waterY = BuildWaterParams(wp) ? wp.baseHeight : 0.0f;
-    dive_.depth = dive_.waterY - tr->position.y;
-
-    dive_.phase = (diveAnticipation > 0.0f) ? DivePhase::Anticipate : DivePhase::Plunge;
-    dive_.t = 0.0f;
-    return true;
+    diveRequested_ = false;
+    return dive_.Begin(cam, WaterCameraFx::FindWaterY(scene), dive, look, &bubbles_);
   }
 
   /// @brief 飛び込みを止めて後始末する
   /// @param restoreCamera カメラの位置・向き・画角を開始時へ戻すか（テスト／中断用）
   void EndDive(bool restoreCamera) {
-    if (auto *pp = RC::GetRenderContext().GetPostProcess()) {
-      if (dive_.effectsOn) {
-        UnderwaterLook::RemoveStack(pp);
-        pp->RemoveEffect(PostEffectType::RadialBlur);
-        pp->RemoveEffect(PostEffectType::ScreenDroplets);
-      }
-    }
-    SetBubbleEmission(0);
-    if (restoreCamera) {
-      if (auto cam = dive_.camera.lock()) {
-        if (auto *tr = cam->GetComponent<TransformComponent>()) {
-          tr->position = dive_.basePos;
-          tr->rotation = dive_.baseRot;
-        }
-        if (auto *cc = cam->GetComponent<CameraComponent>()) cc->fovY = dive_.baseFov;
-      }
-    }
-    dive_ = DiveState{};
+    dive_.End(restoreCamera);
     diveTestOnly_ = false;
+    diveRequested_ = false;
     decided_ = false;
   }
 
-  static float EaseOutCubic(float u) {
-    u = std::clamp(u, 0.0f, 1.0f);
-    const float v = 1.0f - u;
-    return 1.0f - v * v * v;
-  }
-  static float EaseOutQuad(float u) {
-    u = std::clamp(u, 0.0f, 1.0f);
-    return 1.0f - (1.0f - u) * (1.0f - u);
-  }
-  static float EaseInQuad(float u) {
-    u = std::clamp(u, 0.0f, 1.0f);
-    return u * u;
-  }
-
-  /// @brief 着水の瞬間：水中エフェクト一式 ＋ 飛沫系の演出を起動する
-  void OnSurfaceCross() {
-    dive_.submergedTime = 0.0f;
-    if (auto *pp = RC::GetRenderContext().GetPostProcess()) {
-      // 光と網目を実際の水面高さに合わせてから積む（RailShooterController と同じ順）
-      UnderwaterLook::SetupLight(pp, look, dive_.waterY);
-      UnderwaterLook::AddStack(pp);
-      UnderwaterLook::SetLerp(pp, 0.0f);
-      UnderwaterLook::ApplyFogByDepth(pp, look, 0.0f);
-
-      // 突入の勢い（ラジアルブラー）と、上へ昇っていく泡（レンズ水滴）
-      pp->AddEffect(PostEffectType::RadialBlur);
-      pp->SetRadialBlurCenter(0.5f, 0.5f);
-      pp->SetRadialBlurWidth(kRadialBlurMaxWidth);
-      dive_.radialTimer = kRadialBlurDuration;
-
-      pp->AddEffect(PostEffectType::ScreenDroplets);
-      pp->SetScreenDropletsIntensity(1.0f);
-      pp->SetScreenDropletsSpeed(kDropletSpeed);
-      pp->SetScreenDropletsDistortion(kDropletDistortion);
-      pp->SetScreenDropletsScale(kDropletScale);
-      dive_.dropletTimer = kDropletDuration;
-
-      dive_.effectsOn = true;
-    }
-    if (diveBubbles) SetBubbleEmission(kBubbleEmitPerFrame);
-    Log::Print("[TitleScreenScript] dive: splash");
-  }
-
   void UpdateDive(float dt) {
-    auto cam = dive_.camera.lock();
-    if (!cam) {
+    if (!dive_.Update(dt)) {
       // カメラが消えた（エディタ操作など）。演出を諦めて素直に遷移する
       const bool testOnly = diveTestOnly_;
       EndDive(false);
       if (!testOnly && RequestSceneChange(startScene)) decided_ = true;
       return;
     }
-    auto *tr = cam->GetComponent<TransformComponent>();
-    auto *cc = cam->GetComponent<CameraComponent>();
-    if (!tr || !cc) return;
+    if (!dive_.IsDone() || diveRequested_) return;
 
-    dive_.t += dt;
-    const float topY = dive_.basePos.y + diveLift;
-
-    switch (dive_.phase) {
-    case DivePhase::Anticipate: {
-      // 息を吸うように少し持ち上がる
-      const float u = dive_.t / (std::max)(diveAnticipation, 1e-3f);
-      tr->position.y = dive_.basePos.y + diveLift * EaseOutCubic(u);
-      if (u >= 1.0f) {
-        dive_.phase = DivePhase::Plunge;
-        dive_.t = 0.0f;
-      }
-      break;
+    if (diveTestOnly_) {
+      Log::Print("[TitleScreenScript] dive test finished (no scene change)");
+      diveRequested_ = true;
+      return;
     }
-    case DivePhase::Plunge: {
-      // 重力で落ちるように加速して水面へ。画角が広がってタイトル文字が迫る
-      const float u = dive_.t / (std::max)(divePlunge, 1e-3f);
-      const float e = EaseInQuad(u);
-      const float startY = (diveAnticipation > 0.0f) ? topY : dive_.basePos.y;
-      tr->position.y = startY + (dive_.waterY - startY) * e;
-      cc->fovY = dive_.baseFov * (1.0f + (diveFovBoost - 1.0f) * e);
-      if (u >= 1.0f) {
-        tr->position.y = dive_.waterY;
-        dive_.phase = DivePhase::Sink;
-        dive_.t = 0.0f;
-        OnSurfaceCross();
-      }
-      break;
+    // 画面が深海色になりきってから遷移を要求する。断られたら（遷移中など）しばらく出し直し、
+    // それでも通らない（シーン名が未登録など）なら演出を戻してメニューへ返す。
+    diveRequested_ = RequestSceneChange(startScene, SceneTransitions::kDive);
+    if (!diveRequested_ && dive_.DoneTime() > kDoneRetrySeconds) {
+      Log::Print("[TitleScreenScript] scene change kept failing, giving up: " + startScene);
+      EndDive(/*restoreCamera=*/true);
     }
-    case DivePhase::Sink: {
-      // 着水の勢いのまま沈み、水の抵抗で減速する。並行して見上げる向きへ傾く
-      const float u = dive_.t / (std::max)(diveSink, 1e-3f);
-      tr->position.y = dive_.waterY - diveDepth * EaseOutQuad(u);
-      const float tilt = (diveTilt > 0.0f) ? UnderwaterLook::SmoothStep01(dive_.t / diveTilt) : 1.0f;
-      tr->rotation.x = dive_.baseRot.x + (diveLookUpPitch - dive_.baseRot.x) * tilt;
-      // 画角は沈むあいだに元へ戻す
-      cc->fovY = dive_.baseFov * (diveFovBoost - (diveFovBoost - 1.0f) * EaseOutQuad(u));
-      // 画面が深海色になりきった（深さが deepDepth に達した）時点で遷移へ進む。
-      // 沈みきるまで待つと真っ暗な時間が延びるだけなので、暗くなった瞬間に切り替える。
-      const bool fullyDark = (dive_.waterY - tr->position.y) >= look.deepDepth;
-      if (u >= 1.0f || fullyDark) {
-        dive_.phase = DivePhase::Done;
-        dive_.t = 0.0f;
-        if (diveTestOnly_) {
-          Log::Print("[TitleScreenScript] dive test finished (no scene change)");
-          dive_.requested = true;
-        }
-      }
-      break;
-    }
-    case DivePhase::Done: {
-      // 遷移が始まるまでのあいだ、止まって見えないように緩く沈み続ける
-      tr->position.y -= kDoneSinkSpeed * dt;
-      // 画面が深海色になりきってから遷移を要求する。断られたら（遷移中など）
-      // 暗い画面のまま止まらないように、しばらく毎フレーム出し直す。
-      // それでも通らない（シーン名が未登録など）なら演出を戻してメニューへ返す。
-      if (!dive_.requested) {
-        dive_.requested = RequestSceneChange(startScene, SceneTransitions::kDive);
-        if (!dive_.requested && dive_.t < dt * 1.5f) {
-          Log::Print("[TitleScreenScript] scene change refused, retrying: " + startScene);
-        }
-        if (!dive_.requested && dive_.t > kDoneRetrySeconds) {
-          Log::Print("[TitleScreenScript] scene change kept failing, giving up: " + startScene);
-          EndDive(/*restoreCamera=*/true); // decided_ も戻るのでメニューが再び操作できる
-          return;
-        }
-      }
-      break;
-    }
-    case DivePhase::None:
-      break;
-    }
-
-    dive_.depth = dive_.waterY - tr->position.y;
-
-    // 水中エフェクトの毎フレーム更新（着水後）
-    if (dive_.effectsOn) {
-      dive_.submergedTime += dt;
-      if (auto *pp = RC::GetRenderContext().GetPostProcess()) {
-        const float blend = (diveSurfaceBlend > 0.0f)
-                                ? UnderwaterLook::SmoothStep01(dive_.submergedTime / diveSurfaceBlend)
-                                : 1.0f;
-        UnderwaterLook::SetLerp(pp, blend);
-        UnderwaterLook::ApplyFogByDepth(pp, look, dive_.depth);
-
-        if (dive_.radialTimer > 0.0f) {
-          dive_.radialTimer -= dt;
-          if (dive_.radialTimer <= 0.0f) {
-            dive_.radialTimer = 0.0f;
-            pp->RemoveEffect(PostEffectType::RadialBlur);
-          } else {
-            const float p = dive_.radialTimer / kRadialBlurDuration;
-            pp->SetRadialBlurWidth(kRadialBlurMaxWidth * p * p);
-          }
-        }
-        if (dive_.dropletTimer > 0.0f) {
-          dive_.dropletTimer -= dt;
-          if (dive_.dropletTimer <= 0.0f) {
-            dive_.dropletTimer = 0.0f;
-            pp->RemoveEffect(PostEffectType::ScreenDroplets);
-          } else {
-            const float p = dive_.dropletTimer / kDropletDuration;
-            pp->SetScreenDropletsIntensity(p * p);
-          }
-        }
-      }
-    }
-
-    // 泡はカメラの少し先（見ている方向）から湧かせ、視界を上へ流れていくようにする
-    UpdateBubbleEmitter(*tr);
   }
 
-  // ---- 泡（GPU パーティクル）----
-
-  static constexpr uint32_t kBubbleEmitPerFrame = 6;
-  static constexpr float kBubbleMinDepth = 7.0f; ///< 泡の射出点の上端を水面からこの深さより下に保つ（m）
-
-  void SpawnBubbleEmitter() {
+  /// @brief 深海から浮上して始める（Dive 遷移で入ってきたとき）
+  void BeginRise() {
     Scene *scene = GetScene();
-    if (!scene) return;
-    auto e = scene->CreateEntity("TitleDiveBubbles");
-    auto &tr = e->AddComponent<TransformComponent>();
-    tr.position = {0.0f, -100.0f, 0.0f}; // 起動前は画面外に置いておく
-    auto &gpu = e->AddComponent<GPUParticleComponent>();
-    if (auto *ps = gpu.particleSystem.get()) {
-      ps->SetPipelinePrefix("gpu_particle_bubble");
-      ps->SetParticleType(ParticleType::Default); // EmitParticle.CS：形状・速度・寿命・色を全部使う
-      ps->SetBlendMode(kBlendModeNormal);
-      ps->SetMaxParticles(1024);
-      ps->SetEmitCount(0);
-      ps->emitterShape_ = EmitterShape::Box;
-      // 奥行きを薄くしてカメラの至近に湧かないようにする（至近の泡は画面いっぱいの玉になる）
-      ps->shapeBoxSize_ = {12.0f, 4.0f, 6.0f};
-      // 速度は 1 フレームあたりの移動量（UpdateParticle.CS は translate += velocity）
-      ps->baseVelocity_ = {0.0f, 0.045f, 0.0f}; // ≒ 2.7 m/s で上昇
-      ps->velocityVariance_ = 0.015f;
-      ps->gravity_ = 0.0f;
-      // GPU パーティクルは水面で消えないので、寿命いっぱい昇っても水面に届かない深さから出す
-      // （最長 2.2s × 2.7m/s ≒ 6m。射出点は UpdateBubbleEmitter で水面より kBubbleMinDepth 下に抑える）
-      ps->minLifeTime_ = 1.2f;
-      ps->maxLifeTime_ = 2.2f;
-      ps->minScale_ = 0.06f;
-      ps->maxScale_ = 0.2f;
-      ps->startColor_ = {0.85f, 0.95f, 1.0f, 0.75f};
-      ps->endColor_ = {0.85f, 0.95f, 1.0f, 0.0f};
-    }
-    scene->InitDynamicEntityRuntime(*e);
-    bubbles_ = e;
-  }
-
-  void SetBubbleEmission(uint32_t perFrame) {
-    auto e = bubbles_.lock();
-    if (!e) return;
-    if (auto *gpu = e->GetComponent<GPUParticleComponent>()) {
-      if (gpu->particleSystem) gpu->particleSystem->SetEmitCount(perFrame);
-    }
-  }
-
-  void UpdateBubbleEmitter(const TransformComponent &camTr) {
-    auto e = bubbles_.lock();
-    if (!e) return;
-    auto *tr = e->GetComponent<TransformComponent>();
-    if (!tr) return;
-    // カメラの向き（rotation.x = +π/2 で真下、0 で +Z、負で見上げ）の 8m 先、少し下。
-    // 箱の上端が水面に近づきすぎると泡が空へ飛び出すので、水面より kBubbleMinDepth 下に抑える
-    const float rx = camTr.rotation.x;
-    const RC::Vector3 fwd = {0.0f, -std::sin(rx), std::cos(rx)};
-    float y = camTr.position.y + fwd.y * 8.0f - 3.0f;
-    const float boxHalfH = 2.0f;
-    y = (std::min)(y, dive_.waterY - kBubbleMinDepth - boxHalfH);
-    tr->position = {camTr.position.x + fwd.x * 8.0f, y, camTr.position.z + fwd.z * 8.0f};
+    auto cam = WaterCameraFx::FindMainCamera(scene);
+    if (!cam) return;
+    rise_.Begin(cam, WaterCameraFx::FindWaterY(scene), rise, look, &bubbles_);
   }
 
   // ------------------------------------------------------------------
@@ -1179,9 +898,11 @@ private:
   float time_ = 0.0f;
   float pulseTimer_ = 0.0f;
 
-  DiveState dive_;                 ///< 飛び込みの進行状態
-  bool diveTestOnly_ = false;      ///< ImGui の Test Dive（遷移しない）
-  std::weak_ptr<Entity> bubbles_;  ///< 泡のエミッタ
+  WaterCameraFx::DiveSequence dive_; ///< スタート時の飛び込み
+  WaterCameraFx::RiseSequence rise_; ///< 入場時の浮上
+  WaterCameraFx::Bubbles bubbles_;   ///< 泡のエミッタ（飛び込み・浮上で共用）
+  bool diveTestOnly_ = false;        ///< ImGui の Test Dive（遷移しない）
+  bool diveRequested_ = false;       ///< 飛び込み後の遷移要求が受理されたか
 };
 
 REGISTER_SCRIPT(TitleScreenScript)

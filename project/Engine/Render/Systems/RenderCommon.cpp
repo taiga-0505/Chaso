@@ -149,6 +149,10 @@ void PreDraw2DBackground(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   RenderContext::GetInstance().PreDraw2DBackground(ctx, cl);
 }
 
+void ResumeDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  RenderContext::GetInstance().ResumeDraw2D(ctx, cl);
+}
+
 void ExecuteOverlay3D() {
   RenderContext::GetInstance().ExecuteOverlay3DCommands();
 }

@@ -19,7 +19,7 @@ void Game::Init(SceneContext &ctx) {
 #elif defined(_DEBUG)
   const char *boot = "Game";
 #else
-  const char *boot = "Select";
+  const char *boot = "Title";
 #endif
   sceneMgr_.ChangeImmediately(boot, ctx);
 }
@@ -33,6 +33,10 @@ void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }
 
 void Game::Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
   sceneMgr_.Render(ctx, cl);
+}
+
+void Game::RenderOverlay(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  sceneMgr_.RenderOverlay(ctx, cl);
 }
 
 void Game::Term() {

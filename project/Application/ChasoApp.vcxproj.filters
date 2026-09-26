@@ -134,7 +134,13 @@
     <ClInclude Include="..\Application\Game\Framework\GameSession.h">
       <Filter>Game\Framework</Filter>
     </ClInclude>
+    <ClInclude Include="..\Application\Game\Framework\GameSettings.h">
+      <Filter>Game\Framework</Filter>
+    </ClInclude>
     <ClInclude Include="..\Application\Game\Framework\UnderwaterLook.h">
+      <Filter>Game\Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Application\Game\Framework\WaterCameraFx.h">
       <Filter>Game\Framework</Filter>
     </ClInclude>
     <ClInclude Include="..\Application\Game\Scene\Fade\Fade.h">

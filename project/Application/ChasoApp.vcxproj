@@ -186,9 +186,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="..\Application\Game\Scripts\SceneFlowUI.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\TitleScreenScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\DeepRiseIntroScript.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\DeathSinkScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\ResultScreenScript.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\PauseMenuScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\ShipEnemyScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\WaterObstacleScript.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\TreasureChestScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\WaveManagerScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\WaveSpawnerScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\FarmerController.cpp" />
@@ -209,7 +212,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="..\Application\Game\Framework\GameModeBase.h" />
     <ClInclude Include="..\Application\Game\Framework\GameStateBase.h" />
     <ClInclude Include="..\Application\Game\Framework\GameSession.h" />
+    <ClInclude Include="..\Application\Game\Framework\GameSettings.h" />
     <ClInclude Include="..\Application\Game\Framework\UnderwaterLook.h" />
+    <ClInclude Include="..\Application\Game\Framework\WaterCameraFx.h" />
     <ClInclude Include="..\Application\Game\Scene\Fade\Fade.h" />
     <ClInclude Include="..\Application\Game\Scene\Scene.h" />
     <ClInclude Include="..\Application\Game\Scene\SceneManager.h" />

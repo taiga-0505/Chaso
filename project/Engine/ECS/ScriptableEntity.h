@@ -50,6 +50,14 @@ public:
   /// @details Use this for 2D drawing (DrawBox, DrawCircle, etc.)
   virtual void OnRender() {}
 
+  /// @brief ポストプロセスの後（最終画像の上）に呼ばれる 2D 描画
+  /// @details 輪郭・水中・ビネット・ディゾルブなどの画面効果を受けたくない UI
+  ///          （ポーズメニュー、設定画面など）はここで描く。OnRender で描いた HUD は
+  ///          効果の下に沈むが、ここで描いたものは常に一番手前に出る。
+  ///          2D 描画関数（DrawBox / DrawString 等）だけを使うこと。3D は描けない。
+  ///          シーン遷移のディゾルブも掛からないので、遷移を要求したら自分で消すこと。
+  virtual void OnOverlayRender() {}
+
   /// @brief シャドウパス中に呼ばれる。「影を落とす（光を遮る）」3D ジオメトリだけをここで描く
   /// @details スクリプトが OnRender で自前に 3D モデルを描いている場合（マップの壁・床、ドアなど）、
   ///          ここでも同じモデルを RC::DrawModel / RC::DrawModelBatchColored で描くこと。

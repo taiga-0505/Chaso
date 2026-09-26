@@ -41,6 +41,7 @@ public:
     waypointsTotal_ = 0;
     enemiesDefeated_ = 0;
     damageTaken_ = 0;
+    chestsCollected_ = 0;
     ++playCount_;
   }
 
@@ -75,9 +76,14 @@ public:
     if (amount > 0) damageTaken_ += amount;
   }
 
-  /// @brief 撃破数・被ダメージを直接書く（撮影モードの仕込み用。プレイ中は Add 系を使うこと）
+  /// @brief 宝箱を開けた（TreasureChestScript が HP 0 になった瞬間に呼ぶ）
+  /// @details 得点そのものは score_add 経由でスコアに合算されるので、ここでは個数だけ数える。
+  void AddChestCollected(int count = 1) { chestsCollected_ += count; }
+
+  /// @brief 撃破数・被ダメージ・宝箱取得数を直接書く（撮影モードの仕込み用。プレイ中は Add 系を使うこと）
   void SetEnemiesDefeated(int count) { enemiesDefeated_ = (count < 0) ? 0 : count; }
   void SetDamageTaken(int amount) { damageTaken_ = (amount < 0) ? 0 : amount; }
+  void SetChestsCollected(int count) { chestsCollected_ = (count < 0) ? 0 : count; }
 
   // --- Result から読む値 ---
   int Score() const { return score_; }
@@ -104,6 +110,8 @@ public:
   int EnemiesDefeated() const { return enemiesDefeated_; }
   /// @brief 被弾した合計ダメージ
   int DamageTaken() const { return damageTaken_; }
+  /// @brief 開けた宝箱の数
+  int ChestsCollected() const { return chestsCollected_; }
 
   /// @brief 何回プレイしたか（1 周目なら 1）
   int PlayCount() const { return playCount_; }
@@ -134,4 +142,5 @@ private:
   int waypointsTotal_ = 0;
   int enemiesDefeated_ = 0;
   int damageTaken_ = 0;
+  int chestsCollected_ = 0;
 };

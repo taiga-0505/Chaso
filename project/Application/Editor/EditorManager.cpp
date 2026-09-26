@@ -576,7 +576,7 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
   // 撮影モード（F9）
   // ============================
   // 動画で成果を証明するためのモード。入っているあいだは
-  // メニューバーも他のパネルも出さず、ゲーム画面と字幕だけにする。
+  // メニューバーも他のパネルも出さず、ゲーム画面だけにする。
   CaptureMode::HandleHotkeys();
   if (CaptureMode::IsActive()) {
     // 浮力やウェーブ戦闘は再生中でないと動かないので、再生状態にしておく。
@@ -1200,7 +1200,7 @@ void EditorManager::DrawEntityNode(std::shared_ptr<Entity> e, Scene* currentScen
 
 void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* core, PipelineManager* pm, float deltaTime, Scene* currentScene) {
 #if RC_ENABLE_IMGUI
-  // 撮影モード中はゲーム画面と字幕だけを描いて抜ける。
+  // 撮影モード中はゲーム画面だけを描いて抜ける。
   // 他のパネルを Begin しなければ、そのまま画面から消える。
   if (CaptureMode::IsActive()) {
     CaptureMode::Draw(viewportSrv, core, currentScene, deltaTime);
@@ -1496,6 +1496,9 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
   }
 
   // Viewport パネル
+  // カーソルロック（視点操作）の戻し先。Viewport 画像が描かれた場合だけ下で画像中央を指定し、
+  // 描かれなかったフレームはウィンドウ中央に戻す。
+  if (auto* input = Input::GetInstance()) input->ClearCursorLockCenter();
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0)); // 余白なし
   if (ImGui::Begin("Viewport")) {
     isViewportHovered_ = ImGui::IsWindowHovered();
@@ -1545,6 +1548,8 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
           float scaledY = (currentMouseY / height) * gameH;
           if (auto input = Input::GetInstance()) {
               input->SetGameMousePosition(scaledX, scaledY);
+              // ImGui の座標はクライアント座標（マルチビューポート無効）なので、そのまま渡せる
+              input->SetCursorLockCenter((vMin.x + vMax.x) * 0.5f, (vMin.y + vMax.y) * 0.5f);
           }
       }
 
@@ -2082,7 +2087,7 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
             ImGui::Separator();
 
             // Collect known tags
-            std::set<std::string> knownTags = { "is_enemy", "is_player", "is_terrain", "pending_damage", "impact_factor", "reused", "Shark", "Enemy" };
+            std::set<std::string> knownTags = { "is_enemy", "is_player", "is_terrain", "is_item", "pending_damage", "impact_factor", "reused", "Shark", "Enemy" };
             if (currentScene) {
                 for (const auto& sceneEntity : currentScene->GetEntities()) {
                     if (!sceneEntity) continue;

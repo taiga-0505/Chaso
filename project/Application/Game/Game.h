@@ -26,6 +26,11 @@ public:
   /// @param cl グラフィックスコマンドリスト
   void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
 
+  /// @brief ポストプロセス後のオーバーレイ描画（ポーズメニューなど画面効果を受けない UI）
+  /// @param ctx シーンコンテキスト
+  /// @param cl グラフィックスコマンドリスト
+  void RenderOverlay(SceneContext &ctx, ID3D12GraphicsCommandList *cl);
+
   /// @brief 終了処理
   void Term();
 

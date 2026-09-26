@@ -370,6 +370,42 @@ void RenderContext::PreDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) 
   cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
+void RenderContext::ResumeDraw2D(SceneContext &ctx, ID3D12GraphicsCommandList *cl) {
+  cl_ = cl;
+  ctxRef_ = &ctx;
+  currentBlendMode_ = kBlendModeNormal;
+
+  // ※ Execute3DCommands / BeginFrame は呼ばない（PreDraw2D 済みの続きとして描く）
+
+  // 2D Viewport / Scissor（ポストプロセスが張り替えているので戻す）
+  D3D12_VIEWPORT viewport{};
+  viewport.TopLeftX = 0.0f;
+  viewport.TopLeftY = 0.0f;
+  viewport.Width = static_cast<float>(ctx.app->width);
+  viewport.Height = static_cast<float>(ctx.app->height);
+  viewport.MinDepth = 0.0f;
+  viewport.MaxDepth = 1.0f;
+
+  D3D12_RECT scissor{};
+  scissor.left = 0;
+  scissor.top = 0;
+  scissor.right = static_cast<LONG>(ctx.app->width);
+  scissor.bottom = static_cast<LONG>(ctx.app->height);
+
+  cl->RSSetViewports(1, &viewport);
+  cl->RSSetScissorRects(1, &scissor);
+
+  auto *pso = GetPipeline("sprite", kBlendModeNormal);
+  if (!pso) {
+    cl_ = nullptr;
+    ctxRef_ = nullptr;
+    return;
+  }
+  cl->SetGraphicsRootSignature(pso->Root());
+  cl->SetPipelineState(pso->PSO());
+  cl->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
 void RenderContext::PreDraw2DBackground(SceneContext &ctx,
                                         ID3D12GraphicsCommandList *cl) {
   cl_ = cl;

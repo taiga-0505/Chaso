@@ -465,13 +465,27 @@
                     "waitTime": 0.0
                   }
                 ]
+              },
+              {
+                "enabled": true,
+                "delay": 0.6,
+                "fallTime": 0.8,
+                "sinkTime": 3.2,
+                "depth": 30.0,
+                "lookUpPitch": -1.05,
+                "tiltTime": 2.2,
+                "roll": 0.18,
+                "darkDepth": 24.0,
+                "bubbles": true,
+                "resultScene": "Result"
               }
             ],
             "scriptTypeName": "DeepRiseIntroScript",
             "scriptTypeNames": [
               "DeepRiseIntroScript",
               "RailShooterController",
-              "RailMovementScript"
+              "RailMovementScript",
+              "DeathSinkScript"
             ]
           },
           "enabled": true,
@@ -637,7 +651,7 @@
             "scriptDataList": [
               {
                 "attackHitDistance": 2.5,
-                "attackSpeed": 25.0,
+                "attackSpeed": 18.0,
                 "attackStartDistance": 10.0,
                 "cooldownDuration": 2.0,
                 "detectDistance": 30.0,
@@ -648,7 +662,7 @@
                 ],
                 "swimSineAmplitude": 3.0,
                 "swimSineFrequency": 2.0,
-                "swimSpeed": 8.0
+                "swimSpeed": 6.0
               }
             ],
             "scriptTypeName": "SharkEnemyScript",
@@ -998,7 +1012,7 @@
             "scriptDataList": [
               {
                 "attackHitDistance": 2.5,
-                "attackSpeed": 25.0,
+                "attackSpeed": 18.0,
                 "attackStartDistance": 10.0,
                 "cooldownDuration": 2.0,
                 "detectDistance": 30.0,
@@ -1009,7 +1023,7 @@
                 ],
                 "swimSineAmplitude": 3.0,
                 "swimSineFrequency": 2.0,
-                "swimSpeed": 8.0
+                "swimSpeed": 6.0
               }
             ],
             "scriptTypeName": "SharkEnemyScript",
@@ -1730,7 +1744,7 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 20,
+                  "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
                     0.0,
@@ -1811,7 +1825,7 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 15,
+                  "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
                     0.0,
@@ -1892,7 +1906,7 @@
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
                 "enemyParams": {
-                  "maxHp": 30,
+                  "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
                     0.0,
@@ -2055,6 +2069,277 @@
         "spawner_wave_id": 3,
         "wave_spawner": 1
       },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              -4.0,
+              1.2,
+              -22.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.2,
+                "bobSpeed": 1.5,
+                "maxHp": 3,
+                "openDuration": 1.2,
+                "points": 100,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
+            "color": [
+              0.55,
+              0.35,
+              0.15,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          },
+          "enabled": true,
+          "type": "PrimitiveMeshComponent"
+        }
+      ],
+      "guid": 7301001001001001001,
+      "isFolder": false,
+      "locked": false,
+      "name": "TreasureChest_1",
+      "parentGuid": 710271550770534429,
+      "tags": {
+        "is_item": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              6.0,
+              -5.0,
+              22.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.2,
+                "bobSpeed": 1.5,
+                "maxHp": 5,
+                "openDuration": 1.2,
+                "points": 300,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
+            "color": [
+              0.55,
+              0.35,
+              0.15,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          },
+          "enabled": true,
+          "type": "PrimitiveMeshComponent"
+        }
+      ],
+      "guid": 7301001001001001002,
+      "isFolder": false,
+      "locked": false,
+      "name": "TreasureChest_2",
+      "parentGuid": 710271550770534429,
+      "tags": {
+        "is_item": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "titleScene": "Title",
+                "retryScene": "Game",
+                "panelColor": [
+                  0.06,
+                  0.08,
+                  0.11,
+                  0.92
+                ],
+                "accentColor": [
+                  0.88,
+                  0.74,
+                  0.38,
+                  1.0
+                ],
+                "dimAlpha": 0.55
+              }
+            ],
+            "scriptTypeName": "PauseMenuScript",
+            "scriptTypeNames": [
+              "PauseMenuScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        }
+      ],
+      "guid": 5200100100100100101,
+      "isFolder": false,
+      "locked": false,
+      "name": "PauseMenu",
+      "parentGuid": 0,
+      "tags": {},
       "visible": true
     }
   ],

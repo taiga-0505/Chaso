@@ -162,7 +162,9 @@ protected:
                 bool isTarget = false;
                 bool isTerrainEntity = (e->GetTagInt("is_terrain", 0) == 1);
                 if (isPlayerBullet) {
-                    if (e->GetTagInt("is_enemy", 0) == 1 || isTerrainEntity) isTarget = true;
+                    // 敵・地形に加えて、宝箱などのアイテム（is_item）にも当たる
+                    if (e->GetTagInt("is_enemy", 0) == 1 || isTerrainEntity ||
+                        e->GetTagInt("is_item", 0) == 1) isTarget = true;
                 } else {
                     if (e->GetTagInt("is_player", 0) == 1 || isTerrainEntity) isTarget = true;
                 }
@@ -242,8 +244,14 @@ protected:
         bool hitEnemy = (isPlayerBullet && (other->GetTagInt("is_enemy", 0) == 1));
         bool hitPlayer = (!isPlayerBullet && (other->GetTagInt("is_player", 0) == 1));
         bool hitTerrain = (other->GetTagInt("is_terrain", 0) == 1);
+        // 宝箱などのアイテム。ダメージだけ積み、ポイント加算はアイテム側（TreasureChestScript）が行う
+        bool hitItem = (isPlayerBullet && (other->GetTagInt("is_item", 0) == 1));
 
-        if (hitEnemy || hitPlayer) {
+        if (hitItem) {
+            int pendingDmg = other->GetTagInt("pending_damage", 0);
+            other->SetTag("pending_damage", pendingDmg + damage);
+            Die();
+        } else if (hitEnemy || hitPlayer) {
             // ダメージ処理
             int pendingDmg = other->GetTagInt("pending_damage", 0);
             other->SetTag("pending_damage", pendingDmg + damage);

@@ -492,6 +492,13 @@ void Scene::SceneManager::Render(SceneContext &ctx,
   }
 }
 
+void Scene::SceneManager::RenderOverlay(SceneContext &ctx,
+                                        ID3D12GraphicsCommandList *cl) {
+  if (current_) {
+    current_->RenderOverlay(ctx, cl);
+  }
+}
+
 void Scene::SceneManager::ChangeState(std::unique_ptr<ISceneState> newState) {
   state_ = std::move(newState);
 }

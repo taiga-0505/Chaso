@@ -6,6 +6,8 @@
 #include "Engine/Render/RenderContext.h"
 #include "Application/Framework/App.h"
 #include "Application/Game/Framework/GameSession.h"
+#include "Application/Game/Framework/UnderwaterLook.h"
+#include "Application/Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
 
 #include <Windows.h>
@@ -23,7 +25,7 @@
 ///     - 画面中央に墨色のパネルを敷き、上から順に
 ///         見出し（戦果 / RESULT または GAME OVER / 航路 踏破 or 途絶）
 ///         ウェイポイント達成率（大きな％ ＋ 通過数 ＋ 地点を並べた航路ゲージ）
-///         撃破数 / 被ダメージ（被ダメージには HP のコマも並べる）
+///         撃破数 / 宝箱 / 被ダメージ（被ダメージには HP のコマも並べる）
 ///       を置く。下段に「もう一度」「タイトルへ」の 2 つのボタン。
 ///     - 値はすべて GameSession から読む（Game シーンが書き込んだもの）。
 ///       クリアかゲームオーバーかは GameSession::IsCleared() で見分け、見出し下の一言と欧文を切り替える。
@@ -57,6 +59,14 @@
 ///     "panelColor"      : パネルの色 RGBA
 ///     "accentColor"     : 強調色（達成率ラベル・ゲージ・選択マーカー）RGBA
 ///     "selectedColor"   : 選択中ボタンの塗り RGBA
+///     [決定後の飛び込み]
+///     "uiFadeTime"      : 決定してから UI が消えきるまで（秒）。消えきってから水へ飛び込む
+///     "dive*"           : 飛び込みの調整値（Title と同じキー。WaterCameraFx::DiveParams）
+///     "underwater"      : 水中の見た目（UnderwaterLook::Params。Title / Game と同じキー）
+///     飛び込みで暗くなりきったら "dive" 遷移で retryScene / titleScene へ。
+///     "rise*"           : Dive 遷移（DeathSinkScript：力尽きて沈んだとき）で入ってきたときの浮上。
+///                         浮上しきってから UI をフェードインし、成績の演出を始める
+///     Game は DeepRiseIntroScript、Title は TitleScreenScript が深海からの浮上で受け取る。
 class ResultScreenScript : public ScriptableEntity {
 public:
   // ---- 文言 ----
@@ -84,7 +94,22 @@ public:
   RC::Vector4 accentColor = {0.42f, 0.76f, 0.88f, 1.0f};    ///< 浅葱
   RC::Vector4 selectedColor = {0.12f, 0.27f, 0.50f, 0.96f}; ///< 藍
 
+  // ---- 決定後：UI を消してから水へ飛び込む ----
+  float uiFadeTime = 0.35f;
+  WaterCameraFx::DiveParams dive;
+  WaterCameraFx::RiseParams rise; ///< Dive 遷移（力尽きて沈んだとき）で入ってきたときの浮上
+  UnderwaterLook::Params look;
+
   nlohmann::json Serialize() override {
+    nlohmann::json j = SerializeBase();
+    j["uiFadeTime"] = uiFadeTime;
+    j["underwater"] = look.ToJson();
+    dive.WriteJson(j);
+    rise.WriteJson(j);
+    return j;
+  }
+
+  nlohmann::json SerializeBase() const {
     auto v4 = [](const RC::Vector4 &c) { return nlohmann::json{c.x, c.y, c.z, c.w}; };
     return {
         {"titleText", titleText},
@@ -142,6 +167,10 @@ public:
     readVec4("panelColor", panelColor);
     readVec4("accentColor", accentColor);
     readVec4("selectedColor", selectedColor);
+    readF("uiFadeTime", uiFadeTime);
+    if (j.contains("underwater")) look.FromJson(j["underwater"]);
+    dive.ReadJson(j);
+    rise.ReadJson(j);
   }
 
 protected:
@@ -156,7 +185,8 @@ protected:
       Log::Print("[ResultScreenScript] " + std::string(s.IsCleared() ? "cleared" : "game over") +
                  "  waypoints " + std::to_string(s.WaypointsReached()) + "/" +
                  std::to_string(s.WaypointsTotal()) + "  defeated " +
-                 std::to_string(s.EnemiesDefeated()) + "  damage " +
+                 std::to_string(s.EnemiesDefeated()) + "  chests " +
+                 std::to_string(s.ChestsCollected()) + "  damage " +
                  std::to_string(s.DamageTaken()) + "  hp " + std::to_string(s.PlayerHp()) + "/" +
                  std::to_string(s.PlayerMaxHp()) + "  score " + std::to_string(s.Score()));
     }
@@ -194,20 +224,56 @@ protected:
     if (Input *in = Input::GetInstance()) {
       in->GetGameMousePosition(lastMouseX_, lastMouseY_);
     }
+
+    // 泡のエミッタは先に作っておく（初期化で一瞬止まるので、飛び込みの瞬間には作らない）
+    leaving_ = false;
+    uiAlpha_ = 1.0f;
+    if ((dive.enabled && dive.bubbles) || (rise.enabled && rise.bubbles)) {
+      bubbles_.Spawn(GetScene(), "ResultBubbles");
+    }
+
+    // 力尽きて沈んだ（Dive 遷移で入ってきた）ときは、深海から浮上してからパネルを出す。
+    // 編集モードでもスクリプトは作られるので、再生中だけ
+    if (SceneContext *ctx = GetSceneContext()) {
+      if (rise.enabled && ctx->isPlaying() && ctx->lastTransition == SceneTransition::Dive) {
+        Scene *scene = GetScene();
+        if (rise_.Begin(WaterCameraFx::FindMainCamera(scene), WaterCameraFx::FindWaterY(scene), rise,
+                        look, &bubbles_)) {
+          uiAlpha_ = 0.0f;
+          uiFadeIn_ = 0.0f;
+        }
+      }
+    }
   }
 
   void OnUpdate(float deltaTime) override {
     if (deltaTime <= 0.0f) return; // 一時停止・編集中は演出も入力も止める
     pulse_ += deltaTime;
+    // 浮上中は UI を出さず、演出の時間も進めない（水面の上に上がりきってから始める）
+    if (rise_.IsActive()) rise_.Update(deltaTime);
+    if (rise_.IsMoving()) return;
+    if (uiFadeIn_ >= 0.0f) {
+      uiFadeIn_ += deltaTime;
+      uiAlpha_ = WaterCameraFx::Smooth01(uiFadeIn_ / (std::max)(uiFadeTime, 1e-3f));
+      if (uiAlpha_ >= 1.0f) { uiAlpha_ = 1.0f; uiFadeIn_ = -1.0f; }
+    }
     if (anim_ < kAnimEnd) anim_ = (std::min)(anim_ + deltaTime, kAnimEnd);
     if (bump_ > 0.0f) bump_ = (std::max)(0.0f, bump_ - deltaTime / kBumpTime);
 
+    if (leaving_) {
+      UpdateLeave(deltaTime);
+      return;
+    }
     if (!decided_) {
       HandleInput();
     }
   }
 
   void OnDestroy() override {
+    // 飛び込みの途中でエディタから停止された場合はカメラと画面を戻す
+    if (dive_.IsActive()) dive_.End(/*restoreCamera=*/true);
+    if (rise_.IsActive()) rise_.End();
+    bubbles_.Destroy();
     auto unload = [](int &handle) {
       if (handle >= 0) {
         RC::UnloadFont(handle);
@@ -222,6 +288,7 @@ protected:
   }
 
   void OnRender() override {
+    if (uiAlpha_ <= 0.0f) return; // 飛び込みに入ったら UI は描かない
     float screenW = 1280.0f;
     float screenH = 720.0f;
     auto &rc = RC::GetRenderContext();
@@ -241,7 +308,7 @@ protected:
 
     // 水面全体を少し沈めて文字を読みやすくする
     if (dimAlpha > 0.0f) {
-      RC::DrawBox({0.0f, 0.0f}, {screenW, screenH}, {0.02f, 0.03f, 0.06f, dimAlpha});
+      UiBox({0.0f, 0.0f}, {screenW, screenH}, {0.02f, 0.03f, 0.06f, dimAlpha});
     }
 
     DrawPanel();
@@ -271,7 +338,8 @@ private:
   static constexpr float kButtonGap = 72.0f; ///< パネル下端からボタン中心までの距離
   /// @brief パネル下端（行数で伸び縮みする）
   float PanelBottom() const {
-    const float rows = showScore ? 3.0f : 2.0f;
+    // 撃破数 / 宝箱 / 被ダメージ ＋ 任意で得点
+    const float rows = showScore ? 4.0f : 3.0f;
     return kPanelT + kRowsTop + kRowH * rows + 18.0f;
   }
 
@@ -334,8 +402,8 @@ private:
     if (font < 0 || text.empty()) return;
     const float sc = scale * L_.fs;
     const float sh = (std::max)(1.0f, S(1.0f));
-    RC::DrawString(font, text, {x + sh, y + sh}, {0.0f, 0.02f, 0.05f, 0.55f * color.w}, sc, align);
-    RC::DrawString(font, text, {x, y}, color, sc, align);
+    UiString(font, text, {x + sh, y + sh}, {0.0f, 0.02f, 0.05f, 0.55f * color.w}, sc, align);
+    UiString(font, text, {x, y}, color, sc, align);
   }
   float LineH(int font, float scale = 1.0f) const {
     return (font >= 0) ? RC::GetFontLineHeight(font, scale * L_.fs) : S(kLabelPx) * scale;
@@ -352,26 +420,26 @@ private:
   void DrawPanel() const {
     const RC::Vector2 tl = P(kPanelL, kPanelT);
     const RC::Vector2 br = P(kPanelR, PanelBottom());
-    RC::DrawBox(tl, br, panelColor);
+    UiBox(tl, br, panelColor);
 
     // 内側と外側の細い枠。和綴じの表紙のように 2 本引く
     const float in1 = S(6.0f), in2 = S(11.0f);
-    RC::DrawBox({tl.x + in1, tl.y + in1}, {br.x - in1, br.y - in1}, WithAlpha(kInk, 0.55f), kWire);
-    RC::DrawBox({tl.x + in2, tl.y + in2}, {br.x - in2, br.y - in2}, WithAlpha(kInk, 0.22f), kWire);
+    UiBox({tl.x + in1, tl.y + in1}, {br.x - in1, br.y - in1}, WithAlpha(kInk, 0.55f), kWire);
+    UiBox({tl.x + in2, tl.y + in2}, {br.x - in2, br.y - in2}, WithAlpha(kInk, 0.22f), kWire);
 
     // 四隅の飾り（L 字）
     const float arm = S(22.0f);
     const float th = (std::max)(1.0f, S(2.0f));
     const RC::Vector4 c = WithAlpha(accentColor, 0.9f);
     const float o = S(2.0f);
-    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o + arm, tl.y + o}, c, th);
-    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o, tl.y + o + arm}, c, th);
-    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o - arm, tl.y + o}, c, th);
-    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o, tl.y + o + arm}, c, th);
-    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o + arm, br.y - o}, c, th);
-    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o, br.y - o - arm}, c, th);
-    RC::DrawLine({br.x - o, br.y - o}, {br.x - o - arm, br.y - o}, c, th);
-    RC::DrawLine({br.x - o, br.y - o}, {br.x - o, br.y - o - arm}, c, th);
+    UiLine({tl.x + o, tl.y + o}, {tl.x + o + arm, tl.y + o}, c, th);
+    UiLine({tl.x + o, tl.y + o}, {tl.x + o, tl.y + o + arm}, c, th);
+    UiLine({br.x - o, tl.y + o}, {br.x - o - arm, tl.y + o}, c, th);
+    UiLine({br.x - o, tl.y + o}, {br.x - o, tl.y + o + arm}, c, th);
+    UiLine({tl.x + o, br.y - o}, {tl.x + o + arm, br.y - o}, c, th);
+    UiLine({tl.x + o, br.y - o}, {tl.x + o, br.y - o - arm}, c, th);
+    UiLine({br.x - o, br.y - o}, {br.x - o - arm, br.y - o}, c, th);
+    UiLine({br.x - o, br.y - o}, {br.x - o, br.y - o - arm}, c, th);
   }
 
   /// @brief 見出し（戦果）と欧文、クリア／未クリアの一言。パネルの上に置く
@@ -385,13 +453,13 @@ private:
     const float halfW = TextW(headingFont_, titleText) * 0.5f + S(28.0f);
     const float ruleY = headTop + headH * 0.56f;
     const float ruleLen = S(150.0f);
-    RC::DrawLine({cx - halfW - ruleLen, ruleY}, {cx - halfW, ruleY}, WithAlpha(kInk, 0.5f),
+    UiLine({cx - halfW - ruleLen, ruleY}, {cx - halfW, ruleY}, WithAlpha(kInk, 0.5f),
                  (std::max)(1.0f, S(1.0f)));
-    RC::DrawLine({cx + halfW, ruleY}, {cx + halfW + ruleLen, ruleY}, WithAlpha(kInk, 0.5f),
+    UiLine({cx + halfW, ruleY}, {cx + halfW + ruleLen, ruleY}, WithAlpha(kInk, 0.5f),
                  (std::max)(1.0f, S(1.0f)));
     // 罫の外端に小さな点
-    RC::DrawCircle({cx - halfW - ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
-    RC::DrawCircle({cx + halfW + ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
+    UiCircle({cx - halfW - ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
+    UiCircle({cx + halfW + ruleLen, ruleY}, S(2.5f), WithAlpha(kInk, 0.6f));
 
     // 欧文（小さく、控えめに）。ゲームオーバー時は GAME OVER に差し替える
     const bool cleared = session.IsCleared();
@@ -452,17 +520,17 @@ private:
     const float gx1 = right - S(8.0f);
     const float thin = (std::max)(1.0f, S(3.0f));
     const float thick = (std::max)(1.0f, S(4.0f));
-    RC::DrawLine({gx0, gy}, {gx1, gy}, WithAlpha(kDim, 0.55f), thin);
+    UiLine({gx0, gy}, {gx1, gy}, WithAlpha(kDim, 0.55f), thin);
 
     const float fill = (total > 0) ? (static_cast<float>(reached) / static_cast<float>(total)) * t
                                    : rate * t;
     if (fill > 0.0f) {
-      RC::DrawLine({gx0, gy}, {gx0 + (gx1 - gx0) * fill, gy}, accentColor, thick);
+      UiLine({gx0, gy}, {gx0 + (gx1 - gx0) * fill, gy}, accentColor, thick);
     }
 
     // 出発点（小さな中空の丸）
-    RC::DrawCircle({gx0, gy}, S(5.0f), WithAlpha(kInk, 0.9f));
-    RC::DrawCircle({gx0, gy}, S(2.5f), panelColorOpaque());
+    UiCircle({gx0, gy}, S(5.0f), WithAlpha(kInk, 0.9f));
+    UiCircle({gx0, gy}, S(2.5f), panelColorOpaque());
 
     // 地点。多すぎるときは丸を間引く（線の塗りだけで割合は分かる）
     if (total > 0) {
@@ -476,22 +544,22 @@ private:
         const bool lit = (i < reached) && (pos <= fill + 1e-4f);
         if (last) {
           // 終点：ひと回り大きく、到達していれば金色の芯を入れる
-          RC::DrawCircle({dx, gy}, S(9.0f), lit ? kInk : WithAlpha(kDim, 0.9f));
-          RC::DrawCircle({dx, gy}, S(5.5f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
-          if (lit) RC::DrawCircle({dx, gy}, S(2.5f), kGold);
+          UiCircle({dx, gy}, S(9.0f), lit ? kInk : WithAlpha(kDim, 0.9f));
+          UiCircle({dx, gy}, S(5.5f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
+          if (lit) UiCircle({dx, gy}, S(2.5f), kGold);
         } else {
-          RC::DrawCircle({dx, gy}, S(6.0f), lit ? kInk : WithAlpha(kDim, 0.8f));
-          RC::DrawCircle({dx, gy}, S(3.0f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
+          UiCircle({dx, gy}, S(6.0f), lit ? kInk : WithAlpha(kDim, 0.8f));
+          UiCircle({dx, gy}, S(3.0f), lit ? WithAlpha(selectedColor, 1.0f) : panelColorOpaque());
         }
       }
     }
     // 到達点のいちばん先に、いま塗っている先端の光
     if (fill > 0.0f && fill < 1.0f) {
-      RC::DrawCircle({gx0 + (gx1 - gx0) * fill, gy}, S(4.0f), WithAlpha(kInk, 0.9f));
+      UiCircle({gx0 + (gx1 - gx0) * fill, gy}, S(4.0f), WithAlpha(kInk, 0.9f));
     }
   }
 
-  /// @brief 撃破数・被ダメージ（・得点）の行
+  /// @brief 撃破数・宝箱・被ダメージ（・得点）の行
   void DrawStatRows(const GameSession &session) const {
     const float left = X(kPanelL + kPanelPad);
     const float right = X(kPanelR - kPanelPad);
@@ -504,7 +572,7 @@ private:
     };
 
     auto drawRule = [&](float y, float a) {
-      RC::DrawLine({left, y}, {right, y}, WithAlpha(kInk, 0.18f * a), (std::max)(1.0f, S(1.0f)));
+      UiLine({left, y}, {right, y}, WithAlpha(kInk, 0.18f * a), (std::max)(1.0f, S(1.0f)));
     };
 
     // 行のラベル（和文 ＋ 小さな欧文）を左に置く
@@ -535,6 +603,21 @@ private:
       ++rowIndex;
     }
 
+    // --- 宝箱 ---
+    {
+      const float a = rowAlpha(rowIndex);
+      const float ty = rowY + (rowH - LineH(labelFont_)) * 0.5f;
+      drawLabel("宝箱", "TREASURE", ty, a);
+      const std::string unit = "個";
+      const float unitW = TextW(labelFont_, unit);
+      Text(labelFont_, unit, right, ty, WithAlpha(kMuted, a), TextAlign::Right);
+      const int chests = session.ChestsCollected();
+      drawValue(std::to_string(chests), right - unitW - S(8.0f), rowY, chests > 0 ? kInk : kMuted, a);
+      drawRule(rowY + rowH, a);
+      rowY += rowH;
+      ++rowIndex;
+    }
+
     // --- 被ダメージ ---
     {
       const float a = rowAlpha(rowIndex);
@@ -555,10 +638,10 @@ private:
         for (int i = 0; i < maxHp; ++i) {
           const bool remain = i < (maxHp - lost);
           const RC::Vector4 c = remain ? WithAlpha(accentColor, 0.95f * a) : WithAlpha(kShu, 0.95f * a);
-          RC::DrawBox({px, py}, {px + pipW, py + pipH}, c);
+          UiBox({px, py}, {px + pipW, py + pipH}, c);
           if (!remain) {
             // 削られたコマは中を抜いて「欠け」に見せる
-            RC::DrawBox({px + S(3.0f), py + S(3.0f)}, {px + pipW - S(3.0f), py + pipH - S(3.0f)},
+            UiBox({px + S(3.0f), py + S(3.0f)}, {px + pipW - S(3.0f), py + pipH - S(3.0f)},
                         WithAlpha(panelColorOpaque(), a));
           }
           px += pipW + gap;
@@ -616,20 +699,20 @@ private:
       const RC::Vector2 br = P(r, b);
 
       if (sel) {
-        RC::DrawBox(tl, br, WithAlpha(selectedColor, a));
+        UiBox(tl, br, WithAlpha(selectedColor, a));
         const float borderA = (0.6f + 0.4f * pulse) * a;
-        RC::DrawBox(tl, br, WithAlpha(kInk, borderA), kWire);
+        UiBox(tl, br, WithAlpha(kInk, borderA), kWire);
         const float o = S(4.0f);
-        RC::DrawBox({tl.x - o, tl.y - o}, {br.x + o, br.y + o}, WithAlpha(accentColor, 0.5f * borderA),
+        UiBox({tl.x - o, tl.y - o}, {br.x + o, br.y + o}, WithAlpha(accentColor, 0.5f * borderA),
                     kWire);
         // 左端の三角マーカー
         const float mx = tl.x - S(18.0f);
         const float my = (tl.y + br.y) * 0.5f;
-        RC::DrawTriangle({mx - S(6.0f), my - S(7.0f)}, {mx + S(6.0f), my}, {mx - S(6.0f), my + S(7.0f)},
+        UiTriangle({mx - S(6.0f), my - S(7.0f)}, {mx + S(6.0f), my}, {mx - S(6.0f), my + S(7.0f)},
                          WithAlpha(accentColor, a));
       } else {
-        RC::DrawBox(tl, br, WithAlpha(panelColor, a));
-        RC::DrawBox(tl, br, WithAlpha(kDim, 0.8f * a), kWire);
+        UiBox(tl, br, WithAlpha(panelColor, a));
+        UiBox(tl, br, WithAlpha(kDim, 0.8f * a), kWire);
       }
 
       const std::string &label = (i == kRetry) ? retryLabel : titleLabel;
@@ -720,6 +803,19 @@ private:
 
     if (!confirm) return;
     const std::string &target = (selected_ == kRetry) ? retryScene : titleScene;
+    SceneContext *sc = GetSceneContext();
+    if (sc && !sc->isPlaying()) return; // 編集モードでは飛ばない（RequestSceneChange と同じ）
+    if (dive.enabled) {
+      // UI を消してから飛び込む。遷移の要求は暗くなりきったあと UpdateLeave が出す
+      decided_ = true;
+      leaving_ = true;
+      leaveTarget_ = target;
+      leaveTime_ = 0.0f;
+      leaveRequested_ = false;
+      Log::Print("[ResultScreenScript] " + std::string(selected_ == kRetry ? "retry" : "title") +
+                 " -> dive -> " + target);
+      return;
+    }
     if (RequestSceneChange(target)) {
       decided_ = true;
       Log::Print("[ResultScreenScript] " + std::string(selected_ == kRetry ? "retry" : "title") +
@@ -727,6 +823,79 @@ private:
     } else {
       Log::Print("[ResultScreenScript] scene change refused: " + target);
     }
+  }
+
+  // ------------------------------------------------------------------
+  // 決定後：UI フェード → 飛び込み → 遷移
+  // ------------------------------------------------------------------
+
+  static constexpr float kLeaveRetrySeconds = 1.0f; ///< 遷移要求が通らないとき諦めるまでの秒数
+
+  void UpdateLeave(float dt) {
+    leaveTime_ += dt;
+
+    // 1) UI を消す
+    if (!dive_.IsActive()) {
+      uiAlpha_ = 1.0f - WaterCameraFx::Smooth01(leaveTime_ / (std::max)(uiFadeTime, 1e-3f));
+      if (uiAlpha_ > 0.0f) return;
+      uiAlpha_ = 0.0f;
+      Scene *scene = GetScene();
+      if (!dive_.Begin(WaterCameraFx::FindMainCamera(scene), WaterCameraFx::FindWaterY(scene), dive,
+                       look, &bubbles_)) {
+        // カメラが無い等。演出なしで遷移する
+        Log::Print("[ResultScreenScript] dive could not start, changing scene directly");
+        leaving_ = false;
+        if (!RequestSceneChange(leaveTarget_)) CancelLeave();
+        return;
+      }
+      return;
+    }
+
+    // 2) 飛び込み。暗くなりきったら遷移を要求する
+    if (!dive_.Update(dt)) {
+      dive_.End(false);
+      leaving_ = false;
+      if (!RequestSceneChange(leaveTarget_)) CancelLeave();
+      return;
+    }
+    if (!dive_.IsDone() || leaveRequested_) return;
+    leaveRequested_ = RequestSceneChange(leaveTarget_, SceneTransitions::kDive);
+    if (!leaveRequested_ && dive_.DoneTime() > kLeaveRetrySeconds) {
+      Log::Print("[ResultScreenScript] scene change kept failing, giving up: " + leaveTarget_);
+      dive_.End(/*restoreCamera=*/true);
+      CancelLeave();
+    }
+  }
+
+  /// @brief 飛び込みを取りやめてボタンを操作できる状態へ戻す
+  void CancelLeave() {
+    leaving_ = false;
+    leaveRequested_ = false;
+    decided_ = false;
+    uiAlpha_ = 1.0f;
+  }
+
+  // UI 描画のラッパー（決定後のフェードで全体の不透明度を下げる）
+  RC::Vector4 Ui(const RC::Vector4 &c) const { return {c.x, c.y, c.z, c.w * uiAlpha_}; }
+  void UiString(int font, const std::string &text, const RC::Vector2 &pos, const RC::Vector4 &color,
+                float scale = 1.0f, TextAlign align = TextAlign::Left) const {
+    RC::DrawString(font, text, pos, Ui(color), scale, align);
+  }
+  void UiBox(const RC::Vector2 &a, const RC::Vector2 &b, const RC::Vector4 &color,
+             kFillMode mode = kFill, float feather = 1.0f) const {
+    RC::DrawBox(a, b, Ui(color), mode, feather);
+  }
+  void UiLine(const RC::Vector2 &a, const RC::Vector2 &b, const RC::Vector4 &color,
+              float thickness = 1.0f, float feather = 1.0f) const {
+    RC::DrawLine(a, b, Ui(color), thickness, feather);
+  }
+  void UiCircle(const RC::Vector2 &c, float r, const RC::Vector4 &color, kFillMode mode = kFill,
+                float feather = 1.0f) const {
+    RC::DrawCircle(c, r, Ui(color), mode, feather);
+  }
+  void UiTriangle(const RC::Vector2 &a, const RC::Vector2 &b, const RC::Vector2 &c,
+                  const RC::Vector4 &color, kFillMode mode = kFill, float feather = 1.0f) const {
+    RC::DrawTriangle(a, b, c, Ui(color), mode, feather);
   }
 
   void SetSelected(int index) {
@@ -764,6 +933,16 @@ private:
   int prevStickDir_ = 0;
   float lastMouseX_ = 0.0f;
   float lastMouseY_ = 0.0f;
+
+  bool leaving_ = false;          ///< 決定後の UI フェード〜飛び込み中
+  std::string leaveTarget_;       ///< 飛び込み後に遷移するシーン
+  float leaveTime_ = 0.0f;
+  bool leaveRequested_ = false;
+  float uiAlpha_ = 1.0f;          ///< UI 全体の不透明度
+  WaterCameraFx::DiveSequence dive_;
+  WaterCameraFx::RiseSequence rise_;
+  float uiFadeIn_ = -1.0f;        ///< 浮上後の UI フェードイン（負なら無効）
+  WaterCameraFx::Bubbles bubbles_;
 };
 
 REGISTER_SCRIPT(ResultScreenScript)

@@ -21,6 +21,8 @@ Input::Input(HWND hwnd) {
 }
 
 Input::~Input() {
+    // 隠したままにするとエンジン終了後もカーソルが見えなくなるので必ず戻す
+    SetCursorLocked(false);
     // 各デバイスのデストラクタが呼ばれる
     instance_ = nullptr;
 }
@@ -29,6 +31,54 @@ void Input::Update() {
     if (keyboard_) keyboard_->Update();
     if (mouse_) mouse_->Update();
     if (controller_) controller_->Update();
+    UpdateCursorLock();
+}
+
+// ============================
+// カーソルロック
+// ============================
+void Input::SetCursorLocked(bool locked) {
+    if (cursorLocked_ == locked) return;
+    cursorLocked_ = locked;
+    ApplyCursorVisibility();
+    // ロックした瞬間にも中央へ寄せておく（次の Update まで待つと 1 フレーム端に残る）
+    if (cursorLocked_) UpdateCursorLock();
+}
+
+void Input::ApplyCursorVisibility() {
+    const bool hide = cursorLocked_;
+    if (hide == cursorHidden_) return;
+    cursorHidden_ = hide;
+    // ShowCursor は呼び出し回数を数えるカウンタ。0 未満で非表示、0 以上で表示。
+    // 他の場所で増減されていても確実に目的の状態へ持っていくためループで合わせる。
+    if (hide) {
+        while (ShowCursor(FALSE) >= 0) {}
+    } else {
+        while (ShowCursor(TRUE) < 0) {}
+    }
+}
+
+void Input::UpdateCursorLock() {
+    if (!cursorLocked_ || !hwnd_) return;
+    // 非アクティブ時に戻すと、他のウィンドウを操作しているユーザーのカーソルを奪ってしまう
+    if (GetForegroundWindow() != hwnd_) return;
+
+    POINT center{};
+    if (hasLockCenter_) {
+        center.x = static_cast<LONG>(lockCenterX_ + 0.5f);
+        center.y = static_cast<LONG>(lockCenterY_ + 0.5f);
+    } else {
+        RECT rc{};
+        if (!GetClientRect(hwnd_, &rc)) return;
+        center.x = (rc.right - rc.left) / 2;
+        center.y = (rc.bottom - rc.top) / 2;
+    }
+    ClientToScreen(hwnd_, &center);
+
+    // すでに中央にあるなら何もしない（無駄な WM_MOUSEMOVE を出さない）
+    POINT cur{};
+    if (GetCursorPos(&cur) && cur.x == center.x && cur.y == center.y) return;
+    SetCursorPos(center.x, center.y);
 }
 
 // ============================

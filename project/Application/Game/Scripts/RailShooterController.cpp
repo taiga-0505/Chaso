@@ -13,6 +13,7 @@
 #endif
 
 #include "Engine/Camera/CameraMath.h"
+#include "Engine/Camera/CameraController.h"
 #include "Engine/Graphics/PostProcess/PostProcess.h"
 #include "ECS/TransformComponent.h"
 #include "ECS/NativeScriptComponent.h"
@@ -22,6 +23,7 @@
 #include "ECS/WaterComponent.h"
 #include "Scene.h"
 #include "Application/Game/Framework/GameSession.h"
+#include "Application/Game/Framework/GameSettings.h"
 #include "Application/Game/Framework/UnderwaterLook.h"
 #include <algorithm>
 #include <utility>
@@ -104,14 +106,27 @@ namespace {
 }
 
 /// @brief レールシューティングにおける照準（レティクル）操作を担うスクリプト
+/// @details 照準は画面中央に固定し、マウスの移動量（と右スティック）でカメラの向きを変える
+///          FPS 型の操作。カメラ（このエンティティの TransformComponent）の rotation は
+///          「レールが与える基準の向き ＋ プレイヤーの視点オフセット（yaw / pitch）」で毎フレーム決める。
+///          マウスカーソルは Input のカーソルロックで画面中央に固定・非表示にする。
+///          ポーズ中（deltaTime = 0 で来るフレーム）はロックを外すので、ポーズメニューを
+///          マウスで操作できる。閉じると次のフレームで再びロックする。
+///          プレイヤーが変える感度・上下反転は GameSettings（ポーズメニューの設定画面）から読む。
 class RailShooterController : public ScriptableEntity {
 public:
-    RC::Vector2 cursorPosition = { 640.0f, 360.0f }; // 初期位置（画面中央付近）
-    
-    // 感度調整用パラメータ
-    float mouseSensitivity = 1.0f;
-    float controllerSensitivity = 800.0f; // deltaTimeがかかるため大きめ
-    float deadzone = 0.2f; // アナログスティックのデッドゾーン（20%）
+    /// @brief レティクルのスクリーン座標。常に画面中央（毎フレーム解像度から求める）
+    RC::Vector2 cursorPosition = { 640.0f, 360.0f };
+
+    // 感度調整用パラメータ（プレイヤーが触る倍率・反転は GameSettings 側。ここは基準値）
+    float lookSensitivity = 0.0025f;    ///< マウス 1 カウントあたりの回転量（rad）。GameSettings の倍率を掛けて使う
+    float controllerLookSpeed = 2.5f;   ///< 右スティックを最大まで倒したときの回転速度（rad/s）。同上
+    float deadzone = 0.2f;              ///< アナログスティックのデッドゾーン（20%）
+    bool lockCursor = true;             ///< マウスカーソルを画面中央に固定・非表示にする
+
+    // 視点の可動範囲（レールシューターなので真後ろまでは振り向けない）
+    float maxYawDeg = 80.0f;    ///< 左右の最大角（度）
+    float maxPitchDeg = 60.0f;  ///< 上下の最大角（度）
     
     // 描画設定（仮）
     RC::Vector4 reticleColor = { 1.0f, 0.0f, 0.0f, 1.0f };
@@ -160,11 +175,30 @@ public:
     float waterHeight = 0.0f; ///< 水面の高さ（OnCreate でシーンの WaterComponent から拾う）
 
     nlohmann::json Serialize() override {
-        return {{"underwater", look.ToJson()}};
+        return {
+            {"underwater", look.ToJson()},
+            {"look", {
+                {"lookSensitivity", lookSensitivity},
+                {"controllerLookSpeed", controllerLookSpeed},
+                {"deadzone", deadzone},
+                {"lockCursor", lockCursor},
+                {"maxYawDeg", maxYawDeg},
+                {"maxPitchDeg", maxPitchDeg},
+            }},
+        };
     }
 
     void Deserialize(const nlohmann::json& j) override {
         if (j.contains("underwater")) look.FromJson(j["underwater"]);
+        if (j.contains("look")) {
+            const auto& l = j["look"];
+            if (l.contains("lookSensitivity"))     lookSensitivity     = l["lookSensitivity"].get<float>();
+            if (l.contains("controllerLookSpeed")) controllerLookSpeed = l["controllerLookSpeed"].get<float>();
+            if (l.contains("deadzone"))            deadzone            = l["deadzone"].get<float>();
+            if (l.contains("lockCursor"))          lockCursor          = l["lockCursor"].get<bool>();
+            if (l.contains("maxYawDeg"))           maxYawDeg           = l["maxYawDeg"].get<float>();
+            if (l.contains("maxPitchDeg"))         maxPitchDeg         = l["maxPitchDeg"].get<float>();
+        }
     }
 
     // 水滴演出（ Screen Droplets ）タイマーと設定
@@ -182,6 +216,58 @@ public:
 
 private:
     uint64_t bulletsFolderGuid_ = 0;
+
+    // --- 視点操作の状態 ---
+    /// @brief レール（シーン）が与えるカメラの基準の向き。視点オフセットはこれに足す
+    /// @details 開始演出（DeepRiseIntroScript）が rotation を書き換えるので、演出が終わって
+    ///          最初に操作を受け付けるフレームで拾う（演出は終了時に元の向きへ戻す）。
+    RC::Vector3 baseRotation_ = { 0.0f, 0.0f, 0.0f };
+    bool lookInitialized_ = false; ///< baseRotation_ を拾ったか
+    float lookYaw_ = 0.0f;         ///< 基準からの左右オフセット（rad）
+    float lookPitch_ = 0.0f;       ///< 基準からの上下オフセット（rad。正で下向き）
+    /// @brief 前フレームが停止（ポーズ・一時停止）だったか。再開した瞬間の検出用
+    bool wasInactive_ = false;
+    /// @brief 再開直後、マウスボタンが一度離されるまで射撃を止める
+    /// @details ポーズメニューの「つづける」をクリックした指がまだ離れていないフレームで
+    ///          弾が出るのを防ぐ。
+    bool suppressFireUntilRelease_ = false;
+
+    /// @brief マウス入力をゲーム操作として扱ってよいか
+    /// @details ロック中はカーソルが Viewport 中央に固定されるので常に true。
+    ///          ロックを使わない設定のときは、エディタの Viewport 上にあるときだけ受け付ける
+    ///          （インスペクタをドラッグして視点が回るのを防ぐ）。
+    static bool IsMouseForGame(Input* input) {
+        if (!input) return false;
+        if (input->IsCursorLocked()) return true;
+#if RC_ENABLE_IMGUI
+        return input->IsViewportHovered();
+#else
+        return true;
+#endif
+    }
+
+    /// @brief カーソルロックの ON/OFF を今のゲーム状態から決めて Input へ反映する
+    /// @param active 操作を受け付けている（再生中でポーズも一時停止もしていない）か
+    void UpdateCursorLock(Input* input, bool active) {
+        if (!input) return;
+        bool want = lockCursor && active;
+        // F1 のデバッグカメラ中は右ドラッグで飛び回りたいのでロックしない
+        if (SceneContext* ctx = GetSceneContext()) {
+            if (ctx->camera && ctx->camera->IsUsingDebug()) want = false;
+        }
+        input->SetCursorLocked(want);
+    }
+
+    /// @brief 視点オフセットを基準の向きに足してカメラ（自エンティティ）の rotation に書く
+    void ApplyLookToTransform() {
+        auto* tr = GetComponent<TransformComponent>();
+        if (!tr || !lookInitialized_) return;
+        tr->rotation = {
+            baseRotation_.x + lookPitch_,
+            baseRotation_.y + lookYaw_,
+            baseRotation_.z
+        };
+    }
 
     uint64_t GetBulletsFolder(Scene* scene) {
         if (bulletsFolderGuid_ != 0) return bulletsFolderGuid_;
@@ -202,6 +288,8 @@ protected:
         if (Entity* self = GetEntity()) {
             self->SetTag("is_player", 1);
         }
+        // 感度・反転・音量の保存値（無ければ既定値）。最初の 1 フレームから反映させる
+        GameSettings::Get().EnsureLoaded();
         if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
             // 推奨3: 全体的な視認性向上のための深度ベースアウトラインを常時有効化
             postProcess->AddEffect(PostEffectType::DepthBasedOutline);
@@ -243,10 +331,40 @@ protected:
     }
 
     void OnUpdate(float deltaTime) override {
-        if (deltaTime <= 0.0f) return; // ゲームが一時停止・停止中の場合は処理しない
-
         auto* input = Input::GetInstance();
+
+        // 視野角（設定画面の値）。CameraComponent::fovY はラジアン。
+        // SyncMainCamera はポーズ中も毎フレーム射影行列を作り直すので、ポーズ中に
+        // 設定画面で動かした値もその場で見える（dt の判定より前に置く）。
+        // 編集モード（停止中）では書かない。書くとシーン JSON のカメラ設定を
+        // プレイヤーの設定で上書き保存してしまう。
+        if (SceneContext* ctx = GetSceneContext(); ctx && ctx->isPlaying()) {
+            if (auto* cam = GetComponent<CameraComponent>()) {
+                cam->fovY = GameSettings::Get().FovRadians();
+            }
+        }
+
+        if (deltaTime <= 0.0f) {
+            // ポーズ（ESC メニュー）・エディタの一時停止・停止中は処理しない。
+            // メニューやエディタをマウスで操作できるように、カーソルのロックだけは外しておく
+            // （再開した次のフレームで自動的に戻る）
+            UpdateCursorLock(input, false);
+            wasInactive_ = true;
+            return;
+        }
         if (!input) return;
+
+        // === カーソルロック ===
+        UpdateCursorLock(input, true);
+
+        // 再開した瞬間：「つづける」を押した指が離れるまで射撃しない
+        if (wasInactive_) {
+            wasInactive_ = false;
+            suppressFireUntilRelease_ = true;
+        }
+        if (suppressFireUntilRelease_ && !input->IsMousePressed(0)) {
+            suppressFireUntilRelease_ = false;
+        }
 
         // 開始演出（DeepRiseIntroScript の浮上）中は、水中判定と HUD 以外を止める
         const bool introPlaying = (GetEntity() && GetEntity()->GetTagInt("intro_playing", 0) == 1);
@@ -446,40 +564,53 @@ protected:
             }
         }
 
-        // デッドゾーン計算用の定数（GetXInputThumbLX/LYは-32768～32767）
-        const float MAX_THUMB = 32767.0f;
+        // === 視点操作（画面中央固定エイム） ===
 
-        // 1. コントローラー入力の取得
-        float stickX = input->GetXInputThumbLX() / MAX_THUMB;
-        float stickY = -input->GetXInputThumbLY() / MAX_THUMB; // 画面上方向がマイナスYになることが多い場合反転調整が必要だが、ここでは一般的な2D画面座標系（Y下方向正）に合わせるよう調整
-
-        // デッドゾーン処理
-        if (std::abs(stickX) < deadzone) stickX = 0.0f;
-        if (std::abs(stickY) < deadzone) stickY = 0.0f;
-
-        // 2. マウス入力の取得
-        float deltaMouseX = static_cast<float>(input->GetMouseX());
-        float deltaMouseY = static_cast<float>(input->GetMouseY());
-
-        float absMouseX = 0.0f, absMouseY = 0.0f;
-        input->GetGameMousePosition(absMouseX, absMouseY);
-
-        // 3. カーソル移動の適用
-        if (!isDead) {
-            bool isMouseActive = (deltaMouseX != 0.0f || deltaMouseY != 0.0f || 
-                                  input->IsMousePressed(0) || input->IsMousePressed(1) || input->IsMousePressed(2));
-
-            if (isMouseActive) {
-                cursorPosition.x = absMouseX;
-                cursorPosition.y = absMouseY;
-            } else {
-                // コントローラーのスティックは傾き続けるため deltaTime に依存させる
-                cursorPosition.x += (stickX * controllerSensitivity * deltaTime);
-                cursorPosition.y += (stickY * controllerSensitivity * deltaTime);
+        // 1. 基準の向きを拾う（演出が終わって最初に操作できるフレーム）
+        if (!lookInitialized_) {
+            if (auto* tr = GetComponent<TransformComponent>()) {
+                baseRotation_ = tr->rotation;
+                lookInitialized_ = true;
             }
         }
 
-        // 4. 画面外に出ないよう Clamp 処理
+        // デッドゾーン計算用の定数（GetXInputThumbRX/RYは-32768～32767）
+        const float MAX_THUMB = 32767.0f;
+
+        // 2. コントローラー（右スティック）入力の取得
+        //    スティック上（+Y）で見上げたいので、pitch（正で下向き）に合わせて反転する
+        float stickX = input->GetXInputThumbRX() / MAX_THUMB;
+        float stickY = -input->GetXInputThumbRY() / MAX_THUMB;
+        if (std::abs(stickX) < deadzone) stickX = 0.0f;
+        if (std::abs(stickY) < deadzone) stickY = 0.0f;
+
+        // 3. マウス入力（移動量）の取得。エディタ操作中は視点に使わない
+        const bool mouseForGame = IsMouseForGame(input);
+        float deltaMouseX = mouseForGame ? static_cast<float>(input->GetMouseX()) : 0.0f;
+        float deltaMouseY = mouseForGame ? static_cast<float>(input->GetMouseY()) : 0.0f;
+
+        // 4. 視点オフセットの更新
+        if (!isDead) {
+            // プレイヤーが設定画面で変えた倍率・反転（シーンをまたいで保持される）
+            const GameSettings& settings = GameSettings::Get();
+            const float mouseGain = lookSensitivity * settings.mouseSensitivity;
+            const float stickGain = controllerLookSpeed * settings.controllerSensitivity * deltaTime;
+
+            // マウスは移動量そのもの（フレームレート非依存）、スティックは倒し続けるので deltaTime を掛ける
+            float dYaw   = deltaMouseX * mouseGain + stickX * stickGain;
+            float dPitch = deltaMouseY * mouseGain + stickY * stickGain;
+            if (settings.invertY) dPitch = -dPitch;
+
+            constexpr float kDegToRad = 3.14159265358979f / 180.0f;
+            const float maxYaw   = maxYawDeg * kDegToRad;
+            const float maxPitch = maxPitchDeg * kDegToRad;
+            lookYaw_   = RC::Clamp(lookYaw_ + dYaw, -maxYaw, maxYaw);
+            lookPitch_ = RC::Clamp(lookPitch_ + dPitch, -maxPitch, maxPitch);
+            // 力尽きたあとは向きを書かない（DeathSinkScript が沈みながら見上げさせるため）
+            ApplyLookToTransform();
+        }
+
+        // 5. レティクルは常に画面中央
         auto& ctx = RC::GetRenderContext();
         float screenW = 1280.0f;
         float screenH = 720.0f;
@@ -487,23 +618,24 @@ protected:
             screenW = static_cast<float>(ctx.Ctx()->app->width);
             screenH = static_cast<float>(ctx.Ctx()->app->height);
         }
+        cursorPosition = { screenW * 0.5f, screenH * 0.5f };
 
-        cursorPosition.x = RC::Clamp(cursorPosition.x, 0.0f, screenW);
-        cursorPosition.y = RC::Clamp(cursorPosition.y, 0.0f, screenH);
-
-        // 5. 射撃とクールダウン処理
+        // 6. 射撃とクールダウン処理
         if (!isDead) {
             currentCooldown -= deltaTime;
-            
+
             bool isFirePressed = false;
+            // エディタ操作中のクリック、ポーズを閉じたクリックの残りでは撃たない
+            if (mouseForGame && !suppressFireUntilRelease_) {
 #if RC_ENABLE_IMGUI
-            // ImGuiがマウスをキャプチャしていても、Viewport上なら射撃を許可する
-            if (!ImGui::GetIO().WantCaptureMouse || input->IsViewportHovered()) {
-                isFirePressed = input->IsMousePressed(0);
-            }
+                // ImGuiがマウスをキャプチャしていても、Viewport上なら射撃を許可する
+                if (!ImGui::GetIO().WantCaptureMouse || input->IsViewportHovered() || input->IsCursorLocked()) {
+                    isFirePressed = input->IsMousePressed(0);
+                }
 #else
-            isFirePressed = input->IsMousePressed(0);
+                isFirePressed = input->IsMousePressed(0);
 #endif
+            }
             if (input->GetXInputRightTrigger() > 128) {
                 isFirePressed = true;
             }
@@ -515,7 +647,7 @@ protected:
             }
         }
 
-        // 6. 演出（反動とシェイク）の更新
+        // 7. 演出（反動とシェイク）の更新
         if (currentRecoil > 0.0f) {
             currentRecoil -= recoilMax * recoilRecoverySpeed * deltaTime;
             if (currentRecoil < 0.0f) currentRecoil = 0.0f;
@@ -652,7 +784,14 @@ protected:
         currentRecoil = recoilMax;
         currentCameraShake = shakeMax;
     }
-    
+
+    void OnDestroy() override {
+        // Result などカーソルで操作するシーンへ移るので、ロックと非表示を必ず戻す
+        if (auto* input = Input::GetInstance()) {
+            input->SetCursorLocked(false);
+        }
+    }
+
     void OnRender() override {
         // 開始演出（深海からの浮上）中は HUD を出さない
         if (GetEntity() && GetEntity()->GetTagInt("intro_playing", 0) == 1) return;
@@ -843,13 +982,33 @@ public:
             ImGui::End();
         }
 
-        ImGui::Text("Cursor Pos: (%.1f, %.1f)", cursorPosition.x, cursorPosition.y);
-        
+        ImGui::Text("Reticle Pos: (%.1f, %.1f)", cursorPosition.x, cursorPosition.y);
+        {
+            constexpr float kRadToDeg = 180.0f / 3.14159265358979f;
+            ImGui::Text("Look: yaw %.1f deg / pitch %.1f deg", lookYaw_ * kRadToDeg, lookPitch_ * kRadToDeg);
+            Input* in = Input::GetInstance();
+            const bool locked = in && in->IsCursorLocked();
+            ImGui::Text("Cursor: %s  (ESC: pause menu releases it)", locked ? "LOCKED" : "free");
+            if (ImGui::SmallButton("Reset Look")) {
+                lookYaw_ = 0.0f;
+                lookPitch_ = 0.0f;
+            }
+        }
+
         ImGui::Separator();
-        ImGui::Text("Sensitivity Settings");
-        ImGui::DragFloat("Mouse Sensitivity", &mouseSensitivity, 0.1f, 0.1f, 10.0f);
-        ImGui::DragFloat("Controller Sensitivity", &controllerSensitivity, 10.0f, 10.0f, 2000.0f);
+        ImGui::Text("Look Settings (base values; player multipliers live in GameSettings)");
+        ImGui::DragFloat("Look Sensitivity (rad/count)", &lookSensitivity, 0.0001f, 0.0001f, 0.02f, "%.4f");
+        ImGui::DragFloat("Controller Look Speed (rad/s)", &controllerLookSpeed, 0.1f, 0.1f, 10.0f);
         ImGui::SliderFloat("Deadzone", &deadzone, 0.0f, 1.0f);
+        ImGui::Checkbox("Lock Cursor", &lockCursor);
+        {
+            GameSettings& gs = GameSettings::Get();
+            ImGui::SliderFloat("Player Mouse Sens. (x)", &gs.mouseSensitivity, GameSettings::kSensitivityMin, GameSettings::kSensitivityMax);
+            ImGui::SliderFloat("Player Stick Sens. (x)", &gs.controllerSensitivity, GameSettings::kSensitivityMin, GameSettings::kSensitivityMax);
+            ImGui::Checkbox("Player Invert Y", &gs.invertY);
+        }
+        ImGui::DragFloat("Max Yaw (deg)", &maxYawDeg, 1.0f, 0.0f, 180.0f);
+        ImGui::DragFloat("Max Pitch (deg)", &maxPitchDeg, 1.0f, 0.0f, 89.0f);
         
         ImGui::Separator();
         ImGui::Text("Reticle Settings");

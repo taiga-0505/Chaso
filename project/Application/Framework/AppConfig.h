@@ -27,7 +27,7 @@ struct AppConfig {
 #elif defined(_DEBUG)
   std::string title = "ChasoEngine"; ///< デバッグビルド時のタイトル
 #else
-  std::string title = "LE3B_03_オオシマ_タイガ_"; ///< リリースビルド時のタイトル
+  std::string title = "LE3B_03_オオシマ_タイガ_水天の射手"; ///< リリースビルド時のタイトル
 #endif
 
   std::array<float, 4> clearColor{0.1f, 0.25f, 0.5f, 1.0f}; ///< 画面のクリアカラー (RGBA)

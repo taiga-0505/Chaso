@@ -86,12 +86,27 @@ struct SceneContext {
 
   PlayState playState = PlayState::Playing; ///< 現在の再生状態
 
+  /// @brief ゲーム内ポーズ（ESC メニュー）中か
+  /// @details playState はエディタの再生／停止ボタンの状態で、エディタが毎フレーム同期して
+  ///          上書きするため、ゲーム側の都合で書き換えられない。ゲームが自分で止まる
+  ///          「ポーズ」は別のフラグで持つ。true のあいだ DataDrivenScene はスクリプト・
+  ///          アニメーション・GameMode の時間を進めない（deltaTime = 0 で回す）。
+  ///          ポーズメニューのスクリプト自身は deltaTime ではなく ctx.deltaTime を読んで動く。
+  ///          立てたスクリプトが OnDestroy で必ず下ろすこと（シーンをまたいで残さない）。
+  bool gamePaused = false;
+
   D3D12_CPU_DESCRIPTOR_HANDLE currentRTV{}; ///< 現在の描画先RTV
   D3D12_CPU_DESCRIPTOR_HANDLE currentDSV{}; ///< 現在の描画先DSV
 
-  /// @brief 再生中かどうか判定する
+  /// @brief 再生中かどうか判定する（エディタの再生状態。ゲーム内ポーズは見ない）
   bool isPlaying() const {
     return playState == PlayState::Playing;
+  }
+
+  /// @brief ゲームの時間が進んでいるか（再生中 かつ ゲーム内ポーズでない）
+  /// @details 敵・弾・レール・アニメーションなど「ゲームの進行」はこちらで判定する。
+  bool isSimulating() const {
+    return isPlaying() && !gamePaused;
   }
 };
 
@@ -126,6 +141,14 @@ public:
   /// @param ctx シーンコンテキスト
   /// @param cl グラフィックスコマンドリスト
   virtual void Render(SceneContext &ctx, ID3D12GraphicsCommandList *cl) = 0;
+
+  /// @brief ポストプロセス後のオーバーレイ描画（2D のみ）
+  /// @param ctx シーンコンテキスト
+  /// @param cl グラフィックスコマンドリスト
+  /// @details App がポストプロセスの最終出力をレンダーターゲットにしたあとで呼ぶ。
+  ///          画面効果の影響を受けない UI（ポーズメニュー等）をここで描く。
+  ///          既定では何もしない。
+  virtual void RenderOverlay(SceneContext &, ID3D12GraphicsCommandList *) {}
 
   /// @brief オーディオ（AudioSourceComponent）の毎フレーム更新
   /// @param ctx シーンコンテキスト

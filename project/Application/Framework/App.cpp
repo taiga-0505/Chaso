@@ -240,11 +240,19 @@ int App::Run() {
 #if !RC_ENABLE_IMGUI
       // 通常モード：ポストプロセスをバックバッファに転送
       postProcess_->Draw(cl_, renderTexture_);
+
+      // ポストプロセス後のオーバーレイ（ポーズメニューなど、画面効果を受けない UI）。
+      // PostProcess::Draw が最終出力先（バックバッファ）をレンダーターゲットにしたまま戻るので、
+      // そのまま上に描く。2D パイプラインは深度を使わないので DSV は要らない。
+      game_.RenderOverlay(sceneCtx_, cl_);
 #endif
 
 #if RC_ENABLE_IMGUI
       // エディタモード：ポストプロセスの出力を viewportTexture_ に書き込む
       postProcess_->Draw(cl_, renderTexture_, &viewportTexture_);
+
+      // ポストプロセス後のオーバーレイ（viewportTexture_ がレンダーターゲットのまま）
+      game_.RenderOverlay(sceneCtx_, cl_);
 
       // Viewport 描画用にSRV状態へ遷移
       viewportTexture_.TransitionToShaderResource(cl_);

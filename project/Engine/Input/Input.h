@@ -169,6 +169,43 @@ public:
         isGameMousePosSet_ = true;
     }
 
+    // ============================
+    // カーソルロック（視点操作用）
+    // ============================
+
+    /// @brief マウスカーソルを画面中央に固定して非表示にする
+    /// @details FPS やレールシューターのように「マウスの移動量だけ」で視点を動かす操作で使う。
+    ///          ロック中は毎フレーム（Update 内で）カーソルをロック中心へ戻し、
+    ///          ウィンドウの外へ出て他のウィンドウをクリックしてしまうのを防ぐ。
+    ///          移動量（GetMouseX/Y）は DirectInput から取るので、戻してもゼロにはならない。
+    ///          ウィンドウが非アクティブのあいだは戻さない（他のアプリの操作を妨げない）。
+    /// @param locked true でロック、false で解除（カーソルも再表示される）
+    void SetCursorLocked(bool locked);
+
+    /// @brief カーソルがロック中か
+    bool IsCursorLocked() const { return cursorLocked_; }
+
+    /// @brief ロック中にカーソルを戻す位置をクライアント座標で指定する
+    /// @details エディタでは Viewport 画像の中央を渡す。中央に戻しておけば ImGui 側で
+    ///          Viewport がホバー状態のままになり、ゲームのクリック判定が通る。
+    ///          指定が無ければウィンドウのクライアント領域の中央を使う。
+    void SetCursorLockCenter(float x, float y) {
+        lockCenterX_ = x;
+        lockCenterY_ = y;
+        hasLockCenter_ = true;
+    }
+
+    /// @brief ロック中心の指定を解除する（ウィンドウ中央に戻る）
+    void ClearCursorLockCenter() { hasLockCenter_ = false; }
+
+private:
+    /// @brief ロック中ならカーソルをロック中心へ戻す（Update から毎フレーム呼ぶ）
+    void UpdateCursorLock();
+
+    /// @brief ロック状態に合わせてカーソルの表示/非表示を切り替える
+    /// @details ShowCursor は表示カウンタなので、状態が変わったときに一度だけ増減する
+    void ApplyCursorVisibility();
+
 private:
     static Input* instance_;                 ///< シングルトン用インスタンスポインタ
     Microsoft::WRL::ComPtr<IDirectInput8> directInput_; ///< DirectInput インターフェース
@@ -183,4 +220,10 @@ private:
     float gameMouseX_ = 0.0f;
     float gameMouseY_ = 0.0f;
     bool isGameMousePosSet_ = false;
+
+    bool cursorLocked_ = false;    ///< カーソルロック要求中か
+    bool cursorHidden_ = false;    ///< ShowCursor(FALSE) を発行済みか（表示カウンタの二重操作防止）
+    bool hasLockCenter_ = false;   ///< ロック中心が外部（エディタ）から指定されているか
+    float lockCenterX_ = 0.0f;     ///< ロック中心 X（クライアント座標）
+    float lockCenterY_ = 0.0f;     ///< ロック中心 Y（クライアント座標）
 };
