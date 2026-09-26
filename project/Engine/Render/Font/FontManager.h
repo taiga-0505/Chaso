@@ -33,6 +33,8 @@ public:
   static constexpr uint32_t kFrameCount = 3;
   /// @brief 1 フレームに描画できる最大グリフ数（超過分は描かれず警告ログ）
   static constexpr uint32_t kMaxGlyphsPerFrame = 8192;
+  /// @brief 未使用のまま保持しておくフォントの上限（超えたら古いものから破棄）
+  static constexpr size_t kMaxCachedFonts = 16;
 
   /// @brief 初期化
   /// @param device D3D12 デバイス
@@ -55,10 +57,17 @@ public:
   /// @note 同じ path × sizePx を再度 Load すると同じハンドルを返す（参照カウント）
   int Load(const std::string &path, float sizePx, uint32_t atlasSize = 1024);
 
-  /// @brief フォントを解放する（参照カウントが 0 になったら実体を破棄）
-  /// @param handle フォントハンドル
+  /// @brief フォントを解放する
+  /// @param handle フォントハンドル（呼び出し後は無効になる）
+  /// @note 参照カウントが 0 になってもアトラスはすぐには破棄せずキャッシュに残す。
+  ///       次に同じ path × sizePx が Load されたら再利用する（シーン遷移での再ロード防止）。
+  ///       未使用キャッシュが kMaxCachedFonts を超えたら古いものから破棄する。
   /// @note GPU が参照を終えている前提（シーン終了時などに呼ぶ）
   void Unload(int handle);
+
+  /// @brief 未使用（参照カウント 0）のキャッシュ済みフォントをすべて破棄する
+  /// @note GPU が参照を終えている前提
+  void PurgeUnused();
 
   /// @brief 有効なハンドルか
   bool IsValid(int handle) const;
@@ -110,8 +119,14 @@ private:
     std::string path;
     float sizePx = 0.0f;
     int refCount = 0;
-    bool inUse = false;
+    bool inUse = false;     ///< ハンドルとして有効か（false でも atlas があればキャッシュ）
+    uint64_t lastUsed = 0;  ///< 最後に Unload された順番（キャッシュ破棄の優先度）
   };
+
+  /// @brief スロットのアトラスを破棄して空きにする
+  void DestroySlot_(Slot &s);
+  /// @brief 未使用キャッシュが上限を超えていたら古いものから破棄する
+  void TrimCache_();
 
   /// @brief フレーム別の GPU バッファ
   struct FrameBuffer {
@@ -133,6 +148,7 @@ private:
   SRVManager *srv_ = nullptr;
 
   std::vector<Slot> fonts_;
+  uint64_t unloadCounter_ = 0;
 
   FrameBuffer frames_[kFrameCount]{};
   uint32_t frameSlot_ = 0; ///< BeginFrame ごとに進める自前のリングインデックス

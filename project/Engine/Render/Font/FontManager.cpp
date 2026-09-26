@@ -148,18 +148,25 @@ int FontManager::Load(const std::string &path, float sizePx,
     return -1;
   }
 
-  // 同一 path × size は共有
+  // 同一 path × size は共有（使用中のもの、または未使用でキャッシュに残っているもの）
   for (size_t i = 0; i < fonts_.size(); ++i) {
     auto &s = fonts_[i];
-    if (s.inUse && s.path == path && s.sizePx == sizePx) {
-      if (s.atlas && s.atlas->AtlasSize() < atlasSize) {
-        Log::Print(std::format(
-            "[Font] 既存ハンドル ({}px, atlas {}) を共有します。atlasSize={} は無視されます: {}",
-            sizePx, s.atlas->AtlasSize(), atlasSize, Log::NormalizePath(path)));
-      }
-      ++s.refCount;
-      return static_cast<int>(i);
+    if (!s.atlas || s.path != path || s.sizePx != sizePx) {
+      continue;
     }
+    if (s.atlas->AtlasSize() < atlasSize) {
+      if (!s.inUse) {
+        // キャッシュのアトラスが小さい → 誰も使っていないので作り直す
+        DestroySlot_(s);
+        break;
+      }
+      Log::Print(std::format(
+          "[Font] 既存ハンドル ({}px, atlas {}) を共有します。atlasSize={} は無視されます: {}",
+          sizePx, s.atlas->AtlasSize(), atlasSize, Log::NormalizePath(path)));
+    }
+    ++s.refCount;
+    s.inUse = true;
+    return static_cast<int>(i);
   }
 
   // 描画用 GPU バッファ（頂点リング・CB）は初回ロード時に確保
@@ -174,10 +181,10 @@ int FontManager::Load(const std::string &path, float sizePx,
     return -1;
   }
 
-  // 空きスロットを再利用
+  // 空きスロット（アトラスを持たないもの）を再利用
   int handle = -1;
   for (size_t i = 0; i < fonts_.size(); ++i) {
-    if (!fonts_[i].inUse) {
+    if (!fonts_[i].inUse && !fonts_[i].atlas) {
       handle = static_cast<int>(i);
       break;
     }
@@ -205,14 +212,47 @@ void FontManager::Unload(int handle) {
   if (--s.refCount > 0) {
     return;
   }
-  Log::Print(std::format("[Font] 破棄完了: {} ({}px)",
-                         Log::NormalizePath(s.path), s.sizePx));
-  s.atlas->Term(srv_);
-  s.atlas.reset();
+  // すぐには破棄せずキャッシュへ（次の同じ Load で再利用する）
+  s.refCount = 0;
+  s.inUse = false;
+  s.lastUsed = ++unloadCounter_;
+  TrimCache_();
+}
+
+void FontManager::PurgeUnused() {
+  for (auto &s : fonts_) {
+    if (!s.inUse && s.atlas) {
+      DestroySlot_(s);
+    }
+  }
+}
+
+void FontManager::DestroySlot_(Slot &s) {
+  if (s.atlas) {
+    Log::Print(std::format("[Font] 破棄完了: {} ({}px)",
+                           Log::NormalizePath(s.path), s.sizePx));
+    s.atlas->Term(srv_);
+    s.atlas.reset();
+  }
   s.path.clear();
   s.sizePx = 0.0f;
   s.refCount = 0;
   s.inUse = false;
+  s.lastUsed = 0;
+}
+
+void FontManager::TrimCache_() {
+  for (;;) {
+    size_t cached = 0;
+    Slot *oldest = nullptr;
+    for (auto &s : fonts_) {
+      if (s.inUse || !s.atlas) continue;
+      ++cached;
+      if (!oldest || s.lastUsed < oldest->lastUsed) oldest = &s;
+    }
+    if (cached <= kMaxCachedFonts || !oldest) return;
+    DestroySlot_(*oldest);
+  }
 }
 
 bool FontManager::IsValid(int handle) const {
