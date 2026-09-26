@@ -292,6 +292,10 @@ public:
   /// @brief 水中ブレンド率を設定する (0.0:適用しない ~ 1.0:完全適用)
   void SetLightShaftLerpFactor(float lerpFactor);
 
+  /// @brief 光の進む向き（ワールド座標。DirectionalLight の direction と同じ向き）を設定する
+  /// @details 光柱はこの向きに傾く。内部で正規化し、y が 0 以上なら真下向きに補正する。
+  void SetLightShaftSunDirection(float x, float y, float z);
+
   /// @brief 模様の密度・速度・水面高さを Caustics と同期させる
   /// @details 光柱の断面と床の網目は同じパターンを共有しているため、
   ///          scale / speed / waterHeight がズレると位置が合わなくなる。
@@ -602,7 +606,7 @@ private:
     float tintColor[4] = {0.2f, 0.5f, 1.0f, 1.0f};
     float fogColor[4] = {0.0f, 0.3f, 0.6f, 1.0f};
     float time = 0.0f;
-    float distortionForce = 0.01f;
+    float distortionForce = 0.004f;
     float fogStart = 10.0f;
     float fogEnd = 150.0f;
     float lerpFactor = 1.0f;
@@ -611,7 +615,7 @@ private:
   UnderwaterData *mappedUnderwater_ = nullptr;
   float underwaterTintColor_[4] = {0.2f, 0.5f, 1.0f, 1.0f};
   float underwaterFogColor_[4] = {0.0f, 0.3f, 0.6f, 1.0f};
-  float underwaterDistortionForce_ = 0.01f;
+  float underwaterDistortionForce_ = 0.004f;
   float underwaterFogStart_ = 10.0f;
 
   float underwaterFogEnd_ = 150.0f;
@@ -655,7 +659,7 @@ private:
 
   // LightShaft パラメータ
   // NOTE: HLSL 側 cbuffer LightShaftParams (b1) と 1:1 で対応する。
-  //       全 48 float = 192 byte がちょうど 12 個の float4 行に収まる。
+  //       全 52 float = 208 byte（13 個の float4 行）。sunDir は 13 行目に単独で入る。
   //       末尾の _padding を含めて数が合っているので、メンバを増減する際は
   //       必ずパディングを調整すること。
   Microsoft::WRL::ComPtr<ID3D12Resource> cbufferLightShaft_;
@@ -675,8 +679,10 @@ private:
     float ditherStrength = 1.0f;                      // バンディング対策
     float lerpFactor = 1.0f;                          // 水中ブレンド率
     float _padding = 0.0f;
+    float sunDir[4] = {-0.464f, -0.743f, 0.464f, 0.0f};   // 光の進む向き（ワールド、正規化済み、y<0）
   };
   LightShaftData *mappedLightShaft_ = nullptr;
+  float lightShaftSunDir_[3] = {-0.464f, -0.743f, 0.464f};
   float lightShaftColor_[3] = {0.80f, 0.94f, 1.0f};
   float lightShaftIntensity_ = 1.0f;
   float lightShaftContrast_ = 3.0f;

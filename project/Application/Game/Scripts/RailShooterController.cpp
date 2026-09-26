@@ -21,6 +21,7 @@
 #include "ECS/PrimitiveMeshComponent.h"
 #include "ECS/ColliderComponent.h"
 #include "ECS/WaterComponent.h"
+#include "ECS/LightComponent.h"
 #include "Scene.h"
 #include "Application/Game/Framework/GameSession.h"
 #include "Application/Game/Framework/GameSettings.h"
@@ -28,6 +29,8 @@
 #include <algorithm>
 #include <utility>
 #include <cmath>
+#include <cstdio>
+#include <string>
 
 namespace {
     bool IntersectSegmentAABB(const RC::Vector3& p0, const RC::Vector3& p1, const RC::Vector3& min, const RC::Vector3& max) {
@@ -173,6 +176,20 @@ public:
     ///          JSON の "underwater" キーで上書きできる。
     UnderwaterLook::Params look;
     float waterHeight = 0.0f; ///< 水面の高さ（OnCreate でシーンの WaterComponent から拾う）
+    RC::Vector3 sunDir_ = {-0.5f, -0.8f, 0.5f}; ///< 光の向き（OnCreate でシーンの DirectionalLight から拾う）
+    bool hasSunDir_ = false;
+
+    // HUD テキスト（スコア / GAME OVER）。PauseMenu と同じフォント・同じ 1280x720 基準レイアウトで、
+    // ゲームのレンダーターゲット内へ描く（ImGui だとエディタのウィンドウ座標に出てしまい、
+    // ビューポートの外へはみ出す）。
+    static constexpr float kDesignW = 1280.0f;
+    static constexpr float kDesignH = 720.0f;
+    static constexpr float kScorePx = 30.0f;     ///< スコアの文字サイズ（1280x720 基準）
+    static constexpr float kGameOverPx = 72.0f;  ///< GAME OVER の文字サイズ（1280x720 基準）
+    std::string hudFontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
+    int scoreFont_ = -1;
+    int gameOverFont_ = -1;
+    float hudFontScale_ = 1.0f; ///< フォントをロードした時点の実解像度 / 基準解像度
 
     nlohmann::json Serialize() override {
         return {
@@ -290,6 +307,24 @@ protected:
         }
         // 感度・反転・音量の保存値（無ければ既定値）。最初の 1 フレームから反映させる
         GameSettings::Get().EnsureLoaded();
+
+        // HUD フォント（PauseMenu と同じく、基準解像度のサイズ × 実解像度スケールでロード）
+        {
+            float w = kDesignW, h = kDesignH;
+            auto& rc = RC::GetRenderContext();
+            if (rc.Ctx() && rc.Ctx()->app && rc.Ctx()->app->width > 0 && rc.Ctx()->app->height > 0) {
+                w = static_cast<float>(rc.Ctx()->app->width);
+                h = static_cast<float>(rc.Ctx()->app->height);
+            }
+            hudFontScale_ = (std::min)(w / kDesignW, h / kDesignH);
+            if (hudFontScale_ <= 0.0f) hudFontScale_ = 1.0f;
+            scoreFont_ = RC::LoadFont(hudFontPath, std::round(kScorePx * hudFontScale_), 1024);
+            gameOverFont_ = RC::LoadFont(hudFontPath, std::round(kGameOverPx * hudFontScale_), 1024);
+            if (scoreFont_ < 0 || gameOverFont_ < 0) {
+                Log::Print("[RailShooterController] failed to load HUD font: " + hudFontPath);
+            }
+        }
+
         if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
             // 推奨3: 全体的な視認性向上のための深度ベースアウトラインを常時有効化
             postProcess->AddEffect(PostEffectType::DepthBasedOutline);
@@ -299,12 +334,17 @@ protected:
         }
 
         // 水面の高さはシーンの WaterComponent から拾う（無ければ 0）
+        // 光柱の向きはシーンの DirectionalLight から拾う（無ければ PostProcess の既定）
         waterHeight = 0.0f;
         if (Scene* scene = GetScene()) {
             for (auto& e : scene->GetEntities()) {
-                if (!e || !e->GetComponent<WaterComponent>()) continue;
-                if (auto* wtr = e->GetComponent<TransformComponent>()) waterHeight = wtr->position.y;
-                break;
+                if (!e) continue;
+                if (e->GetComponent<WaterComponent>()) {
+                    if (auto* wtr = e->GetComponent<TransformComponent>()) waterHeight = wtr->position.y;
+                }
+                if (auto* dl = e->GetComponent<DirectionalLightComponent>()) {
+                    if (dl->visible) { sunDir_ = dl->direction; hasSunDir_ = true; }
+                }
             }
         }
 
@@ -319,7 +359,7 @@ protected:
                 self->SetTag("is_underwater", isUnderwater ? 1 : 0);
             }
             if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
-                UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+                UnderwaterLook::SetupLight(postProcess, look, waterHeight, hasSunDir_ ? &sunDir_ : nullptr);
                 if (isUnderwater) {
                     UnderwaterLook::AddStack(postProcess);
                     UnderwaterLook::SetLerp(postProcess, 1.0f);
@@ -395,7 +435,7 @@ protected:
                         // 位置が一致し、かつ模様自体も水で揺らぐようになる。
                         // （LightShaft → Caustics → Underwater → Vignette。Vignette は
                         //   水中での「密閉感・深海感・水圧」の演出）
-                        UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+                        UnderwaterLook::SetupLight(postProcess, look, waterHeight, hasSunDir_ ? &sunDir_ : nullptr);
                         UnderwaterLook::AddStack(postProcess);
 
                         // 推奨1: 水中突入（ダイブ）時の強烈な勢い・スピード感演出としての RadialBlur スタック
@@ -790,6 +830,50 @@ protected:
         if (auto* input = Input::GetInstance()) {
             input->SetCursorLocked(false);
         }
+        if (scoreFont_ >= 0) { RC::UnloadFont(scoreFont_); scoreFont_ = -1; }
+        if (gameOverFont_ >= 0) { RC::UnloadFont(gameOverFont_); gameOverFont_ = -1; }
+    }
+
+    /// @brief ポストプロセスの後に描く HUD テキスト（水中の歪み・ビネットが乗らないように）
+    void OnOverlayRender() override {
+        if (GetEntity() && GetEntity()->GetTagInt("intro_playing", 0) == 1) return;
+
+        // PauseMenu と同じ 1280x720 基準レイアウト（レターボックス分をオフセット）
+        float screenW = kDesignW, screenH = kDesignH;
+        auto& rc = RC::GetRenderContext();
+        if (rc.Ctx() && rc.Ctx()->app) {
+            screenW = static_cast<float>(rc.Ctx()->app->width);
+            screenH = static_cast<float>(rc.Ctx()->app->height);
+        }
+        float s = (std::min)(screenW / kDesignW, screenH / kDesignH);
+        if (s <= 0.0f) s = 1.0f;
+        const float ox = (screenW - kDesignW * s) * 0.5f;
+        const float oy = (screenH - kDesignH * s) * 0.5f;
+        const float fs = (hudFontScale_ > 0.0f) ? (s / hudFontScale_) : 1.0f;
+
+        auto drawText = [&](int font, const std::string& text, float dx, float dy,
+                            const RC::Vector4& color, TextAlign align) {
+            if (font < 0 || text.empty()) return;
+            const float x = ox + dx * s;
+            const float y = oy + dy * s;
+            const float sh = 2.0f * s;
+            RC::DrawString(font, text, {x + sh, y + sh}, {0.0f, 0.02f, 0.05f, 0.6f * color.w}, fs, align);
+            RC::DrawString(font, text, {x, y}, color, fs, align);
+        };
+
+        if (isDead) {
+            const float lh = (gameOverFont_ >= 0) ? RC::GetFontLineHeight(gameOverFont_, fs) / s : kGameOverPx;
+            drawText(gameOverFont_, "GAME OVER", kDesignW * 0.5f, kDesignH * 0.5f - lh * 0.5f,
+                     {1.0f, 0.25f, 0.25f, 1.0f}, TextAlign::Center);
+            return;
+        }
+
+        if (!isGameCleared) {
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "SCORE  %06d", score);
+            drawText(scoreFont_, buf, 24.0f, 18.0f, {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign::Left);
+        }
+
     }
 
     void OnRender() override {
@@ -804,12 +888,15 @@ protected:
                     {cursorPosition.x + 2.0f, cursorPosition.y + 2.0f}, 
                     {0.0f, 0.0f, 0.0f, 1.0f});
 
-        // Weapon Indicator
         auto& ctx = RC::GetRenderContext();
+        float screenW = 1280.0f;
         float screenH = 720.0f;
         if (ctx.Ctx() && ctx.Ctx()->app) {
+            screenW = static_cast<float>(ctx.Ctx()->app->width);
             screenH = static_cast<float>(ctx.Ctx()->app->height);
         }
+
+        // Weapon Indicator（元の表示）
         float wX = 20.0f; float wY = screenH - 80.0f;
         float alphaN = (currentWeapon == WeaponType::Normal) ? 0.9f : 0.3f;
         RC::DrawBox({wX, wY}, {wX+20.0f, wY+20.0f}, {0.2f, 0.6f, 1.0f, alphaN});
@@ -818,18 +905,13 @@ protected:
         float alphaH = (currentWeapon == WeaponType::Heavy) ? 0.9f : 0.3f;
         RC::DrawBox({wX+50.0f, wY}, {wX+70.0f, wY+20.0f}, {0.8f, 0.3f, 0.1f, alphaH});
 
-        // === Player HP Bar ===
-        float screenW = 1280.0f;
-        if (ctx.Ctx() && ctx.Ctx()->app) {
-            screenW = static_cast<float>(ctx.Ctx()->app->width);
-        }
-        float barX = 20.0f;
-        float barY = screenH - 50.0f;
-        float barW = 200.0f;
-        float barH = 20.0f;
+        // === Player HP Gauge ===
+        // 武器表示の下。元のゲージより長く・太くして読みやすくする
+        const float barX = 20.0f;
+        const float barW = 300.0f;
+        const float barH = 16.0f;
+        const float barY = screenH - 20.0f - barH - 14.0f; // 下端から 34px（武器表示と 10px 空ける）
 
-        // Background
-        
         bool drawPlayerUI = true;
         if (invincibleTimer > 0.0f) {
             if (static_cast<int>(invincibleTimer * 10.0f) % 2 == 0) {
@@ -838,18 +920,17 @@ protected:
         }
 
         if (drawPlayerUI) {
+            // Background
             RC::DrawBox({ barX, barY }, { barX + barW, barY + barH }, { 0.3f, 0.05f, 0.05f, 0.8f });
 
             // Foreground
-            float hpRatio = static_cast<float>(hp) / static_cast<float>(maxHp);
+            float hpRatio = (maxHp > 0) ? static_cast<float>((std::max)(hp, 0)) / static_cast<float>(maxHp) : 0.0f;
             RC::Vector4 hpColor = { 1.0f - hpRatio, hpRatio, 0.1f, 0.9f };
             RC::DrawBox({ barX, barY }, { barX + barW * hpRatio, barY + barH }, hpColor);
 
             // Border
-            RC::DrawBox({ barX, barY }, { barX + barW, barY + barH }, { 1.0f, 1.0f, 1.0f, 0.5f }, kWire);
+            RC::DrawBox({ barX, barY }, { barX + barW, barY + barH }, { 1.0f, 1.0f, 1.0f, 0.6f }, kWire);
         }
-
-
 
         // === 敵ごとの個別HPバーを頭上に描画 ===
         if (Scene* scene = GetScene()) {
@@ -942,46 +1023,8 @@ public:
 
     void OnImGui() override {
 #if RC_ENABLE_IMGUI
-        if (isDead) {
-            auto& ctx = RC::GetRenderContext();
-            float screenW = 1280.0f;
-            float screenH = 720.0f;
-            if (ctx.Ctx() && ctx.Ctx()->app) {
-                screenW = static_cast<float>(ctx.Ctx()->app->width);
-                screenH = static_cast<float>(ctx.Ctx()->app->height);
-            }
-            ImGui::SetNextWindowPos(ImVec2(screenW * 0.5f, screenH * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-            ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("GameOverOverlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
-            ImGui::SetWindowFontScale(4.0f);
-            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "GAME OVER");
-            ImGui::SetWindowFontScale(1.0f);
-            ImGui::End();
-        }
-
-        // --- HUD Overlay (Score) ---
-        if (!isDead && !isGameCleared) {
-            auto& ctx = RC::GetRenderContext();
-            float screenW = 1280.0f;
-            float screenH = 720.0f;
-            if (ctx.Ctx() && ctx.Ctx()->app) {
-                screenW = static_cast<float>(ctx.Ctx()->app->width);
-                screenH = static_cast<float>(ctx.Ctx()->app->height);
-            }
-            ImGui::SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond_Always);
-            ImGui::SetNextWindowBgAlpha(0.0f);
-            ImGui::Begin("HUDOverlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
-            ImGui::SetWindowFontScale(2.5f);
-            
-            // ドロップシャドウ風
-            ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 2.5f, ImVec2(pos.x + 2, pos.y + 2), IM_COL32(0, 0, 0, 255), std::format("SCORE: {:06d}", score).c_str());
-            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "SCORE: %06d", score);
-            
-            ImGui::SetWindowFontScale(1.0f);
-            ImGui::End();
-        }
-
+        // スコア / GAME OVER は OnOverlayRender でゲーム画面内に描く（ここは Inspector 専用）
+        ImGui::Text("Score: %06d", score);
         ImGui::Text("Reticle Pos: (%.1f, %.1f)", cursorPosition.x, cursorPosition.y);
         {
             constexpr float kRadToDeg = 180.0f / 3.14159265358979f;
@@ -1034,7 +1077,7 @@ public:
         if (UnderwaterLook::DrawImGui(look)) {
             // 光の設定は水中に入る瞬間にしか流し込まないので、いじった値をその場で反映する
             if (auto* postProcess = RC::GetRenderContext().GetPostProcess()) {
-                UnderwaterLook::SetupLight(postProcess, look, waterHeight);
+                UnderwaterLook::SetupLight(postProcess, look, waterHeight, hasSunDir_ ? &sunDir_ : nullptr);
             }
         }
 

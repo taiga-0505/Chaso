@@ -61,7 +61,8 @@ struct Params {
 
   // ---- Underwater シェーダのその他 ----
   RC::Vector4 tintColor = kDefaultTint;
-  float distortionForce = 0.01f;
+  /// @brief 屈折のうねりの振幅（UV。0.004 で 720p 時に約 3px）
+  float distortionForce = 0.004f;
 
   // ---- Caustics（床の網目）/ LightShaft（降り注ぐ光）----
   /// @brief 水面からこの深さ（m）で網目が消えきる
@@ -168,8 +169,11 @@ inline void ApplyFogByDepth(PostProcess *pp, const Params &p, float depth) {
 /// @param waterHeight 水面のワールド Y。シーンの WaterComponent の Transform.y を渡す
 /// @details PostProcess の既定値（水面 Y=150、距離減衰 300→150）は本作の水面（Y=0）と
 ///          合っておらず、そのままだと網目も光柱もほぼ出ない。ここで揃える。
-inline void SetupLight(PostProcess *pp, const Params &p, float waterHeight) {
+/// @param sunDir  光の進む向き（DirectionalLightComponent::direction）。nullptr なら既定の斜め下
+inline void SetupLight(PostProcess *pp, const Params &p, float waterHeight,
+                       const RC::Vector3 *sunDir = nullptr) {
   if (!pp) return;
+  if (sunDir) pp->SetLightShaftSunDirection(sunDir->x, sunDir->y, sunDir->z);
   pp->SetCausticsWater(waterHeight, p.causticsFadeDepth);
   pp->SetCausticsScale(p.causticsScale);
   pp->SetCausticsIntensity(p.causticsIntensity);

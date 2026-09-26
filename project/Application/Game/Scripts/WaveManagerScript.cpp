@@ -10,6 +10,9 @@
 #include "imgui/imgui.h"
 #endif
 
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -51,12 +54,14 @@ public:
   float clearDuration = 1.6f;
   /// @brief 画面上部のウェーブ表示を出すか
   bool showHud = true;
-  /// @brief クリア時に clear.png を重ねるか
+  /// @brief クリア時に "WAVE CLEAR" のパネルを出すか
   bool showClearBanner = true;
-  /// @brief HUD の下敷きパネルの色
-  RC::Vector4 panelColor = {0.05f, 0.09f, 0.14f, 0.78f};
-  /// @brief ウェーブ表示のアクセント色
-  RC::Vector4 accentColor = {1.0f, 0.55f, 0.15f, 1.0f};
+  /// @brief 使うフォント（PauseMenu / Result と同じ KiwiMaru）
+  std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
+  /// @brief パネルの色（PauseMenu と同じ墨）
+  RC::Vector4 panelColor = {0.06f, 0.08f, 0.11f, 0.92f};
+  /// @brief アクセント色（PauseMenu と同じ金）
+  RC::Vector4 accentColor = {0.88f, 0.74f, 0.38f, 1.0f};
 
   // -------------------------------------------------------------------
   // 外部から参照する状態
@@ -72,6 +77,7 @@ public:
         {"clearDuration", clearDuration},
         {"showHud", showHud},
         {"showClearBanner", showClearBanner},
+        {"fontPath", fontPath},
         {"panelColor", {panelColor.x, panelColor.y, panelColor.z, panelColor.w}},
         {"accentColor", {accentColor.x, accentColor.y, accentColor.z, accentColor.w}},
     };
@@ -82,6 +88,7 @@ public:
     if (j.contains("clearDuration")) clearDuration = j["clearDuration"].get<float>();
     if (j.contains("showHud")) showHud = j["showHud"].get<bool>();
     if (j.contains("showClearBanner")) showClearBanner = j["showClearBanner"].get<bool>();
+    if (j.contains("fontPath") && j["fontPath"].is_string()) fontPath = j["fontPath"].get<std::string>();
     if (j.contains("panelColor")) ReadColor(j["panelColor"], panelColor);
     if (j.contains("accentColor")) ReadColor(j["accentColor"], accentColor);
   }
@@ -114,31 +121,34 @@ protected:
     wavesCleared_ = 0;
     stateTimer_ = 0.0f;
 
-    SceneContext *ctx = GetSceneContext();
-    if (!ctx) return;
+    // フォントは基準解像度（1280x720）のサイズ × 実解像度のスケールでロードする（PauseMenu と同じ）
+    float w = kDesignW, h = kDesignH;
+    if (SceneContext *ctx = GetSceneContext()) {
+      if (ctx->app && ctx->app->width > 0 && ctx->app->height > 0) {
+        w = static_cast<float>(ctx->app->width);
+        h = static_cast<float>(ctx->app->height);
+      }
+    }
+    fontScale_ = (std::min)(w / kDesignW, h / kDesignH);
+    if (fontScale_ <= 0.0f) fontScale_ = 1.0f;
 
-    // Sprite2D は 1 ハンドルにつき定数バッファ 1 つで、Draw はコマンドリストへの
-    // 記録でしかない。同じハンドルを 1 フレームに複数回描くと GPU 実行時には
-    // 最後に書いた座標と UV しか残らないため、桁ごとにハンドルを分ける。
-    for (int i = 0; i < kWaveDigits; ++i) {
-      waveDigitHandles_[i] = RC::LoadSprite("Resources/UI/number.png", *ctx);
-    }
-    for (int i = 0; i < kRemainDigits; ++i) {
-      remainDigitHandles_[i] = RC::LoadSprite("Resources/UI/number.png", *ctx);
-    }
-    if (showClearBanner) {
-      clearBannerHandle_ = RC::LoadSprite("Resources/UI/clear.png", *ctx);
-    }
+    auto load = [&](float designPx) {
+      const int handle = RC::LoadFont(fontPath, std::round(designPx * fontScale_), 1024);
+      if (handle < 0) Log::Print("[WaveManagerScript] failed to load font: " + fontPath);
+      return handle;
+    };
+    headingFont_ = load(kHeadingPx);
+    itemFont_ = load(kItemPx);
+    labelFont_ = load(kLabelPx);
   }
 
   void OnDestroy() override {
-    for (int i = 0; i < kWaveDigits; ++i) {
-      if (waveDigitHandles_[i] >= 0) { RC::UnloadSprite(waveDigitHandles_[i]); waveDigitHandles_[i] = -1; }
-    }
-    for (int i = 0; i < kRemainDigits; ++i) {
-      if (remainDigitHandles_[i] >= 0) { RC::UnloadSprite(remainDigitHandles_[i]); remainDigitHandles_[i] = -1; }
-    }
-    if (clearBannerHandle_ >= 0) { RC::UnloadSprite(clearBannerHandle_); clearBannerHandle_ = -1; }
+    auto unload = [](int &handle) {
+      if (handle >= 0) { RC::UnloadFont(handle); handle = -1; }
+    };
+    unload(headingFont_);
+    unload(itemFont_);
+    unload(labelFont_);
   }
 
   void OnUpdate(float deltaTime) override {
@@ -221,22 +231,27 @@ protected:
     }
   }
 
-  void OnRender() override {
+  /// @brief ポストプロセスの後に描く（水中の歪み・ビネットが UI に乗らないように。PauseMenu と同じ）
+  void OnOverlayRender() override {
     if (!showHud) return;
     if (state_ == State::Idle) return;
 
-    float screenW = 1280.0f;
-    float screenH = 720.0f;
+    float screenW = kDesignW, screenH = kDesignH;
     auto &rc = RC::GetRenderContext();
     if (rc.Ctx() && rc.Ctx()->app) {
       screenW = static_cast<float>(rc.Ctx()->app->width);
       screenH = static_cast<float>(rc.Ctx()->app->height);
     }
+    L_.s = (std::min)(screenW / kDesignW, screenH / kDesignH);
+    if (L_.s <= 0.0f) L_.s = 1.0f;
+    L_.ox = (screenW - kDesignW * L_.s) * 0.5f;
+    L_.oy = (screenH - kDesignH * L_.s) * 0.5f;
+    L_.fs = (fontScale_ > 0.0f) ? (L_.s / fontScale_) : 1.0f;
 
     if (state_ == State::Cleared) {
-      DrawClear(screenW, screenH);
+      if (showClearBanner) DrawClear();
     } else {
-      DrawWaveBar(screenW, screenH);
+      DrawWaveBar();
     }
   }
 
@@ -376,152 +391,176 @@ private:
   }
 
   // -------------------------------------------------------------------
-  // 描画
+  // 描画（PauseMenu と同じ意匠：1280x720 基準レイアウト・墨のパネル・金のアクセント・KiwiMaru）
   // -------------------------------------------------------------------
-  // フォント描画の仕組みがエンジンに無く、使える素材も Resources/UI の数点だけ
-  // なので、文字は number.png の数字と図形（DrawBox）で表している。
+  static constexpr float kDesignW = 1280.0f;
+  static constexpr float kDesignH = 720.0f;
+
+  static constexpr float kHeadingPx = 40.0f;
+  static constexpr float kItemPx = 26.0f;
+  static constexpr float kLabelPx = 17.0f;
+
+  static constexpr float kClearPanelW = 460.0f; ///< PauseMenu のメインパネルと同じ幅
+  static constexpr float kClearPanelH = 168.0f;
+  static constexpr float kClearPadTop = 30.0f;
+
+  static constexpr float kBarW = 300.0f;        ///< 画面上部のウェーブ表示
+  static constexpr float kBarH = 48.0f;
+  static constexpr float kBarY = 14.0f;
+
+  // 色（PauseMenu / Result と共通の生成り／鼠）
+  static constexpr RC::Vector4 kInk = {0.95f, 0.93f, 0.87f, 1.0f};
+  static constexpr RC::Vector4 kMuted = {0.66f, 0.70f, 0.76f, 1.0f};
+
+  struct Layout {
+    float s = 1.0f;  ///< 1280x720 → 実解像度の倍率
+    float ox = 0.0f; ///< レターボックスの横オフセット
+    float oy = 0.0f; ///< レターボックスの縦オフセット
+    float fs = 1.0f; ///< DrawString に渡す scale（ロード時スケールとの比）
+  };
+  Layout L_;
+
+  float X(float x) const { return L_.ox + x * L_.s; }
+  float Y(float y) const { return L_.oy + y * L_.s; }
+  float S(float v) const { return v * L_.s; }
+
+  static RC::Vector4 WithAlpha(const RC::Vector4 &c, float a) { return {c.x, c.y, c.z, c.w * a}; }
+  static float EaseOutCubic(float t) {
+    t = std::clamp(t, 0.0f, 1.0f);
+    const float u = 1.0f - t;
+    return 1.0f - u * u * u;
+  }
+
+  /// @brief 影付きテキスト（PauseMenu::Text と同じ）
+  void Text(int font, const std::string &text, float x, float y, const RC::Vector4 &color,
+            TextAlign align = TextAlign::Left, float scale = 1.0f) const {
+    if (font < 0 || text.empty()) return;
+    const float sc = scale * L_.fs;
+    const float sh = S(2.0f);
+    RC::DrawString(font, text, {x + sh, y + sh}, {0.0f, 0.02f, 0.05f, 0.55f * color.w}, sc, align);
+    RC::DrawString(font, text, {x, y}, color, sc, align);
+  }
+  float LineH(int font, float scale = 1.0f) const {
+    return (font >= 0) ? RC::GetFontLineHeight(font, scale * L_.fs) : S(kItemPx) * scale;
+  }
+
+  /// @brief 墨のパネル（二重の細枠 ＋ 四隅の飾り。PauseMenu::DrawPanel と同じ）
+  /// @param l,t,w,h 1280x720 基準の矩形
+  void DrawPanel(float l, float t, float w, float h, float a) const {
+    const RC::Vector2 tl = {X(l), Y(t)};
+    const RC::Vector2 br = {X(l + w), Y(t + h)};
+    RC::DrawBox(tl, br, WithAlpha(panelColor, a));
+
+    const float in1 = S(6.0f), in2 = S(11.0f);
+    RC::DrawBox({tl.x + in1, tl.y + in1}, {br.x - in1, br.y - in1}, WithAlpha(kInk, 0.55f * a), kWire);
+    RC::DrawBox({tl.x + in2, tl.y + in2}, {br.x - in2, br.y - in2}, WithAlpha(kInk, 0.22f * a), kWire);
+
+    const float arm = S(22.0f);
+    const float th = (std::max)(1.0f, S(2.0f));
+    const RC::Vector4 c = WithAlpha(accentColor, 0.9f * a);
+    const float o = S(2.0f);
+    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o + arm, tl.y + o}, c, th);
+    RC::DrawLine({tl.x + o, tl.y + o}, {tl.x + o, tl.y + o + arm}, c, th);
+    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o - arm, tl.y + o}, c, th);
+    RC::DrawLine({br.x - o, tl.y + o}, {br.x - o, tl.y + o + arm}, c, th);
+    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o + arm, br.y - o}, c, th);
+    RC::DrawLine({tl.x + o, br.y - o}, {tl.x + o, br.y - o - arm}, c, th);
+    RC::DrawLine({br.x - o, br.y - o}, {br.x - o - arm, br.y - o}, c, th);
+    RC::DrawLine({br.x - o, br.y - o}, {br.x - o, br.y - o - arm}, c, th);
+  }
 
   /// @brief 画面上部にウェーブ番号と残り数を出す
-  void DrawWaveBar(float screenW, float screenH) {
-    (void)screenH;
-
-    const float barH = 54.0f;
-    const float barY = 12.0f;
-    const float barW = 320.0f;
-    const float barX = (screenW - barW) * 0.5f;
-
+  void DrawWaveBar() const {
     // Intro の間はせり出してくるように見せる（0→1 で高さが伸びる）
     float reveal = 1.0f;
     if (state_ == State::Intro && introDuration > 0.0f) {
-      reveal = stateTimer_ / introDuration;
-      if (reveal > 1.0f) reveal = 1.0f;
+      reveal = EaseOutCubic(stateTimer_ / introDuration);
     }
-    const float h = barH * reveal;
+    const float h = kBarH * reveal;
     if (h < 2.0f) return;
 
-    RC::DrawBox({barX, barY}, {barX + barW, barY + h}, panelColor);
-    RC::DrawBox({barX, barY}, {barX + barW, barY + h},
-                {accentColor.x, accentColor.y, accentColor.z, 0.9f}, kWire);
-    // 左端のアクセント帯（「WAVE」の文字素材が無いぶんの目印）
-    RC::DrawBox({barX, barY}, {barX + 10.0f, barY + h}, accentColor);
+    const float l = (kDesignW - kBarW) * 0.5f;
+    const RC::Vector2 tl = {X(l), Y(kBarY)};
+    const RC::Vector2 br = {X(l + kBarW), Y(kBarY + h)};
+    RC::DrawBox(tl, br, panelColor);
+    const float in1 = S(4.0f);
+    RC::DrawBox({tl.x + in1, tl.y + in1}, {br.x - in1, br.y - in1}, WithAlpha(kInk, 0.4f), kWire);
+    // 左端のアクセント帯
+    RC::DrawBox(tl, {tl.x + S(6.0f), br.y}, accentColor);
 
-    if (reveal < 1.0f) return;
+    if (reveal < 0.999f) return;
 
-    // ウェーブ番号
-    float x = barX + 26.0f;
-    const float digitW = 22.0f;
-    const float digitH = 34.0f;
-    const float digitY = barY + (barH - digitH) * 0.5f;
-    x = DrawNumber(waveDigitHandles_, kWaveDigits, activeWaveId_, x, digitY, digitW, digitH);
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "WAVE %d", activeWaveId_);
+    const float textY = Y(kBarY) + (S(kBarH) - LineH(itemFont_)) * 0.5f;
+    Text(itemFont_, buf, X(l + 22.0f), textY, kInk, TextAlign::Left);
 
-    // 残り数のピップ表示。数が多いときは数字へ切り替える。
+    // 残り数：少ないうちは金の丸で、多いときは数字で
     if (state_ == State::Fighting) {
-      const float pipX = barX + barW - 20.0f;
-      const float pipY = barY + barH * 0.5f;
+      const float pipR = S(6.0f);
+      const float gap = S(18.0f);
+      const float pipY = (tl.y + br.y) * 0.5f;
+      const float pipX = br.x - S(22.0f);
       if (remainingEnemies_ > 0 && remainingEnemies_ <= kMaxPips) {
-        const float pipR = 7.0f;
-        const float gap = 20.0f;
         for (int i = 0; i < remainingEnemies_; ++i) {
           RC::DrawCircle({pipX - gap * static_cast<float>(i), pipY}, pipR, accentColor);
         }
       } else if (remainingEnemies_ > kMaxPips) {
-        const float nx = barX + barW - 20.0f - digitW * 2.0f;
-        DrawNumber(remainDigitHandles_, kRemainDigits, remainingEnemies_, nx, digitY,
-                   digitW, digitH);
+        std::snprintf(buf, sizeof(buf), "残り %d", remainingEnemies_);
+        const float ly = Y(kBarY) + (S(kBarH) - LineH(labelFont_)) * 0.5f;
+        Text(labelFont_, buf, br.x - S(18.0f), ly, kMuted, TextAlign::Right);
       }
+    } else {
+      // Spawning 中は「出現中」を小さく添える
+      const float ly = Y(kBarY) + (S(kBarH) - LineH(labelFont_)) * 0.5f;
+      Text(labelFont_, "出現中", br.x - S(18.0f), ly, WithAlpha(kMuted, 0.9f), TextAlign::Right);
     }
   }
 
-  /// @brief クリア表示（clear.png のフェードイン／アウト）
-  void DrawClear(float screenW, float screenH) {
+  /// @brief クリア表示（"WAVE CLEAR" のパネルをフェードイン／アウト）
+  void DrawClear() const {
     // 前後 25% をフェードに使い、真ん中は出したままにする
-    float alpha = 1.0f;
+    float a = 1.0f;
     if (clearDuration > 0.0f) {
       const float t = stateTimer_ / clearDuration;
       const float fade = 0.25f;
-      if (t < fade)             alpha = t / fade;
-      else if (t > 1.0f - fade) alpha = (1.0f - t) / fade;
-      if (alpha < 0.0f) alpha = 0.0f;
-      if (alpha > 1.0f) alpha = 1.0f;
+      if (t < fade)             a = EaseOutCubic(t / fade);
+      else if (t > 1.0f - fade) a = EaseOutCubic((1.0f - t) / fade);
+      a = std::clamp(a, 0.0f, 1.0f);
     }
-    if (alpha <= 0.01f) return;
+    if (a <= 0.01f) return;
 
-    const float panelH = screenH * 0.22f;
-    const float panelY = screenH * 0.30f;
-    RC::DrawBox({0.0f, panelY}, {screenW, panelY + panelH},
-                {0.92f, 0.95f, 1.0f, 0.82f * alpha});
+    // 背後をわずかに沈める（PauseMenu の dim より軽く。プレイは止まっていないので）
+    RC::DrawBox({0.0f, 0.0f}, {X(kDesignW) + L_.ox, Y(kDesignH) + L_.oy},
+                {0.02f, 0.03f, 0.06f, 0.30f * a});
 
-    if (clearBannerHandle_ >= 0) {
-      // clear.png は 1280x720 のキャンバス中央に黒文字が置かれた素材なので、
-      // 画面全体へ引き伸ばして明るいパネルの上に重ねる
-      Transform t{};
-      t.scale = {1.0f, 1.0f, 1.0f};
-      t.rotation = {0.0f, 0.0f, 0.0f};
-      t.translation = {0.0f, 0.0f, 0.0f};
-      RC::SetSpriteTransform(clearBannerHandle_, t);
-      RC::SetSpriteScreenSize(clearBannerHandle_, screenW, screenH);
-      RC::SetSpriteColor(clearBannerHandle_, {1.0f, 1.0f, 1.0f, alpha});
-      RC::DrawSprite(clearBannerHandle_);
-    }
+    const float l = (kDesignW - kClearPanelW) * 0.5f;
+    const float t = (kDesignH - kClearPanelH) * 0.5f;
+    DrawPanel(l, t, kClearPanelW, kClearPanelH, a);
+
+    // 見出し ＋ 下線 ＋ 小さな添え字（PauseMenu::DrawHeading と同じ組み方）
+    const float cx = X(kDesignW * 0.5f);
+    const float top = Y(t + kClearPadTop);
+    Text(headingFont_, "WAVE CLEAR", cx, top, WithAlpha(kInk, a), TextAlign::Center);
+
+    const float lineY = top + LineH(headingFont_) + S(4.0f);
+    const float halfW = S(kClearPanelW * 0.5f - 40.0f);
+    RC::DrawLine({cx - halfW, lineY}, {cx + halfW, lineY}, WithAlpha(accentColor, 0.7f * a),
+                 (std::max)(1.0f, S(1.5f)));
+
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "WAVE %d", activeWaveId_);
+    Text(labelFont_, buf, cx, lineY + S(8.0f), WithAlpha(kMuted, 0.9f * a), TextAlign::Center, 0.85f);
 
     // 再進行を示す帯。右へ流れて「この先へ進む」ことを伝える。
-    const float lineY = panelY + panelH + 24.0f;
-    const float sweep = (clearDuration > 0.0f) ? (stateTimer_ / clearDuration) : 1.0f;
-    const float lineW = screenW * 0.35f;
-    const float lineX = (screenW - lineW) * 0.5f;
-    RC::DrawBox({lineX, lineY}, {lineX + lineW * sweep, lineY + 6.0f},
-                {accentColor.x, accentColor.y, accentColor.z, alpha});
+    const float sweep = (clearDuration > 0.0f) ? std::clamp(stateTimer_ / clearDuration, 0.0f, 1.0f) : 1.0f;
+    const float barY = Y(t + kClearPanelH) + S(18.0f);
+    const float barW = S(kClearPanelW * 0.7f);
+    const float barX = cx - barW * 0.5f;
+    RC::DrawBox({barX, barY}, {barX + barW * sweep, barY + S(4.0f)}, WithAlpha(accentColor, a));
   }
 
-  /// @brief number.png の数字で value を描き、次に描ける x を返す
-  /// @details number.png は 32x32 の数字を 5 列 x 2 行に並べたシート（上段 0〜4 / 下段 5〜9）。
-  ///          ハンドル数を超える桁は描けないので上位から切り捨てる。
-  float DrawNumber(const int *handles, int handleCount, int value, float x, float y,
-                   float w, float h) {
-    if (!handles || handleCount <= 0) return x;
-    if (value < 0) value = 0;
-
-    // 桁数がハンドル数を超えると下位桁だけが残り、100 体を "00" と表示してしまう。
-    // 誤読させるくらいなら上限に張り付かせたほうがよいので、描ける最大値へ丸める。
-    int limit = 1;
-    for (int i = 0; i < handleCount && i < kMaxNumberDigits; ++i) limit *= 10;
-    if (value >= limit) value = limit - 1;
-
-    int digits[kMaxNumberDigits] = {};
-    int count = 0;
-    do {
-      digits[count++] = value % 10;
-      value /= 10;
-    } while (value > 0 && count < handleCount && count < kMaxNumberDigits);
-
-    for (int i = 0; i < count; ++i) {
-      const int handle = handles[i];
-      if (handle < 0) continue;
-
-      const int d = digits[count - 1 - i]; // 上位桁から描く
-      const float srcX = static_cast<float>(d % 5) * kDigitSrcSize;
-      const float srcY = static_cast<float>(d / 5) * kDigitSrcSize;
-
-      Transform t{};
-      t.scale = {1.0f, 1.0f, 1.0f};
-      t.rotation = {0.0f, 0.0f, 0.0f};
-      t.translation = {x + w * static_cast<float>(i), y, 0.0f};
-      RC::SetSpriteTransform(handle, t);
-      RC::SetSpriteScreenSize(handle, w, h);
-      RC::SetSpriteColor(handle, {1.0f, 1.0f, 1.0f, 1.0f});
-      RC::DrawSpriteRect(handle, srcX, srcY, kDigitSrcSize, kDigitSrcSize,
-                         kDigitSheetW, kDigitSheetH, 0.5f);
-    }
-    return x + w * static_cast<float>(count);
-  }
-
-  static constexpr float kDigitSrcSize = 32.0f;  ///< number.png の 1 文字あたりのピクセル数
-  static constexpr float kDigitSheetW = 160.0f;  ///< number.png の幅
-  static constexpr float kDigitSheetH = 64.0f;   ///< number.png の高さ
-  static constexpr int kWaveDigits = 2;          ///< ウェーブ番号に使うハンドル数（最大 99）
-  static constexpr int kRemainDigits = 2;        ///< 残り数に使うハンドル数
-  static constexpr int kMaxNumberDigits = 4;     ///< DrawNumber の内部バッファ長
-  static constexpr int kMaxPips = 8;             ///< 丸で残り数を出す上限
+  static constexpr int kMaxPips = 8; ///< 丸で残り数を出す上限
 
   State state_ = State::Idle;
   int activeWaveId_ = 0;
@@ -530,9 +569,10 @@ private:
   int peakEnemies_ = 0;
   float stateTimer_ = 0.0f;
 
-  int waveDigitHandles_[kWaveDigits] = {-1, -1};
-  int remainDigitHandles_[kRemainDigits] = {-1, -1};
-  int clearBannerHandle_ = -1;
+  int headingFont_ = -1;
+  int itemFont_ = -1;
+  int labelFont_ = -1;
+  float fontScale_ = 1.0f;
 
 #if RC_ENABLE_IMGUI
   int debugWaveId_ = 1;

@@ -296,7 +296,7 @@
                     1.0,
                     1.0
                   ],
-                  "distortionForce": 0.01,
+                  "distortionForce": 0.004,
                   "causticsFadeDepth": 20.0,
                   "causticsScale": 0.3,
                   "causticsIntensity": 1.2,

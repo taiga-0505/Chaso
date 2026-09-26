@@ -29,15 +29,24 @@ PixelShaderOutPut main(PixelShaderInput input) {
 
     // UV座標の歪み（Distortion）計算
     // 水の揺らぎをlerpFactorに応じて強める
+    // 高周波 1 本の sin だと輪郭がギザギザの「縞」になって見えるので、
+    // 低周波の波を 2 本ずらして重ね、ゆっくり大きくうねる屈折にする。
+    // 画面端では歪みを 0 に落として、clamp による端の伸びを出さない。
     float2 uv = input.texcoord;
     float currentDistortion = distortionForce * lerpFactor;
-    
-    float offsetX = sin(uv.y * 20.0f + time * 3.0f) * currentDistortion;
-    float offsetY = cos(uv.x * 15.0f + time * 2.5f) * currentDistortion * 0.5f;
-    
-    uv.x += offsetX;
-    uv.y += offsetY;
-    uv = clamp(uv, 0.0f, 1.0f);
+
+    float2 edge = 1.0f - abs(uv * 2.0f - 1.0f);           // 端で 0、中央で 1
+    float edgeFade = smoothstep(0.0f, 0.15f, min(edge.x, edge.y));
+
+    float wx = sin(uv.y * 5.2f + time * 0.9f) * 0.65f
+             + sin(uv.y * 9.1f - uv.x * 3.3f + time * 1.4f) * 0.35f;
+    float wy = cos(uv.x * 4.6f + time * 0.8f) * 0.65f
+             + cos(uv.x * 8.3f + uv.y * 2.7f + time * 1.1f) * 0.35f;
+
+    // アスペクト比を揃える（横方向は縦の 9/16 で同じ画面上の長さになる）
+    float2 offset = float2(wx * 0.5625f, wy) * currentDistortion * edgeFade;
+
+    uv = clamp(uv + offset, 0.0f, 1.0f);
 
     // 元のシーンの色と深度をサンプリング
     float4 baseColor = gTexture.Sample(gSampler, uv);

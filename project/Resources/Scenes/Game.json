@@ -5,6 +5,28 @@
       "components": [
         {
           "data": {
+            "scriptDataList": [
+              {
+                "autoDetect": true,
+                "crossMargin": 0.5,
+                "debugDraw": true,
+                "minRadius": 0.5,
+                "radiusScale": 1.0,
+                "reflectRange": 6.0,
+                "reflectStrength": 1.0,
+                "terrainTag": "is_terrain"
+              }
+            ],
+            "scriptTypeName": "WaterObstacleScript",
+            "scriptTypeNames": [
+              "WaterObstacleScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
             "position": [
               0.0,
               0.0,
@@ -26,6 +48,7 @@
         },
         {
           "data": {
+            "crestTint": 0.0,
             "deepColor": [
               0.019999999552965164,
               0.10000000149011612,
@@ -58,28 +81,6 @@
           },
           "enabled": true,
           "type": "WaterComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "autoDetect": true,
-                "crossMargin": 0.5,
-                "debugDraw": true,
-                "minRadius": 0.5,
-                "radiusScale": 1.0,
-                "reflectRange": 6.0,
-                "reflectStrength": 1.0,
-                "terrainTag": "is_terrain"
-              }
-            ],
-            "scriptTypeName": "WaterObstacleScript",
-            "scriptTypeNames": [
-              "WaterObstacleScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
         }
       ],
       "guid": 15696101900784297463,
@@ -93,34 +94,6 @@
     {
       "active": true,
       "components": [
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "alignToSurface": true,
-                "debugDraw": true,
-                "densityRatio": 0.44999998807907104,
-                "gravity": 9.8100004196167,
-                "halfHeight": 0.5,
-                "linearDrag": 6.0,
-                "maxRiseSpeed": 8.0,
-                "maxTiltDeg": 18.0,
-                "pitchSign": -1.0,
-                "quadraticDrag": 1.2000000476837158,
-                "rollSign": 1.0,
-                "sampleRadius": 1.5,
-                "tiltSharpness": 5.0,
-                "useFourSamples": true
-              }
-            ],
-            "scriptTypeName": "BuoyancyScript",
-            "scriptTypeNames": [
-              "BuoyancyScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
         {
           "data": {
             "position": [
@@ -141,6 +114,37 @@
           },
           "enabled": true,
           "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "alignToSurface": true,
+                "debugDraw": true,
+                "densityRatio": 0.44999998807907104,
+                "floodDuration": 2.5,
+                "floodedDensityRatio": 1.350000023841858,
+                "gravity": 9.8100004196167,
+                "halfHeight": 0.5,
+                "linearDrag": 6.0,
+                "maxRiseSpeed": 8.0,
+                "maxTiltDeg": 18.0,
+                "pitchSign": -1.0,
+                "quadraticDrag": 1.2000000476837158,
+                "rollSign": 1.0,
+                "sampleRadius": 1.5,
+                "sampleRadiusSide": 0.0,
+                "tiltSharpness": 5.0,
+                "useFourSamples": true
+              }
+            ],
+            "scriptTypeName": "BuoyancyScript",
+            "scriptTypeNames": [
+              "BuoyancyScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
         },
         {
           "data": {
@@ -184,34 +188,6 @@
       "components": [
         {
           "data": {
-            "scriptDataList": [
-              {
-                "alignToSurface": true,
-                "debugDraw": true,
-                "densityRatio": 0.4000000059604645,
-                "gravity": 9.8100004196167,
-                "halfHeight": 1.2000000476837158,
-                "linearDrag": 5.5,
-                "maxRiseSpeed": 8.0,
-                "maxTiltDeg": 18.0,
-                "pitchSign": -1.0,
-                "quadraticDrag": 1.0,
-                "rollSign": 1.0,
-                "sampleRadius": 0.0,
-                "tiltSharpness": 5.0,
-                "useFourSamples": false
-              }
-            ],
-            "scriptTypeName": "BuoyancyScript",
-            "scriptTypeNames": [
-              "BuoyancyScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
-        {
-          "data": {
             "position": [
               -3.0,
               4.56394100189209,
@@ -230,6 +206,37 @@
           },
           "enabled": true,
           "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "alignToSurface": true,
+                "debugDraw": true,
+                "densityRatio": 0.4000000059604645,
+                "floodDuration": 2.5,
+                "floodedDensityRatio": 1.350000023841858,
+                "gravity": 9.8100004196167,
+                "halfHeight": 1.2000000476837158,
+                "linearDrag": 5.5,
+                "maxRiseSpeed": 8.0,
+                "maxTiltDeg": 18.0,
+                "pitchSign": -1.0,
+                "quadraticDrag": 1.0,
+                "rollSign": 1.0,
+                "sampleRadius": 0.0,
+                "sampleRadiusSide": 0.0,
+                "tiltSharpness": 5.0,
+                "useFourSamples": false
+              }
+            ],
+            "scriptTypeName": "BuoyancyScript",
+            "scriptTypeNames": [
+              "BuoyancyScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
         },
         {
           "data": {
@@ -273,62 +280,64 @@
       "components": [
         {
           "data": {
-            "position": [
-              0.0,
-              2.0,
-              -50.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
             "scriptDataList": [
               {
                 "alwaysPlay": false,
-                "riseDepth": 26.0,
-                "riseDuration": 3.2,
-                "riseEase": 2.2,
-                "risePitchStart": -0.35,
                 "bubbles": true,
+                "riseDepth": 26.0,
+                "riseDuration": 3.200000047683716,
+                "riseEase": 2.200000047683716,
+                "risePitchStart": -0.3499999940395355,
                 "showStartText": true,
-                "startText": "GAME START",
-                "startTextDuration": 1.4,
-                "startBandAlpha": 0.72,
+                "startBandAlpha": 0.7200000286102295,
                 "startFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
-                "startFontSize": 72.0
+                "startFontSize": 72.0,
+                "startText": "GAME START",
+                "startTextDuration": 1.399999976158142
               },
               {
+                "look": {
+                  "controllerLookSpeed": 2.5,
+                  "deadzone": 0.20000000298023224,
+                  "lockCursor": true,
+                  "lookSensitivity": 0.0024999999441206455,
+                  "maxPitchDeg": 60.0,
+                  "maxYawDeg": 80.0
+                },
                 "underwater": {
-                  "shallowFogColor": [0.0, 0.3, 0.6, 1.0],
-                  "shallowFogStart": 10.0,
-                  "shallowFogEnd": 150.0,
-                  "deepFogColor": [0.0, 0.012, 0.03, 1.0],
-                  "deepFogStart": 0.0,
-                  "deepFogEnd": 7.0,
-                  "deepDepth": 24.0,
-                  "deepBias": 1.35,
-                  "tintColor": [0.2, 0.5, 1.0, 1.0],
-                  "distortionForce": 0.01,
-                  "causticsFadeDepth": 20.0,
-                  "causticsScale": 0.3,
-                  "causticsIntensity": 1.2,
-                  "causticsDistanceFadeStart": 25.0,
                   "causticsDistanceFadeEnd": 70.0,
+                  "causticsDistanceFadeStart": 25.0,
+                  "causticsFadeDepth": 20.0,
+                  "causticsIntensity": 1.2000000476837158,
+                  "causticsScale": 0.30000001192092896,
+                  "deepBias": 1.350000023841858,
+                  "deepDepth": 24.0,
+                  "deepFogColor": [
+                    0.0,
+                    0.012000000104308128,
+                    0.029999999329447746,
+                    1.0
+                  ],
+                  "deepFogEnd": 7.0,
+                  "deepFogStart": 0.0,
+                  "distortionForce": 0.004000000189989805,
+                  "lightShaftDensity": 0.07999999821186066,
                   "lightShaftIntensity": 1.0,
-                  "lightShaftDensity": 0.08,
-                  "lightShaftMaxDistance": 80.0
+                  "lightShaftMaxDistance": 80.0,
+                  "shallowFogColor": [
+                    0.0,
+                    0.30000001192092896,
+                    0.6000000238418579,
+                    1.0
+                  ],
+                  "shallowFogEnd": 150.0,
+                  "shallowFogStart": 10.0,
+                  "tintColor": [
+                    0.20000000298023224,
+                    0.5,
+                    1.0,
+                    1.0
+                  ]
                 }
               },
               {
@@ -348,6 +357,12 @@
                   1.0
                 ],
                 "speed": 5.0,
+                "waveColor": [
+                  1.0,
+                  0.3499999940395355,
+                  0.10000000149011612,
+                  1.0
+                ],
                 "waveManagerName": "WaveManager",
                 "waypoints": [
                   {
@@ -467,17 +482,17 @@
                 ]
               },
               {
-                "enabled": true,
-                "delay": 0.6,
-                "fallTime": 0.8,
-                "sinkTime": 3.2,
-                "depth": 30.0,
-                "lookUpPitch": -1.05,
-                "tiltTime": 2.2,
-                "roll": 0.18,
-                "darkDepth": 24.0,
                 "bubbles": true,
-                "resultScene": "Result"
+                "darkDepth": 24.0,
+                "delay": 0.6000000238418579,
+                "depth": 30.0,
+                "enabled": true,
+                "fallTime": 0.800000011920929,
+                "lookUpPitch": -1.0499999523162842,
+                "resultScene": "Result",
+                "roll": 0.18000000715255737,
+                "sinkTime": 3.200000047683716,
+                "tiltTime": 2.200000047683716
               }
             ],
             "scriptTypeName": "DeepRiseIntroScript",
@@ -490,6 +505,27 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              0.0,
+              2.0,
+              -50.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
         },
         {
           "data": {
@@ -508,7 +544,11 @@
       "name": "Camera",
       "parentGuid": 0,
       "tags": {
-        "is_player": 1
+        "has_rail": 1,
+        "is_player": 1,
+        "is_underwater": 0,
+        "rail_branch_to": -1,
+        "rail_wp": 1
       },
       "visible": true
     },
@@ -585,6 +625,12 @@
         },
         {
           "data": {
+            "ambientColor": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "ambientIntensity": 0.0,
             "color": [
               1.0,
               1.0,
@@ -627,54 +673,6 @@
       "components": [
         {
           "data": {
-            "position": [
-              2.0,
-              0.09999999403953552,
-              27.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              3.99999737739563,
-              4.0,
-              3.99999737739563
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "attackHitDistance": 2.5,
-                "attackSpeed": 18.0,
-                "attackStartDistance": 10.0,
-                "cooldownDuration": 2.0,
-                "detectDistance": 30.0,
-                "modelRotOffset": [
-                  0.0,
-                  0.0,
-                  0.0
-                ],
-                "swimSineAmplitude": 3.0,
-                "swimSineFrequency": 2.0,
-                "swimSpeed": 6.0
-              }
-            ],
-            "scriptTypeName": "SharkEnemyScript",
-            "scriptTypeNames": [
-              "SharkEnemyScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
-        {
-          "data": {
             "center": [
               0.0,
               0.0,
@@ -682,61 +680,17 @@
             ],
             "isTrigger": false,
             "layer": 4294967295,
-            "radius": 0.5,
+            "radius": 1.0,
             "shape": 0,
             "size": [
-              0.4000000059604645,
-              0.4000000059604645,
+              1.0,
+              1.0,
               1.0
             ]
           },
           "enabled": true,
           "type": "ColliderComponent"
         },
-        {
-          "data": {
-            "color": [
-              0.9,
-              0.25,
-              0.25,
-              1.0
-            ],
-            "environmentCoeff": 0.0,
-            "lightingMode": -1,
-            "normalMapPath": "",
-            "roughnessMapPath": "",
-            "shininess": 32.0,
-            "texturePath": "",
-            "type": 1,
-            "uvOffset": [
-              0.0,
-              0.0
-            ],
-            "uvTiling": [
-              1.0,
-              1.0
-            ],
-            "visible": true
-          },
-          "enabled": true,
-          "type": "PrimitiveMeshComponent"
-        }
-      ],
-      "guid": 7482451223708769765,
-      "isFolder": false,
-      "locked": false,
-      "name": "shark",
-      "parentGuid": 0,
-      "tags": {
-        "current_hp": 20,
-        "is_enemy": 1,
-        "max_hp": 20
-      },
-      "visible": true
-    },
-    {
-      "active": true,
-      "components": [
         {
           "data": {
             "position": [
@@ -757,26 +711,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -822,6 +756,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               8.0,
               0.0,
@@ -840,26 +794,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -905,6 +839,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               -6.0,
               0.0,
@@ -923,26 +877,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -988,54 +922,6 @@
       "components": [
         {
           "data": {
-            "position": [
-              8.0,
-              0.10000000149011612,
-              -5.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              3.99999737739563,
-              4.0,
-              3.99999737739563
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "attackHitDistance": 2.5,
-                "attackSpeed": 18.0,
-                "attackStartDistance": 10.0,
-                "cooldownDuration": 2.0,
-                "detectDistance": 30.0,
-                "modelRotOffset": [
-                  0.0,
-                  0.0,
-                  0.0
-                ],
-                "swimSineAmplitude": 3.0,
-                "swimSineFrequency": 2.0,
-                "swimSpeed": 6.0
-              }
-            ],
-            "scriptTypeName": "SharkEnemyScript",
-            "scriptTypeNames": [
-              "SharkEnemyScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
-        {
-          "data": {
             "center": [
               0.0,
               0.0,
@@ -1046,58 +932,14 @@
             "radius": 1.0,
             "shape": 0,
             "size": [
-              0.4000000059604645,
-              0.4000000059604645,
+              1.0,
+              1.0,
               1.0
             ]
           },
           "enabled": true,
           "type": "ColliderComponent"
         },
-        {
-          "data": {
-            "color": [
-              0.9,
-              0.25,
-              0.25,
-              1.0
-            ],
-            "environmentCoeff": 0.0,
-            "lightingMode": -1,
-            "normalMapPath": "",
-            "roughnessMapPath": "",
-            "shininess": 32.0,
-            "texturePath": "",
-            "type": 1,
-            "uvOffset": [
-              0.0,
-              0.0
-            ],
-            "uvTiling": [
-              1.0,
-              1.0
-            ],
-            "visible": true
-          },
-          "enabled": true,
-          "type": "PrimitiveMeshComponent"
-        }
-      ],
-      "guid": 8367239994704043667,
-      "isFolder": false,
-      "locked": false,
-      "name": "shark_ambush",
-      "parentGuid": 0,
-      "tags": {
-        "current_hp": 20,
-        "is_enemy": 1,
-        "max_hp": 20
-      },
-      "visible": true
-    },
-    {
-      "active": true,
-      "components": [
         {
           "data": {
             "position": [
@@ -1118,26 +960,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1183,6 +1005,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               0.0,
               -25.0,
@@ -1201,26 +1043,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1266,6 +1088,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               -10.0,
               -10.0,
@@ -1284,26 +1126,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1349,6 +1171,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               12.0,
               -12.0,
@@ -1367,26 +1209,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1432,6 +1254,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               -8.09057331085205,
               -15.0,
@@ -1450,26 +1292,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1515,6 +1337,26 @@
       "components": [
         {
           "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "ColliderComponent"
+        },
+        {
+          "data": {
             "position": [
               5.0,
               -18.0,
@@ -1533,26 +1375,6 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "center": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "isTrigger": false,
-            "layer": 4294967295,
-            "radius": 1.0,
-            "shape": 0,
-            "size": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "ColliderComponent"
         },
         {
           "data": {
@@ -1598,97 +1420,22 @@
       "components": [
         {
           "data": {
-            "position": [
-              -2.4589426517486572,
-              4.343377113342285,
-              -9.764863967895508
-            ],
-            "rotation": [
-              0.0,
-              -0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "color": [
-              1.0,
-              1.0,
-              1.0,
-              1.0
-            ],
-            "cosAngle": 0.8659999966621399,
-            "decay": 1.0,
-            "direction": [
-              26.100000381469727,
-              -3.200000047683716,
-              0.0
-            ],
-            "distance": 20.0,
-            "intensity": 3.0999999046325684,
-            "visible": true
-          },
-          "enabled": true,
-          "type": "SpotLightComponent"
-        }
-      ],
-      "guid": 15464136321597754641,
-      "isFolder": false,
-      "locked": false,
-      "name": "Spot Light",
-      "parentGuid": 0,
-      "tags": {},
-      "visible": true
-    },
-    {
-      "active": true,
-      "components": [
-        {
-          "data": {
-            "position": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
             "scriptDataList": [
               {
                 "accentColor": [
-                  1.0,
-                  0.55,
-                  0.15,
+                  0.8799999952316284,
+                  0.7400000095367432,
+                  0.3799999952316284,
                   1.0
                 ],
-                "clearDuration": 1.6,
-                "introDuration": 0.8,
+                "clearDuration": 1.600000023841858,
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "introDuration": 0.800000011920929,
                 "panelColor": [
-                  0.05,
-                  0.09,
-                  0.14,
-                  0.78
+                  0.05999999865889549,
+                  0.07999999821186066,
+                  0.10999999940395355,
+                  0.9200000166893005
                 ],
                 "showClearBanner": true,
                 "showHud": true
@@ -1701,25 +1448,13 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
-        }
-      ],
-      "guid": 4410277318825190001,
-      "isFolder": false,
-      "locked": false,
-      "name": "WaveManager",
-      "parentGuid": 0,
-      "tags": {},
-      "visible": true
-    },
-    {
-      "active": true,
-      "components": [
+        },
         {
           "data": {
             "position": [
-              4.0,
-              0.5,
-              -12.0
+              0.0,
+              0.0,
+              0.0
             ],
             "rotation": [
               0.0,
@@ -1734,7 +1469,24 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
+        }
+      ],
+      "guid": 4410277318825190001,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveManager",
+      "parentGuid": 0,
+      "tags": {
+        "wave_active": 0,
+        "wave_busy": 0,
+        "wave_cleared_id": 0,
+        "waves_cleared": 0
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
         {
           "data": {
             "scriptDataList": [
@@ -1758,18 +1510,18 @@
                 ],
                 "enemyScript": "SharkEnemyScript",
                 "modelPath": "",
-                "spawnInterval": 0.35,
-                "spreadRadius": 8.0,
-                "startDelay": 0.0,
-                "waveId": 1,
-                "waveManagerName": "WaveManager",
-                "primitiveShape": "box",
                 "primitiveColor": [
-                  0.9,
+                  0.8999999761581421,
                   0.25,
                   0.25,
                   1.0
-                ]
+                ],
+                "primitiveShape": "box",
+                "spawnInterval": 0.3499999940395355,
+                "spreadRadius": 8.0,
+                "startDelay": 0.0,
+                "waveId": 1,
+                "waveManagerName": "WaveManager"
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",
@@ -1779,6 +1531,27 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              4.0,
+              0.5,
+              -12.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
         }
       ],
       "guid": 4410277318825190002,
@@ -1795,27 +1568,6 @@
     {
       "active": true,
       "components": [
-        {
-          "data": {
-            "position": [
-              2.0,
-              -6.0,
-              48.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
         {
           "data": {
             "scriptDataList": [
@@ -1839,18 +1591,18 @@
                 ],
                 "enemyScript": "SharkEnemyScript",
                 "modelPath": "",
-                "spawnInterval": 0.35,
-                "spreadRadius": 9.0,
-                "startDelay": 0.0,
-                "waveId": 2,
-                "waveManagerName": "WaveManager",
-                "primitiveShape": "box",
                 "primitiveColor": [
-                  0.9,
+                  0.8999999761581421,
                   0.25,
                   0.25,
                   1.0
-                ]
+                ],
+                "primitiveShape": "box",
+                "spawnInterval": 0.3499999940395355,
+                "spreadRadius": 9.0,
+                "startDelay": 0.0,
+                "waveId": 2,
+                "waveManagerName": "WaveManager"
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",
@@ -1860,6 +1612,27 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              2.0,
+              -6.0,
+              48.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
         }
       ],
       "guid": 4410277318825190003,
@@ -1876,27 +1649,6 @@
     {
       "active": true,
       "components": [
-        {
-          "data": {
-            "position": [
-              12.0,
-              1.0,
-              58.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
         {
           "data": {
             "scriptDataList": [
@@ -1920,18 +1672,18 @@
                 ],
                 "enemyScript": "SharkEnemyScript",
                 "modelPath": "",
-                "spawnInterval": 0.35,
-                "spreadRadius": 6.0,
-                "startDelay": 0.0,
-                "waveId": 3,
-                "waveManagerName": "WaveManager",
-                "primitiveShape": "box",
                 "primitiveColor": [
-                  0.9,
+                  0.8999999761581421,
                   0.25,
                   0.25,
                   1.0
-                ]
+                ],
+                "primitiveShape": "box",
+                "spawnInterval": 0.3499999940395355,
+                "spreadRadius": 6.0,
+                "startDelay": 0.0,
+                "waveId": 3,
+                "waveManagerName": "WaveManager"
               }
             ],
             "scriptTypeName": "WaveSpawnerScript",
@@ -1941,6 +1693,27 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              12.0,
+              1.0,
+              58.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
         }
       ],
       "guid": 4410277318825190004,
@@ -1959,27 +1732,6 @@
       "components": [
         {
           "data": {
-            "position": [
-              16.0,
-              0.5,
-              66.0
-            ],
-            "rotation": [
-              0.0,
-              3.14159274,
-              0.0
-            ],
-            "scale": [
-              1.0,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
             "scriptDataList": [
               {
                 "colliderRadius": 3.0,
@@ -1988,15 +1740,15 @@
                 "enemyName": "WaveShip",
                 "enemyScale": [
                   3.0,
-                  1.6,
+                  1.600000023841858,
                   9.0
                 ],
                 "enemyScript": "ShipEnemyScript",
                 "modelPath": "",
                 "primitiveColor": [
-                  0.3,
-                  0.33,
-                  0.38,
+                  0.30000001192092896,
+                  0.33000001311302185,
+                  0.3799999952316284,
                   1.0
                 ],
                 "primitiveShape": "box",
@@ -2046,7 +1798,7 @@
                 ],
                 "spawnInterval": 0.0,
                 "spreadRadius": 0.0,
-                "startDelay": 1.2,
+                "startDelay": 1.2000000476837158,
                 "waveId": 3,
                 "waveManagerName": "WaveManager"
               }
@@ -2058,6 +1810,27 @@
           },
           "enabled": true,
           "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              16.0,
+              0.5,
+              66.0
+            ],
+            "rotation": [
+              0.0,
+              3.1415927410125732,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
         }
       ],
       "guid": 4410277318825190005,
@@ -2074,48 +1847,6 @@
     {
       "active": true,
       "components": [
-        {
-          "data": {
-            "position": [
-              -4.0,
-              1.2,
-              -22.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.4,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "bobAmplitude": 0.2,
-                "bobSpeed": 1.5,
-                "maxHp": 3,
-                "openDuration": 1.2,
-                "points": 100,
-                "popHeight": 1.0,
-                "spinSpeedDeg": 0.0
-              }
-            ],
-            "scriptTypeName": "TreasureChestScript",
-            "scriptTypeNames": [
-              "TreasureChestScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
         {
           "data": {
             "center": [
@@ -2138,10 +1869,53 @@
         },
         {
           "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.20000000298023224,
+                "bobSpeed": 1.5,
+                "hp": 3,
+                "maxHp": 3,
+                "openDuration": 1.2000000476837158,
+                "points": 100,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              -4.0,
+              1.2000000476837158,
+              -22.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.399999976158142,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
             "color": [
-              0.55,
-              0.35,
-              0.15,
+              0.550000011920929,
+              0.3499999940395355,
+              0.15000000596046448,
               1.0
             ],
             "environmentCoeff": 0.0,
@@ -2171,55 +1945,15 @@
       "name": "TreasureChest_1",
       "parentGuid": 710271550770534429,
       "tags": {
-        "is_item": 1
+        "current_hp": 3,
+        "is_item": 1,
+        "max_hp": 3
       },
       "visible": true
     },
     {
       "active": true,
       "components": [
-        {
-          "data": {
-            "position": [
-              6.0,
-              -5.0,
-              22.0
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              0.0
-            ],
-            "scale": [
-              1.4,
-              1.0,
-              1.0
-            ]
-          },
-          "enabled": true,
-          "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "bobAmplitude": 0.2,
-                "bobSpeed": 1.5,
-                "maxHp": 5,
-                "openDuration": 1.2,
-                "points": 300,
-                "popHeight": 1.0,
-                "spinSpeedDeg": 0.0
-              }
-            ],
-            "scriptTypeName": "TreasureChestScript",
-            "scriptTypeNames": [
-              "TreasureChestScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
-        },
         {
           "data": {
             "center": [
@@ -2242,10 +1976,53 @@
         },
         {
           "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.20000000298023224,
+                "bobSpeed": 1.5,
+                "hp": 5,
+                "maxHp": 5,
+                "openDuration": 1.2000000476837158,
+                "points": 300,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              6.0,
+              -5.0,
+              22.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.399999976158142,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
             "color": [
-              0.55,
-              0.35,
-              0.15,
+              0.550000011920929,
+              0.3499999940395355,
+              0.15000000596046448,
               1.0
             ],
             "environmentCoeff": 0.0,
@@ -2275,13 +2052,45 @@
       "name": "TreasureChest_2",
       "parentGuid": 710271550770534429,
       "tags": {
-        "is_item": 1
+        "current_hp": 5,
+        "is_item": 1,
+        "max_hp": 5
       },
       "visible": true
     },
     {
       "active": true,
       "components": [
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "accentColor": [
+                  0.8799999952316284,
+                  0.7400000095367432,
+                  0.3799999952316284,
+                  1.0
+                ],
+                "dimAlpha": 0.550000011920929,
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "panelColor": [
+                  0.05999999865889549,
+                  0.07999999821186066,
+                  0.10999999940395355,
+                  0.9200000166893005
+                ],
+                "retryScene": "Game",
+                "titleScene": "Title"
+              }
+            ],
+            "scriptTypeName": "PauseMenuScript",
+            "scriptTypeNames": [
+              "PauseMenuScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
         {
           "data": {
             "position": [
@@ -2302,42 +2111,135 @@
           },
           "enabled": true,
           "type": "TransformComponent"
-        },
-        {
-          "data": {
-            "scriptDataList": [
-              {
-                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
-                "titleScene": "Title",
-                "retryScene": "Game",
-                "panelColor": [
-                  0.06,
-                  0.08,
-                  0.11,
-                  0.92
-                ],
-                "accentColor": [
-                  0.88,
-                  0.74,
-                  0.38,
-                  1.0
-                ],
-                "dimAlpha": 0.55
-              }
-            ],
-            "scriptTypeName": "PauseMenuScript",
-            "scriptTypeNames": [
-              "PauseMenuScript"
-            ]
-          },
-          "enabled": true,
-          "type": "NativeScriptComponent"
         }
       ],
       "guid": 5200100100100100101,
       "isFolder": false,
       "locked": false,
       "name": "PauseMenu",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              -200.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "configPath": "Resources/Particle/default.json",
+            "texturePath": "Resources/Particle/circle.png"
+          },
+          "enabled": true,
+          "type": "GPUParticleComponent"
+        }
+      ],
+      "guid": 4595823565574006220,
+      "isFolder": false,
+      "locked": false,
+      "name": "DeathBubbles",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              -200.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "configPath": "Resources/Particle/default.json",
+            "texturePath": "Resources/Particle/circle.png"
+          },
+          "enabled": true,
+          "type": "GPUParticleComponent"
+        }
+      ],
+      "guid": 14258516335686059496,
+      "isFolder": false,
+      "locked": false,
+      "name": "DeathBubbles",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              -200.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "configPath": "Resources/Particle/default.json",
+            "texturePath": "Resources/Particle/circle.png"
+          },
+          "enabled": true,
+          "type": "GPUParticleComponent"
+        }
+      ],
+      "guid": 111477607587289491,
+      "isFolder": false,
+      "locked": false,
+      "name": "DeathBubbles",
       "parentGuid": 0,
       "tags": {},
       "visible": true

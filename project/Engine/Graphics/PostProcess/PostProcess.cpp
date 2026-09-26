@@ -450,6 +450,10 @@ void PostProcess::Initialize(Dx12Core *dxCore,
       mappedLightShaft_->ditherStrength = lightShaftDitherStrength_;
       mappedLightShaft_->lerpFactor = lightShaftLerpFactor_;
       mappedLightShaft_->_padding = 0.0f;
+      mappedLightShaft_->sunDir[0] = lightShaftSunDir_[0];
+      mappedLightShaft_->sunDir[1] = lightShaftSunDir_[1];
+      mappedLightShaft_->sunDir[2] = lightShaftSunDir_[2];
+      mappedLightShaft_->sunDir[3] = 0.0f;
 
       // scale / speed / waterHeight は Caustics と共有する必要がある
       mappedLightShaft_->scale = causticsScale_;
@@ -996,6 +1000,22 @@ void PostProcess::SetLightShaftLerpFactor(float lerpFactor) {
   lightShaftLerpFactor_ = lerpFactor;
   if (mappedLightShaft_) {
     mappedLightShaft_->lerpFactor = lerpFactor;
+  }
+}
+
+void PostProcess::SetLightShaftSunDirection(float x, float y, float z) {
+  // 上向き・ほぼ水平だと水面へ戻す距離が発散するので、下向きに最低限の傾きを持たせる
+  if (y > -0.2f) y = -0.2f;
+  float len = std::sqrt(x * x + y * y + z * z);
+  if (len < 1e-6f) { x = 0.0f; y = -1.0f; z = 0.0f; len = 1.0f; }
+  lightShaftSunDir_[0] = x / len;
+  lightShaftSunDir_[1] = y / len;
+  lightShaftSunDir_[2] = z / len;
+  if (mappedLightShaft_) {
+    mappedLightShaft_->sunDir[0] = lightShaftSunDir_[0];
+    mappedLightShaft_->sunDir[1] = lightShaftSunDir_[1];
+    mappedLightShaft_->sunDir[2] = lightShaftSunDir_[2];
+    mappedLightShaft_->sunDir[3] = 0.0f;
   }
 }
 

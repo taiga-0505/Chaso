@@ -54,6 +54,7 @@ cbuffer LightShaftParams : register(b1) {
     float ditherStrength;       // バンディング対策のディザ量 (0 ~ 1)
     float lerpFactor;           // 水中ブレンド率 (0:適用しない ~ 1:完全適用)
     float _padding;
+    float4 sunDir;              // 光の進む向き（ワールド、正規化済み、y<0）。光柱はこの向きに傾く
 };
 
 struct PixelShaderOutPut {
@@ -147,6 +148,23 @@ PixelShaderOutPut main(VertexShaderOutput input) {
     float dither = frac(dot(input.position.xy, float2(0.7548776662f, 0.5698402909f)));
     float startOffset = lerp(0.5f, dither, saturate(ditherStrength));
 
+    // --- 光の向き ---
+    // 光は太陽の向き sunDir で水中へ差し込む。サンプル位置から光の逆向きに水面まで
+    // 戻った点の明るさを使うと、光柱が sunDir に傾いて「斜めに差し込む光」になる。
+    // （以前は真上の水面を見ていたので、どこから見ても垂直な柱＝面全体が一様に白く霞んだ）
+    float3 L = normalize(sunDir.xyz);
+    if (L.y > -0.2f) L = normalize(float3(L.x, -0.2f, L.z)); // 保険：ほぼ水平だと発散する
+    float2 slopeXZ = L.xz / (-L.y); // 深さ 1m あたり水面上で戻る XZ 距離
+
+    // 前方散乱：太陽の方を向いたときに光柱が濃く見え、背にすると薄い。
+    // 完全に 0 にはせず、横向きでも 20% 程度は残す。
+    float cosToSun = saturate(dot(rayDir, -L));
+    float scatter = lerp(0.2f, 1.0f, pow(cosToSun, 3.0f));
+
+    // 下を向いた視線は光柱をほとんど横切らない（床を見ているときは Caustics が担当）
+    float lookUp = saturate(rayDir.y * 1.5f + 0.6f);   // 水平で 0.6、真下で 0、やや上で 1
+    scatter *= lookUp;
+
     float accum = 0.0f;
     for (int i = 0; i < steps; ++i) {
         float t = t0 + (float(i) + startOffset) * stepLen;
@@ -155,9 +173,12 @@ PixelShaderOutPut main(VertexShaderOutput input) {
         // 区間を絞っているので depthBelow は常に正（数値誤差分だけ max で保護）
         float depthBelow = max(waterHeight - samplePos.y, 0.0f);
 
-        // 真上の水面の明るさ。Caustics と同じ座標系・同じ位相なので
-        // 床に落ちる網目と光柱の位置が一致する。
-        float surfaceLight = CausticsPatternCheap(samplePos.xz * scale, time, speed, contrast);
+        // この点へ光が入ってきた水面上の位置（光の逆向きに水面まで戻す）
+        float2 surfaceXZ = samplePos.xz - slopeXZ * depthBelow;
+
+        // 水面の明るさ。Caustics と同じ座標系・同じ位相なので、光の傾きが小さい範囲では
+        // 床に落ちる網目と光柱の付け根が一致する。
+        float surfaceLight = CausticsPatternCheap(surfaceXZ * scale, time, speed, contrast);
 
         // 深いところほど光が届かない
         accum += surfaceLight * exp(-density * depthBelow);
@@ -172,7 +193,10 @@ PixelShaderOutPut main(VertexShaderOutput input) {
 
     // 網目は細い線なので mean は小さな値になる。
     // intensity を 0~2 程度の直感的な範囲で扱えるように経験的な係数を掛ける。
-    accum = mean * pathFactor * 12.0f;
+    accum = mean * pathFactor * scatter * 8.0f;
+
+    // 明るさを飽和させる（足し込みで白飛びして全体が霞むのを防ぐ）
+    accum = 1.0f - exp(-accum);
 
     // --- 加算合成 ---
     float3 finalColor = baseColor.rgb + shaftColor.rgb * accum * intensity * lerpFactor;
