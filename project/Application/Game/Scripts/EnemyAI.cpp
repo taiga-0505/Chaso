@@ -279,6 +279,8 @@ private:
         bullet->SetTag("dir_y", static_cast<int>(dir.y * 1000.0f));
         bullet->SetTag("dir_z", static_cast<int>(dir.z * 1000.0f));
         bullet->SetTag("bullet_speed", static_cast<int>(bulletSpeed * 10.0f));
+        // プールは船と共有。船の砲弾で立てた「撃ち落とせる」印を持ち越さない
+        bullet->ClearTag("shootable");
 
         if (isNew) {
             scene->InitDynamicEntityRuntime(*bullet);

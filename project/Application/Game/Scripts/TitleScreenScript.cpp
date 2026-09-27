@@ -143,7 +143,7 @@ public:
   float menuSelectedLift = 0.12f;
   float menuBobAmplitude = 0.04f;
   float menuTiltScale = 0.5f;
-  std::string startScene = "Game";
+  std::string startScene = "Select";
   bool quitEnabled = true;
 
   // ---- 操作ヒント（2D）----

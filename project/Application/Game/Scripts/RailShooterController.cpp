@@ -25,6 +25,7 @@
 #include "Scene.h"
 #include "Application/Game/Framework/GameSession.h"
 #include "Application/Game/Framework/GameSettings.h"
+#include "Application/Game/Framework/StageProgress.h"
 #include "Application/Game/Framework/UnderwaterLook.h"
 #include "Application/Game/Framework/InkScreenFx.h"
 #include <algorithm>
@@ -895,6 +896,32 @@ protected:
             char buf[32];
             std::snprintf(buf, sizeof(buf), "SCORE  %06d", score);
             drawText(scoreFont_, buf, 24.0f, 18.0f, {1.0f, 1.0f, 1.0f, 1.0f}, TextAlign::Left);
+        } else {
+            // 終点に着いたときの帯（OnRender の緑の帯。画面の 40%〜60%）に文字を載せる。
+            //   1 行目: STAGE CLEAR（最終面は ALL CLEAR）
+            //   2 行目: 第 N 面 ○○ 踏破 ／ スコア
+            const StageProgress &prog = StageProgress::Get();
+            const int stage = prog.Current();
+            const bool finalStage = prog.IsFinalStage();
+            const float titleH = (gameOverFont_ >= 0) ? RC::GetFontLineHeight(gameOverFont_, fs) / s : kGameOverPx;
+            const float subH = (scoreFont_ >= 0) ? RC::GetFontLineHeight(scoreFont_, fs) / s : kScorePx;
+            const float gap = 6.0f;
+            const float top = kDesignH * 0.5f - (titleH + gap + subH) * 0.5f;
+            drawText(gameOverFont_, finalStage ? "ALL CLEAR" : "STAGE CLEAR", kDesignW * 0.5f, top,
+                     {1.0f, 0.97f, 0.85f, 1.0f}, TextAlign::Center);
+
+            std::string sub;
+            if (stage >= 0) {
+                sub = "第" + std::to_string(stage + 1) + "面　" + StageProgress::Info(stage).title +
+                      (finalStage ? "　全航路 踏破" : "　踏破");
+            } else {
+                sub = "航路 踏破";
+            }
+            char scoreBuf[32];
+            std::snprintf(scoreBuf, sizeof(scoreBuf), "　　SCORE %06d", score);
+            sub += scoreBuf;
+            drawText(scoreFont_, sub, kDesignW * 0.5f, top + titleH + gap, {1.0f, 1.0f, 1.0f, 1.0f},
+                     TextAlign::Center);
         }
 
     }

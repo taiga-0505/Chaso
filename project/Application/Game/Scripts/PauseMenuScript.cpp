@@ -40,13 +40,15 @@
 ///   JSON（scriptDataList）で設定できる項目:
 ///     "fontPath"   : 使うフォント（既定は Result と同じ KiwiMaru-Medium）
 ///     "titleScene" : 「タイトルへ」の遷移先（既定 "Title"）
-///     "retryScene" : 「はじめから」の遷移先（既定 "Game"。同名シーンへの遷移はリトライになる）
+///     "retryScene" : 「はじめから」の遷移先（既定 ""＝いまのシーン。同名シーンへの遷移はリトライになる）
+///     "titleLabel" : 4 番目の項目の文字（既定 "タイトルへ"。ステージでは "セレクトへ" にして titleScene を "Select" に）
 ///     "panelColor" / "accentColor" / "dimAlpha"
 class PauseMenuScript : public ScriptableEntity {
 public:
   std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
   std::string titleScene = "Title";
-  std::string retryScene = "Game";
+  std::string retryScene; ///< 空ならいまのシーンをやり直す（Stage1〜5 で使い回せるように）
+  std::string titleLabel = "タイトルへ";
   RC::Vector4 panelColor = {0.06f, 0.08f, 0.11f, 0.92f}; ///< 墨
   RC::Vector4 accentColor = {0.88f, 0.74f, 0.38f, 1.0f}; ///< 金（選択中）
   float dimAlpha = 0.55f;                                ///< 背後の画面を沈める濃さ
@@ -56,6 +58,7 @@ public:
         {"fontPath", fontPath},
         {"titleScene", titleScene},
         {"retryScene", retryScene},
+        {"titleLabel", titleLabel},
         {"panelColor", {panelColor.x, panelColor.y, panelColor.z, panelColor.w}},
         {"accentColor", {accentColor.x, accentColor.y, accentColor.z, accentColor.w}},
         {"dimAlpha", dimAlpha},
@@ -76,6 +79,7 @@ public:
     readS("fontPath", fontPath);
     readS("titleScene", titleScene);
     readS("retryScene", retryScene);
+    readS("titleLabel", titleLabel);
     readC("panelColor", panelColor);
     readC("accentColor", accentColor);
     if (j.contains("dimAlpha")) dimAlpha = j["dimAlpha"].get<float>();
@@ -471,7 +475,7 @@ private:
       bump_ = 1.0f;
       break;
     case kRestart:
-      RequestChange(retryScene, "restart");
+      RequestChange(RetryTarget(), "restart");
       break;
     case kTitle:
       RequestChange(titleScene, "title");
@@ -558,6 +562,13 @@ private:
       minV = maxV = step = 0.0f;
       return nullptr;
     }
+  }
+
+  /// @brief 「はじめから」の遷移先。retryScene が空ならいまのシーン
+  std::string RetryTarget() {
+    if (!retryScene.empty()) return retryScene;
+    if (Scene *scene = GetScene()) return scene->Name();
+    return "Stage1";
   }
 
   void RequestChange(const std::string &target, const char *what) {
@@ -677,7 +688,7 @@ private:
       RowRect(i, l, t, r, b);
       const bool sel = (i == selected_);
       const float lh = LineH(itemFont_);
-      Text(itemFont_, kMainLabels[i], X((l + r) * 0.5f), Y((t + b) * 0.5f) - lh * 0.5f,
+      Text(itemFont_, (i == kTitle) ? titleLabel.c_str() : kMainLabels[i], X((l + r) * 0.5f), Y((t + b) * 0.5f) - lh * 0.5f,
            WithAlpha(sel ? kInk : kMuted, a), TextAlign::Center);
     }
     DrawHint("↑↓ 選択　　Enter / Space 決定　　ESC 再開", a);

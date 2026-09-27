@@ -6,6 +6,7 @@
 #include "Engine/Render/RenderContext.h"
 #include "Application/Framework/App.h"
 #include "Application/Game/Framework/GameSession.h"
+#include "Application/Game/Framework/StageProgress.h"
 #include "Application/Game/Framework/UnderwaterLook.h"
 #include "Application/Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
@@ -51,6 +52,13 @@
 ///     "failText"        : 未クリア時の一言（既定 "航路 途絶"）
 ///     "retryLabel" / "titleLabel"   : ボタンの文字
 ///     "retryScene" / "titleScene"   : 各ボタンの遷移先シーン名
+///     "nextLabel" / "selectLabel"   : ステージから来たときの「次のステージへ」「セレクトへ」の文字
+///     "selectScene"     : ステージから来たときの「セレクトへ」の遷移先（既定 "Select"）
+///   ステージ（Stage1〜5）から来たときのボタン:
+///     クリア      : 次のステージへ ／ もう一度 ／ セレクトへ（最終面は 次へ を出さない）
+///     ゲームオーバー: もう一度 ／ セレクトへ
+///     「もう一度」は直前に遊んだステージ（StageProgress::CurrentSceneName）へ戻る。
+///   テスト用の Game シーンから来たときは従来どおり retryScene ／ titleScene の 2 つ。
 ///     "fontPath"        : 画面全体で使うフォント（既定は Title の 3D 文字と同じ KiwiMaru-Medium）
 ///     "showScore"       : 得点の行を足すか
 ///     "showHint"        : 画面下の操作ヒントを出すか
@@ -79,6 +87,9 @@ public:
   std::string titleLabel = "タイトルへ";
   std::string retryScene = "Game";
   std::string titleScene = "Title";
+  std::string nextLabel = "次のステージへ";
+  std::string selectLabel = "セレクトへ";
+  std::string selectScene = "Select";
 
   // ---- フォント（Title の 3D 文字と同じもの）----
   std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
@@ -121,6 +132,9 @@ public:
         {"titleLabel", titleLabel},
         {"retryScene", retryScene},
         {"titleScene", titleScene},
+        {"nextLabel", nextLabel},
+        {"selectLabel", selectLabel},
+        {"selectScene", selectScene},
         {"fontPath", fontPath},
         {"showScore", showScore},
         {"showHint", showHint},
@@ -159,6 +173,9 @@ public:
     readS("titleLabel", titleLabel);
     readS("retryScene", retryScene);
     readS("titleScene", titleScene);
+    readS("nextLabel", nextLabel);
+    readS("selectLabel", selectLabel);
+    readS("selectScene", selectScene);
     readS("fontPath", fontPath);
     readB("showScore", showScore);
     readB("showHint", showHint);
@@ -218,7 +235,8 @@ protected:
     labelFont_ = load(fontPath, kLabelPx, 1024);
 
     anim_ = animate ? 0.0f : kAnimEnd;
-    selected_ = kRetry;
+    BuildChoices();
+    selected_ = 0;
     decided_ = false;
 
     if (Input *in = Input::GetInstance()) {
@@ -320,7 +338,32 @@ protected:
   }
 
 private:
-  enum Choice { kRetry = 0, kTitle = 1, kChoiceCount = 2 };
+  /// @brief 下段のボタン 1 つ分
+  struct Choice {
+    std::string label;
+    std::string target;
+    const char *what; ///< ログ用
+  };
+  std::vector<Choice> choices_;
+  int ChoiceCount() const { return static_cast<int>(choices_.size()); }
+
+  /// @brief どこから来たか・クリアしたかでボタンを組み立てる
+  void BuildChoices() {
+    choices_.clear();
+    const StageProgress &prog = StageProgress::Get();
+    const bool cleared = GameSession::Get().IsCleared();
+    if (prog.Current() >= 0) {
+      // ステージから来た
+      const std::string next = prog.NextSceneName();
+      if (cleared && !next.empty()) choices_.push_back({nextLabel, next, "next"});
+      choices_.push_back({retryLabel, prog.CurrentSceneName(), "retry"});
+      choices_.push_back({selectLabel, selectScene, "select"});
+    } else {
+      // テスト用の Game シーンなど（従来どおり）
+      choices_.push_back({retryLabel, retryScene, "retry"});
+      choices_.push_back({titleLabel, titleScene, "title"});
+    }
+  }
 
   // ------------------------------------------------------------------
   // レイアウト（1280x720 基準）
@@ -469,8 +512,11 @@ private:
            cleared ? WithAlpha(kMuted, 0.85f) : WithAlpha(kShu, 0.95f), TextAlign::Center, 0.75f);
     }
 
-    // クリア／未クリアの一言（パネル内の最上段）
-    const std::string &line = cleared ? clearText : failText;
+    // クリア／未クリアの一言（パネル内の最上段）。ステージから来たときは面の名前を前に添える
+    std::string line = cleared ? clearText : failText;
+    if (const int stage = StageProgress::Get().Current(); stage >= 0) {
+      line = "第" + std::to_string(stage + 1) + "面 " + StageProgress::Info(stage).title + "　" + line;
+    }
     const RC::Vector4 col = cleared ? accentColor : WithAlpha(kShu, 0.9f);
     Text(labelFont_, line, cx, Y(kPanelT + 22.0f), col, TextAlign::Center, 1.05f);
   }
@@ -666,8 +712,10 @@ private:
 
   /// @brief ボタンの矩形（基準座標）
   void ButtonRect(int index, float &l, float &t, float &r, float &b) const {
-    const float w = 240.0f, h = 54.0f, gap = 56.0f;
-    const float cx = kDesignW * 0.5f + (index == kRetry ? -1.0f : 1.0f) * (w + gap) * 0.5f;
+    const int n = (std::max)(1, ChoiceCount());
+    const float w = (n >= 3) ? 220.0f : 240.0f, h = 54.0f, gap = (n >= 3) ? 34.0f : 56.0f;
+    const float span = w * n + gap * (n - 1);
+    const float cx = kDesignW * 0.5f - span * 0.5f + w * 0.5f + (w + gap) * static_cast<float>(index);
     const float cy = PanelBottom() + kButtonGap; // パネルの丈に合わせて追従する
     l = cx - w * 0.5f;
     r = cx + w * 0.5f;
@@ -681,7 +729,7 @@ private:
     if (a <= 0.0f) return;
 
     const float pulse = 0.5f + 0.5f * std::sin(pulse_ * (6.28318530718f / kPulsePeriod));
-    for (int i = 0; i < kChoiceCount; ++i) {
+    for (int i = 0; i < ChoiceCount(); ++i) {
       float l, t, r, b;
       ButtonRect(i, l, t, r, b);
       const bool sel = (i == selected_);
@@ -715,7 +763,7 @@ private:
         UiBox(tl, br, WithAlpha(kDim, 0.8f * a), kWire);
       }
 
-      const std::string &label = (i == kRetry) ? retryLabel : titleLabel;
+      const std::string &label = choices_[static_cast<size_t>(i)].label;
       const float lh = LineH(buttonFont_);
       Text(buttonFont_, label, (tl.x + br.x) * 0.5f, (tl.y + br.y) * 0.5f - lh * 0.5f,
            WithAlpha(sel ? kInk : kMuted, a), TextAlign::Center);
@@ -727,6 +775,14 @@ private:
     const float a = EaseOutCubic(Phase(kButtonStart, kButtonFade));
     if (a <= 0.0f) return;
     const char *text = InputReady() ? "←→ 選択　　SPACE / Enter 決定" : "";
+    // 今回のクリアで次の面が開いたら、ボタンの上に一言添える
+    const int unlocked = StageProgress::Get().JustUnlocked();
+    if (unlocked >= 0 && GameSession::Get().IsCleared()) {
+      const std::string notice = "第" + std::to_string(unlocked + 1) + "面「" +
+                                 StageProgress::Info(unlocked).title + "」が解放された";
+      Text(labelFont_, notice, X(kDesignW * 0.5f), Y(PanelBottom() + 14.0f), WithAlpha(kGold, a),
+           TextAlign::Center, 0.9f);
+    }
     Text(labelFont_, text, X(kDesignW * 0.5f), Y(PanelBottom() + kButtonGap + 54.0f),
          WithAlpha(kMuted, 0.8f * a), TextAlign::Center, 0.85f);
   }
@@ -797,12 +853,13 @@ private:
       confirm = true;
     }
 
-    if (move != 0) {
-      SetSelected((selected_ + move + kChoiceCount) % kChoiceCount);
+    if (move != 0 && ChoiceCount() > 0) {
+      SetSelected((selected_ + move + ChoiceCount()) % ChoiceCount());
     }
 
-    if (!confirm) return;
-    const std::string &target = (selected_ == kRetry) ? retryScene : titleScene;
+    if (!confirm || choices_.empty()) return;
+    const Choice &choice = choices_[static_cast<size_t>(std::clamp(selected_, 0, ChoiceCount() - 1))];
+    const std::string &target = choice.target;
     SceneContext *sc = GetSceneContext();
     if (sc && !sc->isPlaying()) return; // 編集モードでは飛ばない（RequestSceneChange と同じ）
     if (dive.enabled) {
@@ -812,14 +869,12 @@ private:
       leaveTarget_ = target;
       leaveTime_ = 0.0f;
       leaveRequested_ = false;
-      Log::Print("[ResultScreenScript] " + std::string(selected_ == kRetry ? "retry" : "title") +
-                 " -> dive -> " + target);
+      Log::Print("[ResultScreenScript] " + std::string(choice.what) + " -> dive -> " + target);
       return;
     }
     if (RequestSceneChange(target)) {
       decided_ = true;
-      Log::Print("[ResultScreenScript] " + std::string(selected_ == kRetry ? "retry" : "title") +
-                 " -> " + target);
+      Log::Print("[ResultScreenScript] " + std::string(choice.what) + " -> " + target);
     } else {
       Log::Print("[ResultScreenScript] scene change refused: " + target);
     }
@@ -907,7 +962,7 @@ private:
 
   /// @brief マウス座標（ゲーム解像度基準）がどのボタンの上か。無ければ -1
   int HitTestButtons(float mx, float my) const {
-    for (int i = 0; i < kChoiceCount; ++i) {
+    for (int i = 0; i < ChoiceCount(); ++i) {
       float l, t, r, b;
       ButtonRect(i, l, t, r, b);
       if (mx >= X(l) && mx <= X(r) && my >= Y(t) && my <= Y(b)) return i;
@@ -929,7 +984,7 @@ private:
   float pulse_ = 0.0f;
   float bump_ = 0.0f;
   bool decided_ = false;
-  int selected_ = kRetry;
+  int selected_ = 0;
   int prevStickDir_ = 0;
   float lastMouseX_ = 0.0f;
   float lastMouseY_ = 0.0f;

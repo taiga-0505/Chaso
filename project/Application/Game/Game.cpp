@@ -15,9 +15,9 @@ void Game::Init(SceneContext &ctx) {
 
   // Here we decide the first scene to boot into (Game's responsibility)
 #if defined(RC_DEVELOPMENT)
-  const char *boot = "Game";
+  const char *boot = "Title";
 #elif defined(_DEBUG)
-  const char *boot = "Game";
+  const char *boot = "Title";
 #else
   const char *boot = "Title";
 #endif

@@ -109,13 +109,13 @@ protected:
     float alpha = a0_;
     const float easeOut = 1.0f - (1.0f - t) * (1.0f - t);
     switch (kind_) {
-    case 0: // 飛沫：縮みながら、最後の 4 割で消える
-      scale = s0_ * (1.0f - t * t);
-      alpha = a0_ * (1.0f - std::clamp((t - 0.6f) / 0.4f, 0.0f, 1.0f));
+    case 0: // 飛沫：縮みながら、だんだん薄れて消える（最後まで不透明だと黒い玉に見える）
+      scale = s0_ * (1.0f - 0.7f * t);
+      alpha = a0_ * (1.0f - t);
       break;
     case 1: // 墨の煙：ふわっと広がって薄れる
       scale = s0_ + (s1_ - s0_) * easeOut;
-      alpha = a0_ * std::pow(1.0f - t, 1.5f);
+      alpha = a0_ * std::pow(1.0f - t, 2.5f); // 早めに薄れさせて視界を塞がない
       break;
     default: // 閃光：一瞬で膨らんで消える
       scale = s0_ + (s1_ - s0_) * easeOut;
@@ -164,8 +164,11 @@ namespace OctopusDetail {
 
 /// @brief 墨玉がはじける演出を出す
 /// @param pos     はじけた位置
-/// @param dir     墨玉が飛んでいた向き（飛沫が少しだけ前へ流れる）
+/// @param dir     墨玉が飛んでいた向き（＝自機へ向かう向き）
 /// @param size    墨玉の大きさ（Transform の scale）
+/// @details 墨玉は自機へ向かって飛んでくるので、撃ち落とす位置は自機の目の前になりやすい。
+///          飛沫を全方向へ散らすと半分がカメラへ突っ込んで画面いっぱいの黒い玉になるため、
+///          自機から離れる向き（-dir）と横方向にだけ散らす。
 inline void SpawnInkBurst(Scene *scene, SceneContext *ctx, const RC::Vector3 &pos,
                           const RC::Vector3 &dir, float size) {
   if (!scene) return;
@@ -181,28 +184,29 @@ inline void SpawnInkBurst(Scene *scene, SceneContext *ctx, const RC::Vector3 &po
   };
   std::vector<Spec> specs;
 
-  // 閃光：紫がかった光が一瞬ふくらむ（「パンッ」の瞬間）
-  specs.push_back({2, {0, 0, 0}, size * 0.6f, size * 2.6f, 0.16f, 0.0f, 0.0f, {0.80f, 0.60f, 1.0f, 0.75f}});
+  // ※ 以前は「閃光」と「墨の煙」として大きな半透明の球を 3 つ重ねていたが、
+  //   撃ち落とす位置が自機の目の前なので、画面の中央に半透明の球が重なって見えるだけだった。
+  //   球を重ねる表現はやめ、小さな飛沫だけで「はじけた」ことを伝える。
+  //   （InkParticleScript の kind 1 / 2 は残してあるので、必要になったらここで足せる）
 
-  // 墨の煙：その場に残ってふわっと広がる
-  for (int i = 0; i < 3; ++i) {
-    const RC::Vector3 v = {(U(rng) - 0.5f) * 2.0f, (U(rng) - 0.3f) * 1.2f, (U(rng) - 0.5f) * 2.0f};
-    specs.push_back({1, v, size * 0.7f, size * (2.0f + U(rng) * 0.8f), 0.8f + U(rng) * 0.4f, 1.5f, -0.3f,
-                     {0.09f, 0.05f, 0.13f, 0.55f}});
-  }
-
-  // 飛沫：全方向へ飛び散る。墨玉の勢いで少し前へ流れる
-  for (int i = 0; i < 14; ++i) {
-    // 球面上に一様に散らす
+  // 飛沫：自機から離れる向きの半球へ散らす
+  for (int i = 0; i < 18; ++i) {
+    // 球面上に一様に散らしてから、自機側（dir 側）へ向かう成分を裏返す
     const float z = U(rng) * 2.0f - 1.0f;
     const float a = U(rng) * 6.2831853f;
     const float r = std::sqrt((std::max)(0.0f, 1.0f - z * z));
-    const float sp = 6.0f + U(rng) * 7.0f;
-    const RC::Vector3 v = {std::cos(a) * r * sp + dir.x * 3.0f,
-                           z * sp + dir.y * 3.0f + 1.5f,
-                           std::sin(a) * r * sp + dir.z * 3.0f};
-    const float s = size * (0.16f + U(rng) * 0.22f);
-    specs.push_back({0, v, s, s, 0.45f + U(rng) * 0.35f, 2.5f, 6.0f, {0.06f, 0.03f, 0.09f, 1.0f}});
+    RC::Vector3 n = {std::cos(a) * r, z, std::sin(a) * r};
+    const float toward = n.x * dir.x + n.y * dir.y + n.z * dir.z;
+    if (toward > 0.0f) {
+      n = {n.x - 2.0f * toward * dir.x, n.y - 2.0f * toward * dir.y, n.z - 2.0f * toward * dir.z};
+    }
+    const float sp = 4.0f + U(rng) * 5.0f;
+    const RC::Vector3 v = {n.x * sp - dir.x * 2.0f,
+                           n.y * sp - dir.y * 2.0f + 1.0f,
+                           n.z * sp - dir.z * 2.0f};
+    // 大きさは墨玉の 1〜2 割。以前（2〜4 割）は目の前だと拳大の黒い玉に見えた
+    const float s = size * (0.08f + U(rng) * 0.1f);
+    specs.push_back({0, v, s, s, 0.35f + U(rng) * 0.25f, 3.0f, 6.0f, {0.06f, 0.03f, 0.09f, 0.9f}});
   }
 
   // エフェクトフォルダ（WaterBullet と同じ場所へまとめる）と、使い回せる粒を集める
@@ -248,6 +252,7 @@ inline void SpawnInkBurst(Scene *scene, SceneContext *ctx, const RC::Vector3 &po
     }
     pm->color = sp.color;
 
+    e->SetTag("no_shadow", 1); // エフェクトの粒は影を落とさない
     e->SetTag("ink_kind", sp.kind);
     e->SetTag("ink_vx", toTag(sp.vel.x));
     e->SetTag("ink_vy", toTag(sp.vel.y));
@@ -271,7 +276,13 @@ inline void SpawnInkBurst(Scene *scene, SceneContext *ctx, const RC::Vector3 &po
 
     // 色（使い回しの粒は前回の色と透明度が残っている）と Transform をその場で反映する
     if (pm->meshHandle >= 0) {
-      if (auto *mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) mat->color = sp.color;
+      // ライティングを切って平たい墨にする（陰影とハイライトが付くとボールに見える）
+      RC::SetPrimitiveMeshLightingMode(pm->meshHandle, LightingMode::None);
+      if (auto *mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) {
+        mat->color = sp.color;
+        mat->shininess = 0.0f;
+        mat->environmentCoefficient = 0.0f;
+      }
       if (auto *pmTr = RC::GetPrimitiveMeshTransformPtr(pm->meshHandle)) {
         pmTr->scale = tr->scale;
         pmTr->rotation = tr->rotation;

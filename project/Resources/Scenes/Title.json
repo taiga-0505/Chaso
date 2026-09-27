@@ -176,7 +176,7 @@
                 "menuSelectedLift": 0.12,
                 "menuBobAmplitude": 0.04,
                 "menuTiltScale": 0.5,
-                "startScene": "Game",
+                "startScene": "Select",
                 "quitEnabled": true,
                 "showHint": true,
                 "hintFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Regular.ttf",

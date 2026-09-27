@@ -1,0 +1,8436 @@
+{
+  "sceneName": "Stage1",
+  "entities": [
+    {
+      "active": true,
+      "components": [],
+      "guid": 2303383149465349767,
+      "isFolder": true,
+      "locked": false,
+      "name": "Field",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [],
+      "guid": 2988614496493638630,
+      "isFolder": true,
+      "locked": false,
+      "name": "Cave",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -9,
+              0,
+              -30
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              5,
+              10,
+              5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1211056581438726861,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA1",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12,
+              0,
+              -8
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              6,
+              12,
+              6
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 814968165095866612,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA2",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -12,
+              0,
+              20
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              4,
+              8,
+              4
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3830640150556821485,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA3",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              16,
+              0,
+              45
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              5,
+              9,
+              7
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3432876797431113772,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA4",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -10,
+              0,
+              72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              6,
+              11,
+              5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1085287323358745264,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA5",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              0,
+              100
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              4,
+              7,
+              4
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 752931173170578832,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA6",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -13,
+              0,
+              140
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              5,
+              9,
+              5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7354019744479494182,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA7",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              0,
+              158
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              5,
+              11,
+              6
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4394368941189482030,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeaRockA8",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              -30,
+              40
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              80,
+              5,
+              300
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.8,
+              0.7,
+              0.5,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2443227140253745203,
+      "isFolder": false,
+      "locked": false,
+      "name": "SeabedA",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -26,
+              8,
+              180.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              36,
+              30,
+              10
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1329497009133494759,
+      "isFolder": false,
+      "locked": false,
+      "name": "CliffA_L",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              26,
+              8,
+              180.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              36,
+              30,
+              10
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7730440810842612669,
+      "isFolder": false,
+      "locked": false,
+      "name": "CliffA_R",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              17,
+              180.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              16,
+              12,
+              10
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7098533633574664495,
+      "isFolder": false,
+      "locked": false,
+      "name": "CliffA_Arch",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -20.0,
+              -6.0,
+              200.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8953291278759523910,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_L0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              20.0,
+              -6.0,
+              200.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5773602288327193770,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_R0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              16.28765532316252,
+              200.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5973260090407987444,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelCeiling_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              200.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8178395968394902693,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelFloor_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -18.760418986934415,
+              -6.0,
+              230.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1414038533344108258,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_L1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              21.239581013065585,
+              -6.0,
+              230.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8405253858231119819,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_R1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              16.20099289009354,
+              230.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 746235175783970611,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelCeiling_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              230.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1986754743226318588,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelFloor_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -20.31942637753354,
+              -6.0,
+              260.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7218610774812511958,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_L2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              19.68057362246646,
+              -6.0,
+              260.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1137928747845428710,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_R2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              15.444511190603361,
+              260.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1187599559276052222,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelCeiling_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              260.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8293487992460664676,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelFloor_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -21.157268352909664,
+              -6.0,
+              290.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 427969529327331120,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_L3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              18.842731647090336,
+              -6.0,
+              290.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6467964463046494748,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_R3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              16.539224857486975,
+              290.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 443396355179030897,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelCeiling_3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              290.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8387020711054395949,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelFloor_3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -19.38235831107674,
+              -6.0,
+              317.5
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              25.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2489138118862434612,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_L4",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              20.61764168892326,
+              -6.0,
+              317.5
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              52.0,
+              25.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3019350726085149387,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelWall_R4",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              15.836943624153434,
+              317.5
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              8.0,
+              25.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1793006718714333553,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelCeiling_4",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              317.5
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              42.0,
+              5.0,
+              25.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4649658147937678696,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelFloor_4",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12.82986263488364,
+              11.264575779291762,
+              208.9497596603133
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.9983567844074974,
+              2.0708484414164765,
+              1.9983567844074974
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5509769119611386630,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -8.840897920320113,
+              10.322868139163122,
+              206.2799285340689
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.21477380507508,
+              3.954263721673758,
+              1.21477380507508
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1299072444890228617,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              10.907426314282482,
+              9.860772407244951,
+              221.28510114812025
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.1833422062644843,
+              4.878455185510099,
+              1.1833422062644843
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2085129503797929827,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              2.831984080491903,
+              10.272109447421935,
+              315.8318265864235
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.9086190023721248,
+              4.055781105156132,
+              1.9086190023721248
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 512880304431464977,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              5.827219461950552,
+              9.977948921680616,
+              196.53944509412713
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.5074669801947995,
+              4.644102156638769,
+              1.5074669801947995
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5741931287671998719,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_4",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -5.300926269572072,
+              10.025287283455196,
+              215.66792975643054
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.499388669706963,
+              4.549425433089608,
+              1.499388669706963
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 745773125769733874,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_5",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12.263689342206519,
+              9.858211926927046,
+              294.4835390725039
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4795755004391542,
+              4.883576146145909,
+              1.4795755004391542
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5633147827233960880,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_6",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              5.554788627774606,
+              10.91238363551589,
+              272.66382374018264
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.9480604296312765,
+              2.7752327289682204,
+              1.9480604296312765
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4277656384124779632,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_7",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -5.250773569788796,
+              9.86804849256501,
+              295.4497950341253
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.5810512499388283,
+              4.863903014869983,
+              1.5810512499388283
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4212932653782221018,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_8",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -10.017745078901019,
+              10.29874885724611,
+              301.4055044318103
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0220340439549958,
+              4.0025022855077825,
+              1.0220340439549958
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7068186988497454883,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_9",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -12.624496984573376,
+              11.251603501073424,
+              261.7952371140223
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.910097076758009,
+              2.0967929978531537,
+              1.910097076758009
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6093479501383756811,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_10",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.17583122819437236,
+              10.68583681660961,
+              259.837072298692
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.593199800769677,
+              3.2283263667807804,
+              1.593199800769677
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 760783575964337501,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_11",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              11.66097954791801,
+              10.739332290769962,
+              231.48635067821817
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4991126390564724,
+              3.1213354184600757,
+              1.4991126390564724
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8816831046569428072,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_12",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -5.675081580021114,
+              10.485319227794541,
+              270.41065574270425
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.3201662101526228,
+              3.629361544410921,
+              1.3201662101526228
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4367823716096891183,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_13",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              4.85065610094253,
+              11.16783581498375,
+              261.3124963469149
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.9957809785938498,
+              2.2643283700324996,
+              1.9957809785938498
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5000416958282365752,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_14",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -4.040408918559621,
+              10.695795258975862,
+              248.28751102436868
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.9154050306187453,
+              3.208409482048279,
+              1.9154050306187453
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1127764791432479858,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_15",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12.660389941293804,
+              10.699011406971987,
+              259.1191183941844
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.9158790152577738,
+              3.2019771860560287,
+              0.9158790152577738
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4837314838432444567,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_16",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              11.07401121718004,
+              10.480060959872729,
+              213.1384462421434
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.2189665303724093,
+              3.6398780802545443,
+              1.2189665303724093
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1953455597573079321,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_17",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -4.80793466066058,
+              11.013109499474039,
+              238.22310056528664
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.8443702911986579,
+              2.5737810010519224,
+              0.8443702911986579
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2279836176216575994,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_18",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.9926700276778959,
+              10.329383584048125,
+              297.4474837641692
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0418089716635148,
+              3.9412328319037493,
+              1.0418089716635148
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5936571776612445440,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite22_19",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              11.47136179390052,
+              -10.791123307923291,
+              318.31875113911303
+            ],
+            "rotation": [
+              0.0,
+              1.858965492421209,
+              0.0
+            ],
+            "scale": [
+              4.231083360121448,
+              22.417753384153418,
+              4.231083360121448
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8632580966590515908,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -9.981820586318026,
+              -10.447402067106953,
+              219.95963048010805
+            ],
+            "rotation": [
+              0.0,
+              1.4288034907818297,
+              0.0
+            ],
+            "scale": [
+              3.1114339346825326,
+              23.105195865786094,
+              3.1114339346825326
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7885146589064082816,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -12.83129187778165,
+              -9.946879095964515,
+              206.15063121591265
+            ],
+            "rotation": [
+              0.0,
+              1.6096705225919978,
+              0.0
+            ],
+            "scale": [
+              3.7750205006122752,
+              24.10624180807097,
+              3.7750205006122752
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2085344039988868252,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              6.3236451271543785,
+              -9.04224410959874,
+              241.66952677220596
+            ],
+            "rotation": [
+              0.0,
+              1.8498477359040955,
+              0.0
+            ],
+            "scale": [
+              2.1438863241230464,
+              25.91551178080252,
+              2.1438863241230464
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1773999915123417980,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_3",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12.709851144631841,
+              -10.078290463079483,
+              242.1630274021541
+            ],
+            "rotation": [
+              0.0,
+              1.796226892942192,
+              0.0
+            ],
+            "scale": [
+              3.8994665306088274,
+              23.843419073841034,
+              3.8994665306088274
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5467820110516241377,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_4",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -11.185124643255474,
+              -9.523475755164574,
+              256.6286349526951
+            ],
+            "rotation": [
+              0.0,
+              1.4049978961182699,
+              0.0
+            ],
+            "scale": [
+              3.794785009381998,
+              24.953048489670852,
+              3.794785009381998
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7259562902625767018,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_5",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              3.844218570119068,
+              -10.19146912780835,
+              218.6637980779316
+            ],
+            "rotation": [
+              0.0,
+              2.5618427669481343,
+              0.0
+            ],
+            "scale": [
+              2.446349876627078,
+              23.6170617443833,
+              2.446349876627078
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6625437644916888648,
+      "isFolder": false,
+      "locked": false,
+      "name": "ChannelRock_6",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              6,
+              190
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              1.0,
+              0.95,
+              0.85,
+              1.0
+            ],
+            "intensity": 2.5,
+            "radius": 35.0,
+            "decay": 1.0,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 8906179143665862799,
+      "isFolder": false,
+      "locked": false,
+      "name": "EntranceLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -14,
+              6,
+              215
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              1.0,
+              1.8,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7572287413615768258,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -14,
+              6,
+              215
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 3178414876417157511,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              5,
+              240
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              1.0,
+              1.8,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3692456166097950835,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              5,
+              240
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 7136911703764338397,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -14,
+              7,
+              262
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              1.0,
+              1.8,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4295829970163941281,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -14,
+              7,
+              262
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 4641884356274245811,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              4,
+              285
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              1.0,
+              1.8,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8324899900376337285,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14,
+              4,
+              285
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 8526952020668990872,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -13,
+              6,
+              310
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              1.0,
+              1.8,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6649599400591897652,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -13,
+              6,
+              310
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 6004199688393739678,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -22.0,
+              -5.0,
+              345.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              54.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6920054338652033699,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallWall_L0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              22.0,
+              -5.0,
+              345.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              54.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8760681326637792921,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallWall_R0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              18.28765532316252,
+              345.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              46.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4034480093013928648,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallCeiling_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              345.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              46.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3622987397387411428,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallFloor_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -20.760418986934415,
+              -5.0,
+              375.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              54.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8143112126482186670,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallWall_L1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              23.239581013065585,
+              -5.0,
+              375.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              8.0,
+              54.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5153422037686901850,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallWall_R1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              18.20099289009354,
+              375.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              46.0,
+              8.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8578491795003920257,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallCeiling_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.0,
+              -24.5,
+              375.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              46.0,
+              5.0,
+              30.5
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.42,
+              0.38,
+              0.32,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5491431849429414716,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallFloor_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -13.522502916694268,
+              12.554368993214986,
+              352.730193525594
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.8802564195197369,
+              3.4912620135700276,
+              1.8802564195197369
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2251227540411869383,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_0",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              10.978333725228897,
+              11.39953864077636,
+              378.39234279332373
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.8581601602027202,
+              5.800922718447284,
+              1.8581601602027202
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3848972696499918063,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -4.129258489319739,
+              11.740519064614455,
+              335.0619261117279
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.9516910480677527,
+              5.118961870771091,
+              0.9516910480677527
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1823022864342781152,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_3",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              14.509949189445468,
+              12.953298625338501,
+              351.7386305558633
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.9449000749155145,
+              2.6934027493229995,
+              0.9449000749155145
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8072364310085031999,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_5",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              15.287861710897555,
+              12.812823626473973,
+              344.2898080974602
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.8241195091431304,
+              2.9743527470520568,
+              0.8241195091431304
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4354236347730256520,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_6",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -14.421367902324597,
+              12.464541712342083,
+              338.1761268385565
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.9959219884992105,
+              3.670916575315834,
+              0.9959219884992105
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3466212236605426573,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_7",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              7.6274376629086404,
+              12.06374909171242,
+              382.1873299688506
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.7241732659918847,
+              4.472501816575162,
+              1.7241732659918847
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1314297538398925083,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_9",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              2.787004301598664,
+              12.506939231294192,
+              354.0315241734535
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0928158700133657,
+              3.586121537411618,
+              1.0928158700133657
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3424216107971741114,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_10",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -13.091034206544538,
+              11.908858264477464,
+              340.1795456258979
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.8579188306808299,
+              4.782283471045074,
+              0.8579188306808299
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 5924083403814204817,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_13",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -6.335747207271432,
+              12.751675401173548,
+              366.9236922162943
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              0.8436376764450182,
+              3.096649197652904,
+              0.8436376764450182
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.2,
+              0.18,
+              0.17,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 8006108511644392286,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_14",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0.8051334788989735,
+              12.694165811759872,
+              377.2195410680208
+            ],
+            "rotation": [
+              3.141592653589793,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.2514547906570415,
+              3.2116683764802594,
+              1.2514547906570415
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 4,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 403797398712226830,
+      "isFolder": false,
+      "locked": false,
+      "name": "Stalactite32_17",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -12.56948020975657,
+              -10.314426084103532,
+              365.7006872397072
+            ],
+            "rotation": [
+              0.0,
+              1.9172379890427742,
+              0.0
+            ],
+            "scale": [
+              2.3870583716126843,
+              23.371147831792936,
+              2.3870583716126843
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              0.27,
+              0.25,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3667852131714195676,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallRock_1",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              8.567701353158728,
+              -10.846916899658684,
+              380.15967928939114
+            ],
+            "rotation": [
+              0.0,
+              0.8013809788452645,
+              0.0
+            ],
+            "scale": [
+              2.2160079553952072,
+              22.306166200682632,
+              2.2160079553952072
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 3797177384055127536,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallRock_2",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -5.770584340419662,
+              -9.481860773058035,
+              347.3602009355052
+            ],
+            "rotation": [
+              0.0,
+              1.7998243485060166,
+              0.0
+            ],
+            "scale": [
+              3.3381958972514294,
+              25.03627845388393,
+              3.3381958972514294
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.5,
+              0.45,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4758428267033572343,
+      "isFolder": false,
+      "locked": false,
+      "name": "HallRock_4",
+      "parentGuid": 2988614496493638630,
+      "tags": {
+        "is_terrain": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -16,
+              8,
+              340
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              0.9,
+              1.62,
+              0.9
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 7224079882817224142,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -16,
+              8,
+              340
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              1.0,
+              0.7,
+              0.35,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 6027847811373693497,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              16,
+              6,
+              362
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              0.9,
+              1.62,
+              0.9
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 4146696710192283116,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              16,
+              6,
+              362
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              0.35,
+              0.95,
+              1.0,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 4309189612352720919,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -16,
+              7,
+              385
+            ],
+            "rotation": [
+              0.6,
+              0.3,
+              0.4
+            ],
+            "scale": [
+              0.9,
+              1.62,
+              0.9
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.3,
+              1.0,
+              0.75,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 0,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 2698123850308772474,
+      "isFolder": false,
+      "locked": false,
+      "name": "Crystal",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -16,
+              7,
+              385
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PointLightComponent",
+          "enabled": true,
+          "data": {
+            "visible": true,
+            "color": [
+              0.3,
+              1.0,
+              0.75,
+              1.0
+            ],
+            "intensity": 2.0,
+            "radius": 18.0,
+            "decay": 1.5,
+            "castShadow": false
+          }
+        }
+      ],
+      "guid": 7937765758694758571,
+      "isFolder": false,
+      "locked": false,
+      "name": "CrystalLight",
+      "parentGuid": 2988614496493638630,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "autoDetect": true,
+                "crossMargin": 0.5,
+                "debugDraw": true,
+                "minRadius": 0.5,
+                "radiusScale": 1.0,
+                "reflectRange": 6.0,
+                "reflectStrength": 1.0,
+                "terrainTag": "is_terrain"
+              }
+            ],
+            "scriptTypeName": "WaterObstacleScript",
+            "scriptTypeNames": [
+              "WaterObstacleScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "crestTint": 0.0,
+            "deepColor": [
+              0.019999999552965164,
+              0.10000000149011612,
+              0.25,
+              0.949999988079071
+            ],
+            "environmentCoeff": 0.6000000238418579,
+            "fresnelPower": 3.0,
+            "normalMapPath": "",
+            "normalScrollSpeed": 0.07000000029802322,
+            "normalStrength": 0.44999998807907104,
+            "planeHeight": 1000.0,
+            "planeWidth": 1000.0,
+            "segments": 512,
+            "shallowColor": [
+              0.10000000149011612,
+              0.5,
+              0.6000000238418579,
+              0.8500000238418579
+            ],
+            "specularPower": 55.0,
+            "visible": true,
+            "waveFreq": 0.6499999761581421,
+            "waveFreq2": 0.949999988079071,
+            "waveHeight": 0.15000000596046448,
+            "waveHeight2": 0.15000000596046448,
+            "waveSpeed": 2.0,
+            "waveSpeed2": 2.0,
+            "waveSteepness": 0.3499999940395355
+          },
+          "enabled": true,
+          "type": "WaterComponent"
+        }
+      ],
+      "guid": 4518062721767297136,
+      "isFolder": false,
+      "locked": false,
+      "name": "Water",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              100.0,
+              100.0,
+              100.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "color": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "skyboxPath": "Resources/SkyBox/skybox.dds",
+            "visible": true
+          },
+          "enabled": true,
+          "type": "SkyboxComponent"
+        }
+      ],
+      "guid": 7092508274108382252,
+      "isFolder": false,
+      "locked": false,
+      "name": "Skybox",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              0.0,
+              10.0,
+              -15.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "ambientColor": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "ambientIntensity": 0.0,
+            "color": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "direction": [
+              -0.5,
+              -0.8,
+              0.5
+            ],
+            "intensity": 1.0,
+            "visible": true
+          },
+          "enabled": true,
+          "type": "DirectionalLightComponent"
+        }
+      ],
+      "guid": 4174799162106343111,
+      "isFolder": false,
+      "locked": false,
+      "name": "Directional Light",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "alwaysPlay": false,
+                "bubbles": true,
+                "riseDepth": 26.0,
+                "riseDuration": 3.200000047683716,
+                "riseEase": 2.200000047683716,
+                "risePitchStart": -0.3499999940395355,
+                "showStartText": true,
+                "startBandAlpha": 0.7200000286102295,
+                "startFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "startFontSize": 72.0,
+                "startText": "第1面　外洋",
+                "startTextDuration": 1.399999976158142
+              },
+              {
+                "look": {
+                  "controllerLookSpeed": 2.5,
+                  "deadzone": 0.20000000298023224,
+                  "lockCursor": true,
+                  "lookSensitivity": 0.0024999999441206455,
+                  "maxPitchDeg": 60.0,
+                  "maxYawDeg": 80.0
+                },
+                "underwater": {
+                  "causticsDistanceFadeEnd": 70.0,
+                  "causticsDistanceFadeStart": 25.0,
+                  "causticsFadeDepth": 20.0,
+                  "causticsIntensity": 1.2000000476837158,
+                  "causticsScale": 0.30000001192092896,
+                  "deepBias": 1.350000023841858,
+                  "deepDepth": 24.0,
+                  "deepFogColor": [
+                    0.0,
+                    0.012000000104308128,
+                    0.029999999329447746,
+                    1.0
+                  ],
+                  "deepFogEnd": 7.0,
+                  "deepFogStart": 0.0,
+                  "distortionForce": 0.004000000189989805,
+                  "lightShaftDensity": 0.07999999821186066,
+                  "lightShaftIntensity": 1.0,
+                  "lightShaftMaxDistance": 80.0,
+                  "shallowFogColor": [
+                    0.0,
+                    0.30000001192092896,
+                    0.6000000238418579,
+                    1.0
+                  ],
+                  "shallowFogEnd": 150.0,
+                  "shallowFogStart": 10.0,
+                  "tintColor": [
+                    0.20000000298023224,
+                    0.5,
+                    1.0,
+                    1.0
+                  ]
+                }
+              },
+              {
+                "branchColor": [
+                  0.0,
+                  0.800000011920929,
+                  1.0,
+                  1.0
+                ],
+                "drawPath": true,
+                "isMoving": true,
+                "loop": false,
+                "pathColor": [
+                  1.0,
+                  1.0,
+                  0.0,
+                  1.0
+                ],
+                "speed": 5.0,
+                "waveColor": [
+                  1.0,
+                  0.3499999940395355,
+                  0.10000000149011612,
+                  1.0
+                ],
+                "waveManagerName": "WaveManager",
+                "waypoints": [
+                  {
+                    "pos": [
+                      0.0,
+                      2.0,
+                      -50.0
+                    ],
+                    "waitTime": 0.0
+                  },
+                  {
+                    "pos": [
+                      4.0,
+                      2.0,
+                      -25.0
+                    ],
+                    "waitTime": 0.0,
+                    "waveId": 1
+                  },
+                  {
+                    "pos": [
+                      -3.0,
+                      2.0,
+                      5.0
+                    ],
+                    "waitTime": 0.0
+                  },
+                  {
+                    "pos": [
+                      2.0,
+                      2.0,
+                      30.0
+                    ],
+                    "waitTime": 0.0,
+                    "waveId": 2
+                  },
+                  {
+                    "pos": [
+                      8.0,
+                      2.0,
+                      60.0
+                    ],
+                    "waitTime": 0.0
+                  },
+                  {
+                    "pos": [
+                      0.0,
+                      2.0,
+                      90.0
+                    ],
+                    "waitTime": 0.0,
+                    "waveId": 3
+                  },
+                  {
+                    "pos": [
+                      0.0,
+                      2.0,
+                      110.0
+                    ],
+                    "waitTime": 0.0
+                  },
+                  {
+                    "pos": [
+                      0.0,
+                      2.0,
+                      125.0
+                    ],
+                    "waitTime": 0.0,
+                    "isEnd": true
+                  }
+                ]
+              },
+              {
+                "bubbles": true,
+                "darkDepth": 24.0,
+                "delay": 0.6000000238418579,
+                "depth": 30.0,
+                "enabled": true,
+                "fallTime": 0.800000011920929,
+                "lookUpPitch": -1.0499999523162842,
+                "resultScene": "Result",
+                "roll": 0.18000000715255737,
+                "sinkTime": 3.200000047683716,
+                "tiltTime": 2.200000047683716
+              }
+            ],
+            "scriptTypeName": "DeepRiseIntroScript",
+            "scriptTypeNames": [
+              "DeepRiseIntroScript",
+              "RailShooterController",
+              "RailMovementScript",
+              "DeathSinkScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              0.0,
+              2.0,
+              -50.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "farZ": 260.0,
+            "fovY": 0.44999998807907104,
+            "isMain": true,
+            "nearZ": 0.10000000149011612
+          },
+          "enabled": true,
+          "type": "CameraComponent"
+        }
+      ],
+      "guid": 3961790750127502042,
+      "isFolder": false,
+      "locked": false,
+      "name": "Camera",
+      "parentGuid": 0,
+      "tags": {
+        "has_rail": 1,
+        "is_player": 1,
+        "is_underwater": 0,
+        "rail_branch_to": -1,
+        "rail_wp": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.5,
+                "count": 3,
+                "drawGizmo": true,
+                "enemyName": "WaveShark",
+                "enemyParams": {
+                  "detectDistance": 80.0,
+                  "maxHp": 3,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "enemyScale": [
+                  4.0,
+                  4.0,
+                  4.0
+                ],
+                "enemyScript": "SharkEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.8999999761581421,
+                  0.25,
+                  0.25,
+                  1.0
+                ],
+                "primitiveShape": "box",
+                "aheadDistance": 55.0,
+                "aheadSideStep": 7.0,
+                "spawnAheadOfPlayer": true,
+                "spawnInterval": 2.2,
+                "spreadRadius": 2.0,
+                "startDelay": 0.8,
+                "waveId": 1,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              4,
+              0.5,
+              -12
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 1368081656345596601,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_1_shark_1",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 1,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.6,
+                "count": 1,
+                "drawGizmo": true,
+                "enemyName": "WaveOctopus",
+                "enemyParams": {
+                  "fireInterval": 4.0,
+                  "inkAmount": 1.0,
+                  "inkDamage": 0,
+                  "maxHp": 4,
+                  "preferredDistance": 20.0,
+                  "windupDuration": 0.9
+                },
+                "enemyScale": [
+                  2.0,
+                  2.0,
+                  2.0
+                ],
+                "enemyScript": "OctopusEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.62,
+                  0.28,
+                  0.72,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 0.6,
+                "spreadRadius": 0.0,
+                "startDelay": 1.0,
+                "waveId": 1,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -8,
+              -1.5,
+              -4
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 2482861864026269102,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_1_octopus_2",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 1,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.5,
+                "count": 4,
+                "drawGizmo": true,
+                "enemyName": "WaveShark",
+                "enemyParams": {
+                  "detectDistance": 80.0,
+                  "maxHp": 3,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "enemyScale": [
+                  4.0,
+                  4.0,
+                  4.0
+                ],
+                "enemyScript": "SharkEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.8999999761581421,
+                  0.25,
+                  0.25,
+                  1.0
+                ],
+                "primitiveShape": "box",
+                "aheadDistance": 55.0,
+                "aheadSideStep": 7.0,
+                "spawnAheadOfPlayer": true,
+                "spawnInterval": 1.6,
+                "spreadRadius": 2.0,
+                "startDelay": 0.8,
+                "waveId": 2,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              2,
+              0.5,
+              45
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 181953088295045533,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_2_shark_3",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 2,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.6,
+                "count": 1,
+                "drawGizmo": true,
+                "enemyName": "WaveOctopus",
+                "enemyParams": {
+                  "fireInterval": 4.0,
+                  "inkAmount": 1.0,
+                  "inkDamage": 0,
+                  "maxHp": 4,
+                  "preferredDistance": 20.0,
+                  "windupDuration": 0.9
+                },
+                "enemyScale": [
+                  2.0,
+                  2.0,
+                  2.0
+                ],
+                "enemyScript": "OctopusEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.62,
+                  0.28,
+                  0.72,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 0.6,
+                "spreadRadius": 0.0,
+                "startDelay": 1.0,
+                "waveId": 2,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              10,
+              -1.5,
+              40
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 5690584310783974456,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_2_octopus_4",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 2,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.4,
+                "count": 1,
+                "drawGizmo": true,
+                "enemyName": "WaveShip",
+                "enemyScale": [
+                  3.0,
+                  1.600000023841858,
+                  9.0
+                ],
+                "enemyScript": "ShipEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.30000001192092896,
+                  0.33000001311302185,
+                  0.3799999952316284,
+                  1.0
+                ],
+                "primitiveShape": "box",
+                "scripts": [
+                  {
+                    "name": "ShipEnemyScript",
+                    "params": {
+                      "broadsideToleranceDeg": 35.0,
+                      "bulletType": 0,
+                      "cruiseSpeed": 6.0,
+                      "detectDistance": 60.0,
+                      "engageSpeed": 4.5,
+                      "fireMaxDistance": 45.0,
+                      "fireMinDistance": 12.0,
+                      "gunHeight": 1.4,
+                      "gunOffset": 2.2,
+                      "leadFactor": 0.6,
+                      "maxHp": 40,
+                      "patrolRadius": 18.0,
+                      "preferredDistance": 28.0,
+                      "reloadDuration": 3.0,
+                      "shellSpeed": 22.0,
+                      "spreadDeg": 4.0,
+                      "turnRateDeg": 35.0,
+                      "volleyCount": 3,
+                      "volleyInterval": 0.22
+                    }
+                  },
+                  {
+                    "name": "BuoyancyScript",
+                    "params": {
+                      "alignToSurface": true,
+                      "debugDraw": false,
+                      "densityRatio": 0.5,
+                      "floodDuration": 3.0,
+                      "floodedDensityRatio": 1.4,
+                      "halfHeight": 0.8,
+                      "linearDrag": 5.5,
+                      "maxTiltDeg": 12.0,
+                      "quadraticDrag": 1.0,
+                      "sampleRadius": 4.0,
+                      "sampleRadiusSide": 1.5,
+                      "tiltSharpness": 4.0,
+                      "useFourSamples": true
+                    }
+                  }
+                ],
+                "spawnInterval": 0.0,
+                "spreadRadius": 0.0,
+                "startDelay": 1.2000000476837158,
+                "waveId": 3,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              12,
+              0.5,
+              118
+            ],
+            "rotation": [
+              0.0,
+              3.141592653589793,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 5732492821184778104,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_3_ship_5",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 3,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 0.5,
+                "count": 2,
+                "drawGizmo": true,
+                "enemyName": "WaveShark",
+                "enemyParams": {
+                  "detectDistance": 80.0,
+                  "maxHp": 3,
+                  "modelRotOffset": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                "enemyScale": [
+                  4.0,
+                  4.0,
+                  4.0
+                ],
+                "enemyScript": "SharkEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.8999999761581421,
+                  0.25,
+                  0.25,
+                  1.0
+                ],
+                "primitiveShape": "box",
+                "aheadDistance": 35.0,
+                "aheadSideStep": 7.0,
+                "spawnAheadOfPlayer": true,
+                "spawnInterval": 2.2,
+                "spreadRadius": 2.0,
+                "startDelay": 3.0,
+                "waveId": 3,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -4,
+              0.5,
+              110
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 6374006750139979818,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_3_shark_6",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 3,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.20000000298023224,
+                "bobSpeed": 1.5,
+                "hp": 3,
+                "maxHp": 3,
+                "openDuration": 1.2000000476837158,
+                "points": 100,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -4,
+              1.2,
+              -18
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.35,
+              0.15,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 6440386239873244563,
+      "isFolder": false,
+      "locked": false,
+      "name": "TreasureChest_1",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "current_hp": 3,
+        "is_item": 1,
+        "max_hp": 3
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "ColliderComponent",
+          "enabled": true,
+          "data": {
+            "center": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "isTrigger": false,
+            "layer": 4294967295,
+            "radius": 1.0,
+            "shape": 0,
+            "size": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "bobAmplitude": 0.20000000298023224,
+                "bobSpeed": 1.5,
+                "hp": 5,
+                "maxHp": 5,
+                "openDuration": 1.2000000476837158,
+                "points": 300,
+                "popHeight": 1.0,
+                "spinSpeedDeg": 0.0
+              }
+            ],
+            "scriptTypeName": "TreasureChestScript",
+            "scriptTypeNames": [
+              "TreasureChestScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              10,
+              1.2,
+              52
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.4,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "PrimitiveMeshComponent",
+          "enabled": true,
+          "data": {
+            "color": [
+              0.55,
+              0.35,
+              0.15,
+              1.0
+            ],
+            "environmentCoeff": 0.0,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          }
+        }
+      ],
+      "guid": 1533687805303655431,
+      "isFolder": false,
+      "locked": false,
+      "name": "TreasureChest_2",
+      "parentGuid": 2303383149465349767,
+      "tags": {
+        "current_hp": 5,
+        "is_item": 1,
+        "max_hp": 5
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              4,
+              2.8,
+              -20
+            ],
+            "rotation": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "scale": [
+              2,
+              1,
+              3
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "alignToSurface": true,
+                "debugDraw": true,
+                "densityRatio": 0.44999998807907104,
+                "floodDuration": 2.5,
+                "floodedDensityRatio": 1.350000023841858,
+                "gravity": 9.8100004196167,
+                "halfHeight": 0.5,
+                "linearDrag": 6.0,
+                "maxRiseSpeed": 8.0,
+                "maxTiltDeg": 18.0,
+                "pitchSign": -1.0,
+                "quadraticDrag": 1.2000000476837158,
+                "rollSign": 1.0,
+                "sampleRadius": 1.5,
+                "sampleRadiusSide": 0.0,
+                "tiltSharpness": 5.0,
+                "useFourSamples": true
+              }
+            ],
+            "scriptTypeName": "BuoyancyScript",
+            "scriptTypeNames": [
+              "BuoyancyScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "color": [
+              0.7200000286102295,
+              0.5199999809265137,
+              0.30000001192092896,
+              1.0
+            ],
+            "environmentCoeff": 0.20000000298023224,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 1,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          },
+          "enabled": true,
+          "type": "PrimitiveMeshComponent"
+        }
+      ],
+      "guid": 8270180031768823647,
+      "isFolder": false,
+      "locked": false,
+      "name": "FloatCrate",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "position": [
+              -6,
+              2.8,
+              36
+            ],
+            "rotation": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        },
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "alignToSurface": true,
+                "debugDraw": true,
+                "densityRatio": 0.4000000059604645,
+                "floodDuration": 2.5,
+                "floodedDensityRatio": 1.350000023841858,
+                "gravity": 9.8100004196167,
+                "halfHeight": 1.2000000476837158,
+                "linearDrag": 5.5,
+                "maxRiseSpeed": 8.0,
+                "maxTiltDeg": 18.0,
+                "pitchSign": -1.0,
+                "quadraticDrag": 1.0,
+                "rollSign": 1.0,
+                "sampleRadius": 0.0,
+                "sampleRadiusSide": 0.0,
+                "tiltSharpness": 5.0,
+                "useFourSamples": false
+              }
+            ],
+            "scriptTypeName": "BuoyancyScript",
+            "scriptTypeNames": [
+              "BuoyancyScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "color": [
+              0.8999999761581421,
+              0.25,
+              0.20000000298023224,
+              1.0
+            ],
+            "environmentCoeff": 0.20000000298023224,
+            "lightingMode": 2,
+            "normalMapPath": "",
+            "roughnessMapPath": "",
+            "shininess": 32.0,
+            "texturePath": "",
+            "type": 0,
+            "uvOffset": [
+              0.0,
+              0.0
+            ],
+            "uvTiling": [
+              1.0,
+              1.0
+            ],
+            "visible": true
+          },
+          "enabled": true,
+          "type": "PrimitiveMeshComponent"
+        }
+      ],
+      "guid": 4055139371623849436,
+      "isFolder": false,
+      "locked": false,
+      "name": "FloatBuoy",
+      "parentGuid": 2303383149465349767,
+      "tags": {},
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "accentColor": [
+                  0.8799999952316284,
+                  0.7400000095367432,
+                  0.3799999952316284,
+                  1.0
+                ],
+                "clearDuration": 1.600000023841858,
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "introDuration": 0.800000011920929,
+                "panelColor": [
+                  0.05999999865889549,
+                  0.07999999821186066,
+                  0.10999999940395355,
+                  0.9200000166893005
+                ],
+                "showClearBanner": true,
+                "showHud": true
+              }
+            ],
+            "scriptTypeName": "WaveManagerScript",
+            "scriptTypeNames": [
+              "WaveManagerScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        }
+      ],
+      "guid": 8714996346104973975,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveManager",
+      "parentGuid": 0,
+      "tags": {
+        "wave_active": 0,
+        "wave_busy": 0,
+        "wave_cleared_id": 0,
+        "waves_cleared": 0
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "data": {
+            "scriptDataList": [
+              {
+                "accentColor": [
+                  0.8799999952316284,
+                  0.7400000095367432,
+                  0.3799999952316284,
+                  1.0
+                ],
+                "dimAlpha": 0.550000011920929,
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "panelColor": [
+                  0.05999999865889549,
+                  0.07999999821186066,
+                  0.10999999940395355,
+                  0.9200000166893005
+                ],
+                "retryScene": "",
+                "titleScene": "Select",
+                "titleLabel": "セレクトへ"
+              }
+            ],
+            "scriptTypeName": "PauseMenuScript",
+            "scriptTypeNames": [
+              "PauseMenuScript"
+            ]
+          },
+          "enabled": true,
+          "type": "NativeScriptComponent"
+        },
+        {
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "enabled": true,
+          "type": "TransformComponent"
+        }
+      ],
+      "guid": 7363967226869130751,
+      "isFolder": false,
+      "locked": false,
+      "name": "PauseMenu",
+      "parentGuid": 0,
+      "tags": {},
+      "visible": true
+    }
+  ]
+}

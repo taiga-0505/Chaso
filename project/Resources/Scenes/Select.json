@@ -2,7 +2,7 @@
   "sceneName": "Select",
   "entities": [
     {
-      "id": "f4cdba5d-ff39-4775-ad47-3425f6d7e102",
+      "id": "314691e4-2682-42c4-88be-1d677282de82",
       "name": "Directional Light",
       "tag": "",
       "active": true,
@@ -39,9 +39,9 @@
               1.0
             ],
             "direction": [
-              0.0,
+              0.3,
               -1.0,
-              0.5
+              0.35
             ],
             "intensity": 1.0
           }
@@ -49,7 +49,7 @@
       ]
     },
     {
-      "id": "259fea98-032c-412c-aca9-db26ca7f118d",
+      "id": "f4df7276-a834-46eb-8e0f-11ebb4b8afcc",
       "name": "Main Camera",
       "tag": "",
       "active": true,
@@ -60,11 +60,11 @@
           "data": {
             "position": [
               0.0,
-              1.0,
-              -10.0
+              42.0,
+              0.0
             ],
             "rotation": [
-              0.0,
+              1.5707963,
               0.0,
               0.0
             ],
@@ -80,8 +80,234 @@
           "data": {
             "fovY": 0.45,
             "nearZ": 0.1,
-            "farZ": 100.0,
+            "farZ": 300.0,
             "isMain": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "8eaf53f4-026b-481b-9db2-1089a46f2f54",
+      "name": "Skybox",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              100.0,
+              100.0,
+              100.0
+            ]
+          }
+        },
+        {
+          "type": "SkyboxComponent",
+          "data": {
+            "color": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "skyboxPath": "Resources/SkyBox/skybox.dds",
+            "visible": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "2aed44b9-d691-4773-a099-dda417ff2570",
+      "name": "Water",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "WaterComponent",
+          "data": {
+            "visible": true,
+            "planeWidth": 160.0,
+            "planeHeight": 160.0,
+            "segments": 384,
+            "waveHeight": 0.16,
+            "waveSpeed": 1.2,
+            "waveFreq": 0.9,
+            "waveHeight2": 0.09,
+            "waveSpeed2": 1.0,
+            "waveFreq2": 1.5,
+            "waveSteepness": 0.32,
+            "shallowColor": [
+              0.08,
+              0.3,
+              0.46,
+              0.92
+            ],
+            "deepColor": [
+              0.01,
+              0.05,
+              0.17,
+              0.97
+            ],
+            "fresnelPower": 3.0,
+            "specularPower": 90.0,
+            "normalScrollSpeed": 0.05,
+            "normalStrength": 1.0,
+            "environmentCoeff": 0.55,
+            "crestTint": 0.8,
+            "normalMapPath": "Resources/Water/water_normal.png"
+          }
+        }
+      ]
+    },
+    {
+      "id": "65e2a38f-ccb6-45a2-b504-f46f2efa80e7",
+      "name": "StageSelectUI",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "type": "NativeScriptComponent",
+          "data": {
+            "scriptTypeNames": [
+              "StageSelectScript"
+            ],
+            "scriptDataList": [
+              {
+                "titleText": "航路選択",
+                "subtitleText": "STAGE SELECT",
+                "titleScene": "Title",
+                "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
+                "dimAlpha": 0.22,
+                "panelColor": [
+                  0.05,
+                  0.06,
+                  0.09,
+                  0.78
+                ],
+                "accentColor": [
+                  0.42,
+                  0.76,
+                  0.88,
+                  1.0
+                ],
+                "selectedColor": [
+                  0.12,
+                  0.27,
+                  0.5,
+                  0.96
+                ],
+                "uiFadeTime": 0.35,
+                "diveEnabled": true,
+                "diveAnticipation": 0.35,
+                "diveLift": 1.5,
+                "divePlunge": 0.85,
+                "diveFovBoost": 1.35,
+                "diveSink": 1.7,
+                "diveDepth": 30.0,
+                "diveLookUpPitch": -0.45,
+                "diveTilt": 0.9,
+                "diveSurfaceBlend": 0.25,
+                "diveBubbles": true,
+                "underwater": {
+                  "shallowFogColor": [
+                    0.0,
+                    0.3,
+                    0.6,
+                    1.0
+                  ],
+                  "shallowFogStart": 6.0,
+                  "shallowFogEnd": 480.0,
+                  "deepFogColor": [
+                    0.0,
+                    0.012,
+                    0.03,
+                    1.0
+                  ],
+                  "deepFogStart": 0.0,
+                  "deepFogEnd": 7.0,
+                  "deepDepth": 24.0,
+                  "deepBias": 1.35,
+                  "tintColor": [
+                    0.2,
+                    0.5,
+                    1.0,
+                    1.0
+                  ],
+                  "distortionForce": 0.004,
+                  "causticsFadeDepth": 20.0,
+                  "causticsScale": 0.3,
+                  "causticsIntensity": 1.2,
+                  "causticsDistanceFadeStart": 25.0,
+                  "causticsDistanceFadeEnd": 70.0,
+                  "lightShaftIntensity": 1.0,
+                  "lightShaftDensity": 0.08,
+                  "lightShaftMaxDistance": 80.0
+                },
+                "riseEnabled": true,
+                "riseDepth": 26.0,
+                "riseUnderwaterTime": 2.0,
+                "riseEase": 2.2,
+                "risePitchStart": -0.35,
+                "riseClimbTime": 1.6,
+                "riseSurfaceBlend": 0.5,
+                "riseBubbles": true
+              }
+            ],
+            "scriptTypeName": "StageSelectScript"
           }
         }
       ]

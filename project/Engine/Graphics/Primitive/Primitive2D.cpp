@@ -60,7 +60,11 @@ void Primitive2D::Initialize(ID3D12Device *device, float screenW,
   cbStride_ = Align256((uint32_t)sizeof(Params));
 
   // ★リング分まとめて確保
-  cbParamsRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame, L"Primitive2D::cbParamsRes_");
+  // フレーム領域 × kFrameCount。前のフレームを GPU が読んでいる間に上書きしないため
+  cbParamsRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame * kFrameCount,
+                                      L"Primitive2D::cbParamsRes_");
+  frameSlot_ = 0;
+  cbCursor_ = 0;
   cbParamsRes_->Map(0, nullptr, reinterpret_cast<void **>(&cbParamsMap_));
 
   // CPU側初期化
@@ -149,14 +153,23 @@ void Primitive2D::SetSpriteRect(const Vector2 &mn, const Vector2 &mx,
   paramsCPU_.Color = color;
 }
 
-void Primitive2D::BeginFrame() { cbCursor_ = 0; }
+void Primitive2D::BeginFrame() {
+  // 以前は毎フレーム同じ領域の先頭（スロット 0）から書き直していた。
+  // GPU は最大 2 フレーム遅れて前フレームのコマンドを実行するので、
+  // 前フレームのレティクル等のパラメータが次フレームの別の図形で上書きされ、
+  // 図形が消える・別の色や大きさで出る・ちらつく、が起きていた。
+  frameSlot_ = (frameSlot_ + 1) % kFrameCount;
+  cbCursor_ = 0;
+}
 
 void Primitive2D::Draw(ID3D12GraphicsCommandList *cmdList) {
   if (!visible_)
     return;
 
-  const uint32_t idx =
+  // 上限を超えたら現フレーム領域の中で折り返す（他フレームの領域には書かない）
+  const uint32_t local =
       (cbCursor_ < kMaxDrawPerFrame) ? cbCursor_++ : (cbCursor_ = 1, 0);
+  const uint32_t idx = frameSlot_ * kMaxDrawPerFrame + local;
 
   // ★Drawごとに別スロットへ書く
   std::memcpy(cbParamsMap_ + idx * cbStride_, &paramsCPU_, sizeof(Params));

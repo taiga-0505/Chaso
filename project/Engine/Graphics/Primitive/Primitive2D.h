@@ -158,6 +158,10 @@ private:
   enum : uint32_t { FLAG_STROKE = 1, FLAG_TEX = 2 };
 
   static constexpr uint32_t kMaxDrawPerFrame = 4096; ///< 1フレームあたりの最大描画数
+  /// @brief CB リングをフレームごとに分ける数（GPU が読み終わる前に次フレームが上書きしないように）
+  /// @details Dx12Core は最大 2 フレーム先行する（Present 後に次のバックバッファ分だけ待つ）。
+  ///          FontManager / FrameResource と同じく 3 にしておく。
+  static constexpr uint32_t kFrameCount = 3;
   static constexpr uint32_t Align256(uint32_t v) { return (v + 255u) & ~255u; }
 
   Params paramsCPU_{}; ///< CPU側のパラメータキャッシュ
@@ -166,7 +170,8 @@ private:
   Microsoft::WRL::ComPtr<ID3D12Resource> cbParamsRes_;
   uint8_t *cbParamsMap_ = nullptr;
   uint32_t cbStride_ = 0;
-  uint32_t cbCursor_ = 0;
+  uint32_t cbCursor_ = 0;      ///< 現フレーム領域の中での書き込み位置（0..kMaxDrawPerFrame-1）
+  uint32_t frameSlot_ = 0;     ///< 現在書き込んでいるフレーム領域（0..kFrameCount-1）
 
   Microsoft::WRL::ComPtr<ID3D12Device> device_;
   float screenW_ = 0.0f;

@@ -8,6 +8,7 @@
 #include "RenderCommon.h"
 #include "Render/Systems/RenderInteractiveWater.h"
 #include "Scene.h"
+#include <algorithm>
 #include <cmath>
 
 /// @brief Water bullet: flies forward, detects collision, spawns splash effect
@@ -213,6 +214,11 @@ protected:
             }
         }
 
+        // 撃ち落とし：`shootable` の付いた敵弾（船の砲弾）は、自機の弾が近くを通ると両方消える
+        if (!isPlayerBulletSelf(self) && self->GetTagInt("shootable", 0) == 1) {
+            if (TryShootDown(scene, self, oldPos, tr->position)) return;
+        }
+
         // Lifetime
         elapsed_ += deltaTime;
         if (elapsed_ >= lifetime) {
@@ -289,6 +295,61 @@ protected:
     float elapsed_ = 0.0f;
     bool markedForDestroy_ = false;
     std::weak_ptr<Entity> cachedCamera_;
+
+    static bool isPlayerBulletSelf(Entity* self) {
+        return self && self->GetName() == "PlayerBullet";
+    }
+
+    /// @brief このフレームの移動線分（from→to）の近くに自機の弾があれば、両方を消す
+    /// @details 砲弾と自機の弾はどちらも速いので、点どうしの距離ではなく
+    ///          自分の移動線分との距離で見る（すれ違いの取りこぼし防止）。
+    /// @return 撃ち落とされたら true（自分は Die 済み）
+    bool TryShootDown(Scene* scene, Entity* self, const RC::Vector3& from, const RC::Vector3& to) {
+        const float radius = static_cast<float>(self->GetTagInt("shoot_radius", 120)) / 100.0f;
+        if (radius <= 0.0f) return false;
+        const RC::Vector3 seg = { to.x - from.x, to.y - from.y, to.z - from.z };
+        const float segLenSq = seg.x * seg.x + seg.y * seg.y + seg.z * seg.z;
+
+        for (auto& e : scene->GetEntities()) {
+            if (!e || !e->IsActive() || e->IsPendingDestroy()) continue;
+            if (e->GetName() != "PlayerBullet") continue;
+            auto* ptr = e->GetComponent<TransformComponent>();
+            if (!ptr) continue;
+
+            // 線分上の最近点
+            float t = 0.0f;
+            if (segLenSq > 1e-6f) {
+                t = ((ptr->position.x - from.x) * seg.x + (ptr->position.y - from.y) * seg.y +
+                     (ptr->position.z - from.z) * seg.z) / segLenSq;
+                t = (std::max)(0.0f, (std::min)(1.0f, t));
+            }
+            const float dx = ptr->position.x - (from.x + seg.x * t);
+            const float dy = ptr->position.y - (from.y + seg.y * t);
+            const float dz = ptr->position.z - (from.z + seg.z * t);
+            if (dx * dx + dy * dy + dz * dz > radius * radius) continue;
+
+            // 自機の弾はプールへ戻す（再利用時に reused タグで初期化される）
+            e->SetActive(false);
+
+            // スコア加算（墨玉の撃ち落としと同じく +1）
+            std::shared_ptr<Entity> cam = cachedCamera_.lock();
+            if (!cam || cam->IsPendingDestroy() || !cam->IsActive()) {
+                cam = nullptr;
+                for (auto& pe : scene->GetEntities()) {
+                    if (pe && pe->HasComponent<CameraComponent>()) { cam = pe; cachedCamera_ = pe; break; }
+                }
+            }
+            if (cam) cam->SetTag("score_add", cam->GetTagInt("score_add", 0) + 1);
+
+            // 撃ち落とした位置で水しぶき
+            if (auto* tr = GetComponent<TransformComponent>()) {
+                tr->position = { from.x + seg.x * t, from.y + seg.y * t, from.z + seg.z * t };
+            }
+            Die();
+            return true;
+        }
+        return false;
+    }
 
     void SetVelocityTowardTarget(const std::string& targetName, float speed,
                                   const std::string& ownerName, const RC::Vector3& myPos) {

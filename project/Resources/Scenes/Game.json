@@ -1746,7 +1746,7 @@
           "data": {
             "scriptDataList": [
               {
-                "colliderRadius": 3.0,
+                "colliderRadius": 0.4,
                 "count": 1,
                 "drawGizmo": true,
                 "enemyName": "WaveShip",

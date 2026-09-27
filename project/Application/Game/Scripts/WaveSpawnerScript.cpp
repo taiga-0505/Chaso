@@ -14,6 +14,7 @@
 #include "imgui/imgui.h"
 #endif
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -58,7 +59,12 @@ public:
   float startDelay = 0.0f;
   /// @brief 生成する敵のスケール
   RC::Vector3 enemyScale = {4.0f, 4.0f, 4.0f};
-  /// @brief 生成する敵のコライダー半径
+  /// @brief 生成する敵のコライダー半径（ローカル単位）
+  /// @details 実際の当たり半径は colliderRadius × enemyScale の最大成分になる
+  ///          （WaterBullet などが Transform のスケールを掛けるため）。
+  ///          例: サメ 0.5 × 4 = 2m、船 0.4 × 9 = 3.6m。
+  ///          ワールドの m のつもりで大きな値を入れると、船（z スケール 9）では 3.0 で 27m になり、
+  ///          自機が球の中に入って「撃った瞬間に当たる」状態になるので注意。
   float colliderRadius = 0.5f;
   /// @brief 敵スクリプトへ渡すパラメータ（"maxHp" などをここに書く）
   nlohmann::json enemyParams;
@@ -365,6 +371,16 @@ private:
     col.shape = ColliderComponent::Shape::Sphere;
     col.radius = colliderRadius;
     col.isTrigger = false;
+    {
+      // 当たり半径が大きすぎる設定を知らせる（ローカル単位の取り違え対策）
+      const float worldR = colliderRadius * (std::max)((std::max)(std::abs(enemyScale.x),
+                                                                 std::abs(enemyScale.y)),
+                                                       std::abs(enemyScale.z));
+      if (worldR > 8.0f) {
+        Log::Print("[WaveSpawnerScript] warning: collider radius is " + std::to_string(worldR) +
+                   "m in world (colliderRadius x max(enemyScale)). Is colliderRadius in local units?");
+      }
+    }
 
     auto &nsc = entity->AddComponent<NativeScriptComponent>();
     // スクリプト実体は次の Update で作られるので、生成直後にメンバへ代入することは

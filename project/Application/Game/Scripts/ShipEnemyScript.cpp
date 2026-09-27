@@ -91,6 +91,7 @@ public:
     float gunHeight = 1.2f;              ///< 砲の高さ(m)
     float spreadDeg = 4.0f;              ///< 弾の散り(度)
     float leadFactor = 0.6f;             ///< 未来位置を読む強さ(0=読まない / 1=完全に読む)
+    float shellShootRadius = 1.2f;       ///< 自機の弾がこの距離まで来たら砲弾を撃ち落とせる(m)
 
     // --- 見た目 ---
     float modelYawOffsetDeg = 0.0f; ///< モデルの向き補正(度)。箱の仮モデルでは 0
@@ -119,6 +120,7 @@ protected:
         j["gunHeight"] = gunHeight;
         j["spreadDeg"] = spreadDeg;
         j["leadFactor"] = leadFactor;
+        j["shellShootRadius"] = shellShootRadius;
         j["modelYawOffsetDeg"] = modelYawOffsetDeg;
         j["debugDraw"] = debugDraw;
         return j;
@@ -146,6 +148,7 @@ protected:
         if (j.contains("gunHeight")) gunHeight = j["gunHeight"].get<float>();
         if (j.contains("spreadDeg")) spreadDeg = j["spreadDeg"].get<float>();
         if (j.contains("leadFactor")) leadFactor = j["leadFactor"].get<float>();
+        if (j.contains("shellShootRadius")) shellShootRadius = j["shellShootRadius"].get<float>();
         if (j.contains("modelYawOffsetDeg")) modelYawOffsetDeg = j["modelYawOffsetDeg"].get<float>();
         if (j.contains("debugDraw")) debugDraw = j["debugDraw"].get<bool>();
     }
@@ -370,6 +373,7 @@ public:
         ImGui::DragFloat("Gun Height", &gunHeight, 0.1f, -5.0f, 20.0f);
         ImGui::DragFloat("Spread (deg)", &spreadDeg, 0.1f, 0.0f, 45.0f);
         ImGui::SliderFloat("Lead Factor", &leadFactor, 0.0f, 1.5f);
+        ImGui::DragFloat("Shell Shoot Radius", &shellShootRadius, 0.05f, 0.0f, 5.0f);
         ImGui::Checkbox("Debug Draw", &debugDraw);
 
         // 実際にどれくらいの手数になるかの目安。
@@ -634,6 +638,9 @@ private:
         shell->SetTag("dir_z", static_cast<int>(dir.z * 1000.0f));
         shell->SetTag("bullet_speed", static_cast<int>(shellSpeed * 10.0f));
         shell->SetTag("bullet_type", SanitizeBulletType(bulletType));
+        // 砲弾は自機の弾で撃ち落とせる（判定は WaterBullet 側）。半径は 100 倍の整数
+        shell->SetTag("shootable", 1);
+        shell->SetTag("shoot_radius", static_cast<int>(shellShootRadius * 100.0f));
 
         if (isNew) {
             scene->InitDynamicEntityRuntime(*shell);

@@ -335,3 +335,6 @@ Texassemble.exe
 *.exp
 project/externals/**/*.lib
 !project/externals/assimp/**/*.lib
+
+# ステージ進行のセーブデータ（StageProgress）
+project/StageProgress.json

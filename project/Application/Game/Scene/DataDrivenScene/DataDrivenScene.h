@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "Application/Game/Framework/GameSession.h"
+#include "Application/Game/Framework/StageProgress.h"
 #include "Common/Math/MathUtils.h"
 #include "Common/Math/Math.h"
 #include "Camera/CameraController.h" // ctx.camera->GetWorldPos()（Scene.h は前方宣言のみ）
@@ -80,9 +81,11 @@ public:
         gameMode_->ResetForRestart();
     }
 
-    // Game シーンに入った瞬間が「1 プレイの開始」。前回の結果を捨てる。
-    if (sceneName_ == "Game") {
+    // プレイシーン（Stage1〜5 / テスト用 Game）に入った瞬間が「1 プレイの開始」。前回の結果を捨てる。
+    // どのステージを遊んでいるかも記録しておく（Result の「次へ／もう一度」が使う）。
+    if (StageProgress::IsPlayScene(sceneName_)) {
         GameSession::Get().BeginRun();
+        StageProgress::Get().SetCurrentScene(sceneName_);
     }
 
     // Initialize runtime handles for all loaded components
@@ -445,7 +448,7 @@ public:
 
     // === ゲーム結果判定（プレイ中のみ） ===
     if (ctx.isSimulating() && !resultTriggered_) {
-        if (sceneName_ != "Game") {
+        if (!StageProgress::IsPlayScene(sceneName_)) {
             // スペースキーで次へ進むのはセレクト〜リザルトの導線シーンだけに限定する。
             // CG4 など導線外のシーンでは Space をゲーム操作（ジャンプ）に使うため、
             // 名前が一致しないシーンをまとめて Title へ送らないこと。
@@ -453,13 +456,8 @@ public:
             // Result は ResultScreenScript が「もう一度／タイトルへ」で
             // 自前に遷移を扱うため、ここでは判定しない（二重判定になる）。
             // GameOver シーンは廃止し、死亡時も Result へ送る（Result 側が決着を見て表示を変える）。
-            const bool isFlowScene = (sceneName_ == "Select");
-            if (isFlowScene && ctx.input->IsKeyTrigger(DIK_SPACE)) {
-                resultTriggered_ = true;
-                resultTarget_ = "Game";
-                // 即座に遷移させるためディレイを最大値にする
-                resultDelayTimer_ = kResultDelay_;
-            }
+            // Select は StageSelectScript が自前でステージを選んで遷移するので、ここでは判定しない。
+            // （旧仕様の「Select で Space → Game」は廃止。残すと決定の瞬間に二重遷移する）
         } else {
             // プレイヤー死亡チェック
             // レールシューターの自機はカメラに乗っていて名前が "player" ではないため、
@@ -517,6 +515,11 @@ public:
                     resultTarget_ = "Result";
                     resultDelayTimer_ = 0.0f;
                     GameSession::Get().Finish(GameSession::Outcome::Cleared);
+                    // ステージのクリアを記録し、次の面を解放して保存する（Game シーンは対象外）
+                    const int stageIndex = StageProgress::IndexOf(sceneName_);
+                    if (stageIndex >= 0) {
+                        StageProgress::Get().MarkCleared(stageIndex, GameSession::Get().Score());
+                    }
                 }
             }
 
