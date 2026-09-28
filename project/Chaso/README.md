@@ -16,7 +16,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
       Editor/       EditorManager, CaptureMode（ImGui エディタ）
       Game/         Game, Scene, SceneManager, DataDrivenScene, Fade, Framework/*
       Resources/    エンジン用リソースの原本（ビルド前に project/Resources へ同期される）
-      Template/     新しいゲームを作るときに project/ へコピーするひな形
+      Template/     新しいゲームを作るときに project/ へコピーするひな形（_root/ はリポジトリ直下へ）
       scripts/      同期用スクリプト
 ```
 
@@ -59,7 +59,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 
 | やりたいこと | コマンド |
 |---|---|
-| 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame -Dest D:\` |
+| 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame -Dest D:\`（引数なしなら名前を聞かれ、今のリポジトリと同じ階層に作る） |
 | リソースを手動で同期する（通常はビルド前に自動） | `.\project\Chaso\scripts\sync-resources.ps1` |
 | ゲーム中にエンジンを直した → ChasoEngine へ反映 | `.\project\Chaso\scripts\engine-push.ps1` |
 | ChasoEngine の更新を取り込む | `.\project\Chaso\scripts\engine-pull.ps1` |
@@ -68,6 +68,9 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 - 別のゲームで先にエンジンが更新されていて push が拒否されたら、`engine-pull` → 競合解決 → `engine-push`。
 - エンジンだけ直したいときは、どれかのゲームリポジトリの `project/Chaso/` で直して push すればよい。
   ChasoEngine を単体で clone しても Visual Studio では開けない（sln はゲーム側にある）。
+
+VS Code の Project Actions（`.project-actions.json`）にも同じボタンがある:
+「エンジン反映」「エンジン取込」「リソース同期」「新規ゲーム」。新規ゲームにもこのボタン設定と `scripts/build/` が付いてくる。
 
 ## 手動で同じことをする場合
 

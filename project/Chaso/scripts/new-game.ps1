@@ -10,7 +10,7 @@
 
   出来上がった構成:
     <Dest>/<Name>/
-      .gitignore
+      .gitignore, .project-actions.json, .vscode/, scripts/build/   ← Template/_root から
       project/
         chaso.sln, main.cpp, AppConfig.json, GameSettings.json
         Application/ChasoApp.vcxproj, Application/Game/Scripts/
@@ -19,14 +19,25 @@
 
 .EXAMPLE
   .\project\Chaso\scripts\new-game.ps1 -Name MyNewGame -Dest D:\
+  .\project\Chaso\scripts\new-game.ps1            # 名前を聞かれる。作成先は今のリポジトリと同じ階層
 #>
 param(
-  [Parameter(Mandatory = $true)][string]$Name,
-  [string]$Dest = (Get-Location).Path,
+  [string]$Name,
+  [string]$Dest,
   [string]$Remote = "https://github.com/taiga-0505/ChasoEngine.git",
   [string]$Branch = "main"
 )
 $ErrorActionPreference = "Stop"
+
+if (-not $Name) {
+  $Name = Read-Host "新しいゲームの名前（リポジトリ名）"
+  if (-not $Name) { throw "名前が空です" }
+}
+if (-not $Dest) {
+  # 既定: 今いる git リポジトリの親フォルダ（例: D:\Chaso で実行 → D:\）
+  $here = git rev-parse --show-toplevel 2>$null
+  $Dest = if ($here) { Split-Path -Parent $here } else { (Get-Location).Path }
+}
 
 $target = Join-Path $Dest $Name
 if (Test-Path $target) { throw "$target は既に存在します" }
@@ -46,11 +57,15 @@ git subtree add --prefix=project/Chaso $Remote $Branch --squash -m "engine: add 
 
 Write-Host "==> テンプレートを展開" -ForegroundColor Cyan
 $tpl = Join-Path $target "project\Chaso\Template"
-Copy-Item -Path (Join-Path $tpl "*") -Destination (Join-Path $target "project") -Recurse -Force
-# ルート用 .gitignore
-if (Test-Path (Join-Path $tpl ".gitignore")) {
-  Copy-Item (Join-Path $tpl ".gitignore") (Join-Path $target ".gitignore") -Force
-  Remove-Item (Join-Path $target "project\.gitignore") -ErrorAction SilentlyContinue
+# _root/ 以外 → project/ 、 _root/ の中身 → リポジトリ直下
+Get-ChildItem -Path $tpl -Force | Where-Object { $_.Name -ne "_root" } | ForEach-Object {
+  Copy-Item -Path $_.FullName -Destination (Join-Path $target "project") -Recurse -Force
+}
+$tplRoot = Join-Path $tpl "_root"
+if (Test-Path $tplRoot) {
+  Get-ChildItem -Path $tplRoot -Force | ForEach-Object {
+    Copy-Item -Path $_.FullName -Destination $target -Recurse -Force
+  }
 }
 # タイトルをゲーム名に（構成別）
 $cfg = Join-Path $target "project\AppConfig.json"
