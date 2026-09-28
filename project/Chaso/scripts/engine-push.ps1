@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   ゲームリポジトリ内で行ったエンジン (project/Chaso) の変更を ChasoEngine リポジトリへ送る。
 
@@ -23,6 +23,9 @@ if (-not $root) { throw "git リポジトリの中で実行してください" }
 Set-Location $root
 
 if (-not (Test-Path $Prefix)) { throw "$Prefix が見つかりません（ゲームリポジトリのルートで実行してください）" }
+
+# Resources/ で直したエンジン側リソースを Chaso/Resources に書き戻してから確認する
+& (Join-Path $root "$Prefix/scripts/sync-resources.ps1")
 
 $dirty = git status --porcelain -- $Prefix
 if ($dirty) {

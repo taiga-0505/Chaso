@@ -22,8 +22,10 @@ struct AppConfig {
 #endif
   bool vsync = true; ///< 垂直同期 (V-Sync) を有効にするか
 
-  // ウィンドウタイトルと起動シーンはゲームごとに異なるため AppConfig.json（ゲーム側）で上書きする
-  //   "title": "ゲーム名", "bootScene": "Title"
+  // ウィンドウタイトルと起動シーンはゲームごとに異なるため AppConfig.json（ゲーム側）で上書きする。
+  // 文字列（全構成共通）か、構成別オブジェクトのどちらでも書ける:
+  //   "bootScene": "Title"
+  //   "bootScene": { "Debug": "Sample", "Development": "Stage1", "Release": "Title" }
   std::string title = "ChasoEngine"; ///< ウィンドウタイトル（AppConfig.json の "title" で上書き）
   std::string bootScene = "Title";   ///< 起動時に読み込むシーン名（AppConfig.json の "bootScene" で上書き）
 

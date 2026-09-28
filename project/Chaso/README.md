@@ -8,42 +8,59 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
     chaso.sln, main.cpp, AppConfig.json      ← ゲーム側（Template からコピー）
     Application/ChasoApp.vcxproj             ← ゲーム側
     Application/Game/Scripts/                ← ゲーム側（スクリプト）
-    Resources/                               ← ゲーム側（モデル・音・シーン JSON など）
+    Resources/                               ← 実行時に使う唯一の Resources（ゲーム + エンジン由来のコピー）
     Chaso/                                   ← ★ このリポジトリ（subtree）
       Engine/       エンジン本体（ChasoEngine.vcxproj）
       Externals/    imgui / assimp / DirectXTex / nlohmann / curl / httplib
       Framework/    App（アプリのライフサイクル）, AppConfig
       Editor/       EditorManager, CaptureMode（ImGui エディタ）
       Game/         Game, Scene, SceneManager, DataDrivenScene, Fade, Framework/*
-      Resources/    エンジンが必要とするリソース（Shader, icons, fonts, noise, Particle, Template）
+      Resources/    エンジン用リソースの原本（ビルド前に project/Resources へ同期される）
       Template/     新しいゲームを作るときに project/ へコピーするひな形
       scripts/      同期用スクリプト
 ```
 
-## リソースの解決ルール
+## リソースの扱い
 
-コード中のパスは従来どおり `"Resources/..."` のまま。`Chaso::ResolvePath()`（`Engine/Common/ResourcePath.h`）が
+実行ファイルが見るのは従来どおり **`project/Resources/` ひとつだけ**。配布時もこのフォルダを exe と一緒に置けばよい。
 
-1. ゲーム側 `project/Resources/...`
-2. エンジン側 `project/Chaso/Resources/...`
+エンジンが必要とするリソース（Shader / icons / fonts / noise / Particle / Template / uvChecker / white1x1）の
+原本は ChasoEngine 側の `Chaso/Resources/` にあり、**ビルド前に `scripts/sync-resources.ps1` が自動で同期**する
+（`ChasoApp.vcxproj` の PreBuildEvent）:
 
-の順に探す。ゲーム側に同名ファイルを置けばエンジン側を上書きできる。
-テクスチャ・モデル・音・シェーダー・フォント・JSON の各ローダーに適用済み。
+1. `Chaso/Resources` → `Resources`: 新しい・無いファイルをコピー
+2. `Resources` → `Chaso/Resources`: エンジン側に既にあるファイルだけ、更新されていれば書き戻す（新しい方が勝つ）
+3. `Resources/.gitignore` を自動生成し、エンジン由来のコピーはゲームリポジトリで追跡しない
+
+つまり **エンジンのシェーダーやフォントは `project/Resources/` で直接編集してよい**。次のビルドで
+`Chaso/Resources` に書き戻され、`engine-push.ps1` で ChasoEngine に反映される。
+新しいファイルをエンジンに追加するときだけ `Chaso/Resources/` に置く（`Resources/` に置くとゲーム固有扱い）。
+削除は同期されないので、両方から消すこと。
+
+保険として `Chaso::ResolvePath()`（`Engine/Common/ResourcePath.h`）が「`Resources/` に無ければ `Chaso/Resources/`」も
+探すので、同期前でも起動はできる。
 
 ## ゲームごとに変える設定（`project/AppConfig.json`）
 
 ```json
-{ "width": 1280, "height": 720, "fullscreen": false,
-  "title": "ゲーム名", "bootScene": "Title" }
+{
+  "width": 1280, "height": 720, "fullscreen": false,
+  "title":     { "Debug": "ChasoEngine", "Development": "〇〇_CG4", "Release": "〇〇_ゲーム名" },
+  "bootScene": { "Debug": "Title",       "Development": "Stage1",  "Release": "Title" }
+}
 ```
 
 `title` がウィンドウタイトル、`bootScene` が起動時に読むシーン名（`Resources/Scenes/<name>.json`）。
+どちらも文字列 1 つ（全構成共通）でも、`Debug` / `Development` / `Release` の構成別オブジェクトでも書ける
+（無い構成は `Release` → 既定値の順で補う）。エディタからの保存（`SaveAppConfig`）はウィンドウ設定だけ上書きし、
+これらのキーは壊さない。
 
 ## 日常の使い方（ゲームリポジトリ側で実行）
 
 | やりたいこと | コマンド |
 |---|---|
 | 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame -Dest D:\` |
+| リソースを手動で同期する（通常はビルド前に自動） | `.\project\Chaso\scripts\sync-resources.ps1` |
 | ゲーム中にエンジンを直した → ChasoEngine へ反映 | `.\project\Chaso\scripts\engine-push.ps1` |
 | ChasoEngine の更新を取り込む | `.\project\Chaso\scripts\engine-pull.ps1` |
 

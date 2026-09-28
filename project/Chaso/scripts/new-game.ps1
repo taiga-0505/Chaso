@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   ChasoEngine を使った新しいゲームリポジトリを作る。
 
@@ -52,13 +52,16 @@ if (Test-Path (Join-Path $tpl ".gitignore")) {
   Copy-Item (Join-Path $tpl ".gitignore") (Join-Path $target ".gitignore") -Force
   Remove-Item (Join-Path $target "project\.gitignore") -ErrorAction SilentlyContinue
 }
-# タイトルをゲーム名に
+# タイトルをゲーム名に（構成別）
 $cfg = Join-Path $target "project\AppConfig.json"
 if (Test-Path $cfg) {
   $j = Get-Content $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
-  $j.title = $Name
+  $j.title = [ordered]@{ Debug = "$Name (Debug)"; Development = "$Name (Development)"; Release = $Name }
   $j | ConvertTo-Json -Depth 5 | Set-Content $cfg -Encoding UTF8
 }
+
+# エンジンのリソースを project/Resources に展開（ビルド前にも自動で走る）
+& (Join-Path $target "project\Chaso\scripts\sync-resources.ps1")
 
 git add -A
 git commit -q -m "game: bootstrap from ChasoEngine template"

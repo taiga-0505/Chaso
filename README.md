@@ -93,7 +93,7 @@ project/
   chaso.sln, main.cpp, AppConfig.json      ← ゲーム側
   Application/ChasoApp.vcxproj             ← ゲーム側
   Application/Game/Scripts/                ← ゲーム側（スクリプト）
-  Resources/                               ← ゲーム側（モデル・音・シーン JSON など）
+  Resources/                               ← 実行時に使う唯一の Resources（ゲーム側 + エンジン由来のコピー）
   Chaso/                                   ← エンジン（ChasoEngine の subtree）
 ```
 
@@ -106,16 +106,16 @@ project/
 | **[Framework/](project/Chaso/Framework/)** | アプリケーション基盤 (`App`) とコンフィグ管理 |
 | **[Editor/](project/Chaso/Editor/)** | エディタUI管理（Hierarchy / Inspector / Viewport パネル） |
 | **[Game/](project/Chaso/Game/)** | `Game` / `Scene` / `SceneManager` / `DataDrivenScene` / `Fade` とゲーム基盤 (`Framework/`) |
-| **[Resources/](project/Chaso/Resources/)** | エンジンが必要とするリソース（Shader / icons / fonts / noise / Particle / Template） |
+| **[Resources/](project/Chaso/Resources/)** | エンジン用リソースの原本。ビルド前に `sync-resources.ps1` が `project/Resources/` へ同期する |
 | **[Template/](project/Chaso/Template/)** | 新しいゲームを作るときのひな形 |
-| **[scripts/](project/Chaso/scripts/)** | `engine-push.ps1` / `engine-pull.ps1` / `new-game.ps1` |
+| **[scripts/](project/Chaso/scripts/)** | `engine-push.ps1` / `engine-pull.ps1` / `new-game.ps1` / `sync-resources.ps1` |
 
 ### ゲーム (`project/`)
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
 | **[Application/Game/Scripts/](project/Application/Game/Scripts/)** | ゲームロジック（Player・Enemy・UI などの NativeScript） |
-| **[Resources/](project/Resources/)** | ゲームのリソース（モデル・音・シーン JSON・UI など）。エンジン側と同名のファイルを置くと上書きできる |
+| **[Resources/](project/Resources/)** | 実行時に使うリソース。ゲーム固有のもの（モデル・音・シーン JSON・UI）に加え、エンジン由来のコピー（Shader / fonts / icons など。`.gitignore` で自動的に追跡対象外）が入る |
 
 ## ビルド方法 (Build)
 

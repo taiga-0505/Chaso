@@ -385,6 +385,33 @@ void App::Term() {
   ReportLiveObjectsDbg("FINAL Report at the end of App::Term");
 }
 
+/// @brief ビルド構成名（AppConfig.json の構成別キーに使う）
+static const char *BuildConfigName_() {
+#if defined(RC_DEVELOPMENT)
+  return "Development";
+#elif defined(_DEBUG)
+  return "Debug";
+#else
+  return "Release";
+#endif
+}
+
+/// @brief 文字列 or 構成別オブジェクトの値を読む
+/// @details "bootScene": "Title"                                   → 全構成で "Title"
+///          "bootScene": { "Debug": "Sample", "Development": "Stage1", "Release": "Title" }
+///                                                                   → 構成ごとに切り替え（無いキーは "Release" → 既定値の順）
+static std::string ReadPerConfigString_(const nlohmann::json &j, const char *key, const std::string &fallback) {
+  if (!j.contains(key)) return fallback;
+  const auto &v = j[key];
+  if (v.is_string()) return v.get<std::string>();
+  if (v.is_object()) {
+    const char *cfg = BuildConfigName_();
+    if (v.contains(cfg) && v[cfg].is_string()) return v[cfg].get<std::string>();
+    if (v.contains("Release") && v["Release"].is_string()) return v["Release"].get<std::string>();
+  }
+  return fallback;
+}
+
 void App::LoadAppConfig() {
   bool loaded = false;
   std::ifstream ifs("../project/AppConfig.json");
@@ -395,8 +422,8 @@ void App::LoadAppConfig() {
       if (j.contains("width")) appConfig_.width = j["width"];
       if (j.contains("height")) appConfig_.height = j["height"];
       if (j.contains("fullscreen")) appConfig_.fullscreen = j["fullscreen"];
-      if (j.contains("title") && j["title"].is_string()) appConfig_.title = j["title"].get<std::string>();
-      if (j.contains("bootScene") && j["bootScene"].is_string()) appConfig_.bootScene = j["bootScene"].get<std::string>();
+      appConfig_.title = ReadPerConfigString_(j, "title", appConfig_.title);
+      appConfig_.bootScene = ReadPerConfigString_(j, "bootScene", appConfig_.bootScene);
       loaded = true;
     } catch (...) {
       Log::Print("[App] Failed to parse AppConfig.json");
@@ -409,18 +436,26 @@ void App::LoadAppConfig() {
   appConfig_.fullscreen = true;
 #endif
 
-  Log::Print(std::format("[App] {} AppConfig: {}x{} Fullscreen:{}",
-                         loaded ? "Loaded" : "Default",
-                         appConfig_.width, appConfig_.height, appConfig_.fullscreen));
+  Log::Print(std::format("[App] {} AppConfig ({}): {}x{} Fullscreen:{} Title:\"{}\" BootScene:\"{}\"",
+                         loaded ? "Loaded" : "Default", BuildConfigName_(),
+                         appConfig_.width, appConfig_.height, appConfig_.fullscreen,
+                         appConfig_.title, appConfig_.bootScene));
 }
 
 void App::SaveAppConfig() {
-  nlohmann::json j;
+  // title / bootScene（構成別オブジェクトのことがある）など他のキーを壊さないよう、
+  // 既存の JSON を読み込んでからウィンドウ設定だけ上書きする
+  nlohmann::json j = nlohmann::json::object();
+  {
+    std::ifstream in("../project/AppConfig.json");
+    if (in) {
+      try { in >> j; } catch (...) { j = nlohmann::json::object(); }
+      if (!j.is_object()) j = nlohmann::json::object();
+    }
+  }
   j["width"] = appConfig_.width;
   j["height"] = appConfig_.height;
   j["fullscreen"] = appConfig_.fullscreen;
-  j["title"] = appConfig_.title;
-  j["bootScene"] = appConfig_.bootScene;
 
   std::ofstream ofs("../project/AppConfig.json");
   if (ofs) {
