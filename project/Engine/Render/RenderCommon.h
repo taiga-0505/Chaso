@@ -2,7 +2,7 @@
 #include "GraphicsPipeline/GraphicsPipeline.h"
 #include "Font/TextMeshGenerator.h"
 #include "Math/Math.h"
-#include "Scene.h"
+#include "Common/SceneContext.h"
 #include <d3d12.h>
 #include <string>
 #include <future>
@@ -69,11 +69,6 @@ int GetActiveDirectionalLightHandle();
 /// @param lightHandle ライトハンドル
 /// @return DirectionalLightSource*（無効ハンドルなら nullptr）
 DirectionalLightSource *GetDirectionalLightPtr(int lightHandle);
-
-/// @brief ディレクショナルライトの ImGui 表示を行う
-/// @param lightHandle ライトハンドル（-1 の場合は実効アクティブを使用）
-/// @param name 表示名
-void DrawImGuiDirectionalLight(int lightHandle, const char *name);
 
 /// @brief ディレクショナルライトの ON/OFF を切り替える
 /// @param lightHandle ライトハンドル
@@ -142,11 +137,6 @@ int GetActivePointLightHandleAt(int index);
 /// @return PointLightSource*（無効ハンドルなら nullptr）
 PointLightSource *GetPointLightPtr(int pointLightHandle);
 
-/// @brief ポイントライトの ImGui 表示を行う
-/// @param pointLightHandle ポイントライトハンドル
-/// @param name 表示名
-void DrawImGuiPointLight(int pointLightHandle, const char *name);
-
 /// @brief ポイントライトの ON/OFF を切り替える
 /// @param pointLightHandle ポイントライトハンドル
 /// @param enabled 有効にするなら true
@@ -213,11 +203,6 @@ int GetActiveSpotLightHandleAt(int index);
 /// @param spotLightHandle スポットライトハンドル
 /// @return SpotLightSource*（無効ハンドルなら nullptr）
 SpotLightSource *GetSpotLightPtr(int spotLightHandle);
-
-/// @brief スポットライトの ImGui 表示を行う
-/// @param spotLightHandle スポットライトハンドル
-/// @param name 表示名
-void DrawImGuiSpotLight(int spotLightHandle, const char *name);
 
 /// @brief スポットライトの ON/OFF を切り替える
 /// @param spotLightHandle スポットライトハンドル
@@ -363,11 +348,6 @@ int GetActiveAreaLightHandleAt(int index);
 /// @return AreaLightSource*
 AreaLightSource *GetAreaLightPtr(int areaLightHandle);
 
-/// @brief エリアライトの ImGui 表示を行う
-/// @param areaLightHandle エリアライトハンドル
-/// @param name 表示名
-void DrawImGuiAreaLight(int areaLightHandle, const char *name = nullptr);
-
 /// @brief エリアライトの ON/OFF を切り替える
 /// @param areaLightHandle エリアライトハンドル
 /// @param enabled 有効にするなら true
@@ -413,18 +393,6 @@ void DrawModel(int modelHandle, int texHandle);
 /// @param modelHandle モデルハンドル
 void DrawModel(int modelHandle);
 
-/// @brief モデルを描画する（カリング無効版）
-/// @param modelHandle モデルハンドル
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelNoCull(int modelHandle, int texHandle = -1);
-
-/// @brief モデルをインスタンシング（複数Transform）で描画する
-/// @param modelHandle モデルハンドル
-/// @param instances インスタンスTransform配列
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelBatch(int modelHandle, const std::vector<Transform> &instances,
-                    int texHandle = -1);
-
 /// @brief モデルをインスタンシング（複数Transform + 単一色）で描画する
 /// @param modelHandle モデルハンドル
 /// @param instances インスタンスTransform配列
@@ -434,11 +402,6 @@ void DrawModelBatchColored(int modelHandle,
                            const std::vector<Transform> &instances,
                            const Vector4 &color,
                            int texHandle = -1);
-
-/// @brief モデルの ImGui 表示を行う
-/// @param modelHandle モデルハンドル
-/// @param name 表示名
-void DrawImGui3D(int modelHandle, const char *name);
 
 /// @brief モデルを解放する（ハンドルは無効化される）
 /// @param modelHandle モデルハンドル
@@ -557,33 +520,9 @@ void ClearModelLightingModeOverride(int modelHandle);
 /// @param path .obj へのパス
 void SetModelMesh(int modelHandle, const std::string &path);
 
-/// @brief DrawModelBatch の内部カーソルをリセットする
+/// @brief DrawModelBatchColored の内部カーソルをリセットする
 /// @param modelHandle モデルハンドル
 void ResetCursor(int modelHandle);
-
-// ── ガラスモデル ──────────────────────────────────
-
-/// @brief ガラスモデルを描画する
-/// @param modelHandle モデルハンドル
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelGlass(int modelHandle, int texHandle = -1);
-
-/// @brief ガラスモデルをインスタンシングで描画する
-/// @param modelHandle モデルハンドル
-/// @param instances インスタンスTransform配列
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelGlassBatch(int modelHandle,
-                         const std::vector<Transform> &instances,
-                         int texHandle = -1);
-
-/// @brief ガラスモデルをインスタンシング（複数Transform + 単一色）で描画する
-/// @param modelHandle モデルハンドル
-/// @param instances インスタンスTransform配列
-/// @param color 全インスタンスに適用する乗算色
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelGlassBatchColored(int modelHandle,
-                                const std::vector<Transform> &instances,
-                                const Vector4 &color, int texHandle = -1);
 
 // ── ガラス（2パス：背面→表面） ──────────────────
 // ※箱/ブロックみたいな「厚み」を出したい時に使う
@@ -592,25 +531,6 @@ void DrawModelGlassBatchColored(int modelHandle,
 /// @param modelHandle モデルハンドル
 /// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
 void DrawModelGlassTwoPass(int modelHandle, int texHandle = -1);
-
-/// @brief ガラス（2パス）をインスタンシングで描画する
-/// @param modelHandle モデルハンドル
-/// @param instances インスタンスTransform配列
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelGlassTwoPassBatch(int modelHandle,
-                                const std::vector<Transform> &instances,
-                                int texHandle = -1);
-
-/// @brief ガラス（2パス）をインスタンシング（複数Transform + 単一色）で描画する
-/// @param modelHandle モデルハンドル
-/// @param instances インスタンスTransform配列
-/// @param color 全インスタンスに適用する乗算色
-/// @param texHandle テクスチャハンドル（-1 なら mtl のテクスチャ）
-void DrawModelGlassTwoPassBatchColored(int modelHandle,
-                                       const std::vector<Transform> &instances,
-                                       const Vector4 &color,
-                                       int texHandle = -1);
-
 
 // ── 2D用 ──────────────────────────────────────────
 
@@ -723,11 +643,6 @@ void UnloadSprite(int spriteHandle);
 /// @param h 高さ（ピクセル）
 void SetSpriteScreenSize(int spriteHandle, float w, float h);
 
-/// @brief スプライトの ImGui 表示を行う
-/// @param spriteHandle スプライトハンドル
-/// @param name 表示名
-void DrawImGui2D(int spriteHandle, const char *name);
-
 // ── 文字描画用 (Font) ─────────────────────────────
 
 /// @brief フォントファイルをロードしてハンドルを返す
@@ -802,11 +717,6 @@ int GenerateSkydomeEx(int textureHandle = -1, float radius = 100.0f,
 /// @param texHandle 一時的に差し替えるテクスチャ（-1 なら生成時のテクスチャ。無ければ white1x1）
 void DrawSkydome(int skydomeHandle, int texHandle = -1);
 
-/// @brief 天球の ImGui 表示を行う
-/// @param skydomeHandle 天球ハンドル
-/// @param name 表示名
-void DrawSkydomeImGui(int skydomeHandle, const char *name = nullptr);
-
 /// @brief 天球を解放する
 /// @param skydomeHandle 天球ハンドル
 void UnloadSkydome(int skydomeHandle);
@@ -832,11 +742,6 @@ int CreateSkyBox(const std::string &ddsPath);
 /// @brief スカイボックスを描画する（3Dパス内で使用）
 /// @param skyboxHandle スカイボックスハンドル
 void DrawSkyBox(int skyboxHandle);
-
-/// @brief スカイボックスの ImGui 表示を行う
-/// @param skyboxHandle スカイボックスハンドル
-/// @param name 表示名
-void DrawSkyBoxImGui(int skyboxHandle, const char *name = nullptr);
 
 /// @brief スカイボックスを解放する
 /// @param skyboxHandle スカイボックスハンドル
@@ -1050,11 +955,6 @@ void UnloadPrimitiveMesh(int meshHandle);
 /// @param meshHandle メッシュハンドル
 /// @return Transform*（無効ハンドルなら nullptr）
 Transform *GetPrimitiveMeshTransformPtr(int meshHandle);
-
-/// @brief 汎用プリミティブメッシュの ImGui 表示を行う
-/// @param meshHandle メッシュハンドル
-/// @param name 表示名
-void DrawPrimitiveMeshImGui(int meshHandle, const char *name = nullptr);
 
 /// @brief プリミティブメッシュの環境マップ映り込み係数を設定する
 /// @param meshHandle メッシュハンドル

@@ -168,19 +168,6 @@ D3D12_GPU_VIRTUAL_ADDRESS DirectionalLightManager::GetActiveCBAddress() {
   return GetCBAddress(h);
 }
 
-void DirectionalLightManager::DrawImGui(int handle, const char *name) {
-  if (!IsValid_(handle)) {
-    return;
-  }
-
-  auto &slot = slots_[handle];
-  slot.light.DrawImGui(name);
-
-  // Reflect UI edits to the GPU buffer.
-  EnsureCB_(slot);
-  SyncCB_(slot);
-}
-
 void DirectionalLightManager::ReleaseSlot_(Slot &s) {
   if (s.cb) {
     if (s.mapped) {

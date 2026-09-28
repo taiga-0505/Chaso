@@ -419,7 +419,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float scatter = lerp(0.02f, 0.15f, rough);
     float3 transmissionLit = diffuseSum * scatter;
 
-    // ★プレマルチ出力：rgbは alpha を掛けた“透過色” + 反射（反射はαで薄まらない）
+    // プレマルチ出力：rgbは alpha を掛けた“透過色” + 反射（反射はαで薄まらない）
     output.color.rgb = saturate(base.rgb * opacity + transmissionLit * opacity + reflection);
     output.color.a = opacity;
 

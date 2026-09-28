@@ -49,10 +49,6 @@ public:
     roughnessMapSrv_ = srvGPUHandle;
   }
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param name UIに表示するラベル
-  void DrawImGui(const char *name);
-
   /// @brief トランスフォーム情報への参照を取得
   /// @return Transform構造体への参照
   Transform &T() { return transform_; }

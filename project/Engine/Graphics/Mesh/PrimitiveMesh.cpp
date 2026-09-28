@@ -1,6 +1,6 @@
 #include "PrimitiveMesh.h"
 #include "RenderContext.h"
-#include "../../../Application/Game/Scene/Scene.h"
+#include "Common/SceneContext.h"
 #include "../../Dx12/Dx12Core.h"
 #include "../../Dx12/DeferredReleaseQueue/DeferredReleaseQueue.h"
 #include "Math/Math.h"
@@ -138,38 +138,6 @@ void PrimitiveMesh::Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4
   } else {
     cmdList->DrawInstanced(vb_.vertexCount, 1, 0, 0);
   }
-}
-
-void PrimitiveMesh::DrawImGui(const char *name) {
-#if RC_ENABLE_IMGUI
-  std::string label = name ? name : "PrimitiveMesh";
-  if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-    return;
-
-  ImGui::PushID(label.c_str());
-
-  if (ImGui::TreeNode("Transform")) {
-    ImGui::DragFloat3("Position", &transform_.translation.x, 0.1f);
-    ImGui::SliderAngle("Rotate X", &transform_.rotation.x);
-    ImGui::SliderAngle("Rotate Y", &transform_.rotation.y);
-    ImGui::SliderAngle("Rotate Z", &transform_.rotation.z);
-    ImGui::DragFloat3("Scale", &transform_.scale.x, 0.05f);
-    ImGui::TreePop();
-  }
-
-  if (cbMat_.mapped) {
-    if (ImGui::TreeNode("Material")) {
-      ImGui::ColorEdit4("Color", &cbMat_.mapped->color.x);
-      ImGui::DragFloat("Shininess", &cbMat_.mapped->shininess, 0.5f, 0.0f, 512.0f);
-
-      const char *items[] = {"None", "Lambert", "Half-Lambert"};
-      ImGui::Combo("Lighting Mode", &cbMat_.mapped->lightingMode, items, 3);
-      ImGui::TreePop();
-    }
-  }
-
-  ImGui::PopID();
-#endif
 }
 
 void PrimitiveMesh::UploadVB_(const std::vector<VertexData> &vertices) {

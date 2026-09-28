@@ -222,10 +222,4 @@ D3D12_GPU_VIRTUAL_ADDRESS AreaLightManager::GetCBAddress() {
   return cb_ ? cb_->GetGPUVirtualAddress() : 0;
 }
 
-void AreaLightManager::DrawImGui(int handle, const char *name) {
-  if (!IsValid_(handle))
-    return;
-  slots_[handle].light.DrawImGui(name);
-}
-
 } // namespace RC

@@ -77,12 +77,6 @@ void DrawSkydome(int skydomeHandle, int texHandle) {
 }
 
 
-void DrawSkydomeImGui(int skydomeHandle, const char *name) {
-  if (auto *s = GetRenderContext().Skydomes().Get(skydomeHandle)) {
-    s->DrawImGui(name);
-  }
-}
-
 void UnloadSkydome(int skydomeHandle) {
   GetRenderContext().Skydomes().Unload(skydomeHandle);
 }

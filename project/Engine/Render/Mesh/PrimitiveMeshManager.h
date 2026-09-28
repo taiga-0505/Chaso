@@ -65,11 +65,6 @@ public:
   /// @param overrideTexHandle 新しいテクスチャハンドル
   void ApplyTexture(int handle, int overrideTexHandle);
 
-  /// @brief ImGuiによる編集UIを表示する
-  /// @param handle メッシュハンドル
-  /// @param name UIに表示するラベル
-  void DrawImGui(int handle, const char *name);
-
 private:
   /// @brief メッシュオブジェクト保持用スロット
   struct Slot {

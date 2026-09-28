@@ -166,7 +166,7 @@ int ModelManager::Load(const std::string &path) {
           if (pipelineMgr_ && srvMgr_ && mesh->HasSkinData()) {
             ptr->Resource().SetSkinningCS(device_, pipelineMgr_, srvMgr_);
           }
-          ptr->SetReady(true); // 完了！
+          ptr->SetReady(true); // 読み込み完了
         }
       }
 

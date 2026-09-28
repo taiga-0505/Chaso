@@ -159,7 +159,6 @@
     <ClCompile Include="..\Engine\Graphics\Model\ModelResource.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive2D.cpp" />
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp" />
-    <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp" />
     <ClCompile Include="..\Engine\Particle\GPUParticle.cpp" />
     <ClCompile Include="..\Engine\Audio\Sound.cpp" />
     <ClCompile Include="..\Engine\Audio\AudioEngine.cpp" />
@@ -197,7 +196,6 @@
     <ClCompile Include="..\Engine\Render\Skydome\SkydomeManager.cpp" />
     <ClCompile Include="..\Engine\Render\Skybox\SkyboxManager.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp" />
-    <ClCompile Include="..\Engine\Render\Systems\RenderQueue.cpp" />
     <ClCompile Include="..\Engine\Render\Systems\FrameResource.cpp" />
     <ClCompile Include="..\Engine\Render\Mesh\PrimitiveMeshManager.cpp" />
     <ClCompile Include="..\Engine\Render\Sprite\SpriteManager.cpp" />
@@ -232,7 +230,6 @@
     <ClInclude Include="..\Engine\Dx12\CommandContext\CommandContext.h" />
     <ClInclude Include="..\Engine\Dx12\DepthStencil\DepthStencil.h" />
     <ClInclude Include="..\Engine\Dx12\DescriptorHeap\DescriptorHeap.h" />
-    <ClInclude Include="..\Engine\Dx12\DescriptorHeap\DescriptorHelpers.h" />
     <ClInclude Include="..\Engine\Dx12\Device\Device.h" />
     <ClInclude Include="..\Engine\Dx12\Dx12Core.h" />
     <ClInclude Include="..\Engine\Dx12\Utility\ScreenCapture.h" />
@@ -258,7 +255,6 @@
     <ClInclude Include="..\Engine\Graphics\Model\ModelResource.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive2D.h" />
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h" />
-    <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h" />
     <ClInclude Include="..\Engine\Particle\GPUParticle.h" />
     <ClInclude Include="..\Engine\Audio\AudioEngine.h" />
     <ClInclude Include="..\Engine\Audio\Sound.h" />
@@ -284,7 +280,7 @@
     <ClInclude Include="..\Engine\Render\RenderCommon.h" />
     <ClInclude Include="..\Engine\Render\Systems\RenderInteractiveWater.h" />
     <ClInclude Include="..\Engine\Render\RenderContext.h" />
-    <ClInclude Include="..\Engine\Render\RenderQueue.h" />
+    <ClInclude Include="..\Engine\Render\SortKey.h" />
     <ClInclude Include="..\Engine\Render\FrameResource.h" />
     <ClInclude Include="..\Engine\Render\Skydome\SkydomeManager.h" />
     <ClInclude Include="..\Engine\Render\Skybox\SkyboxManager.h" />
@@ -295,6 +291,7 @@
     <!-- Window -->
     <ClInclude Include="..\Engine\Window\Window.h" />
     <ClInclude Include="Common\EngineConfig.h" />
+    <ClInclude Include="Common\SceneContext.h" />
     <ClInclude Include="Input\Controller\Controller.h" />
     <ClInclude Include="Input\Keyboard\Keyboard.h" />
     <ClInclude Include="Input\Mouse\Mouse.h" />

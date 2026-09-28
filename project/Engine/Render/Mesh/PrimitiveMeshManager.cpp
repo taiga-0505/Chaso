@@ -124,11 +124,4 @@ void PrimitiveMeshManager::ApplyTexture(int handle, int overrideTexHandle) {
   }
 }
 
-void PrimitiveMeshManager::DrawImGui(int handle, const char *name) {
-  if (!IsValid(handle)) {
-    return;
-  }
-  primitives_[handle].ptr->DrawImGui(name);
-}
-
 } // namespace RC

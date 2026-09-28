@@ -47,10 +47,6 @@ public:
   void Draw(ID3D12GraphicsCommandList *cmdList, const RC::Matrix4x4 &world,
             const RC::Matrix4x4 &viewProj);
 
-  /// @brief ImGui を使用したデバッグ用 UI を表示する
-  /// @param name 表示ラベル
-  void DrawImGui(const char *name = nullptr);
-
   /// @brief 天球に使用するテクスチャ（SRV）を設定する
   /// @param srvGPUHandle テクスチャの GPU ハンドル
   void SetTexture(D3D12_GPU_DESCRIPTOR_HANDLE srvGPUHandle) {

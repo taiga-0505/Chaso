@@ -24,9 +24,9 @@ class FrameResource; // 前方宣言
 // - ModelObject から分離された「GPU側のデータ」を担当
 // - 1つの ModelMesh (共有) をバインドし、Draw/DrawBatch を実行する
 //
-// ★ 毎フレームの WVP CB / InstanceData は FrameResource (リニア
-//    アロケータ) から確保するため、CPU/GPU 間のレースコンディション
-//    が発生しない。
+// 毎フレームの WVP CB / InstanceData は FrameResource (リニア
+// アロケータ) から確保するため、CPU/GPU 間のレースコンディション
+// が発生しない。
 // ============================================================
 /// @class ModelResource
 /// @brief GPU リソース（定数バッファ、SRV）とモデルの描画ロジックを管理するクラス

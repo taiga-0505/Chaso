@@ -73,12 +73,6 @@ public:
   /// @return GPU上の仮想アドレス。準備できていない場合は 0
   D3D12_GPU_VIRTUAL_ADDRESS GetCBAddress(int handle);
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// 編集された値は自動的にGPU側の定数バッファに同期されます。
-  /// @param handle 対象의 ライトハンドル
-  /// @param name UIに表示するラベル
-  void DrawImGui(int handle, const char *name);
-
   /// @brief 明示的なアクティブライトが設定されているか確認
   /// @return 設定されていれば true (handle >= 0)
   bool HasExplicitActive() const { return activeHandle_ >= 0; }

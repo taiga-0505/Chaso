@@ -25,7 +25,7 @@ void TextureManager::Term() {
   ReleasePendingUploads();
 
   for (auto &[_, tex] : cache_) {
-    tex.Term(srv_); // ★必ず srv を渡す
+    tex.Term(srv_); // 必ず srv を渡す
   }
   cache_.clear();
   srv_ = nullptr;

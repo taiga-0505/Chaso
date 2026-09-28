@@ -9,6 +9,7 @@
 #include "Particle/GPUParticle.h"
 #include "Graphics/Texture/RenderTexture/RenderTexture.h"
 #include "Camera/CameraController.h"
+#include "Scene.h"
 
 class Dx12Core;
 class Scene;

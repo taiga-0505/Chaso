@@ -756,11 +756,11 @@ void PipelineManager::RegisterDefaultPipelines() {
   // ものに差し替えてある。そのため RenderContext がマスクパス中に PSO を振り替える
   // だけで、既存の DrawModel 系がそのままマスクを書ける（追加バインドは不要）。
   //
-  // ★ 深度は使わない（enableDepth = false）。マスクパスはメイン3D描画より前に走る
-  //    ので、この時点の深度バッファは空（クリア直後）で比較する相手が居ない。
-  //    結果として壁の向こうの対象にも輪郭が出る＝インタラクト対象の道案内になる。
-  //    遮蔽させたい場合はメイン3Dの発行後にパスを移し、主DSVを読み取り専用で
-  //    バインドする必要がある（DSVヒープが1枚しかない点に注意）。
+  // 深度は使わない（enableDepth = false）。マスクパスはメイン3D描画より前に走る
+  // ので、この時点の深度バッファは空（クリア直後）で比較する相手が居ない。
+  // 結果として壁の向こうの対象にも輪郭が出る＝インタラクト対象の道案内になる。
+  // 遮蔽させたい場合はメイン3Dの発行後にパスを移し、主DSVを読み取り専用で
+  // バインドする必要がある（DSVヒープが1枚しかない点に注意）。
   {
     const std::wstring maskPs = L"Resources/Shader/Mask/Mask.PS.hlsl";
     GPipelineOptions opt{};
@@ -792,16 +792,16 @@ void PipelineManager::RegisterDefaultPipelines() {
     GPipelineOptions opt{};
     opt.rootType = RootSignatureType::Object3D;
     opt.enableDepth = true;
-    opt.enableDepthWrite = false; // ←重要
+    opt.enableDepthWrite = false; // 半透明のため深度は書き込まない
     opt.enableAlphaBlend = true;
-    opt.blendMode = kBlendModePremultiplied; // ←重要
-    opt.cull = D3D12_CULL_MODE_BACK;         // 窓板みたいな薄い板ならおすすめ
+    opt.blendMode = kBlendModePremultiplied; // PS はプレマルチプライド済みの色を出力する
+    opt.cull = D3D12_CULL_MODE_BACK;         // 薄い板向け（背面は描かない）
 
     CreateFromFiles(MakeKey("object3d_glass", kBlendModePremultiplied), objVs,
                     glassPs, InputLayoutType::Object3D, opt);
   }
 
-  // 2パス用（背面描画 = FRONTカリング
+  // 2パス用（背面描画 = FRONT カリング）
   {
     GPipelineOptions opt{};
     opt.rootType = RootSignatureType::Object3D;
@@ -809,7 +809,7 @@ void PipelineManager::RegisterDefaultPipelines() {
     opt.enableDepthWrite = false;
     opt.enableAlphaBlend = true;
     opt.blendMode = kBlendModePremultiplied;
-    opt.cull = D3D12_CULL_MODE_FRONT; // ←ここが追加ポイント
+    opt.cull = D3D12_CULL_MODE_FRONT; // 表面を捨てて裏側だけを描く
 
     CreateFromFiles(MakeKey("object3d_glass_front", kBlendModePremultiplied),
                     objVs, glassPs, InputLayoutType::Object3D, opt);

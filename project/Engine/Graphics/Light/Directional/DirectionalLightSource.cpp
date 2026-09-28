@@ -1,5 +1,4 @@
 #include "DirectionalLightSource.h"
-#include "imgui/imgui.h"
 #include <cmath>
 #include <string>
 
@@ -50,81 +49,6 @@ DirectionalLight DirectionalLightSource::DataForGPU() const {
     out.intensity = 0.0f;
   }
   return out;
-}
-
-void DirectionalLightSource::DrawImGui(const char *name) {
-#if RC_ENABLE_IMGUI
-
-
-  std::string label = name ? std::string(name) : std::string("Light");
-  if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-    return;
-  }
-
-  // 有効/無効
-  ImGui::Checkbox((std::string("有効##") + label).c_str(), &enabled_);
-  if (!enabled_) {
-    ImGui::SameLine();
-    ImGui::TextDisabled("(OFF: intensity=0)");
-  }
-  ImGui::Separator();
-
-  if (enabled_) {
-    ImGui::TextUnformatted("Lighting");
-
-    static const char *kModes[] = {"None", "Lambert", "HalfLambert"};
-
-    int mode = lightingMode_;
-    if (mode < 0)
-      mode = 0;
-    if (mode > 2)
-      mode = 2;
-
-    if (ImGui::Combo((std::string("モード##") + label).c_str(), &mode, kModes,
-                     IM_ARRAYSIZE(kModes))) {
-      lightingMode_ = mode;
-    }
-
-    // 光カラー
-    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
-                      &data_.color.x, ImGuiColorEditFlags_Float);
-
-    // 方向（-1..1）＋正規化
-    bool dirChanged =
-        ImGui::DragFloat3((std::string("光方向(x,y,z)##") + label).c_str(),
-                          &data_.direction.x, 0.01f, -1.0f, 1.0f, "%.2f");
-    if (dirChanged) {
-      Vector3 d = data_.direction;
-      float len = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
-      if (len > 1e-6f) {
-        d.x /= len;
-        d.y /= len;
-        d.z /= len;
-        data_.direction = d;
-      }
-    }
-
-    // 強さ
-    ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
-                     0.01f, 0.0f, 16.0f, "%.2f");
-
-    // 環境光（ライトが当たっていない面の底上げ。0 で真っ暗）
-    ImGui::ColorEdit3((std::string("環境光カラー##") + label).c_str(),
-                      &data_.ambientColor.x, ImGuiColorEditFlags_Float);
-    ImGui::DragFloat((std::string("環境光の強さ##") + label).c_str(),
-                     &data_.ambientIntensity, 0.005f, 0.0f, 2.0f, "%.3f");
-
-    ImGui::Dummy(ImVec2(0, 6));
-
-    if (lightingMode_ != 0) {
-      ImGui::DragFloat((std::string("光沢度(shininess)##") + label).c_str(),
-                       &shininess_, 0.5f, 0.0f, 256.0f, "%.1f");
-      ImGui::SameLine();
-      ImGui::TextDisabled("(0で鏡面なし)");
-    }
-  }
-
-#endif
 }
 
 } // namespace RC

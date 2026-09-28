@@ -25,8 +25,8 @@ struct Material
 {
     float4 color;                 // 発光色 (RGB) + 明度スケール (A)
     int lightingMode;             // 未使用
-    float shininess;              // ★伸長率 0..1 として流用
-    float environmentCoefficient; // ★経過秒数として流用
+    float shininess;              // 伸長率 0..1 として流用
+    float environmentCoefficient; // 経過秒数として流用
     int useNormalMap;             // 未使用
     int useRoughnessMap;          // 未使用
     float2 padding;

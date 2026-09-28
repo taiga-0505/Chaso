@@ -7,7 +7,8 @@
 #include "RenderCommon.h"
 #include "RenderContext.h"
 
-#include "Scene.h"
+#include "Common/SceneContext.h"
+#include "AppConfig.h" // SceneContext::app の画面サイズを参照する
 
 namespace RC {
 
@@ -123,10 +124,6 @@ void UnloadSprite(int spriteHandle) {
 
 void SetSpriteScreenSize(int spriteHandle, float w, float h) {
   GetRenderContext().Sprites().SetSize(spriteHandle, w, h);
-}
-
-void DrawImGui2D(int spriteHandle, const char *name) {
-  GetRenderContext().Sprites().DrawImGui(spriteHandle, name);
 }
 
 } // namespace RC

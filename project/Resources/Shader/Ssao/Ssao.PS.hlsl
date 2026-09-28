@@ -70,9 +70,9 @@ PixelShaderOutPut main(VertexShaderOutput input) {
     const float centerDepth = gDepthTexture.SampleLevel(gSamplerPoint, uv, 0);
 
     // 何も描かれていない（＝遠クリップ）画素は陰を付けない。
-    // ★ ここで return してはいけない。下で ddx/ddy を使うため、画素ごとに分岐すると
-    //    クアッド内でレーンが分かれて微分が未定義になり、空とのシルエット境界に
-    //    誤った AO の縁が出る。Caustics.PS.hlsl と同じく乗算マスクで無効化する。
+    // ここで return してはいけない。下で ddx/ddy を使うため、画素ごとに分岐すると
+    // クアッド内でレーンが分かれて微分が未定義になり、空とのシルエット境界に
+    // 誤った AO の縁が出る。Caustics.PS.hlsl と同じく乗算マスクで無効化する。
     const float sceneMask = step(centerDepth, 0.99999f);
 
     const float3 centerView = ReconstructViewPos(uv, centerDepth);

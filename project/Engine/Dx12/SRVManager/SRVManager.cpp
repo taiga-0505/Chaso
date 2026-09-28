@@ -31,7 +31,6 @@ SRVManager::Handle SRVManager::Allocate() {
     // 新規確保：今のUsedが確保されるindex
     idx = srvHeap_->Used();
     srvHeap_->AllocateCPU(1); // offset_ を進める（DescriptorHeapの基本動作）
-                              // :contentReference[oaicite:2]{index=2}
   }
 
   assert(idx < srvHeap_->Capacity());

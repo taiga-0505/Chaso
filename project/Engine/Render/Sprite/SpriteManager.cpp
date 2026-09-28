@@ -266,14 +266,6 @@ void SpriteManager::SetCamera(int handle, const Matrix4x4 &view,
   sp->SetCamera(view, proj);
 }
 
-void SpriteManager::DrawImGui(int handle, const char *name) {
-  auto *sp = Get(handle);
-  if (!sp) {
-    return;
-  }
-  sp->DrawImGui(name);
-}
-
 int SpriteManager::GetTexHandle(int handle) const {
   if (!IsValid(handle)) {
     return -1;

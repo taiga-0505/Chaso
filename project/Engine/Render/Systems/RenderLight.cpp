@@ -31,7 +31,6 @@ concept LightManager = requires(T & m, int h) {
   { m.Create() } -> std::same_as<int>;
   { m.Destroy(h) };
   { m.Get(h) };
-  { m.DrawImGui(h, (const char *)nullptr) };
   { m.GetActiveHandle() } -> std::same_as<int>;
   { m.SetActive(h) };
 };
@@ -102,13 +101,6 @@ template <LightManager T> int TGetActiveLightHandle(const T &mgr) {
   return h;
 }
 
-template <LightManager T> void TDrawImGuiLight(T &mgr, int handle, const char *name) {
-  if (handle < 0) {
-    handle = TGetActiveLightHandle(mgr);
-  }
-  mgr.DrawImGui(handle, name);
-}
-
 template <LightManager T> void TSetLightEnabled(T &mgr, int handle, bool enabled) {
   if (auto *p = mgr.Get(handle)) {
     p->SetEnabled(enabled);
@@ -174,10 +166,6 @@ DirectionalLightSource *GetDirectionalLightPtr(int lightHandle) {
   return GetRenderContext().DirLights().Get(lightHandle);
 }
 
-void DrawImGuiDirectionalLight(int lightHandle, const char *name) {
-  TDrawImGuiLight(GetRenderContext().DirLights(), lightHandle, name);
-}
-
 void SetDirectionalLightEnabled(int lightHandle, bool enabled) {
   TSetLightEnabled(GetRenderContext().DirLights(), lightHandle, enabled);
 }
@@ -241,10 +229,6 @@ PointLightSource *GetPointLightPtr(int pointLightHandle) {
   return GetRenderContext().PtLights().Get(pointLightHandle);
 }
 
-void DrawImGuiPointLight(int pointLightHandle, const char *name) {
-  TDrawImGuiLight(GetRenderContext().PtLights(), pointLightHandle, name);
-}
-
 void SetPointLightEnabled(int pointLightHandle, bool enabled) {
   TSetLightEnabled(GetRenderContext().PtLights(), pointLightHandle, enabled);
 }
@@ -306,10 +290,6 @@ int GetActiveSpotLightHandleAt(int index) {
 
 SpotLightSource *GetSpotLightPtr(int spotLightHandle) {
   return GetRenderContext().SpLights().Get(spotLightHandle);
-}
-
-void DrawImGuiSpotLight(int spotLightHandle, const char *name) {
-  TDrawImGuiLight(GetRenderContext().SpLights(), spotLightHandle, name);
 }
 
 void SetSpotLightEnabled(int spotLightHandle, bool enabled) {
@@ -393,12 +373,6 @@ AreaLightSource *GetAreaLightPtr(int areaLightHandle) {
   auto &ctx = GetRenderContext();
   if (!ctx.IsInitialized()) return nullptr;
   return ctx.ArLights().Get(areaLightHandle);
-}
-
-void DrawImGuiAreaLight(int areaLightHandle, const char *name) {
-  auto &ctx = GetRenderContext();
-  if (!ctx.IsInitialized()) return;
-  TDrawImGuiLight(ctx.ArLights(), areaLightHandle, name);
 }
 
 void SetAreaLightEnabled(int areaLightHandle, bool enabled) {

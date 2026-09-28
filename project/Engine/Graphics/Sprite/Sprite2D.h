@@ -115,10 +115,6 @@ public:
   /// @return ファイルパス文字列
   const std::string &GetFilePath() const { return filePath_; }
 
-  /// @brief ImGui を使用したデバッグ用 UI を表示する
-  /// @param name 表示名
-  void DrawImGui(const char *name);
-
 private:
   /// @struct CBW
   /// @brief 行列用定数バッファ管理構造体

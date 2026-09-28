@@ -4,13 +4,8 @@
 #include <mferror.h>
 #include <chrono>
 #include <filesystem>
+#include <cstdint>
 #include <format>
-#include "Common/EngineConfig.h"
-#if RC_ENABLE_IMGUI
-#include "imgui/imgui.h"
-#endif
-#include "Dx12/Dx12Core.h"
-#include <shellapi.h>
 
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfplat.lib")
@@ -134,7 +129,6 @@ bool VideoRecorder::Start(ID3D12Device* device, ID3D12CommandQueue* queue, UINT 
     device_->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, readbackBuffers_[0].allocator.Get(), nullptr, IID_PPV_ARGS(&commandList_));
     commandList_->Close();
 
-    rtStart_ = 0;
     frameCount_ = 0;
     currentBufferIndex_ = 0;
     isRecording_ = true;
@@ -224,53 +218,8 @@ void VideoRecorder::Stop() {
     TerminateMF();
     isRecording_ = false;
 
-    Log::Print("[VideoRecorder] Stopped recording. Saved to: " + latestPath_);
-
-    notify_.path = latestPath_;
-    notify_.timer = kNotifyDisplayTime;
-    notify_.active = true;
-}
-
-void VideoRecorder::DrawImGui(float deltaTime, Dx12Core* core) {
-#if RC_ENABLE_IMGUI
-    if (!core) return;
-
-    // --- 通知ポップアウト ---
-    if (notify_.active) {
-        notify_.timer -= deltaTime;
-        if (notify_.timer <= 0.0f) {
-            notify_.active = false;
-        }
-
-        float alpha = 1.0f;
-        if (notify_.timer < 1.0f) {
-            alpha = notify_.timer;
-        }
-
-        // ScreenCaptureのすぐ上に配置するか、同じ位置にするか
-        // ここでは少しずらして配置
-        ImGui::SetNextWindowPos(ImVec2(10, ImGui::GetIO().DisplaySize.y - 230), ImGuiCond_Always);
-        ImGui::SetNextWindowSize(ImVec2(220, 0));
-        ImGui::SetNextWindowBgAlpha(alpha * 0.7f);
-        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
-
-        ImGuiWindowFlags notifyFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-                                      ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-                                      ImGuiWindowFlags_NoNav;
-
-        if (ImGui::Begin("VideoNotify", nullptr, notifyFlags)) {
-            ImGui::Text("Video Saved!");
-            if (ImGui::Button("Open Video File", ImVec2(200, 30))) {
-                std::filesystem::path p(notify_.path);
-                std::wstring absPath = std::filesystem::absolute(p).wstring();
-                ShellExecuteW(NULL, NULL, absPath.c_str(), NULL, NULL, SW_SHOW);
-                notify_.active = false;
-            }
-        }
-        ImGui::End();
-        ImGui::PopStyleVar();
-    }
-#endif
+    // 保存完了の通知はログで行う（エディタのコンソールにも表示される）
+    Log::Print(std::format("[VideoRecorder] Video saved: {}", latestPath_));
 }
 
 void VideoRecorder::FlushBuffers() {

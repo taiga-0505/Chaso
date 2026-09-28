@@ -34,6 +34,18 @@ enum class RootSignatureType {
   WaveSimulationCS,   ///< 波のシミュレーションCS用
 };
 
+/// @brief Object3D 系ルートシグネチャのパラメータ番号
+/// @details ルートシグネチャの定義側と描画側のバインドで同じ番号を使うための定数。
+namespace Object3DRootParam {
+inline constexpr UINT kMaterial = 0;      ///< CBV b0 (PS) Material
+inline constexpr UINT kTransform = 1;     ///< CBV b0 (VS) Transform
+inline constexpr UINT kTexture = 2;       ///< SRV table t0 (PS) Texture
+inline constexpr UINT kLight = 3;         ///< CBV b1 (PS) DirectionalLight
+inline constexpr UINT kNormalMap = 9;     ///< SRV table t2 (PS) NormalMap
+inline constexpr UINT kRoughnessMap = 10; ///< SRV table t3 (PS) RoughnessMap
+inline constexpr UINT kSkinMatrices = 13; ///< SRV t1 (VS) SkinMatrices（Object3DSkin のみ）
+} // namespace Object3DRootParam
+
 /// @brief パイプライン構築時のオプション設定構造体
 struct GPipelineOptions {
   bool enableAlphaBlend = false;      ///< アルファブレンドを有効にするか
@@ -58,33 +70,6 @@ public:
 
   /// @brief 終了処理
   void Term();
-
-  /// @brief ルートシグネチャとPSOを構築する
-  /// @param inputElems 入力レイアウト定義の配列
-  /// @param elemCount 入力レイアウト定義の要素数
-  /// @param vs 頂点シェーダーのバイナリ
-  /// @param ps ピクセルシェーダーのバイナリ
-  /// @param rtvFmt レンダーターゲットのフォーマット
-  /// @param dsvFmt 深度ステンシルのフォーマット
-  /// @param cull カリングモード
-  /// @param fill フィルモード
-  void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
-             D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
-             DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
-             D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
-             D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
-
-  /// @brief ルートシグネチャとPSOを構築する（ID3DBlob 版）
-  void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
-             ID3DBlob *vs, ID3DBlob *ps, DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt,
-             D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
-             D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
-
-  /// @brief ルートシグネチャとPSOを構築する（IDxcBlob 版）
-  void Build(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
-             struct IDxcBlob *vs, struct IDxcBlob *ps, DXGI_FORMAT rtvFmt,
-             DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull = D3D12_CULL_MODE_BACK,
-             D3D12_FILL_MODE fill = D3D12_FILL_MODE_SOLID);
 
   /// @brief 拡張オプション付きでPSOを構築する
   /// @param inputElems 入力レイアウト
@@ -120,12 +105,6 @@ private:
   /// @brief ルートシグネチャを構築する内部関数
   void
   buildRootSignature_(RootSignatureType type = RootSignatureType::Object3D);
-
-  /// @brief PSOを構築する内部関数
-  void buildPSO_(const D3D12_INPUT_ELEMENT_DESC *inputElems, UINT elemCount,
-                 D3D12_SHADER_BYTECODE vs, D3D12_SHADER_BYTECODE ps,
-                 DXGI_FORMAT rtvFmt, DXGI_FORMAT dsvFmt, D3D12_CULL_MODE cull,
-                 D3D12_FILL_MODE fill);
 
 private:
   Microsoft::WRL::ComPtr<ID3D12Device> device_;      ///< デバイス

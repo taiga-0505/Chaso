@@ -1,5 +1,4 @@
 #include "SpotLightSource.h"
-#include "imgui/imgui.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -7,7 +6,6 @@
 namespace RC {
 
 static float DegToRad_(float deg) { return deg * 3.1415926535f / 180.0f; }
-static float RadToDeg_(float rad) { return rad * 180.0f / 3.1415926535f; }
 
 SpotLightSource::SpotLightSource() {
   data_.color = {1, 1, 1, 1};
@@ -40,49 +38,6 @@ void SpotLightSource::SetAngleRad(float rad) {
     out.intensity = 0.0f;
   }
   return out;
-}
-
-void SpotLightSource::DrawImGui(const char *name) {
-#if RC_ENABLE_IMGUI
-
-  std::string label = name ? std::string(name) : std::string("SpotLight");
-  if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-    return;
-  }
-
-  ImGui::Checkbox((std::string("有効##") + label).c_str(), &enabled_);
-
-  if (enabled_) {
-
-    ImGui::ColorEdit3((std::string("光カラー##") + label).c_str(),
-                      &data_.color.x, ImGuiColorEditFlags_Float);
-
-    ImGui::DragFloat3((std::string("位置##") + label).c_str(),
-                      &data_.position.x, 0.01f);
-
-    ImGui::DragFloat3((std::string("方向##") + label).c_str(),
-                      &data_.direction.x, 0.01f);
-
-    ImGui::DragFloat((std::string("強さ##") + label).c_str(), &data_.intensity,
-                     0.01f, 0.0f, 64.0f, "%.2f");
-
-    ImGui::DragFloat((std::string("距離(distance)##") + label).c_str(),
-                     &data_.distance, 0.05f, 0.0f, 500.0f, "%.2f");
-
-    ImGui::DragFloat((std::string("減衰(decay)##") + label).c_str(),
-                     &data_.decay, 0.05f, 0.0f, 32.0f, "%.2f");
-
-    // cosAngle から度数に戻して編集
-    float c = std::clamp(data_.cosAngle, -1.0f, 1.0f);
-    float angleDeg = RadToDeg_(std::acos(c));
-
-    if (ImGui::DragFloat((std::string("角度(度)##") + label).c_str(), &angleDeg,
-                         0.1f, 0.0f, 89.9f, "%.1f")) {
-      SetAngleDeg(angleDeg);
-    }
-  }
-
-#endif
 }
 
 } // namespace RC

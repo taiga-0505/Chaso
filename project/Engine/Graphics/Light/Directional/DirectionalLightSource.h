@@ -72,10 +72,6 @@ public:
   /// @return 光沢度
   float GetShininess() const { return shininess_; }
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param name UIに表示するラベル
-  void DrawImGui(const char *name = nullptr);
-
 private:
   DirectionalLight data_{}; ///< ライトパラメータ実体
   bool enabled_ = true;      ///< 有効フラグ

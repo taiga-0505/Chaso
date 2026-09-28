@@ -87,12 +87,4 @@ void SetSkyBoxColor(int skyboxHandle, const Vector4 &color) {
   ctx.SkyBoxes().SetColor(skyboxHandle, color);
 }
 
-void DrawSkyBoxImGui(int skyboxHandle, const char *name) {
-  auto &ctx = GetRenderContext();
-  auto *skybox = ctx.SkyBoxes().Get(skyboxHandle);
-  if (!skybox)
-    return;
-  skybox->DrawImGui(name);
-}
-
 } // namespace RC

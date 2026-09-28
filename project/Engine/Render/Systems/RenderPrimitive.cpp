@@ -6,12 +6,13 @@
 
 #include "RenderCommon.h"
 #include "RenderContext.h"
-#include "RenderQueue.h"
+#include "SortKey.h"
 
 #include "PipelineManager.h"
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
-#include "Scene.h"
+#include "Common/SceneContext.h"
+#include "AppConfig.h" // SceneContext::app の画面サイズを参照する
 #include "Common/Log/Log.h"
 #include <format>
 #include <cmath>
@@ -147,7 +148,7 @@ void DrawLine3D(const Vector3 &a, const Vector3 &b, const Vector4 &color,
   if (!prim) {
     return;
   }
-  // 以前は Overlay モードで depth を強制 false にしていましたが、引数を尊重するように変更
+  // Overlay モードでも depth は引数の指定に従う
   bool useDepth = depth;
   uint64_t sortKey = ctx.IsOverlayMode()
       ? SortKey::Make(SortKey::kLayerOverlay, 0, 0) : 0;

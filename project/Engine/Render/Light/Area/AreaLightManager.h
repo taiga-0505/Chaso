@@ -88,11 +88,6 @@ public:
   /// @brief CPU側のライト状態を GPU 定数バッファへ転送する（RenderContext が描画パスごとに 1 回呼ぶ）
   void SyncCB();
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param handle 対象のライトハンドル
-  /// @param name UIに表示するラベル
-  void DrawImGui(int handle, const char *name);
-
 private:
   /// @brief ライト管理用のスロット構造体
   struct Slot {

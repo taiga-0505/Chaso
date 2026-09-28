@@ -1,6 +1,6 @@
 #include "Skybox.h"
 #include "../../Render/RenderContext.h"
-#include "../../../Application/Game/Scene/Scene.h"
+#include "Common/SceneContext.h"
 #include "../../Dx12/Dx12Core.h"
 #include "../../Dx12/DeferredReleaseQueue/DeferredReleaseQueue.h"
 #include "Math/Math.h"
@@ -103,44 +103,6 @@ void Skybox::Draw(ID3D12GraphicsCommandList *cmdList, const Matrix4x4 &world) {
   cbWvp_.mapped->worldInverseTranspose = Transpose(Inverse(world));
 
   Draw(cmdList);
-}
-
-void Skybox::DrawImGui(const char *name) {
-#if RC_ENABLE_IMGUI
-
-  std::string label = name ? std::string(name) : std::string("Skybox");
-  if (!ImGui::CollapsingHeader(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-    return;
-  // ---- 表示ON/OFF ----
-  bool vis = Visible();
-  if (ImGui::Checkbox((std::string("表示##") + label).c_str(), &vis))
-    SetVisible(vis);
-
-  if (vis) {
-    // ---- Transform ----
-    ImGui::TextUnformatted("Transform");
-    ImGui::DragFloat3((std::string("スケール(x,y,z)##") + label).c_str(),
-                      &transform_.scale.x, 1.0f, 1.0f, 10000.0f, "%.1f");
-    ImGui::SliderAngle((std::string("回転Y##") + label).c_str(),
-                       &transform_.rotation.y);
-    if (ImGui::Button((std::string("Transformリセット##") + label).c_str())) {
-      transform_.translation = {0, 0, 0};
-      transform_.rotation = {0, 0, 0};
-      transform_.scale = {100, 100, 100};
-    }
-    ImGui::Dummy(ImVec2(0, 6));
-    // ---- Material（乗算カラー）----
-    ImGui::TextUnformatted("Material");
-    if (cbMat_.mapped) {
-      ImGui::ColorEdit4((std::string("カラー(乗算)##") + label).c_str(),
-                        &cbMat_.mapped->color.x, ImGuiColorEditFlags_Float);
-    } else {
-      ImGui::TextDisabled("Material CB not ready.");
-    }
-    ImGui::Dummy(ImVec2(0, 6));
-  }
-
-#endif
 }
 
 void Skybox::BuildBox_() {

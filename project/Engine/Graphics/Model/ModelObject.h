@@ -28,8 +28,8 @@ class FrameResource; // 前方宣言
 // - Textureは「override（SetTexture）」があればそれを優先。
 //   overrideが無ければ、materialIndexに応じてTextureManagerでロードして使う。
 //
-// ★ 内部的に ModelResource（GPUリソース管理）に委譲している。
-//    このクラスは Transform / 可視性 / ImGui / ライティング設定 を保持するラッパー。
+// 内部的に ModelResource（GPUリソース管理）に委譲している。
+// このクラスは Transform / 可視性 / ImGui / ライティング設定 を保持するラッパー。
 // ============================================================
 /// @class ModelObject
 /// @brief 共有モデルリソース（ModelMesh）を配置・管理するためのオブジェクトクラス
@@ -270,11 +270,6 @@ public:
                  const std::vector<Transform> &instances,
                  const RC::Vector4 &color,
                  RC::FrameResource &frame, bool worldOnly = false);
-
-  /// @brief ImGui を使用したデバッグ用 UI を表示する
-  /// @param name 表示名
-  /// @param showLightingUi ライティング設定を表示するか
-  void DrawImGui(const char *name, bool showLightingUi);
 
   /// @brief バッチ描画用のカーソルをリセットする
   void ResetBatchCursor() { resource_.ResetBatchCursor(); }

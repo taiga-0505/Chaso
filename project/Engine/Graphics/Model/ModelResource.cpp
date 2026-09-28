@@ -3,6 +3,7 @@
 #include "Texture/TextureManager/TextureManager.h"
 #include "SRVManager/SRVManager.h"
 #include "Common/Log/Log.h"
+#include "GraphicsPipeline/GraphicsPipeline.h" // Object3DRootParam
 #include <algorithm>
 #include <cassert>
 #include <cstring>
@@ -468,26 +469,26 @@ void ModelResource::DrawSkinned(ID3D12GraphicsCommandList *cmdList,
     cmdList->IASetIndexBuffer(&mesh_->IBV());
   }
 
-  // Material CB (slot 0, PS)
+  // Material CB (PS b0)
   cbMat_.mapped->useNormalMap = (normalMapSrv_.ptr != 0) ? 1 : 0;
   cbMat_.mapped->useRoughnessMap = (roughnessMapSrv_.ptr != 0) ? 1 : 0;
   cmdList->SetGraphicsRootConstantBufferView(
-      0, cbMat_.resource->GetGPUVirtualAddress());
+      Object3DRootParam::kMaterial, cbMat_.resource->GetGPUVirtualAddress());
 
-  // Light CB (slot 3, PS)
+  // Light CB (PS b1)
   const D3D12_GPU_VIRTUAL_ADDRESS lightAddr =
       (externalLightCBAddress_ != 0)
           ? externalLightCBAddress_
           : cbLight_.resource->GetGPUVirtualAddress();
-  cmdList->SetGraphicsRootConstantBufferView(3, lightAddr);
+  cmdList->SetGraphicsRootConstantBufferView(Object3DRootParam::kLight, lightAddr);
 
-  // 行列パレットをSRVとして転送 (slot 9, VS)
+  // 行列パレットをSRVとして転送 (VS t1)
   const uint32_t matCount = static_cast<uint32_t>(skinMatrices.size());
   const uint32_t matSize = matCount * static_cast<uint32_t>(sizeof(Matrix4x4));
   void *matMapped = nullptr;
   D3D12_GPU_VIRTUAL_ADDRESS matAddr = frame.AllocSRV(matSize, &matMapped);
   std::memcpy(matMapped, skinMatrices.data(), matSize);
-  cmdList->SetGraphicsRootShaderResourceView(9, matAddr);
+  cmdList->SetGraphicsRootShaderResourceView(Object3DRootParam::kSkinMatrices, matAddr);
 
   // スキニングモデルではnodeWorldは掛けない
   // （スキニング計算で既にスケルトン空間→ワールドはworldだけで十分）
@@ -501,13 +502,13 @@ void ModelResource::DrawSkinned(ID3D12GraphicsCommandList *cmdList,
     tm->World = world;
     tm->WVP = Multiply(world, Multiply(view, proj));
     tm->worldInverseTranspose = Transpose(Inverse(world));
-    cmdList->SetGraphicsRootConstantBufferView(1, addr);
+    cmdList->SetGraphicsRootConstantBufferView(Object3DRootParam::kTransform, addr);
 
     const D3D12_GPU_DESCRIPTOR_HANDLE mainSrv =
         (textureSrv_.ptr != 0) ? textureSrv_ : GetSrvForMaterial_(0);
-    cmdList->SetGraphicsRootDescriptorTable(2, mainSrv);
-    cmdList->SetGraphicsRootDescriptorTable(9, (normalMapSrv_.ptr != 0) ? normalMapSrv_ : mainSrv);
-    cmdList->SetGraphicsRootDescriptorTable(10, (roughnessMapSrv_.ptr != 0) ? roughnessMapSrv_ : mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kTexture, mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kNormalMap, (normalMapSrv_.ptr != 0) ? normalMapSrv_ : mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kRoughnessMap, (roughnessMapSrv_.ptr != 0) ? roughnessMapSrv_ : mainSrv);
 
     if (mesh_->HasIndexBuffer()) {
       cmdList->DrawIndexedInstanced(mesh_->IndexCount(), 1, 0, 0, 0);
@@ -528,14 +529,14 @@ void ModelResource::DrawSkinned(ID3D12GraphicsCommandList *cmdList,
     tm->World = world;
     tm->WVP = Multiply(world, Multiply(view, proj));
     tm->worldInverseTranspose = Transpose(Inverse(world));
-    cmdList->SetGraphicsRootConstantBufferView(1, addr);
+    cmdList->SetGraphicsRootConstantBufferView(Object3DRootParam::kTransform, addr);
 
     const D3D12_GPU_DESCRIPTOR_HANDLE mainSrv =
         (textureSrv_.ptr != 0) ? textureSrv_
                                : GetSrvForMaterial_(it.materialIndex);
-    cmdList->SetGraphicsRootDescriptorTable(2, mainSrv);
-    cmdList->SetGraphicsRootDescriptorTable(9, (normalMapSrv_.ptr != 0) ? normalMapSrv_ : mainSrv);
-    cmdList->SetGraphicsRootDescriptorTable(10, (roughnessMapSrv_.ptr != 0) ? roughnessMapSrv_ : mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kTexture, mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kNormalMap, (normalMapSrv_.ptr != 0) ? normalMapSrv_ : mainSrv);
+    cmdList->SetGraphicsRootDescriptorTable(Object3DRootParam::kRoughnessMap, (roughnessMapSrv_.ptr != 0) ? roughnessMapSrv_ : mainSrv);
 
     if (mesh_->HasIndexBuffer() && it.indexCount > 0) {
       cmdList->DrawIndexedInstanced(it.indexCount, 1, it.indexStart, 0, 0);

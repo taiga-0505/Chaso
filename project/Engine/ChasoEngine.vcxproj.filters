@@ -309,9 +309,6 @@
     <ClCompile Include="..\Engine\Graphics\Primitive\Primitive3D.cpp">
       <Filter>Graphics\Primitive</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Graphics\Primitive\PrimitiveObject.cpp">
-      <Filter>Graphics\Primitive</Filter>
-    </ClCompile>
     <ClCompile Include="..\Engine\Particle\ParticleManager.cpp">
       <Filter>Particle</Filter>
     </ClCompile>
@@ -450,9 +447,6 @@
     <ClCompile Include="..\Engine\Render\Systems\RenderSkybox.cpp">
       <Filter>Render\Systems</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Render\Systems\RenderQueue.cpp">
-      <Filter>Render\Systems</Filter>
-    </ClCompile>
     <ClCompile Include="..\Engine\Render\Systems\FrameResource.cpp">
       <Filter>Render\Systems</Filter>
     </ClCompile>
@@ -518,6 +512,9 @@
     <ClInclude Include="..\Engine\Common\struct.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Common\SceneContext.h">
+      <Filter>Common</Filter>
+    </ClInclude>
     <ClInclude Include="..\Engine\Dx12\CommandContext\CommandContext.h">
       <Filter>Dx12\CommandContext</Filter>
     </ClInclude>
@@ -525,9 +522,6 @@
       <Filter>Dx12\DepthStencil</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Dx12\DescriptorHeap\DescriptorHeap.h">
-      <Filter>Dx12\DescriptorHeap</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Dx12\DescriptorHeap\DescriptorHelpers.h">
       <Filter>Dx12\DescriptorHeap</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Dx12\Device\Device.h">
@@ -588,9 +582,6 @@
       <Filter>Graphics\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Graphics\Primitive\Primitive3D.h">
-      <Filter>Graphics\Primitive</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Engine\Graphics\Primitive\PrimitiveObject.h">
       <Filter>Graphics\Primitive</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Particle\ParticleManager.h">
@@ -701,7 +692,7 @@
     <ClInclude Include="..\Engine\Render\RenderContext.h">
       <Filter>Render</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Render\RenderQueue.h">
+    <ClInclude Include="..\Engine\Render\SortKey.h">
       <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\Render\FrameResource.h">

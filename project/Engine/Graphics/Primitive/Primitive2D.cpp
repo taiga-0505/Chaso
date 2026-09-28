@@ -9,10 +9,9 @@ int sWhiteTexHandle = -1;
 D3D12_GPU_DESCRIPTOR_HANDLE GetWhiteSrv_() {
   if (sWhiteTexHandle < 0) {
     sWhiteTexHandle = RC::LoadTex("Resources/white1x1.png");
-    // LoadTexはRC::Init前だと -1 を返す :contentReference[oaicite:2]{index=2}
+    // LoadTexはRC::Init前だと -1 を返す
   }
   return RC::GetSrv(sWhiteTexHandle); // 失敗時は {0} が返る
-                                      // :contentReference[oaicite:3]{index=3}
 }
 } // namespace
 
@@ -59,7 +58,7 @@ void Primitive2D::Initialize(ID3D12Device *device, float screenW,
 
   cbStride_ = Align256((uint32_t)sizeof(Params));
 
-  // ★リング分まとめて確保
+  // リング分まとめて確保
   // フレーム領域 × kFrameCount。前のフレームを GPU が読んでいる間に上書きしないため
   cbParamsRes_ = CreateBufferResource(device_.Get(), cbStride_ * kMaxDrawPerFrame * kFrameCount,
                                       L"Primitive2D::cbParamsRes_");
@@ -171,7 +170,7 @@ void Primitive2D::Draw(ID3D12GraphicsCommandList *cmdList) {
       (cbCursor_ < kMaxDrawPerFrame) ? cbCursor_++ : (cbCursor_ = 1, 0);
   const uint32_t idx = frameSlot_ * kMaxDrawPerFrame + local;
 
-  // ★Drawごとに別スロットへ書く
+  // Drawごとに別スロットへ書く
   std::memcpy(cbParamsMap_ + idx * cbStride_, &paramsCPU_, sizeof(Params));
 
   const D3D12_GPU_VIRTUAL_ADDRESS gpuAddr =

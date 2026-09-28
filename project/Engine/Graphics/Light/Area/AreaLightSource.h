@@ -75,10 +75,6 @@ public:
   /// @return true なら両面
   bool IsTwoSided() const { return data_.twoSided != 0; }
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param name UIに表示するラベル
-  void DrawImGui(const char *name = nullptr);
-
   // --------------------------------------------------------------------------
   // 影（全方位に光る光源なので、真下向きの広角シャドウ 1 枚で遮蔽を判定する。
   //   シェーダの SampleOmniShadowDown を参照）

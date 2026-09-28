@@ -4,7 +4,7 @@
 #include "Mesh/MeshGenerator.h"
 #include "function/function.h"
 #include "RenderInteractiveWater.h"
-#include "../../Application/Game/Scene/Scene.h"
+#include "Common/SceneContext.h"
 #include "../Dx12/Dx12Core.h"
 
 namespace RC {

@@ -5,8 +5,7 @@
 #include <string>
 
 void ImGuiManager::reserveSrvSlotForImGui_(Dx12Core &core) {
-  core.SRV().AllocateCPU(
-      1); // スロット0を確保（以降は1〜） :contentReference[oaicite:5]{index=5}
+  core.SRV().AllocateCPU(1); // スロット0を確保（以降は1〜）
 }
 
 void ImGuiManager::Init(HWND hwnd, Dx12Core &core, bool enableDocking, float jpFontSize,

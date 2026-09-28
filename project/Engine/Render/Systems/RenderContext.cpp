@@ -5,7 +5,8 @@
 #include "PipelineManager.h"
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
-#include "Scene.h"
+#include "Common/SceneContext.h"
+#include "AppConfig.h" // SceneContext::app の画面サイズを参照する
 #include "Graphics/PostProcess/PostProcess.h"
 #include "Graphics/Texture/RenderTexture/RenderTexture.h" // マスクRT（unique_ptr の実体化に必要）
 #include "RenderCommon.h"

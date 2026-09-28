@@ -11,7 +11,7 @@ struct Material
     float4x4 uvTransform; // UV変換行列
 };
 
-// ★ b0 にする！（cbMat_ がバインドされてるレジスタ）
+// b0: cbMat_ がバインドされるレジスタ
 ConstantBuffer<Material> gMaterial : register(b0);
 
 Texture2D gTexture : register(t0);

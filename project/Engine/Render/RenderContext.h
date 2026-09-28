@@ -7,8 +7,8 @@
 // RenderCommon.cpp が唯一のインスタンスを所有し、各サブモジュール
 // (RenderModel.cpp 等) は GetRenderContext() 経由で参照する。
 //
-// ★ このヘッダーをシーン側 (#include "RenderCommon.h" のみ) が直接
-//    include することはない。
+// このヘッダーをシーン側 (#include "RenderCommon.h" のみ) が直接
+// include することはない。
 // ============================================================================
 
 #include <d3d12.h>
@@ -20,7 +20,7 @@
 #include <future>
 #include <mutex>
 
-#include "RenderQueue.h"
+#include "SortKey.h"
 #include "FrameResource.h"
 #include "Dx12/ShadowMap/ShadowMap.h"
 

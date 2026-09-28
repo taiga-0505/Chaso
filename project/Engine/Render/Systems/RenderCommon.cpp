@@ -25,7 +25,7 @@
 #include "Primitive/Primitive2D.h"
 #include "Primitive/Primitive3D.h"
 #include "Graphics/PostProcess/PostProcess.h"
-#include "Scene.h"
+#include "Common/SceneContext.h"
 #include "imgui/imgui.h"
 #include "Common/EngineConfig.h" // Added for RC_ENABLE_IMGUI
 #include "Common/Log/Log.h"

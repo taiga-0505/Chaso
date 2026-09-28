@@ -33,30 +33,14 @@ public:
     /// @brief 現在録画中かどうか
     bool IsRecording() const { return isRecording_; }
 
-    /// @brief 最新の保存パスを取得
-    const std::string& GetLatestRecordPath() const { return latestPath_; }
-    void ClearLatestRecordPath() { latestPath_.clear(); }
-
-    /// @brief 通知UIの表示時間（秒）
-    static constexpr float kNotifyDisplayTime = 3.0f;
-
-    /// @brief ImGuiの描画（録画ボタンや通知UI等）
-    void DrawImGui(float deltaTime, class Dx12Core* core);
-
 private:
-    struct NotifyData {
-        std::string path;
-        float timer = 0.0f;
-        bool active = false;
-    };
-    NotifyData notify_;
     bool InitializeMF();
     void TerminateMF();
     bool SetupSinkWriter(const std::wstring& path, UINT width, UINT height, UINT fps);
     void FlushBuffers();
 
     bool isRecording_ = false;
-    std::string latestPath_;
+    std::string latestPath_; ///< 録画中ファイルの保存先（停止時にログへ出す）
 
     Microsoft::WRL::ComPtr<ID3D12Device> device_;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue_;
@@ -64,7 +48,6 @@ private:
     // Media Foundation
     Microsoft::WRL::ComPtr<IMFSinkWriter> sinkWriter_;
     DWORD streamIndex_ = 0;
-    UINT64 rtStart_ = 0;
     UINT64 frameCount_ = 0;
     UINT videoFps_ = 60;
     UINT videoWidth_ = 0;

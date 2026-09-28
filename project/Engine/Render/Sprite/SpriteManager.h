@@ -116,11 +116,6 @@ public:
   /// @param proj プロジェクション行列
   void SetCamera(int handle, const Matrix4x4 &view, const Matrix4x4 &proj);
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param handle スプライトハンドル
-  /// @param name UIに表示するラベル
-  void DrawImGui(int handle, const char *name);
-
   /// @brief スプライトが参照しているテクスチャのハンドルを取得する
   /// @param handle スプライトハンドル
   /// @return テクスチャハンドル（無効なら -1）

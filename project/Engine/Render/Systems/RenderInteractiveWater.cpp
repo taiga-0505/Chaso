@@ -4,7 +4,7 @@
 #include "Dx12/PipelineManager.h"
 #include "Dx12/SRVManager/SRVManager.h"
 #include "Dx12/Dx12Core.h" // GetSRVManager 等が取れると仮定
-#include "Scene.h"
+#include "Common/SceneContext.h"
 #include "Common/Log/Log.h"
 #include "Common/function/function.h"
 #include <algorithm>

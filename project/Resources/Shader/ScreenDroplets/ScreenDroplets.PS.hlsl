@@ -54,7 +54,7 @@ float4 ComputeDropletLayer(float2 uv, float colScale, float layerSpeed, float ti
     float colOffset = Hash21(float2(colIndex * 7.1f, 19.3f)) * 100.0f;
     
     // 【上下方向スクロールの是正】
-    // - timeVal * dropSpeed とすることで、speed > 0 なら下へ滴り、speed < 0 なら上へ昇る！
+    // - timeVal * dropSpeed とすることで、speed > 0 なら下へ滴り、speed < 0 なら上へ昇る
     float scrollY = (uv.y * colScale) - timeVal * dropSpeed + colOffset;
     
     // レーン内の各セルの縦ID

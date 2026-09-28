@@ -109,10 +109,6 @@ public:
   /// @return GPU転送用データ
   ::PointLight DataForGPU() const;
 
-  /// @brief ImGuiによるパラメータ編集UIを表示
-  /// @param name UIに表示するラベル
-  void DrawImGui(const char *name = nullptr);
-
 private:
   bool enabled_ = true; ///< 有効フラグ
   bool castShadow_ = true;   ///< 影を落とすか（シーン側が影タイルを割り当てる対象になる）

@@ -11,12 +11,12 @@
 // 浮力・着水判定・水しぶきなど「水面と物体の関係」を扱うには
 // 同じ式を CPU 側にも持つ必要がある。
 //
-// ★ここは Water.VS.hlsl と式を一致させること。
-//   片方だけ直すと、見た目の水面と当たり判定の水面がズレる。
-//   対応関係：
-//     GetWaveDef()        -> WaterSurface::GetWave()
-//     AccumulateGerstner()-> WaterSurface::Accumulate()
-//     AccumulateReflection() -> WaterSurface::AccumulateReflection()
+// ここは Water.VS.hlsl と式を一致させること。
+// 片方だけ直すと、見た目の水面と当たり判定の水面がズレる。
+// 対応関係：
+//   GetWaveDef()        -> WaterSurface::GetWave()
+//   AccumulateGerstner()-> WaterSurface::Accumulate()
+//   AccumulateReflection() -> WaterSurface::AccumulateReflection()
 //
 // シェーダ側にある gInteractiveWave（弾着の波紋テクスチャ）は GPU 上にしか
 // 無いためここでは無視する。振幅が小さいディテールなので浮力には影響しない。
