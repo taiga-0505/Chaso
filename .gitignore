@@ -338,3 +338,6 @@ project/externals/**/*.lib
 
 # ステージ進行のセーブデータ（StageProgress）
 project/StageProgress.json
+
+# Engine design notes (local only)
+EngineNotes/
