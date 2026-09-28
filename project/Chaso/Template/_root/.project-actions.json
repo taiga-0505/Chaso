@@ -55,6 +55,12 @@
       "color": "#98c379"
     },
     {
+      "text": "$(github) GitHub公開",
+      "command": "powershell -ExecutionPolicy Bypass -File project/Chaso/scripts/publish-github.ps1",
+      "tooltip": "このリポジトリを GitHub に作成して push します（origin 設定済みなら push だけ）",
+      "color": "#98c379"
+    },
+    {
       "text": "$(trash) ログ削除",
       "command": "powershell -ExecutionPolicy Bypass -File scripts/build/delete_with_confirm.ps1 -TargetFolder \"logs\" -TargetName \"ログ\"",
       "tooltip": "logsフォルダの中身をすべて削除します",

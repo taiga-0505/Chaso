@@ -60,6 +60,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 | やりたいこと | コマンド |
 |---|---|
 | 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame`（`D:\production\MyGame` に作る。引数なしなら名前を聞かれる。場所を変えるなら `-Dest`） |
+| 作ったゲームを GitHub に公開（初回 push） | `.\project\Chaso\scripts\publish-github.ps1`（gh があれば自動作成、無ければ URL を聞く） |
 | リソースを手動で同期する（通常はビルド前に自動） | `.\project\Chaso\scripts\sync-resources.ps1` |
 | ゲーム中にエンジンを直した → ChasoEngine へ反映 | `.\project\Chaso\scripts\engine-push.ps1` |
 | ChasoEngine の更新を取り込む | `.\project\Chaso\scripts\engine-pull.ps1` |
@@ -70,7 +71,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
   ChasoEngine を単体で clone しても Visual Studio では開けない（sln はゲーム側にある）。
 
 VS Code の Project Actions（`.project-actions.json`）にも同じボタンがある:
-「エンジン反映」「エンジン取込」「リソース同期」「新規ゲーム」。新規ゲームにもこのボタン設定と `scripts/build/` が付いてくる。
+「エンジン反映」「エンジン取込」「リソース同期」「新規ゲーム」「GitHub公開」。新規ゲームにもこのボタン設定と `scripts/build/` が付いてくる。
 
 ## 手動で同じことをする場合
 
