@@ -4,8 +4,8 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
-#include "Application/Framework/App.h"
-#include "Application/Game/Framework/GameSettings.h"
+#include "Framework/App.h"
+#include "Game/Framework/GameSettings.h"
 #include "Scene.h"
 
 #if RC_ENABLE_IMGUI

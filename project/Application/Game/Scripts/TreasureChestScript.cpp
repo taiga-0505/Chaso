@@ -11,7 +11,7 @@
 #include "RenderCommon.h"
 #include "Scene.h"
 #include "Common/Log/Log.h"
-#include "Application/Game/Framework/GameSession.h"
+#include "Game/Framework/GameSession.h"
 
 #include <cmath>
 #include <format>

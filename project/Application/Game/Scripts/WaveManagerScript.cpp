@@ -3,7 +3,7 @@
 #include "Scene.h"
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
-#include "Application/Framework/App.h"
+#include "Framework/App.h"
 #include "Common/Log/Log.h"
 
 #if RC_ENABLE_IMGUI

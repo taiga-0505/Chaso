@@ -3,7 +3,7 @@
 #include "ECS/TransformComponent.h"
 #include "Common/Log/Log.h"
 #include "Scene.h"
-#include "Application/Game/Framework/WaterCameraFx.h"
+#include "Game/Framework/WaterCameraFx.h"
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"

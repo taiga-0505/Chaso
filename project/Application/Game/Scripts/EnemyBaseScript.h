@@ -21,7 +21,7 @@
 #include "ECS/CameraComponent.h"
 #include "ECS/ColliderComponent.h"
 #include "Engine/Render/RenderContext.h"
-#include "Application/Game/Framework/GameSession.h"
+#include "Game/Framework/GameSession.h"
 
 
 /// @brief Base class for enemies handling HP, damage, and death state

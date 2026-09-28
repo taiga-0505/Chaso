@@ -1,0 +1,7 @@
+{
+    "fullscreen": false,
+    "height": 720,
+    "width": 1280,
+    "title": "NewGame",
+    "bootScene": "Title"
+}

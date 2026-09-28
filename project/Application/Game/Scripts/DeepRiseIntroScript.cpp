@@ -9,8 +9,8 @@
 #include "Common/Log/Log.h"
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
-#include "Application/Framework/App.h"
-#include "Application/Game/Framework/GameModeBase.h"
+#include "Framework/App.h"
+#include "Game/Framework/GameModeBase.h"
 #include "Scene.h"
 
 #if RC_ENABLE_IMGUI

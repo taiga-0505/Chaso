@@ -123,7 +123,7 @@ Phase 2.1 の診断とユーザーの希望に基づき、ログコードを修�
 - **【追加の必須タスク】** さらに、開発効率化のための以下の3つのタスクと、それらを呼び出すスクリプト(`scripts/build/`内)も作成して `tasks.json` に登録すること：
   1. `Clean & Full Build`: キャッシュ（`.vs`, `obj`, `bin`, `pso_cache.bin`等）を強制削除してから `build_and_run.ps1` を呼ぶタスク。
   2. `Format Code`: `clang-format` を呼び出してソースを自動整形するタスク。
-  3. `Compile Shaders Only`: `dxc.exe` を使用して `project/Resources/Shader/` 内の `.hlsl` を事前コンパイルするタスク。
+  3. `Compile Shaders Only`: `dxc.exe` を使用して `project/Chaso/Resources/Shader/` 内の `.hlsl` を事前コンパイルするタスク。
 
 ### Step 3.4: LSP連携とAI補完環境の整備 (compile_commands.json)
 

@@ -9,10 +9,14 @@ $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Write-Host "🧹 クリーンビルドを開始します..." -ForegroundColor Cyan
 
 # キャッシュファイルの削除
-$psoCachePath = Join-Path $ProjectRoot "project\Resources\Shader\pso_cache.bin"
-if (Test-Path $psoCachePath) {
-    Remove-Item -Force $psoCachePath
-    Write-Host "🗑️  削除完了: pso_cache.bin" -ForegroundColor Yellow
+# pso_cache.bin はゲーム側 Resources/Shader に書き出される（旧配置の Chaso 側も念のため消す）
+foreach ($psoCachePath in @(
+    (Join-Path $ProjectRoot "project\Resources\Shader\pso_cache.bin"),
+    (Join-Path $ProjectRoot "project\Chaso\Resources\Shader\pso_cache.bin"))) {
+    if (Test-Path $psoCachePath) {
+        Remove-Item -Force $psoCachePath
+        Write-Host "🗑️  削除完了: $psoCachePath" -ForegroundColor Yellow
+    }
 }
 
 $vsFolder = Join-Path $ProjectRoot ".vs"

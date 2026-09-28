@@ -85,36 +85,37 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 ## ディレクトリ構成 (Folder Structure)
 
-### Engine (`project/Engine/`)
+エンジン本体は **[ChasoEngine](https://github.com/taiga-0505/ChasoEngine)** リポジトリで管理し、
+`project/Chaso/` に **git subtree** として取り込んでいる。同期の手順は [project/Chaso/README.md](project/Chaso/README.md) を参照。
+
+```
+project/
+  chaso.sln, main.cpp, AppConfig.json      ← ゲーム側
+  Application/ChasoApp.vcxproj             ← ゲーム側
+  Application/Game/Scripts/                ← ゲーム側（スクリプト）
+  Resources/                               ← ゲーム側（モデル・音・シーン JSON など）
+  Chaso/                                   ← エンジン（ChasoEngine の subtree）
+```
+
+### エンジン (`project/Chaso/`)
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
-| **[Dx12/](project/Engine/Dx12/)** | デバイス、スワップチェーン、パイプライン、汎用 ComputeShader 等のコアラッパー |
-| **[Graphics/](project/Engine/Graphics/)** | モデル、スプライト、ライト、エフェクト等の描画オブジェクトの実装 |
-| **[Render/](project/Engine/Render/)** | モジュール化された描画クラス（Model/Sprite/Light等）とコンテキスト管理 |
-| **[ECS/](project/Engine/ECS/)** | Entity-Component-System（Entity, IComponent, Transform, Light, Renderer等） |
-| **[Audio/](project/Engine/Audio/)** | サウンド再生（Sound/BGM/SE）の制御と管理 |
-| **[Particle/](project/Engine/Particle/)** | パーティクル生成・更新・計算ロジック（GPU Particle対応） |
-| **[Camera/](project/Engine/Camera/)** | カメラの管理と変換行列の計算 |
-| **[Window/](project/Engine/Window/)** | Win32ウィンドウ管理、メッセージループ処理 |
-| **[Input/](project/Engine/Input/)** | キーボード、マウス、コントローラー別の入力管理 |
-| **[Common/](project/Engine/Common/)** | 数学ライブラリ、ログ出力、エンジン共通の設定と構造体 |
-| **[ImGuiManager/](project/Engine/ImGuiManager/)** | ImGuiの初期化・描画フローとの統合 |
+| **[Engine/](project/Chaso/Engine/)** | エンジンコア（Dx12 / Graphics / Render / ECS / Audio / Particle / Camera / Window / Input / Common / ImGuiManager） |
+| **[Externals/](project/Chaso/Externals/)** | 外部ライブラリ (Assimp / DirectXTex / ImGui / curl / nlohmann) |
+| **[Framework/](project/Chaso/Framework/)** | アプリケーション基盤 (`App`) とコンフィグ管理 |
+| **[Editor/](project/Chaso/Editor/)** | エディタUI管理（Hierarchy / Inspector / Viewport パネル） |
+| **[Game/](project/Chaso/Game/)** | `Game` / `Scene` / `SceneManager` / `DataDrivenScene` / `Fade` とゲーム基盤 (`Framework/`) |
+| **[Resources/](project/Chaso/Resources/)** | エンジンが必要とするリソース（Shader / icons / fonts / noise / Particle / Template） |
+| **[Template/](project/Chaso/Template/)** | 新しいゲームを作るときのひな形 |
+| **[scripts/](project/Chaso/scripts/)** | `engine-push.ps1` / `engine-pull.ps1` / `new-game.ps1` |
 
-### Application (`project/Application/`)
+### ゲーム (`project/`)
 
 | ディレクトリ | 役割 |
 | :--- | :--- |
-| **[Framework/](project/Application/Framework/)** | アプリケーション基盤 (`App`) とコンフィグ管理 |
-| **[Editor/](project/Application/Editor/)** | エディタUI管理（Hierarchy / Inspector / Viewport パネル） |
-| **[Game/](project/Application/Game/)** | ゲームロジック（Player・Scene・MapChip・Goal・Coin 等） |
-
-### その他
-
-| ディレクトリ | 役割 |
-| :--- | :--- |
-| **[Externals/](project/Externals/)** | 外部ライブラリ (Assimp / DirectXTex / ImGui / curl / nlohmann) |
-| **[Resources/](project/Resources/)** | テクスチャ、モデル、シェーダ等のリソースファイル（`Shader/Compute/` に CS シェーダ） |
+| **[Application/Game/Scripts/](project/Application/Game/Scripts/)** | ゲームロジック（Player・Enemy・UI などの NativeScript） |
+| **[Resources/](project/Resources/)** | ゲームのリソース（モデル・音・シーン JSON・UI など）。エンジン側と同名のファイルを置くと上書きできる |
 
 ## ビルド方法 (Build)
 

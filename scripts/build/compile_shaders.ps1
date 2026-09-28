@@ -1,6 +1,6 @@
 ﻿$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$ShaderDir = Join-Path $ProjectRoot "project\Resources\Shader"
+$ShaderDir = Join-Path $ProjectRoot "project\Chaso\Resources\Shader"
 
 Write-Host "🎨 シェーダーのコンパイルを開始します..." -ForegroundColor Cyan
 

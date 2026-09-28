@@ -1,5 +1,7 @@
 {
     "fullscreen": false,
     "height": 720,
-    "width": 1280
+    "width": 1280,
+    "title": "LE3B_03_オオシマ_タイガ_水天の射手",
+    "bootScene": "Title"
 }

@@ -5,7 +5,7 @@
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
 #include "Common/Math/MathUtils.h"
-#include "Application/Framework/App.h"
+#include "Framework/App.h"
 #include "Common/Log/Log.h"
 
 #if RC_ENABLE_IMGUI
@@ -23,11 +23,11 @@
 #include "ECS/WaterComponent.h"
 #include "ECS/LightComponent.h"
 #include "Scene.h"
-#include "Application/Game/Framework/GameSession.h"
-#include "Application/Game/Framework/GameSettings.h"
-#include "Application/Game/Framework/StageProgress.h"
-#include "Application/Game/Framework/UnderwaterLook.h"
-#include "Application/Game/Framework/InkScreenFx.h"
+#include "Game/Framework/GameSession.h"
+#include "Game/Framework/GameSettings.h"
+#include "Game/Framework/StageProgress.h"
+#include "Game/Framework/UnderwaterLook.h"
+#include "Game/Framework/InkScreenFx.h"
 #include <algorithm>
 #include <utility>
 #include <cmath>

@@ -4,7 +4,7 @@
 #include "ECS/TransformComponent.h"
 #include "ECS/WaterComponent.h"
 #include "ECS/CameraComponent.h"
-#include "Application/Game/Framework/WaterCameraFx.h"
+#include "Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
 
 #if RC_ENABLE_IMGUI

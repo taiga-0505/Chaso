@@ -6,7 +6,7 @@
 #include "Input/Input.h"
 #include "Scene.h"
 #include "RenderCommon.h"
-#include "Application/Game/Framework/GameSession.h"
+#include "Game/Framework/GameSession.h"
 #include <vector>
 #include <string>
 #include <random>

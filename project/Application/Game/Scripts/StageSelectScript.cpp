@@ -4,10 +4,10 @@
 #include "Input/Input.h"
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
-#include "Application/Framework/App.h"
-#include "Application/Game/Framework/StageProgress.h"
-#include "Application/Game/Framework/UnderwaterLook.h"
-#include "Application/Game/Framework/WaterCameraFx.h"
+#include "Framework/App.h"
+#include "Game/Framework/StageProgress.h"
+#include "Game/Framework/UnderwaterLook.h"
+#include "Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
 
 #if RC_ENABLE_IMGUI
