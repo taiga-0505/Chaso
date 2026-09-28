@@ -59,7 +59,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 
 | やりたいこと | コマンド |
 |---|---|
-| 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame -Dest D:\`（引数なしなら名前を聞かれ、今のリポジトリと同じ階層に作る） |
+| 新しいゲームを作る | `.\project\Chaso\scripts\new-game.ps1 -Name MyGame`（`D:\production\MyGame` に作る。引数なしなら名前を聞かれる。場所を変えるなら `-Dest`） |
 | リソースを手動で同期する（通常はビルド前に自動） | `.\project\Chaso\scripts\sync-resources.ps1` |
 | ゲーム中にエンジンを直した → ChasoEngine へ反映 | `.\project\Chaso\scripts\engine-push.ps1` |
 | ChasoEngine の更新を取り込む | `.\project\Chaso\scripts\engine-pull.ps1` |

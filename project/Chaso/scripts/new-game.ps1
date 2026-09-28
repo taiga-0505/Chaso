@@ -19,11 +19,11 @@
 
 .EXAMPLE
   .\project\Chaso\scripts\new-game.ps1 -Name MyNewGame -Dest D:\
-  .\project\Chaso\scripts\new-game.ps1            # 名前を聞かれる。作成先は今のリポジトリと同じ階層
+  .\project\Chaso\scripts\new-game.ps1            # 名前を聞かれる。作成先は D:\production
 #>
 param(
   [string]$Name,
-  [string]$Dest,
+  [string]$Dest = "D:\production",
   [string]$Remote = "https://github.com/taiga-0505/ChasoEngine.git",
   [string]$Branch = "main"
 )
@@ -33,11 +33,7 @@ if (-not $Name) {
   $Name = Read-Host "新しいゲームの名前（リポジトリ名）"
   if (-not $Name) { throw "名前が空です" }
 }
-if (-not $Dest) {
-  # 既定: 今いる git リポジトリの親フォルダ（例: D:\Chaso で実行 → D:\）
-  $here = git rev-parse --show-toplevel 2>$null
-  $Dest = if ($here) { Split-Path -Parent $here } else { (Get-Location).Path }
-}
+if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest | Out-Null }
 
 $target = Join-Path $Dest $Name
 if (Test-Path $target) { throw "$target は既に存在します" }

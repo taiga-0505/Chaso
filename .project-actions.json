@@ -51,7 +51,7 @@
     {
       "text": "$(new-folder) 新規ゲーム",
       "command": "powershell -ExecutionPolicy Bypass -File project/Chaso/scripts/new-game.ps1",
-      "tooltip": "ChasoEngine を使った新しいゲームリポジトリを作成します（ゲーム名を聞かれます。作成先はこのリポジトリと同じ階層）",
+      "tooltip": "ChasoEngine を使った新しいゲームリポジトリを D:\\production\\<名前> に作成します（ゲーム名を聞かれます）",
       "color": "#98c379"
     },
     {
