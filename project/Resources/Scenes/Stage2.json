@@ -13319,6 +13319,93 @@
       "active": true,
       "components": [
         {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 1.4,
+                "count": 1,
+                "drawGizmo": true,
+                "enemyName": "WaveBird",
+                "enemyParams": {
+                  "maxHp": 2,
+                  "detectDistance": 90.0,
+                  "preferredDistance": 22.0,
+                  "sideOffset": 7.0,
+                  "flyHeight": 7.0,
+                  "fireInterval": 3.2,
+                  "windupDuration": 0.75,
+                  "featherCount": 5,
+                  "featherSpreadDeg": 9.0,
+                  "featherSpeed": 17.0,
+                  "featherDamage": 1,
+                  "ceilingY": 10.5
+                },
+                "enemyScale": [
+                  0.45,
+                  0.4,
+                  0.95
+                ],
+                "enemyScript": "BirdEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.97,
+                  0.97,
+                  0.95,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 1.5,
+                "spreadRadius": 0.0,
+                "startDelay": 1.8,
+                "waveId": 1,
+                "waveManagerName": "WaveManager"
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              -10,
+              9.5,
+              166
+            ],
+            "rotation": [
+              0.0,
+              3.141592653589793,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 7269776332384435377,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_1_bird_7",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 1,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
           "type": "ColliderComponent",
           "enabled": true,
           "data": {

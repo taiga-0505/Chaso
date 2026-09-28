@@ -5772,6 +5772,273 @@
       "active": true,
       "components": [
         {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 1.4,
+                "count": 1,
+                "drawGizmo": true,
+                "enemyName": "WaveBird",
+                "enemyParams": {
+                  "maxHp": 2,
+                  "detectDistance": 90.0,
+                  "preferredDistance": 22.0,
+                  "sideOffset": 7.0,
+                  "flyHeight": 7.0,
+                  "fireInterval": 3.2,
+                  "windupDuration": 0.75,
+                  "featherCount": 5,
+                  "featherSpreadDeg": 9.0,
+                  "featherSpeed": 17.0,
+                  "featherDamage": 1
+                },
+                "enemyScale": [
+                  0.45,
+                  0.4,
+                  0.95
+                ],
+                "enemyScript": "BirdEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.97,
+                  0.97,
+                  0.95,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 1.5,
+                "spreadRadius": 0.0,
+                "startDelay": 2.5,
+                "waveId": 1,
+                "waveManagerName": "WaveManager",
+                "aheadDistance": 55.0,
+                "aheadSideStep": 9.0,
+                "spawnAheadOfPlayer": true
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              12,
+              880
+            ],
+            "rotation": [
+              0.0,
+              3.141592653589793,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 1974047401231361084,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_1_bird_10",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 1,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 1.4,
+                "count": 2,
+                "drawGizmo": true,
+                "enemyName": "WaveBird",
+                "enemyParams": {
+                  "maxHp": 2,
+                  "detectDistance": 90.0,
+                  "preferredDistance": 22.0,
+                  "sideOffset": 7.0,
+                  "flyHeight": 7.0,
+                  "fireInterval": 3.2,
+                  "windupDuration": 0.75,
+                  "featherCount": 5,
+                  "featherSpreadDeg": 9.0,
+                  "featherSpeed": 17.0,
+                  "featherDamage": 1
+                },
+                "enemyScale": [
+                  0.45,
+                  0.4,
+                  0.95
+                ],
+                "enemyScript": "BirdEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.97,
+                  0.97,
+                  0.95,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 1.5,
+                "spreadRadius": 0.0,
+                "startDelay": 2.0,
+                "waveId": 3,
+                "waveManagerName": "WaveManager",
+                "aheadDistance": 55.0,
+                "aheadSideStep": 9.0,
+                "spawnAheadOfPlayer": true
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              12,
+              990
+            ],
+            "rotation": [
+              0.0,
+              3.141592653589793,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 873093432879341925,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_3_bird_11",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 3,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
+          "type": "NativeScriptComponent",
+          "enabled": true,
+          "data": {
+            "scriptDataList": [
+              {
+                "colliderRadius": 1.4,
+                "count": 2,
+                "drawGizmo": true,
+                "enemyName": "WaveBird",
+                "enemyParams": {
+                  "maxHp": 2,
+                  "detectDistance": 90.0,
+                  "preferredDistance": 22.0,
+                  "sideOffset": 7.0,
+                  "flyHeight": 7.0,
+                  "fireInterval": 3.6,
+                  "windupDuration": 0.75,
+                  "featherCount": 5,
+                  "featherSpreadDeg": 9.0,
+                  "featherSpeed": 17.0,
+                  "featherDamage": 1
+                },
+                "enemyScale": [
+                  0.45,
+                  0.4,
+                  0.95
+                ],
+                "enemyScript": "BirdEnemyScript",
+                "modelPath": "",
+                "primitiveColor": [
+                  0.97,
+                  0.97,
+                  0.95,
+                  1.0
+                ],
+                "primitiveShape": "sphere",
+                "spawnInterval": 1.5,
+                "spreadRadius": 0.0,
+                "startDelay": 3.0,
+                "waveId": 4,
+                "waveManagerName": "WaveManager",
+                "aheadDistance": 55.0,
+                "aheadSideStep": 9.0,
+                "spawnAheadOfPlayer": true
+              }
+            ],
+            "scriptTypeName": "WaveSpawnerScript",
+            "scriptTypeNames": [
+              "WaveSpawnerScript"
+            ]
+          }
+        },
+        {
+          "type": "TransformComponent",
+          "enabled": true,
+          "data": {
+            "position": [
+              0,
+              12,
+              1060
+            ],
+            "rotation": [
+              0.0,
+              3.141592653589793,
+              0.0
+            ],
+            "scale": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "guid": 4098861510708006547,
+      "isFolder": false,
+      "locked": false,
+      "name": "WaveSpawner_4_bird_12",
+      "parentGuid": 0,
+      "tags": {
+        "spawner_wave_id": 4,
+        "wave_spawner": 1
+      },
+      "visible": true
+    },
+    {
+      "active": true,
+      "components": [
+        {
           "type": "ColliderComponent",
           "enabled": true,
           "data": {

@@ -53,6 +53,11 @@ public:
     ///          このフラグが立っていればデータ側の指定を尊重する。
     bool deathDurationFromData = false;
 
+    /// @brief 撃破時に泡のパーティクル（GPUBubbleEmitter）を出すか
+    /// @details 泡は水中・水面の敵向けの演出。空を飛ぶ鳥（BirdEnemyScript）では不自然なので、
+    ///          派生クラスが OnCreate で false にして自前の演出に差し替える。
+    bool spawnDeathBubbles = true;
+
 protected:
     /// @brief 体力を JSON へ書き出す
     /// @details 派生クラスは自分の Serialize の先頭でこれを呼び、
@@ -208,7 +213,8 @@ public:
                 }
 
                 // GPU泡パーティクル発生
-                if (Scene* scene = GetScene()) {
+                Scene* scene = spawnDeathBubbles ? GetScene() : nullptr;
+                if (scene) {
                     auto emitter = scene->CreateEntity("GPUBubbleEmitter");
                     auto* tr = &emitter->AddComponent<TransformComponent>();
                     if (auto* myTr = self->GetComponent<TransformComponent>()) {
