@@ -19,9 +19,9 @@
 
 .EXAMPLE
   .\project\Chaso\scripts\new-game.ps1 -Name MyNewGame -Dest D:\
-  .\project\Chaso\scripts\new-game.ps1            # 名前と作成先を聞かれる（作成先はフォルダ選択ダイアログ）
+  .\project\Chaso\scripts\new-game.ps1            # 名前と作成先を聞かれる
 
-  -Dest を省略した場合はフォルダ選択ダイアログで作成先を選ぶ。
+  -Dest を省略した場合は作成先をターミナルで聞く（Enter で初期値、? でフォルダ選択ダイアログ）。
   選んだ場所は %APPDATA%\Chaso\new-game.json に PC ごとに記憶し、次回の初期値になる。
 #>
 param(
@@ -49,24 +49,40 @@ if (-not $Dest) {
   $initial = @($lastDest, "D:\production", $env:USERPROFILE) |
     Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
 
-  Add-Type -AssemblyName System.Windows.Forms
-  $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-  $dialog.Description         = "「$Name」を作成する親フォルダを選んでください（<選んだフォルダ>\$Name が作られます）"
-  $dialog.SelectedPath        = $initial
-  $dialog.ShowNewFolderButton = $true
+  # ターミナルで聞く（Enter = 初期値、? = フォルダ選択ダイアログ）
+  Write-Host "作成先の親フォルダ（<親フォルダ>\$Name が作られます）"
+  Write-Host "  Enter のみ: $initial / ? : フォルダ選択ダイアログを開く" -ForegroundColor DarkGray
+  $answer = (Read-Host "作成先").Trim().Trim('"')
 
-  # ダイアログがエディタの裏に隠れないよう最前面のオーナーを付ける
-  $owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false }
-  try {
-    $result = $dialog.ShowDialog($owner)
-  } finally {
-    $owner.Dispose()
+  if ($answer -eq "?") {
+    Add-Type -AssemblyName System.Windows.Forms
+    $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+    $dialog.Description         = "「$Name」を作成する親フォルダを選んでください"
+    $dialog.SelectedPath        = $initial
+    $dialog.ShowNewFolderButton = $true
+
+    # エディタの裏に隠れないよう、画面外に最前面の小さなフォームを実際に表示してオーナーにする
+    $owner = New-Object System.Windows.Forms.Form -Property @{
+      TopMost = $true; ShowInTaskbar = $false; StartPosition = "Manual"
+      Location = New-Object System.Drawing.Point(-2000, -2000); Size = New-Object System.Drawing.Size(1, 1)
+    }
+    try {
+      $owner.Show(); $owner.Activate()
+      Write-Host "ダイアログを開きました（見当たらなければ Alt+Tab で探してください）" -ForegroundColor DarkGray
+      $result = $dialog.ShowDialog($owner)
+    } finally {
+      $owner.Close(); $owner.Dispose()
+    }
+    if ($result -ne [System.Windows.Forms.DialogResult]::OK -or -not $dialog.SelectedPath) {
+      Write-Host "キャンセルされました。" -ForegroundColor Yellow
+      exit 1
+    }
+    $Dest = $dialog.SelectedPath
+  } elseif ($answer) {
+    $Dest = [Environment]::ExpandEnvironmentVariables($answer)
+  } else {
+    $Dest = $initial
   }
-  if ($result -ne [System.Windows.Forms.DialogResult]::OK -or -not $dialog.SelectedPath) {
-    Write-Host "キャンセルされました。" -ForegroundColor Yellow
-    exit 1
-  }
-  $Dest = $dialog.SelectedPath
 
   # 次回の初期値として記憶
   if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir | Out-Null }
