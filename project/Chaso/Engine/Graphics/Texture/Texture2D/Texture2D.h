@@ -60,6 +60,8 @@ public:
     assert(!srv_.IsValid());
 #endif
     path_ = std::move(o.path_);
+    isFallback_ = o.isFallback_;
+    o.isFallback_ = false;
     resource_ = o.resource_;
     o.resource_ = nullptr;
     srv_ = o.srv_;
@@ -100,8 +102,14 @@ public:
   /// @return 完了なら true
   bool IsLoaded() const { return resource_ != nullptr; }
 
+  /// @brief 実ファイルの読み込みに失敗し、白1x1で代替されているか
+  /// @return 代替されていれば true
+  /// @note true でも IsLoaded() は true になる（描画は継続するため）
+  bool IsFallback() const { return isFallback_; }
+
 private:
   std::string path_;                             ///< ファイルパス
+  bool isFallback_ = false;                      ///< 白1x1へフォールバックしたか
   Microsoft::WRL::ComPtr<ID3D12Resource> resource_; ///< D3D12 リソース
   SRVManager::Handle srv_{};                     ///< SRV ハンドル
   DirectX::ScratchImage mipImages_;               ///< ロード中の一時イメージ（ミップマップ含む）

@@ -27,13 +27,21 @@ public:
                    Microsoft::WRL::ComPtr<IDxcBlobUtf8> log)
         : blob_(std::move(blob)), log_(std::move(log)) {}
 
+    /// @brief 失敗理由のみを保持するコンストラクタ
+    /// @param error DXCに到達する前に失敗した場合の理由（ファイル未検出など）
+    explicit CompiledShader(std::string error) : error_(std::move(error)) {}
+
     /// @brief シェーダーバイナリ(Blob)を取得
     /// @return IDxcBlob
     IDxcBlob* Blob() const { return blob_.Get(); }
 
     /// @brief コンパイルログを取得
-    /// @return ログ文字列
-    const char* Log() const { return log_ ? (const char*)log_->GetStringPointer() : ""; }
+    /// @return ログ文字列（DXCログが無い場合は失敗理由、どちらも無ければ空文字）
+    const char* Log() const {
+        if (log_ && log_->GetStringLength() > 0)
+            return (const char*)log_->GetStringPointer();
+        return error_.c_str();
+    }
 
     /// @brief バイナリが正常に生成されているか確認
     /// @return 生成されていればtrue
@@ -50,6 +58,7 @@ public:
 private:
     Microsoft::WRL::ComPtr<IDxcBlob> blob_; ///< シェーダーバイナリ本体
     Microsoft::WRL::ComPtr<IDxcBlobUtf8> log_; ///< エラーメッセージ等のログ
+    std::string error_; ///< DXC到達前に失敗した場合の理由
 };
 
 /// @brief DirectX Shader Compiler (DXC) を用いたシェーダーコンパイラクラス

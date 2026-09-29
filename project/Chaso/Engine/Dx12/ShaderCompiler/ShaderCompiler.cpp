@@ -1,8 +1,25 @@
 #include "ShaderCompiler.h"
 #include "Common/ResourcePath.h"
 #include <cassert>
+#include <filesystem>
+#include <format>
+#include <Windows.h>
 
 using Microsoft::WRL::ComPtr;
+
+namespace {
+/// @brief wstring を UTF-8 の string に変換する（ログ出力用）
+std::string ToUtf8(const std::wstring &w) {
+  if (w.empty())
+    return {};
+  const int len = ::WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(),
+                                        nullptr, 0, nullptr, nullptr);
+  std::string s(static_cast<size_t>(len), '\0');
+  ::WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), s.data(), len,
+                        nullptr, nullptr);
+  return s;
+}
+} // namespace
 
 ShaderCompiler::ShaderCompiler() {}
 ShaderCompiler::~ShaderCompiler() { Term(); }
@@ -25,15 +42,37 @@ void ShaderCompiler::Term() {
 }
 
 CompiledShader ShaderCompiler::Compile(const ShaderDesc &desc) const {
-  assert(utils_ && compiler_ && includeHandler_);
+  // NOTE: assert は Release で消えるうえ Debug では下のメッセージに届かないので使わない
+  if (!utils_ || !compiler_ || !includeHandler_) {
+    return CompiledShader(
+        "ShaderCompiler が初期化されていません (ShaderCompiler::Init 失敗)");
+  }
 
   // ファイル読み込み
   // ゲーム側 Resources → エンジン側 (Chaso/Resources) の順で探す
   const std::wstring srcPath = Chaso::ResolvePath(desc.path);
   ComPtr<IDxcBlobEncoding> srcBlob;
   HRESULT hr = utils_->LoadFile(srcPath.c_str(), nullptr, &srcBlob);
-  if (FAILED(hr))
-    return {};
+  if (FAILED(hr)) {
+    // 大半は「カレントディレクトリ違い」や「パスの解決失敗」でファイルに辿り着けていないケース。
+    // パスのままだと原因が分からないので絶対パスまで含めて報告する。
+    std::string absPath;
+    std::error_code ec;
+    const auto abs = std::filesystem::absolute(srcPath, ec);
+    absPath = ec ? "(絶対パス解決失敗)" : ToUtf8(abs.wstring());
+
+    const auto cwd = std::filesystem::current_path(ec);
+    const std::string cwdStr = ec ? "(取得失敗)" : ToUtf8(cwd.wstring());
+
+    return CompiledShader(std::format(
+        "シェーダーファイルを開けません (hr=0x{:08X})\n"
+        "  指定パス   : {}\n"
+        "  解決パス   : {}\n"
+        "  絶対パス   : {}\n"
+        "  作業ディレクトリ: {}\n"
+        "  → パス指定や作業ディレクトリが正しいか確認してください。",
+        static_cast<unsigned>(hr), ToUtf8(desc.path), ToUtf8(srcPath), absPath, cwdStr));
+  }
 
   // 引数組み立て
   std::vector<LPCWSTR> args;
@@ -65,8 +104,11 @@ CompiledShader ShaderCompiler::Compile(const ShaderDesc &desc) const {
   ComPtr<IDxcResult> result;
   hr = compiler_->Compile(&src, args.data(), (UINT)args.size(),
                           includeHandler_.Get(), IID_PPV_ARGS(&result));
-  if (FAILED(hr) || !result)
-    return {};
+  if (FAILED(hr) || !result) {
+    return CompiledShader(
+        std::format("IDxcCompiler3::Compile 呼び出しに失敗 (hr=0x{:08X}): {}",
+                    static_cast<unsigned>(hr), ToUtf8(desc.path)));
+  }
 
   ComPtr<IDxcBlobUtf8> errors;
   result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);

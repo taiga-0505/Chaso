@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
+#include <set>
 #include <utility> // std::swap (MoveEffect)
 
 namespace {
@@ -1384,7 +1385,22 @@ void PostProcess::DrawSinglePass(ID3D12GraphicsCommandList *cmdList,
                                  D3D12_GPU_DESCRIPTOR_HANDLE srcSRV,
                                  GraphicsPipeline *pipeline,
                                  PostEffectType effectType) {
-  assert(pipeline);
+  // NOTE: null を D3D12 に渡すと D3D12Core.dll の奥でアクセス違反になり、
+  //       呼び出し元が分からないスタックになる。ここで弾いて原因を残す。
+  if (!pipeline || !pipeline->Root() || !pipeline->PSO()) {
+    // エフェクト種別ごとに1回だけ出す（毎フレーム呼ばれるためログが埋まる）
+    static std::set<PostEffectType> logged;
+    if (logged.insert(effectType).second) {
+      Log::Print(std::format(
+          "[PostProcess] 無効なパイプラインのため描画をスキップします "
+          "(effectType={}, pipeline={}, root={}, pso={})",
+          static_cast<int>(effectType), pipeline != nullptr,
+          pipeline && pipeline->Root() != nullptr,
+          pipeline && pipeline->PSO() != nullptr));
+    }
+    return;
+  }
+
   cmdList->SetGraphicsRootSignature(pipeline->Root());
   cmdList->SetPipelineState(pipeline->PSO());
   cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

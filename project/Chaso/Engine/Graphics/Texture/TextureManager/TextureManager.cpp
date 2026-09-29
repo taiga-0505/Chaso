@@ -62,7 +62,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::Load(const std::string &path,
   Texture2D &tex = cache_[npath];
   auto uploadRes = tex.LoadFromFile(*srv_, loadCmd_, npath, srgb);
   if (uploadRes) {
-    Log::Print(std::format("[Texture] ロード完了: {}, SRV Index: {}", npath, tex.SrvHandle().index));
+    Log::Print(std::format("[Texture] {}: {}, SRV Index: {}",
+                           tex.IsFallback() ? "白1x1で代替" : "ロード完了", npath,
+                           tex.SrvHandle().index));
     uint64_t fence = loadCmd_.ExecuteAndReset();
     pendingUploads_.push_back({uploadRes, fence});
   }
@@ -137,7 +139,8 @@ TextureManager::TextureID TextureManager::LoadID(const std::string &path,
       if (tex.IsLoaded()) {
         auto end = std::chrono::high_resolution_clock::now();
         Log::Print(std::format(
-            "[Texture] ロード完了: {} (Time: {:.3f}ms), SRV Index: {}", npath,
+            "[Texture] {}: {} (Time: {:.3f}ms), SRV Index: {}",
+            tex.IsFallback() ? "白1x1で代替" : "ロード完了", npath,
             std::chrono::duration<float, std::milli>(end - start).count(),
             tex.SrvHandle().index));
       }

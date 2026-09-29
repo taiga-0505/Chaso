@@ -27,6 +27,12 @@ public:
   /// @param message 出力するメッセージ
   static void Print(const std::string &message);
 
+  /// @brief 復帰不能なエラーを報告してプロセスを終了する
+  /// @param message エラー内容
+  /// @note Release ビルドでも必ず停止する（assert と違い NDEBUG で消えない）。
+  ///       デバッガ接続時はブレークし、それ以外はメッセージボックスを表示する。
+  [[noreturn]] static void Fatal(const std::string &message);
+
   /// @brief マルチバイト文字列(string)をワイド文字列(wstring)に変換する
   /// @param str 変換元の文字列
   /// @return 変換後のワイド文字列

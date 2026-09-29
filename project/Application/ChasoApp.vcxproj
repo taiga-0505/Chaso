@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -241,7 +241,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="..\Application\Game\Scripts\CharacterTags.h" />
   </ItemGroup>
   <ItemGroup>
-    <!-- 繧ｷ繧ｧ繝ｼ繝繝ｼ (繝薙Ν繝峨°繧蛾勁螟・/ 蜿ら・逕ｨ) -->
+    <!-- シェーダー (ビルドから除外 / 参照用) -->
     <FxCompile Include="..\Chaso\Resources\Shader\Object3d\Object3d.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

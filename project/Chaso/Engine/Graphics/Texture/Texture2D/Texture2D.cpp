@@ -5,6 +5,8 @@
 #include "Dx12/CommandContext/CommandContext.h"
 #include "Common/Log/Log.h"
 #include <format>
+#include <filesystem>
+#include <system_error>
 #include <vector>
 
 Microsoft::WRL::ComPtr<ID3D12Resource> Texture2D::LoadFromFile(SRVManager &srv, CommandContext &cmd, const std::string &path, bool srgb) {
@@ -20,6 +22,7 @@ bool Texture2D::LoadCPU(const std::string &path, bool srgb) {
   const std::string resolved = Chaso::ResolvePath(path);
   std::wstring wpath(resolved.begin(), resolved.end());
   DirectX::ScratchImage image;
+  isFallback_ = false;
 
   bool isDDS = (resolved.size() >= 4 && resolved.substr(resolved.size() - 4) == ".dds");
   HRESULT hr;
@@ -36,10 +39,20 @@ bool Texture2D::LoadCPU(const std::string &path, bool srgb) {
   }
 
   if (FAILED(hr)) {
-    // 代替で白1x1を返すので呼び出し側からは成功に見える。
-    // 黙って差し替えるとパス違いに気付けないため、ここで必ず残す。
-    Log::Print(std::format("[Texture] ロード失敗 → 白1x1で代替: {} (HRESULT={:08X})",
-                           path, static_cast<uint32_t>(hr)));
+    // 描画は続行できるよう白1x1で代替するが、黙って成功扱いにはしない。
+    // （読み込めていないのに「ロード完了」と出ると原因調査が遠回りになる）
+    isFallback_ = true;
+    std::string absStr = "解決失敗";
+    try {
+      std::error_code ec;
+      const auto abs = std::filesystem::absolute(path, ec);
+      if (!ec)
+        absStr = abs.string();
+    } catch (...) {
+      // ログ用途なので絶対パスが取れなくても続行する
+    }
+    Log::Print(std::format("[WARN][Texture] 読み込み失敗のため白1x1で代替します: {} (HRESULT={:08X}, 絶対パス: {})",
+                           path, static_cast<uint32_t>(hr), absStr));
     // 白1x1を生成
     DirectX::ScratchImage white;
     white.Initialize2D(DXGI_FORMAT_R8G8B8A8_UNORM, 1, 1, 1, 1);

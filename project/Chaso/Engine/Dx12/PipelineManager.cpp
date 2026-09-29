@@ -20,8 +20,10 @@ void PipelineManager::Init(ID3D12Device *device, DXGI_FORMAT rtvFmt,
   // Compiler
   // ====================
   // シェーダーコンパイラ初期化
-  const bool ok = compiler_.Init();
-  assert(ok && "ShaderCompiler::Init failed");
+  if (!compiler_.Init()) {
+    Log::Fatal("ShaderCompiler::Init に失敗しました。"
+               "出力フォルダに dxcompiler.dll / dxil.dll があるか確認してください。");
+  }
 }
 
 void PipelineManager::Term() {
@@ -115,15 +117,20 @@ GraphicsPipeline *PipelineManager::Create(const std::string &key,
 
   CompiledShader vs = compiler_.Compile(vsDesc);
   CompiledShader ps = compiler_.Compile(psDesc);
+
+  // NOTE: ここで assert に頼ると Release(NDEBUG) では素通りしてしまい、
+  //       null の PSO のまま SetPipelineState() が呼ばれて D3D12Core.dll 内で
+  //       アクセス違反になる。原因から遠すぎるので全構成で即停止させる。
   if (!vs.HasBlob()) {
-      Log::Print("[ERROR] VS Compile Failed!");
-      Log::Print(vs.Log());
+    Log logger;
+    Log::Fatal(std::format("VS のコンパイルに失敗しました\n  key : {}\n  path: {}\n{}",
+                           key, logger.ConvertString(desc.vsPath), vs.Log()));
   }
   if (!ps.HasBlob()) {
-      Log::Print("[ERROR] PS Compile Failed!");
-      Log::Print(ps.Log());
+    Log logger;
+    Log::Fatal(std::format("PS のコンパイルに失敗しました\n  key : {}\n  path: {}\n{}",
+                           key, logger.ConvertString(desc.psPath), ps.Log()));
   }
-  assert(vs.HasBlob() && ps.HasBlob());
 
   return createFromBlobs_(key, desc, vs.Blob(), ps.Blob(), cachedPSO);
 }
@@ -199,8 +206,15 @@ bool PipelineManager::Rebuild(const std::string &key) {
   // コンパイル
   CompiledShader VS = compiler_.Compile(vs);
   CompiledShader PS = compiler_.Compile(ps);
-  if (!VS.HasBlob() || !PS.HasBlob())
+  // ホットリロードなので失敗しても落とさず、既存パイプラインを維持する
+  if (!VS.HasBlob()) {
+    Log::Print(std::format("[PipelineManager] Rebuild 失敗 (VS): {}\n{}", key, VS.Log()));
     return false;
+  }
+  if (!PS.HasBlob()) {
+    Log::Print(std::format("[PipelineManager] Rebuild 失敗 (PS): {}\n{}", key, PS.Log()));
+    return false;
+  }
 
   // ====================
   // Rebuild
@@ -294,9 +308,14 @@ GraphicsPipeline *PipelineManager::createFromBlobs_(
 }
 
 void PipelineManager::LoadCache(const std::string &filePath) {
-  std::ifstream ifs(Chaso::ResolvePath(filePath), std::ios::binary);
-  if (!ifs)
+  const std::string resolvedPath = Chaso::ResolvePath(filePath);
+  std::ifstream ifs(resolvedPath, std::ios::binary);
+  if (!ifs) {
+    // 初回起動なら正常。毎回出るなら作業ディレクトリやパス指定を疑うこと。
+    Log::Print(std::format(
+        "[PipelineManager] PSOキャッシュ無し（新規作成します）: {} (解決パス: {})", filePath, resolvedPath));
     return;
+  }
 
   size_t count = 0;
   ifs.read((char *)&count, sizeof(count));
@@ -1598,8 +1617,9 @@ void PipelineManager::CreateCompute(const std::string &key,
 
   CompiledShader CS = compiler_.Compile(cs);
   if (!CS.HasBlob()) {
-    Log::Print(std::format("[PipelineManager] CS compile failed: {}", key));
-    return;
+    Log logger;
+    Log::Fatal(std::format("CS のコンパイルに失敗しました\n  key : {}\n  path: {}\n{}",
+                           key, logger.ConvertString(csPath), CS.Log()));
   }
 
   // --- Root Signature 構築 ---

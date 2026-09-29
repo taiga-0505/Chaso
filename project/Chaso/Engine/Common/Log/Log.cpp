@@ -174,6 +174,28 @@ std::string Log::ConvertString(const std::wstring &wstr) {
   return str;
 }
 
+[[noreturn]] void Log::Fatal(const std::string &message) {
+  const std::string full = "========================================\n"
+                           "[FATAL] " + message + "\n"
+                           "========================================";
+  Log::Print(full);
+
+  Log logger;
+  const std::wstring wmsg = logger.ConvertString(full);
+
+  if (::IsDebuggerPresent()) {
+    // デバッガ接続時はその場でブレークし、呼び出し元のスタックを保持する
+    ::DebugBreak();
+  } else {
+    ::MessageBoxW(nullptr, wmsg.c_str(), L"Fatal Error",
+                  MB_OK | MB_ICONERROR | MB_TOPMOST);
+  }
+
+  // デストラクタを走らせず即座に落とす（半端に初期化されたGPUリソースに触らない）
+  ::TerminateProcess(::GetCurrentProcess(), 1);
+  ::ExitProcess(1); // TerminateProcess が返った場合の保険（[[noreturn]] 担保）
+}
+
 std::string Log::NormalizePath(const std::string &path) {
   std::string ret = path;
   std::replace(ret.begin(), ret.end(), '\\', '/');

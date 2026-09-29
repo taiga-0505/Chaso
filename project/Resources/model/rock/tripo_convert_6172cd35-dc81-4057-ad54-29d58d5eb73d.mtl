@@ -1,0 +1,16 @@
+# Blender 5.0.1 MTL File: 'None'
+# www.blender.org
+
+newmtl tripo_mat_6172cd35-dc81-4057-ad54-29d58d5eb73d
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd rock_basecolor.JPEG
+map_Ns rock_roughness.JPEG
+map_Pr rock_roughness.JPEG
+map_refl rock_metallic.JPEG
+map_Pm rock_metallic.JPEG
+map_Bump -bm 1.000000 rock_normal.JPEG
