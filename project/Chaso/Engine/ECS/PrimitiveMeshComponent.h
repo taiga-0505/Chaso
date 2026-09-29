@@ -16,6 +16,15 @@ enum class PrimitiveType {
   Capsule,
 };
 
+/// @brief プリミティブの描画方法
+/// @details 以前は DataDrivenScene がエンティティ名（"PlayerBullet" など）で
+///          描画関数を切り替えていた。名前はゲーム側の都合なので、コンポーネントの値で持つ。
+enum class PrimitiveDrawStyle {
+  Default = 0,     ///< 通常の DrawPrimitiveMesh
+  Water = 1,       ///< 水の質感（DrawPrimitiveMeshWater）。水弾・しぶきなど
+  WaterColumn = 2, ///< 水柱（DrawPrimitiveMeshWaterColumn）
+};
+
 /// @brief Component for primitive mesh rendering.
 /// Holds shape type and size parameters, automatically drawn in the entity loop.
 class PrimitiveMeshComponent : public IComponent {
@@ -28,6 +37,7 @@ public:
   PrimitiveType type = PrimitiveType::Sphere; ///< Shape type (for Inspector)
   RC::Vector4 color = {1.0f, 1.0f, 1.0f, 1.0f}; ///< Multiply color
   float environmentCoeff = 0.0f; ///< Environment map reflection coefficient
+  PrimitiveDrawStyle drawStyle = PrimitiveDrawStyle::Default; ///< 描画方法
 
   // --- Material properties (mirrored to GPU Material on initialize) ---
   // 既定値は PrimitiveMesh::Initialize() の GPU 側 Material 初期値と一致させる
@@ -57,7 +67,8 @@ public:
       {"lightingMode", lightingMode},
       {"shininess", shininess},
       {"uvTiling", {uvTiling.x, uvTiling.y}},
-      {"uvOffset", {uvOffset.x, uvOffset.y}}
+      {"uvOffset", {uvOffset.x, uvOffset.y}},
+      {"drawStyle", static_cast<int>(drawStyle)}
     };
   }
 
@@ -82,5 +93,6 @@ public:
       auto& o = j["uvOffset"];
       uvOffset = {o[0].get<float>(), o[1].get<float>()};
     }
+    if (j.contains("drawStyle")) drawStyle = static_cast<PrimitiveDrawStyle>(j["drawStyle"].get<int>());
   }
 };

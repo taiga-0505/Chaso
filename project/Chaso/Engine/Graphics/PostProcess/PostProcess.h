@@ -782,7 +782,7 @@ private:
   int inkSplatCount_ = 0;
   float inkMurk_ = 0.0f;
   float inkColor_[4] = {0.03f, 0.02f, 0.05f, 0.96f};
-  // ImGui のテスト用（ゲーム中は InkScreenFx が毎フレーム上書きする）
+  // ImGui のテスト用（ゲーム側のスクリプトが毎フレーム上書きする場合がある）
   float inkDebugStrength_ = 1.0f;
   float inkDebugAge_ = 1.5f;
   float inkDebugRadius_ = 0.30f;

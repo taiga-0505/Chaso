@@ -182,6 +182,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="..\Chaso\Framework\App.cpp" />
     <ClCompile Include="..\Chaso\Editor\EditorManager.cpp" />
     <ClCompile Include="..\Chaso\Editor\CaptureMode.cpp" />
+    <ClCompile Include="..\Chaso\Editor\KeyBindingsHelp.cpp" />
+    <ClCompile Include="..\Chaso\Editor\SceneFlowPanel.cpp" />
+    <ClCompile Include="..\Chaso\Game\Scene\SceneFlow.cpp" />
+    <ClCompile Include="..\Chaso\Editor\EditorExtension.cpp" />
     <!-- Game -->
     <ClCompile Include="..\Chaso\Game\Game.cpp" />
     <ClCompile Include="..\Chaso\Game\Framework\GameModeBase.cpp" />
@@ -196,17 +200,15 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="..\Chaso\Framework\AppConfig.h" />
     <ClInclude Include="..\Chaso\Editor\EditorManager.h" />
     <ClInclude Include="..\Chaso\Editor\CaptureMode.h" />
+    <ClInclude Include="..\Chaso\Editor\KeyBindingsHelp.h" />
+    <ClInclude Include="..\Chaso\Editor\SceneFlowPanel.h" />
+    <ClInclude Include="..\Chaso\Game\Scene\SceneFlow.h" />
+    <ClInclude Include="..\Chaso\Editor\EditorExtension.h" />
     <ClInclude Include="..\Chaso\Editor\DebugBridge.h" />
     <!-- Game -->
     <ClInclude Include="..\Chaso\Game\Game.h" />
     <ClInclude Include="..\Chaso\Game\Framework\GameModeBase.h" />
     <ClInclude Include="..\Chaso\Game\Framework\GameStateBase.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\GameSession.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\StageProgress.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\GameSettings.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\UnderwaterLook.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\InkScreenFx.h" />
-    <ClInclude Include="..\Chaso\Game\Framework\WaterCameraFx.h" />
     <ClInclude Include="..\Chaso\Game\Scene\Fade\Fade.h" />
     <ClInclude Include="..\Chaso\Game\Scene\Scene.h" />
     <ClInclude Include="..\Chaso\Game\Scene\SceneManager.h" />

@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "from": "Title",
+      "trigger": "start",
+      "to": "Select",
+      "transition": "dive",
+      "note": "タイトルの「スタート」"
+    },
+    {
+      "from": "Select",
+      "trigger": "back",
+      "to": "Title",
+      "transition": "dissolve",
+      "note": "ステージセレクトで ESC"
+    },
+    {
+      "from": "Select",
+      "trigger": "stage",
+      "to": "$arg",
+      "transition": "dive",
+      "note": "出航（選んだステージへ）"
+    },
+    {
+      "from": "Stage*",
+      "trigger": "cleared",
+      "to": "Result",
+      "transition": "dissolve",
+      "note": "ステージクリア（GameMode の決着）"
+    },
+    {
+      "from": "Stage*",
+      "trigger": "gameover",
+      "to": "Result",
+      "transition": "dive",
+      "note": "力尽きた（DeathSink が沈みきってから遷移）"
+    },
+    {
+      "from": "Stage*",
+      "trigger": "pause_retry",
+      "to": "$current",
+      "transition": "dissolve",
+      "note": "ポーズ「はじめから」"
+    },
+    {
+      "from": "Stage*",
+      "trigger": "pause_exit",
+      "to": "Select",
+      "transition": "dissolve",
+      "note": "ポーズ「セレクトへ」"
+    },
+    {
+      "from": "Game",
+      "trigger": "cleared",
+      "to": "Result",
+      "transition": "dissolve",
+      "note": "テスト用 Game のクリア"
+    },
+    {
+      "from": "Game",
+      "trigger": "gameover",
+      "to": "Result",
+      "transition": "dive",
+      "note": "テスト用 Game で力尽きた"
+    },
+    {
+      "from": "Game",
+      "trigger": "pause_retry",
+      "to": "$current",
+      "transition": "dissolve",
+      "note": "ポーズ「はじめから」"
+    },
+    {
+      "from": "Game",
+      "trigger": "pause_exit",
+      "to": "Title",
+      "transition": "dissolve",
+      "note": "ポーズ「タイトルへ」"
+    },
+    {
+      "from": "Result",
+      "trigger": "next",
+      "to": "$nextStage",
+      "transition": "dive",
+      "note": "リザルト「次のステージへ」（最終面では出ない）"
+    },
+    {
+      "from": "Result",
+      "trigger": "retry",
+      "to": "$lastPlay",
+      "transition": "dive",
+      "note": "リザルト「もう一度」"
+    },
+    {
+      "from": "Result",
+      "trigger": "select",
+      "to": "Select",
+      "transition": "dive",
+      "note": "リザルト「セレクトへ」"
+    },
+    {
+      "from": "Result",
+      "trigger": "title",
+      "to": "Title",
+      "transition": "dive",
+      "note": "リザルト「タイトルへ」（テスト用 Game から来たとき）"
+    }
+  ]
+}

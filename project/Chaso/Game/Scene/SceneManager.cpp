@@ -6,6 +6,7 @@
 #include "Fade/Fade.h"
 #include "Camera/CameraController.h"
 #include "DataDrivenScene/DataDrivenScene.h"
+#include "SceneFlow.h"
 #include <algorithm>
 #include <chrono>
 #include <format>
@@ -22,10 +23,16 @@ class LoadingState;
 
 // For PostEffectType
 #include "Graphics/PostProcess/PostProcess.h"
-// Dive 遷移で抜ける「深海の画面色」（Title の潜水・Game の浮上と同じ定義を使う）
-#include "Game/Framework/UnderwaterLook.h"
 
 namespace {
+
+/// @brief Dive 遷移で抜ける画面色の保存先
+/// @details 関数内 static にしておくと、Application 側の静的初期化から
+///          SetDiveScreenColor を呼ばれても初期化順の問題が起きない。
+RC::Vector4 &DiveScreenColorStorage() {
+  static RC::Vector4 color = {0.0f, 0.0f, 0.0f, 1.0f};
+  return color;
+}
 
 /// @brief 遷移演出ごとのフェード時間（秒）
 float FadeTimeFor(SceneTransition transition) {
@@ -40,7 +47,7 @@ void ApplyDissolveLook(SceneTransition transition) {
   if (transition == SceneTransition::Dive) {
     // 飛び込み側は画面をこの色まで暗くしてから要求してくるので、
     // 同じ色へ抜けると継ぎ目が見えない。縁も光らせない（暗い水の中で橙は浮く）。
-    const RC::Vector4 c = UnderwaterLook::kAbyssScreenColor;
+    const RC::Vector4 c = DiveScreenColorStorage();
     RC::SetDissolveBaseColor(c.x, c.y, c.z, 1.0f);
     RC::SetDissolveEdgeColor(c.x, c.y, c.z);
   } else {
@@ -50,6 +57,14 @@ void ApplyDissolveLook(SceneTransition transition) {
 }
 
 } // namespace
+
+void Scene::SceneManager::SetDiveScreenColor(const RC::Vector4 &color) {
+  DiveScreenColorStorage() = color;
+}
+
+const RC::Vector4 &Scene::SceneManager::DiveScreenColor() {
+  return DiveScreenColorStorage();
+}
 
 // =================================================================
 // 状態インタフェース
@@ -131,7 +146,7 @@ void NormalState::Update(Scene::SceneManager &sm, SceneContext &ctx) {
     RC::SetDissolveNoiseIndex(0);
 
     RC::SetDissolveThreshold(0.0f);
-    ApplyDissolveLook(sm.transition_); // Dissolve は黒、Dive は深海色へ抜く
+    ApplyDissolveLook(sm.transition_); // Dissolve は黒、Dive は DiveScreenColor へ抜く
 
     sm.ChangeState(std::make_unique<FadeOutState>());
   }
@@ -324,6 +339,15 @@ void Scene::SceneManager::Init(SceneContext &ctx) {
     return RequestChange(name, transition);
   };
 
+  // 遷移表（SceneFlow）のエディタが、登録済みシーンの一覧・いまのシーン・
+  // 「試す」ボタンの遷移要求を使えるように結線する。
+  auto &flow = SceneFlow::Get();
+  flow.SetSceneNameProvider([this]() { return GetSceneNames(); });
+  flow.SetCurrentSceneProvider([this]() { return currentName_; });
+  flow.SetRequestFn([this](const std::string &name, SceneTransition transition) {
+    return RequestChange(name, transition);
+  });
+
   // Fadeコンポーネントを初期化
   fade_ = std::make_unique<Fade>();
   fade_->Init(ctx, width, height);
@@ -333,6 +357,12 @@ void Scene::SceneManager::Init(SceneContext &ctx) {
 }
 
 void Scene::SceneManager::Term() {
+  // this を捕まえた結線を外す（SceneFlow はシングルトンなので SceneManager より長生きする）
+  auto &flow = SceneFlow::Get();
+  flow.SetSceneNameProvider(nullptr);
+  flow.SetCurrentSceneProvider(nullptr);
+  flow.SetRequestFn(nullptr);
+
   if (fade_) {
     fade_.reset();
   }

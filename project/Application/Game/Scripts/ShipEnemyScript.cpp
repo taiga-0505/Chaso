@@ -608,6 +608,8 @@ private:
             pm = &shell->AddComponent<PrimitiveMeshComponent>();
             pm->type = PrimitiveType::Sphere;
         }
+        // 水の質感で描く（以前は DataDrivenScene がエンティティ名で判定していた）
+        pm->drawStyle = PrimitiveDrawStyle::Water;
         // EnemyBullet のプールは EnemyAI と共有していて、あちらは弾を赤く塗る。
         // 使い回した弾がそのままだと砲弾が赤く出るので、毎回塗り直す。
         pm->color = kShellColor;

@@ -9,6 +9,7 @@
 #include "Game/Framework/UnderwaterLook.h"
 #include "Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
+#include "SceneFlow.h"
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -40,7 +41,10 @@
 ///
 ///   JSON (scriptDataList) で設定できる項目:
 ///     "titleText" / "subtitleText" : 見出し
-///     "titleScene"      : ESC で戻るシーン（既定 "Title"）
+///   遷移は遷移表（Resources/SceneFlow.json）で決まる:
+///     きっかけ "back"  : ESC で戻る
+///     きっかけ "stage" : 出航（遷移先を $arg にすると、選んだステージのシーンへ行く）
+///                        演出が "dive" のときだけ飛び込み演出を挟む
 ///     "fontPath"        : フォント
 ///     "dimAlpha" / "panelColor" / "accentColor" / "selectedColor"
 ///     "uiFadeTime"      : 出航を決めてから UI が消えきるまで（秒）
@@ -49,7 +53,6 @@ class StageSelectScript : public ScriptableEntity {
 public:
   std::string titleText = "航路選択";
   std::string subtitleText = "STAGE SELECT";
-  std::string titleScene = "Title";
   std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
 
   float dimAlpha = 0.22f;
@@ -67,7 +70,6 @@ public:
     nlohmann::json j = {
         {"titleText", titleText},
         {"subtitleText", subtitleText},
-        {"titleScene", titleScene},
         {"fontPath", fontPath},
         {"dimAlpha", dimAlpha},
         {"panelColor", v4(panelColor)},
@@ -97,7 +99,6 @@ public:
     };
     readS("titleText", titleText);
     readS("subtitleText", subtitleText);
-    readS("titleScene", titleScene);
     readS("fontPath", fontPath);
     readF("dimAlpha", dimAlpha);
     readVec4("panelColor", panelColor);
@@ -620,9 +621,9 @@ private:
     if (ctx && !ctx->isPlaying()) return; // 編集モードでは遷移しない
 
     if (back) {
-      if (RequestSceneChange(titleScene)) {
+      if (RequestTransition(kTriggerBack)) {
         decided_ = true;
-        Log::Print("[StageSelectScript] back -> " + titleScene);
+        Log::Print("[StageSelectScript] back");
       }
       return;
     }
@@ -632,8 +633,15 @@ private:
       return;
     }
     StageProgress::Get().SetLastSelected(selected_);
-    const std::string target = StageProgress::Info(selected_).sceneName;
-    if (dive.enabled) {
+    // 行き先と演出は遷移表で引く（遷移先が $arg なら選んだステージのシーン名になる）
+    std::string target;
+    std::string transition;
+    if (!LookupTransition(kTriggerStage, target, transition, StageProgress::Info(selected_).sceneName) ||
+        target.empty()) {
+      Log::Print("[StageSelectScript] scene flow has no target for 'stage'");
+      return;
+    }
+    if (dive.enabled && transition == SceneTransitions::kDive) {
       decided_ = true;
       leaving_ = true;
       leaveTarget_ = target;
@@ -751,6 +759,8 @@ private:
 
   bool leaving_ = false;
   std::string leaveTarget_;
+  static constexpr const char *kTriggerBack = "back";   ///< 遷移表のきっかけ名（ESC）
+  static constexpr const char *kTriggerStage = "stage"; ///< 遷移表のきっかけ名（出航）
   float leaveTime_ = 0.0f;
   bool leaveRequested_ = false;
   float uiAlpha_ = 1.0f;

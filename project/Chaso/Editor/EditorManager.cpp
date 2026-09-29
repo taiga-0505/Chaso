@@ -1,6 +1,10 @@
 #include "EditorManager.h"
 #include "Common/ResourcePath.h"
 #include "CaptureMode.h"
+#include "EditorExtension.h"
+#include "SceneFlowPanel.h"
+#include "KeyBindingsHelp.h"
+#include "SceneFlow.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/ImGuizmo.h"
@@ -203,6 +207,18 @@ void EditorManager::HandleShortcuts(Dx12Core* core, Scene* currentScene) {
   // --- F2: スクリーンショット（再生中でも常時有効） ---
   if (ImGui::IsKeyPressed(ImGuiKey_F2, false)) {
     if (core) core->RequestScreenshot();
+  }
+
+  // --- Ctrl+S: シーンを保存（未保存の Scene Flow があればそれも） ---
+  // 再生中の状態を保存すると編集内容が壊れるので、編集モードのときだけ保存する。
+  // テキスト入力中でも効かせる（入力欄の値は 1 文字ごとに反映されている）。
+  if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S)) {
+    if (playState_ != PlayState::Stopped) {
+      Log::Print("[Editor] 再生中は保存できません（停止してから Ctrl+S）");
+    } else {
+      if (currentScene) currentScene->Save();
+      if (SceneFlow::Get().IsDirty()) SceneFlow::Get().Save();
+    }
   }
 
   // 以降は編集モード（Stopped）専用。
@@ -574,13 +590,13 @@ void EditorManager::ApplyDarkTheme() {
 void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, Scene* currentScene) {
 #if RC_ENABLE_IMGUI
   // ============================
-  // 撮影モード（F9）
+  // 撮影モード（F11）
   // ============================
-  // 動画で成果を証明するためのモード。入っているあいだは
+  // 録画用のモード。入っているあいだは
   // メニューバーも他のパネルも出さず、ゲーム画面だけにする。
-  CaptureMode::HandleHotkeys();
+  CaptureMode::HandleHotkeys(core);
   if (CaptureMode::IsActive()) {
-    // 浮力やウェーブ戦闘は再生中でないと動かないので、再生状態にしておく。
+    // 撮るのはプレイ画面なので、再生状態にしておく。
     // 停止中からの遷移は App 側がバックアップを取ってくれる。
     if (CaptureMode::WantsPlaying() && playState_ == PlayState::Stopped) {
       playState_ = PlayState::Playing;
@@ -606,6 +622,12 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
   // ============================
   if (ImGui::BeginMainMenuBar()) {
     if (ImGui::BeginMenu("File")) {
+      const bool canSave = (playState_ == PlayState::Stopped) && currentScene != nullptr;
+      if (ImGui::MenuItem("Save Scene", "Ctrl+S", false, canSave)) {
+        currentScene->Save();
+        if (SceneFlow::Get().IsDirty()) SceneFlow::Get().Save();
+      }
+      ImGui::Separator();
       if (ImGui::MenuItem("Exit")) {
         PostQuitMessage(0);
       }
@@ -643,14 +665,30 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
       ImGui::MenuItem("Particle Editor", nullptr, &showParticleEditor_);
       ImGui::MenuItem("Environment Settings", nullptr, &showEnvironmentWindow_);
       ImGui::MenuItem("Post Effect Settings", nullptr, &showPostEffectWindow_);
+      ImGui::MenuItem("Scene Flow (シーン遷移)", nullptr, &showSceneFlow_);
+      // Application 側が EditorExtension::AddPanel で登録したパネル
+      auto &extPanels = EditorExtension::Panels();
+      if (!extPanels.empty()) {
+        ImGui::Separator();
+        for (auto &panel : extPanels) {
+          ImGui::MenuItem(panel.name.c_str(), nullptr, &panel.open);
+        }
+      }
       ImGui::Separator();
-      if (ImGui::MenuItem("撮影モード (F9)")) {
+      if (ImGui::MenuItem("撮影モード (F11)")) {
         CaptureMode::SetActive(true);
+      }
+      if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("ゲーム画面だけを全画面にします。F10 で録画、もう一度 F11 で戻る");
       }
       ImGui::Separator();
       if (ImGui::MenuItem("Reset Layout")) {
         resetLayout_ = true;
       }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Help")) {
+      ImGui::MenuItem("キー操作一覧", nullptr, &showKeyHelp_);
       ImGui::EndMenu();
     }
 
@@ -833,6 +871,7 @@ void EditorManager::Update(Dx12Core* core, std::function<void()> onMenuAppend, S
         else core->StartRecording();
       }
     }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("F10");
 
     // ----------------------------
     // 中央の Play / Pause / Stop / Restart ボタン
@@ -1212,6 +1251,25 @@ void EditorManager::DrawUI(D3D12_GPU_DESCRIPTOR_HANDLE viewportSrv, Dx12Core* co
 
   if (showDemoWindow_) {
     ImGui::ShowDemoWindow(&showDemoWindow_);
+  }
+
+  // シーン遷移表
+  if (showSceneFlow_) {
+    SceneFlowPanel::Draw(&showSceneFlow_);
+  }
+
+  // キー操作一覧（Help）
+  if (showKeyHelp_) {
+    KeyBindingsHelp::Draw(&showKeyHelp_);
+  }
+
+  // Application 側が EditorExtension::AddPanel で登録したパネル
+  for (auto &panel : EditorExtension::Panels()) {
+    if (!panel.open || !panel.draw) continue;
+    if (ImGui::Begin(panel.name.c_str(), &panel.open)) {
+      panel.draw(currentScene);
+    }
+    ImGui::End();
   }
 
   // Performance パネル
@@ -4181,6 +4239,7 @@ void EditorManager::SaveConfig() {
   j["showRenderQueue"] = showRenderQueue_;
   j["showDemoWindow"] = showDemoWindow_;
   j["showParticleEditor"] = showParticleEditor_;
+  j["showSceneFlow"] = showSceneFlow_;
 
   std::ofstream ofs("../project/EditorConfig.json");
   if (ofs) {
@@ -4198,6 +4257,7 @@ void EditorManager::LoadConfig() {
       if (j.contains("showRenderQueue")) showRenderQueue_ = j["showRenderQueue"];
       if (j.contains("showDemoWindow")) showDemoWindow_ = j["showDemoWindow"];
       if (j.contains("showParticleEditor")) showParticleEditor_ = j["showParticleEditor"];
+      if (j.contains("showSceneFlow")) showSceneFlow_ = j["showSceneFlow"];
     } catch (...) {
       Log::Print("[Editor] Failed to parse EditorConfig.json");
     }

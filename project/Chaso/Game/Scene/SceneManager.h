@@ -27,6 +27,15 @@ public:
   ///          ここでは切り替えの継ぎ目を隠すぶんだけ短く抜ける。
   static inline const float kDiveFadeTime = 0.35f;
 
+  /// @brief Dive 遷移で抜ける画面色を設定する
+  /// @details Dive はゲーム側が画面をこの色まで暗くしてから要求する前提の遷移。
+  ///          色はゲームごとに違うので、エンジンは既定の黒だけを持ち、
+  ///          Application 側が起動時（静的初期化でも可）に設定する。
+  static void SetDiveScreenColor(const RC::Vector4 &color);
+
+  /// @brief Dive 遷移で抜ける画面色を取得する（未設定なら黒）
+  static const RC::Vector4 &DiveScreenColor();
+
 public:
   /// @brief 初期化
   /// @param ctx シーンコンテキスト

@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "SceneFlow.h"
 #include "ECS/Entity.h"
 #include "ECS/TransformComponent.h"
 #include "ECS/LightComponent.h"
@@ -509,6 +510,39 @@ bool ScriptableEntity::RequestSceneChange(const std::string& name,
 
     // 演出名はここで型へ変換する（不明な名前は既定の Dissolve）
     return ctx->requestSceneChange(name, ParseSceneTransition(transition));
+}
+
+// ScriptableEntity::LookupTransition / RequestTransition の実体。
+// 遷移元は「このスクリプトが載っているシーン」。遷移表は SceneFlow（Resources/SceneFlow.json）。
+bool ScriptableEntity::LookupTransition(const std::string& trigger, std::string& outTarget,
+                                        std::string& outTransition, const std::string& arg) {
+    outTarget.clear();
+    outTransition = SceneTransitions::kDissolve;
+    Scene* scene = GetScene();
+    if (!scene) {
+        Log::Print("[Script] LookupTransition: シーンが未設定です (" + trigger + ")");
+        return false;
+    }
+    SceneFlowResult result;
+    if (!SceneFlow::Get().Resolve(scene->Name(), trigger, arg, result)) {
+        return false;
+    }
+    outTarget = result.target;
+    outTransition = result.transition;
+    return true;
+}
+
+bool ScriptableEntity::RequestTransition(const std::string& trigger, const std::string& arg) {
+    std::string target;
+    std::string transition;
+    if (!LookupTransition(trigger, target, transition, arg)) {
+        return false;
+    }
+    if (target.empty()) {
+        Log::Print("[Script] RequestTransition: 遷移先が空です (" + trigger + ")");
+        return false;
+    }
+    return RequestSceneChange(target, transition);
 }
 
 void Scene::ResolveCollisions() {

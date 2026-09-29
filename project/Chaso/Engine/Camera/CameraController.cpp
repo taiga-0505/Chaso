@@ -15,15 +15,10 @@ void CameraController::Initialize(Input *input, const Vector3 &mainPos,
   main_.Initialize(mainPos, mainRot, fovY, aspect, nearZ, farZ);
 }
 
-// TAB 切替と各カメラの更新
+// 各カメラの更新
+// ゲームカメラ／デバッグカメラの切り替え（F1）は DataDrivenScene::Update が SetUseDebug で行う。
+// ここでも切り替えると同じフレームで 2 回反転して打ち消し合うので、キーは見ない。
 void CameraController::Update(float dt) {
-#ifdef _DEBUG
-  // 切替
-  if (input_ && (input_->IsKeyTrigger(DIK_TAB) || input_->IsKeyTrigger(DIK_F1))) {
-    useDebug_ = !useDebug_;
-  }
-#endif
-
   if (useDebug_) {
     #if RC_ENABLE_IMGUI
     // ギズモ操作中またはマウスがギズモに乗っている時はカメラ操作をブロックする
@@ -66,7 +61,7 @@ if (true) {
 
 void CameraController::DrawImGui() {
 #if RC_ENABLE_IMGUI
-  ImGui::Begin("カメラモード : F1 / Tab");
+  ImGui::Begin("カメラモード : F1");
 
   if (useDebug_) {
     ImGui::Text("デバッグカメラモード");

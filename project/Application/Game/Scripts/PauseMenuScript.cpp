@@ -7,6 +7,7 @@
 #include "Framework/App.h"
 #include "Game/Framework/GameSettings.h"
 #include "Scene.h"
+#include "SceneFlow.h"
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -39,15 +40,15 @@
 ///
 ///   JSON（scriptDataList）で設定できる項目:
 ///     "fontPath"   : 使うフォント（既定は Result と同じ KiwiMaru-Medium）
-///     "titleScene" : 「タイトルへ」の遷移先（既定 "Title"）
-///     "retryScene" : 「はじめから」の遷移先（既定 ""＝いまのシーン。同名シーンへの遷移はリトライになる）
-///     "titleLabel" : 4 番目の項目の文字（既定 "タイトルへ"。ステージでは "セレクトへ" にして titleScene を "Select" に）
+///     "titleLabel" : 4 番目の項目の文字（既定 "タイトルへ"。ステージでは "セレクトへ"）
+///
+///   遷移は遷移表（Resources/SceneFlow.json）で決まる:
+///     きっかけ "pause_retry" : 「はじめから」（遷移先を $current にするといまのシーンをやり直す）
+///     きっかけ "pause_exit"  : 4 番目の項目（ステージは Select、テスト用 Game は Title など、シーンごとに行を分ける）
 ///     "panelColor" / "accentColor" / "dimAlpha"
 class PauseMenuScript : public ScriptableEntity {
 public:
   std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
-  std::string titleScene = "Title";
-  std::string retryScene; ///< 空ならいまのシーンをやり直す（Stage1〜5 で使い回せるように）
   std::string titleLabel = "タイトルへ";
   RC::Vector4 panelColor = {0.06f, 0.08f, 0.11f, 0.92f}; ///< 墨
   RC::Vector4 accentColor = {0.88f, 0.74f, 0.38f, 1.0f}; ///< 金（選択中）
@@ -56,8 +57,6 @@ public:
   nlohmann::json Serialize() override {
     return {
         {"fontPath", fontPath},
-        {"titleScene", titleScene},
-        {"retryScene", retryScene},
         {"titleLabel", titleLabel},
         {"panelColor", {panelColor.x, panelColor.y, panelColor.z, panelColor.w}},
         {"accentColor", {accentColor.x, accentColor.y, accentColor.z, accentColor.w}},
@@ -77,8 +76,6 @@ public:
       }
     };
     readS("fontPath", fontPath);
-    readS("titleScene", titleScene);
-    readS("retryScene", retryScene);
     readS("titleLabel", titleLabel);
     readC("panelColor", panelColor);
     readC("accentColor", accentColor);
@@ -475,10 +472,10 @@ private:
       bump_ = 1.0f;
       break;
     case kRestart:
-      RequestChange(RetryTarget(), "restart");
+      RequestChange(kTriggerRetry);
       break;
     case kTitle:
-      RequestChange(titleScene, "title");
+      RequestChange(kTriggerExit);
       break;
     default:
       break;
@@ -564,24 +561,21 @@ private:
     }
   }
 
-  /// @brief 「はじめから」の遷移先。retryScene が空ならいまのシーン
-  std::string RetryTarget() {
-    if (!retryScene.empty()) return retryScene;
-    if (Scene *scene = GetScene()) return scene->Name();
-    return "Stage1";
-  }
+  static constexpr const char *kTriggerRetry = "pause_retry"; ///< 遷移表のきっかけ名（はじめから）
+  static constexpr const char *kTriggerExit = "pause_exit";   ///< 遷移表のきっかけ名（タイトル／セレクトへ）
 
-  void RequestChange(const std::string &target, const char *what) {
+  /// @brief 遷移表に従って遷移を要求する
+  void RequestChange(const char *trigger) {
     // ポーズは掛けたまま抜ける（フェード中に敵が動かないように）。
     // gamePaused は OnExit → OnDestroy で必ず下ろされる。
-    if (RequestSceneChange(target)) {
+    if (RequestTransition(trigger)) {
       decided_ = true;
       // メニューはポストプロセスの後に描いているのでディゾルブに巻き込まれない。
       // 出しっぱなしだと画面が黒くなってもメニューだけ残るので、ここで消す。
       open_ = false;
-      Log::Print(std::string("[PauseMenuScript] ") + what + " -> " + target);
+      Log::Print(std::string("[PauseMenuScript] ") + trigger);
     } else {
-      Log::Print("[PauseMenuScript] scene change refused: " + target);
+      Log::Print(std::string("[PauseMenuScript] scene change refused: ") + trigger);
     }
   }
 

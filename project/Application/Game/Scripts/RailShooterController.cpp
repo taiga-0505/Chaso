@@ -804,6 +804,8 @@ protected:
                 pm->type = PrimitiveType::Sphere;
                 pm->meshHandle = RC::GenerateSphere(1.0f);
             }
+            // 水の質感で描く（以前は DataDrivenScene がエンティティ名で判定していた）
+            pm->drawStyle = PrimitiveDrawStyle::Water;
             if (pm->meshHandle >= 0) {
                 if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) {
                     mat->color = { 0.2f, 0.6f, 1.0f, 0.85f };

@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "SceneFlow.h"
 #include "imgui/imgui.h"
 #include "Dx12/Dx12Core.h"
 #include "Dx12/Utility/ScreenCapture.h"
@@ -20,6 +21,9 @@ void Game::Init(SceneContext &ctx) {
 void Game::registerScenes_() {
   // Load data-driven scenes from JSON directory (editor-managed)
   sceneMgr_.LoadScenesFromDirectory(kSceneDir);
+
+  // シーン遷移表（Resources/SceneFlow.json）。無ければ空で始まり、エディタから作れる
+  SceneFlow::Get().Load(SceneFlow::kDefaultPath);
 }
 
 void Game::Update(SceneContext &ctx) { sceneMgr_.Update(ctx); }

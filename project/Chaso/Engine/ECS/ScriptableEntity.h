@@ -125,6 +125,29 @@ public:
   ///          文字列で受けて Scene.cpp 側で変換する。その他の挙動は 1 引数版と同じ。
   bool RequestSceneChange(const std::string& name, const std::string& transition);
 
+  /// @brief 遷移表（Resources/SceneFlow.json）に従って遷移を要求する
+  /// @param trigger きっかけの名前（例: "start" / "back" / "retry"）
+  /// @param arg 遷移先が "$arg" の行に渡す名前（スクリプトが行き先を決める場合）
+  /// @return 要求が受理されたら true
+  /// @details シーン名をスクリプトに書かずに済む。行き先と演出はエディタの
+  ///          Window > Scene Flow で変えられる。表に行が無いきっかけは
+  ///          Scene Flow の「未登録のきっかけ」に出るので、そこから追加できる。
+  ///          再生中以外では何もしない（RequestSceneChange と同じ）。
+  /// @note 実体は Application 側の Scene.cpp で定義している
+  bool RequestTransition(const std::string& trigger, const std::string& arg = "");
+
+  /// @brief 遷移表を引くだけ（遷移はしない）
+  /// @param trigger きっかけの名前
+  /// @param outTarget 遷移先シーン名（変数は解決済み。行き先が無ければ空）
+  /// @param outTransition 演出名（"dissolve" / "dive"）
+  /// @param arg 遷移先が "$arg" の行に渡す名前
+  /// @return 表に行があれば true
+  /// @details 遷移の前に独自の演出（飛び込みなど）を挟むスクリプトが、
+  ///          演出名を見て挟むかどうかを決め、最後に RequestSceneChange(outTarget, ...) を呼ぶ。
+  ///          行き先が無いボタン（最終面の「次へ」など）を隠す判定にも使える。
+  bool LookupTransition(const std::string& trigger, std::string& outTarget,
+                        std::string& outTransition, const std::string& arg = "");
+
 protected:
   /// @brief Called when the script is created
   virtual void OnCreate() {}

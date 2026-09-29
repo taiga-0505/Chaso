@@ -43,6 +43,14 @@ LRESULT CALLBACK Window::WindowProc(HWND hwnd, UINT msg, WPARAM wparam,
   case WM_DESTROY:
     PostQuitMessage(0);
     return 0;
+  case WM_SYSCOMMAND:
+    // F10 / Alt 単独押しで Windows のメニュー操作モード（SC_KEYMENU）に入らないようにする。
+    // 入るとメッセージループがモーダルになり、次のキーを押すまで描画が止まる。
+    // F10 は録画の開始 / 停止に使っている。
+    if ((wparam & 0xFFF0) == SC_KEYMENU) {
+      return 0;
+    }
+    break;
   }
   return DefWindowProc(hwnd, msg, wparam, lparam);
 }

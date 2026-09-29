@@ -93,6 +93,18 @@
     <ClCompile Include="..\Chaso\Editor\CaptureMode.cpp">
       <Filter>Framework</Filter>
     </ClCompile>
+    <ClCompile Include="..\Chaso\Editor\KeyBindingsHelp.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Chaso\Editor\SceneFlowPanel.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Chaso\Game\Scene\SceneFlow.cpp">
+      <Filter>Game\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Chaso\Editor\EditorExtension.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
     <ClCompile Include="..\Chaso\Game\Game.cpp">
       <Filter>Game</Filter>
     </ClCompile>
@@ -119,6 +131,18 @@
     <ClInclude Include="..\Chaso\Editor\CaptureMode.h">
       <Filter>Framework</Filter>
     </ClInclude>
+    <ClInclude Include="..\Chaso\Editor\KeyBindingsHelp.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Chaso\Editor\SceneFlowPanel.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Chaso\Game\Scene\SceneFlow.h">
+      <Filter>Game\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Chaso\Editor\EditorExtension.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
     <ClInclude Include="..\Chaso\Editor\DebugBridge.h">
       <Filter>Framework</Filter>
     </ClInclude>
@@ -129,21 +153,6 @@
       <Filter>Game\Framework</Filter>
     </ClInclude>
     <ClInclude Include="..\Chaso\Game\Framework\GameStateBase.h">
-      <Filter>Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Chaso\Game\Framework\GameSession.h">
-      <Filter>Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Chaso\Game\Framework\StageProgress.h">
-      <Filter>Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Chaso\Game\Framework\GameSettings.h">
-      <Filter>Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Chaso\Game\Framework\UnderwaterLook.h">
-      <Filter>Game\Framework</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Chaso\Game\Framework\WaterCameraFx.h">
       <Filter>Game\Framework</Filter>
     </ClInclude>
     <ClInclude Include="..\Chaso\Game\Scene\Fade\Fade.h">

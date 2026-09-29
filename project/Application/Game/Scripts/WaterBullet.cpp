@@ -474,6 +474,8 @@ protected:
             } else if (pm->meshHandle < 0) {
                 pm->meshHandle = RC::GenerateCylinder(1.0f, 1.0f);
             }
+            // 水柱として描く（以前は DataDrivenScene がエンティティ名で判定していた）
+            pm->drawStyle = PrimitiveDrawStyle::WaterColumn;
 
             if (pm->meshHandle >= 0) {
                 if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) mat->color = { 0.9f, 0.95f, 1.0f, 1.0f }; 
@@ -525,6 +527,8 @@ protected:
                 } else if (pm->meshHandle < 0) {
                     pm->meshHandle = RC::GenerateSphere(1.0f);
                 }
+                // 水の質感で描く（以前は DataDrivenScene がエンティティ名で判定していた）
+                pm->drawStyle = PrimitiveDrawStyle::Water;
 
                 if (pm->meshHandle >= 0) {
                     if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) {

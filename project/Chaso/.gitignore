@@ -4,3 +4,4 @@ Externals/**/*.lib
 !Externals/assimp/**/*.lib
 pso_cache.bin
 *.exp
+!Externals/curl/**/*.lib

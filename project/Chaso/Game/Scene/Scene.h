@@ -230,6 +230,10 @@ public:
   /// @details 派生クラスでオーバーライドして、モデルロードやメッシュ生成を行う
   virtual void InitDynamicEntityRuntime(Entity& e) {}
 
+  /// @brief シーンをファイルへ保存する（エディタの Ctrl+S が呼ぶ）
+  /// @return 保存できたら true。保存先を持たないシーンは false
+  virtual bool Save() { return false; }
+
   /// @brief 動的に生成したエンティティのランタイムリソースを解放する
   /// @param e 解放するエンティティ
   virtual void ReleaseDynamicEntityRuntime(Entity& e) {}

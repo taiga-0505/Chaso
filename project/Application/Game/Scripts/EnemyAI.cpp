@@ -252,6 +252,8 @@ private:
         } else if (pm->meshHandle < 0) {
             pm->meshHandle = RC::GenerateSphere(1.0f);
         }
+        // 水の質感で描く（以前は DataDrivenScene がエンティティ名で判定していた）
+        pm->drawStyle = PrimitiveDrawStyle::Water;
 
         // Set color (reddish water)
         if (pm->meshHandle >= 0) {
@@ -356,6 +358,8 @@ private:
             } else if (pm->meshHandle < 0) {
                 pm->meshHandle = RC::GenerateSphere(1.0f);
             }
+            // 水の質感で描く（以前は DataDrivenScene がエンティティ名で判定していた）
+            pm->drawStyle = PrimitiveDrawStyle::Water;
 
             if (pm->meshHandle >= 0) {
                 if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(pm->meshHandle)) {

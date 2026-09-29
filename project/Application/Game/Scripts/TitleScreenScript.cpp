@@ -17,6 +17,7 @@
 #include "Game/Framework/UnderwaterLook.h"
 #include "Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
+#include "SceneFlow.h"
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -41,7 +42,7 @@
 ///       高さと法線をサンプルし、浮き沈み・傾きを追従させる（Floater）。
 ///     - メニューの選択は色・大きさ・浮き上がりで示す。
 ///       ↑↓ / W S / 十字キー / 左スティックで選択、Space / Enter / A ボタンで決定。
-///       「スタート」→ 飛び込み演出のあと startScene へ遷移、「ゲーム終了」→ PostQuitMessage(0)。
+///       「スタート」→ 飛び込み演出のあと遷移表のきっかけ "start" の行き先へ、「ゲーム終了」→ PostQuitMessage(0)。
 ///     - 操作ヒントだけは小さな 2D 文字（OnRender / RC::DrawString）。showHint で消せる。
 ///
 ///   スタート時の飛び込み（Dive）:
@@ -52,7 +53,7 @@
 ///       2. 落下   : 水面へ向かって加速。画角が広がりタイトル文字が迫る（divePlunge 秒）
 ///       3. 着水   : 水中エフェクト一式 ＋ ラジアルブラー ＋ 上へ昇る水滴 ＋ 泡
 ///       4. 沈降   : 見上げる向きへ傾きながら沈み、深さに応じてフォグが深海色へ（diveSink 秒）
-///       5. 完了   : RequestSceneChange(startScene, "dive")
+///       5. 完了   : RequestSceneChange(行き先, "dive")
 ///     水中の色・距離は UnderwaterLook（Game 側と共通の定義）で決める。
 ///
 ///   注意:
@@ -86,7 +87,7 @@
 ///     "menuSelectedLift"  : 選択中に追加で浮かせる量（m）
 ///     "menuBobAmplitude"  : メニューの上下動（m。タイトル文字より控えめにする）
 ///     "menuTiltScale"     : メニューの傾き追従の強さ
-///     "startScene"     : 「スタート」で遷移するシーン名
+///     （行き先は遷移表 Resources/SceneFlow.json のきっかけ "start"。演出が "dive" のときだけ飛び込む）
 ///     "quitEnabled"    : 「ゲーム終了」でアプリを終了するか（false ならログのみ）
 ///     [ヒント]
 ///     "showHint" / "hintFontPath" / "hintFontSize" : 画面下の操作ヒント（2D）
@@ -143,7 +144,6 @@ public:
   float menuSelectedLift = 0.12f;
   float menuBobAmplitude = 0.04f;
   float menuTiltScale = 0.5f;
-  std::string startScene = "Select";
   bool quitEnabled = true;
 
   // ---- 操作ヒント（2D）----
@@ -196,7 +196,6 @@ public:
         {"menuSelectedLift", menuSelectedLift},
         {"menuBobAmplitude", menuBobAmplitude},
         {"menuTiltScale", menuTiltScale},
-        {"startScene", startScene},
         {"quitEnabled", quitEnabled},
         {"showHint", showHint},
         {"hintFontPath", hintFontPath},
@@ -264,7 +263,6 @@ public:
     readF("menuSelectedLift", menuSelectedLift);
     readF("menuBobAmplitude", menuBobAmplitude);
     readF("menuTiltScale", menuTiltScale);
-    readS("startScene", startScene);
     readB("quitEnabled", quitEnabled);
 
     readB("showHint", showHint);
@@ -297,7 +295,9 @@ public:
     ImGui::DragFloat("Menu Tilt", &menuTiltScale, 0.05f, 0.0f, 2.0f);
     ImGui::Checkbox("Quit Enabled", &quitEnabled);
     ImGui::Checkbox("Show Hint", &showHint);
-    ImGui::TextUnformatted(("Start scene: " + startScene).c_str());
+    if (Scene *scene = GetScene()) {
+      ImGui::TextUnformatted(("Scene Flow: " + SceneFlow::Get().Describe(scene->Name(), kTriggerStart)).c_str());
+    }
     ImGui::TextDisabled("menuSize / menuPositions / fonts are applied on scene reload");
 
     ImGui::SeparatorText("Dive (Start -> Game)");
@@ -787,15 +787,21 @@ private:
       SceneContext *sc = GetSceneContext();
       if (sc && !sc->isPlaying()) return; // 編集モードでは飛ばない（RequestSceneChange と同じ）
 
-      if (dive.enabled && BeginDive()) {
+      // 行き先と演出は遷移表で引く。演出が dive のときだけ飛び込み演出を挟む
+      std::string transition;
+      if (!LookupTransition(kTriggerStart, startTarget_, transition) || startTarget_.empty()) {
+        Log::Print("[TitleScreenScript] scene flow has no target for 'start'");
+        return;
+      }
+      if (dive.enabled && transition == SceneTransitions::kDive && BeginDive()) {
         // 遷移要求は沈みきったあと UpdateDive が出す
         decided_ = true;
-        Log::Print("[TitleScreenScript] start -> dive -> " + startScene);
-      } else if (RequestSceneChange(startScene)) {
+        Log::Print("[TitleScreenScript] start -> dive -> " + startTarget_);
+      } else if (RequestSceneChange(startTarget_)) {
         decided_ = true;
-        Log::Print("[TitleScreenScript] start -> " + startScene);
+        Log::Print("[TitleScreenScript] start -> " + startTarget_);
       } else {
-        Log::Print("[TitleScreenScript] scene change refused: " + startScene);
+        Log::Print("[TitleScreenScript] scene change refused: " + startTarget_);
       }
     } else {
       if (quitEnabled) {
@@ -843,7 +849,7 @@ private:
       // カメラが消えた（エディタ操作など）。演出を諦めて素直に遷移する
       const bool testOnly = diveTestOnly_;
       EndDive(false);
-      if (!testOnly && RequestSceneChange(startScene)) decided_ = true;
+      if (!testOnly && !startTarget_.empty() && RequestSceneChange(startTarget_)) decided_ = true;
       return;
     }
     if (!dive_.IsDone() || diveRequested_) return;
@@ -855,9 +861,9 @@ private:
     }
     // 画面が深海色になりきってから遷移を要求する。断られたら（遷移中など）しばらく出し直し、
     // それでも通らない（シーン名が未登録など）なら演出を戻してメニューへ返す。
-    diveRequested_ = RequestSceneChange(startScene, SceneTransitions::kDive);
+    diveRequested_ = RequestSceneChange(startTarget_, SceneTransitions::kDive);
     if (!diveRequested_ && dive_.DoneTime() > kDoneRetrySeconds) {
-      Log::Print("[TitleScreenScript] scene change kept failing, giving up: " + startScene);
+      Log::Print("[TitleScreenScript] scene change kept failing, giving up: " + startTarget_);
       EndDive(/*restoreCamera=*/true);
     }
   }
@@ -895,6 +901,8 @@ private:
   int selected_ = kMenuStart;
   int prevStickDir_ = 0;
   bool decided_ = false;
+  std::string startTarget_; ///< 「スタート」の行き先（決定時に遷移表から引く）
+  static constexpr const char *kTriggerStart = "start"; ///< 遷移表のきっかけ名
   float time_ = 0.0f;
   float pulseTimer_ = 0.0f;
 

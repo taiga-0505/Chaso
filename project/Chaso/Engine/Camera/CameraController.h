@@ -20,7 +20,7 @@ public:
   void Initialize(Input *input, const Vector3 &mainPos, const Vector3 &mainRot,
                   float fovY, float aspect, float nearZ, float farZ);
 
-  /// @brief 更新処理。TABキーによるカメラ切り替えや、各カメラの更新を行う。
+  /// @brief 更新処理。各カメラの更新を行う（切り替えは SetUseDebug。F1 は DataDrivenScene が扱う）
   /// @param dt 前フレームからの経過時間 (秒)。補間計算に使用。
   void Update(float dt = 1.0f / 60.0f);
 

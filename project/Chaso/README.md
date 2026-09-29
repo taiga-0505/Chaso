@@ -8,13 +8,14 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
     chaso.sln, main.cpp, AppConfig.json      ← ゲーム側（Template からコピー）
     Application/ChasoApp.vcxproj             ← ゲーム側
     Application/Game/Scripts/                ← ゲーム側（スクリプト）
+    Application/Game/Framework/              ← ゲーム側（GameMode の派生・シーンをまたぐ状態・GameSetup.cpp）
     Resources/                               ← 実行時に使う唯一の Resources（ゲーム + エンジン由来のコピー）
     Chaso/                                   ← ★ このリポジトリ（subtree）
       Engine/       エンジン本体（ChasoEngine.vcxproj）
       Externals/    imgui / assimp / DirectXTex / nlohmann / curl / httplib
       Framework/    App（アプリのライフサイクル）, AppConfig
-      Editor/       EditorManager, CaptureMode（ImGui エディタ）
-      Game/         Game, Scene, SceneManager, DataDrivenScene, Fade, Framework/*
+      Editor/       EditorManager, CaptureMode, EditorExtension（ImGui エディタ）
+      Game/         Game, Scene, SceneManager, DataDrivenScene, Fade, Framework/（GameModeBase, GameStateBase）
       Resources/    エンジン用リソースの原本（ビルド前に project/Resources へ同期される）
       Template/     新しいゲームを作るときに project/ へコピーするひな形（_root/ はリポジトリ直下へ）
       scripts/      同期用スクリプト
@@ -84,10 +85,56 @@ git subtree pull --prefix=project/Chaso https://github.com/taiga-0505/ChasoEngin
 git subtree add  --prefix=project/Chaso https://github.com/taiga-0505/ChasoEngine.git main --squash
 ```
 
+## シーン遷移（`project/Resources/SceneFlow.json`）
+
+「どのシーンで・何が起きたら・どこへ・どの演出で」遷移するかを 1 つの表で持つ。
+エディタの **Window > Scene Flow (シーン遷移)** で編集する（編集は即反映、「保存」でファイルへ）。
+
+```cpp
+// スクリプト（ScriptableEntity）からはシーン名を書かず、きっかけ名だけで遷移する
+RequestTransition("start");            // 表の行き先・演出で遷移
+RequestTransition("stage", "Stage3");  // 遷移先が $arg の行なら、渡した名前へ
+LookupTransition("next", target, transition); // 引くだけ（独自演出を挟む・ボタンを隠す判定など）
+```
+
+| 列 | 書き方 |
+|---|---|
+| 遷移元 | シーン名 / `Stage*`（前方一致）/ `*`（全シーン）。完全一致 → 長い前方一致 → `*` の順で優先 |
+| きっかけ | スクリプトや `GameMode::EvaluateOutcome` が渡す名前 |
+| 遷移先 | シーン名 / `$current`（今のシーン）/ `$arg`（スクリプトが渡す）/ Application が登録した変数 |
+| 演出 | `dissolve` / `dive` |
+
+表に無いきっかけで遷移しようとすると、パネルの「未登録のきっかけ」に出る（「追加」で行を作れる）。
+未登録のシーン名・重複行などは「チェック」に出る。新規ゲームには空の `SceneFlow.json` が付く。
+
+## デバッグキー
+
+エディタの **Help > キー操作一覧** に全部載っている（一覧の元は `Editor/KeyBindingsHelp.cpp`。キーを変えたらここも直す）。
+デバッグキーは Debug / Development ビルドだけで効き、配布用 Release では効かない。
+
+| キー | 動作 |
+|---|---|
+| F1 | ゲームカメラ / デバッグカメラの切り替え（再生中） |
+| F2 | スクリーンショット |
+| F3 / F4 | コライダー / デバッグ描画を全部表示 |
+| F10 | 録画（MP4）の開始 / 停止（撮影モード中ならゲーム画面だけが写る） |
+| F11 | 撮影モード（ゲーム画面だけを全画面）の開始 / 終了 |
+| Ctrl+S | シーンを保存（未保存の Scene Flow も。編集モードのみ） |
+
 ## 注意
 
 - `project/Chaso/` の中にゲーム固有のファイルを置かない（push でエンジン側に混ざる）。
-- `Game/Framework/` の `UnderwaterLook`, `WaterCameraFx`, `InkScreenFx`, `StageProgress` は
-  水天の射手由来だが `SceneManager` / `DataDrivenScene` が参照しているためエンジン側に置いている。
-  汎用化するときはここから切り離す。
+- エンジン（`Engine/` `Editor/` `Game/` `Framework/`）から `Application/` のヘッダを include しない。
+  ゲームごとに違う部分は、エンジンが用意した登録口へ Application 側から差し込む:
+
+  | 差し込むもの | 登録口 | 例（水天の射手） |
+  |---|---|---|
+  | ゲームルール（1 プレイの開始・決着判定・レベルの敵に載せるスクリプト） | `GameModeBase` を継承し `GameModeBase::SetFactory` で登録 | `Application/Game/Framework/RailShooterGameMode` |
+  | シーン遷移の行き先で使う変数（`$nextStage` など） | `SceneFlow::Get().RegisterVariable` | `GameSetup.cpp` |
+  | Dive 遷移で抜ける画面色 | `Scene::SceneManager::SetDiveScreenColor` | `GameSetup.cpp` |
+  | エディタのパネル（ゲーム専用のデバッグ UI） | `EditorExtension::AddPanel`（`CHASO_EDITOR_EXTENSION` マクロ） | （未使用） |
+  | プリミティブの描画方法（水・水柱） | `PrimitiveMeshComponent::drawStyle` | 弾やしぶきを作るスクリプト |
+
+  登録は `REGISTER_SCRIPT` と同じく静的初期化で行う（エンジン側の保存先は関数内 static なので順序は問わない）。
+  何も登録しなければ `GameModeBase` の既定動作（決着判定なし）で動く。
 - `Externals/assimp/lib/*.lib` は追跡対象。それ以外の `.lib` と `DirectXTex/Shaders/Compiled/` は無視される。

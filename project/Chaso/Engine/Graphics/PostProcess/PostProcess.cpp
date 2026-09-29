@@ -2220,7 +2220,7 @@ void PostProcess::DrawImGui([[maybe_unused]] const char *label) {
     }
     if (inkOverlay) {
       ImGui::Indent();
-      ImGui::TextDisabled("ゲーム中は InkScreenFx が毎フレーム上書きします");
+      ImGui::TextDisabled("ゲーム側のスクリプトが毎フレーム上書きする場合があります");
       ImGui::Text("Splats: %d / %d", inkSplatCount_, kMaxInkSplats);
       bool dirty = false;
       dirty |= ImGui::SliderFloat("Test Strength (強さ)", &inkDebugStrength_, 0.0f, 1.0f);

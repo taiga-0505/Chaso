@@ -143,6 +143,8 @@ private:
   bool showParticleEditor_ = false; ///< Particle Editor ウィンドウの表示フラグ
   bool showEnvironmentWindow_ = false; ///< Environment Settings ウィンドウの表示フラグ
   bool showPostEffectWindow_ = false; ///< Post Effect Settings ウィンドウの表示フラグ
+  bool showSceneFlow_ = false;        ///< Scene Flow（シーン遷移表）ウィンドウの表示フラグ
+  bool showKeyHelp_ = false;          ///< キー操作一覧（Help）ウィンドウの表示フラグ
   bool isViewportHovered_ = false; ///< Viewportウィンドウがホバーされているか
 
   PlayState playState_; ///< エディタ上での現在の再生状態

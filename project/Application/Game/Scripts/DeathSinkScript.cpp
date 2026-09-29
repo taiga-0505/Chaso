@@ -30,11 +30,12 @@
 ///        少しだけ横に傾く（roll）。深さに応じたフォグは RailShooterController が掛けるので、
 ///        深くなるほど暗くなる。
 ///     5. 深さが darkDepth（UnderwaterLook の deepDepth と揃える）に達したら
-///        RequestSceneChange(resultScene, "dive")。Result 側は深海から浮上して始まる。
+///        遷移表（Resources/SceneFlow.json）のきっかけ "gameover" で遷移する（通常は Result へ "dive"）。
+///        Result 側は深海から浮上して始まる。
 ///
 ///   JSON (scriptDataList):
 ///     "enabled" / "delay" / "fallTime" / "sinkTime" / "depth" / "lookUpPitch" / "tiltTime" /
-///     "roll" / "darkDepth" / "bubbles" / "resultScene"
+///     "roll" / "darkDepth" / "bubbles"
 class DeathSinkScript : public ScriptableEntity {
 public:
   bool enabled = true;
@@ -47,13 +48,12 @@ public:
   float roll = 0.18f;         ///< 沈みながら横に傾く量（rad）
   float darkDepth = 24.0f;    ///< この深さで遷移する（UnderwaterLook の deepDepth と揃える）
   bool bubbles = true;
-  std::string resultScene = "Result";
 
   nlohmann::json Serialize() override {
     return {{"enabled", enabled},   {"delay", delay},       {"fallTime", fallTime},
             {"sinkTime", sinkTime}, {"depth", depth},       {"lookUpPitch", lookUpPitch},
             {"tiltTime", tiltTime}, {"roll", roll},         {"darkDepth", darkDepth},
-            {"bubbles", bubbles},   {"resultScene", resultScene}};
+            {"bubbles", bubbles}};
   }
 
   void Deserialize(const nlohmann::json &j) override {
@@ -69,7 +69,6 @@ public:
     f("roll", roll);
     f("darkDepth", darkDepth);
     b("bubbles", bubbles);
-    if (j.contains("resultScene") && j["resultScene"].is_string()) resultScene = j["resultScene"].get<std::string>();
   }
 
 #if RC_ENABLE_IMGUI
@@ -156,11 +155,15 @@ protected:
       tr->position.y -= 2.0f * dt; // 遷移が始まるまで止まって見えないように
       UpdateTilt(*tr, dt);
       if (!requested_) {
-        requested_ = RequestSceneChange(resultScene, SceneTransitions::kDive);
+        // 行き先と演出は遷移表のきっかけ "gameover"（GameMode の決着と同じ行）で引く
+        if (resultTarget_.empty()) {
+          LookupTransition(kTriggerGameOver, resultTarget_, resultTransition_);
+        }
+        requested_ = !resultTarget_.empty() && RequestSceneChange(resultTarget_, resultTransition_);
         if (!requested_ && t_ > 1.5f) {
           // 何らかの理由で通らない（遷移中など）。素の遷移で送る
-          Log::Print("[DeathSinkScript] dive transition refused, falling back");
-          requested_ = RequestSceneChange(resultScene);
+          Log::Print("[DeathSinkScript] transition refused, falling back");
+          requested_ = !resultTarget_.empty() && RequestSceneChange(resultTarget_);
           if (!requested_ && t_ > 3.0f) {
             self->ClearTag(kOwnerTag);
             requested_ = true; // 諦める（DataDrivenScene 側の要求はもう出ないので、ここで止める）
@@ -202,6 +205,9 @@ private:
   RC::Vector3 startPos_{};
   RC::Vector3 startRot_{};
   bool requested_ = false;
+  std::string resultTarget_;     ///< 遷移表で引いた行き先（Done に入ってから 1 回だけ引く）
+  std::string resultTransition_; ///< 遷移表で引いた演出
+  static constexpr const char *kTriggerGameOver = "gameover"; ///< 遷移表のきっかけ名
   WaterCameraFx::Bubbles bubbles_;
 };
 

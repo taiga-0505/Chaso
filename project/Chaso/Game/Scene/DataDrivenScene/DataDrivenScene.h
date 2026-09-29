@@ -1,7 +1,7 @@
 #pragma once
 #include "Scene.h"
-#include "Game/Framework/GameSession.h"
-#include "Game/Framework/StageProgress.h"
+#include "SceneFlow.h"
+#include "Common/EngineConfig.h"
 #include "Common/Math/MathUtils.h"
 #include "Common/Math/Math.h"
 #include "Camera/CameraController.h" // ctx.camera->GetWorldPos()（Scene.h は前方宣言のみ）
@@ -70,7 +70,6 @@ public:
     resultTriggered_ = false;
     resultChangeRequested_ = false;
     resultDelayTimer_ = 0.0f;
-    statsFinalized_ = false;
     waterTime_ = 0.0f;
 
     // GameMode / GameState をリトライ前提の初期状態へ戻す。
@@ -79,13 +78,8 @@ public:
     // 場合にも、スコアと経過時間が前回のプレイのまま残らないことを保証する。
     if (gameMode_) {
         gameMode_->ResetForRestart();
-    }
-
-    // プレイシーン（Stage1〜5 / テスト用 Game）に入った瞬間が「1 プレイの開始」。前回の結果を捨てる。
-    // どのステージを遊んでいるかも記録しておく（Result の「次へ／もう一度」が使う）。
-    if (StageProgress::IsPlayScene(sceneName_)) {
-        GameSession::Get().BeginRun();
-        StageProgress::Get().SetCurrentScene(sceneName_);
+        // 「1 プレイの開始」などシーン入場時のゲーム固有処理は GameMode 側に任せる
+        gameMode_->OnSceneEnter(*this, ctx);
     }
 
     // Initialize runtime handles for all loaded components
@@ -124,6 +118,8 @@ public:
     (void)sm;
     currentContext_ = &ctx;
 
+#if RC_ENABLE_IMGUI
+    // デバッグキーは Debug / Development ビルドだけ（配布用 Release では効かない）
     // F3 キーでコライダーデバッグ描画をトグル
     if (ctx.input && ctx.input->IsKeyTrigger(DIK_F3)) {
         showColliderGizmos_ = !showColliderGizmos_;
@@ -132,6 +128,7 @@ public:
     if (ctx.input && ctx.input->IsKeyTrigger(DIK_F4)) {
         showAllGizmos_ = !showAllGizmos_;
     }
+#endif
 
     // NativeScriptComponent に Scene/Context 参照を設定
     for (auto& e : entities_) {
@@ -447,90 +444,20 @@ public:
     UpdateBoneAttachments();
 
     // === ゲーム結果判定（プレイ中のみ） ===
-    if (ctx.isSimulating() && !resultTriggered_) {
-        if (!StageProgress::IsPlayScene(sceneName_)) {
-            // スペースキーで次へ進むのはセレクト〜リザルトの導線シーンだけに限定する。
-            // CG4 など導線外のシーンでは Space をゲーム操作（ジャンプ）に使うため、
-            // 名前が一致しないシーンをまとめて Title へ送らないこと。
-            // Title は TitleScreenScript がメニュー（スタート／ゲーム終了）で、
-            // Result は ResultScreenScript が「もう一度／タイトルへ」で
-            // 自前に遷移を扱うため、ここでは判定しない（二重判定になる）。
-            // GameOver シーンは廃止し、死亡時も Result へ送る（Result 側が決着を見て表示を変える）。
-            // Select は StageSelectScript が自前でステージを選んで遷移するので、ここでは判定しない。
-            // （旧仕様の「Select で Space → Game」は廃止。残すと決定の瞬間に二重遷移する）
-        } else {
-            // プレイヤー死亡チェック
-            // レールシューターの自機はカメラに乗っていて名前が "player" ではないため、
-            // 名前だけでなく is_player タグ（RailShooterController が OnCreate で立てる）でも拾う。
-            for (auto& e : entities_) {
-                if (!e || !e->HasTag("game_over")) continue;
-                if (e->GetName() != "player" && !e->HasTag("is_player")) continue;
-                resultTriggered_ = true;
-                resultTarget_ = "Result";
-                resultDelayTimer_ = 0.0f;
-                GameSession::Get().Finish(GameSession::Outcome::GameOver);
-                break;
-            }
-            // クリアチェック（プレイヤーが生きている場合のみ）
-            //
-            // レールが敷かれているシーンでは「終点に到達＝クリア」とする。
-            // A-03 のウェーブ戦闘を入れると、ウェーブとウェーブの間に敵が
-            // 0 体になる瞬間が必ず生まれるため、「敵が全員撃破された＝クリア」
-            // のままだと最初のウェーブを倒した時点で Result へ飛んでしまう。
-            // 撃破後の敵は 2 秒で実体ごと消えるので、抑止タグを足すだけでは塞げない。
-            //
-            // レールが無いシーン（単体テスト用など）は従来どおり全滅で判定する。
-            if (!resultTriggered_) {
-                bool hasRail = false;
-                bool railFinished = false;
-                for (auto& e : entities_) {
-                    if (!e || !e->HasTag("has_rail")) continue;
-                    hasRail = true;
-                    if (e->HasTag("rail_finished")) {
-                        railFinished = true;
-                        break;
-                    }
-                }
-
-                bool cleared = false;
-                if (hasRail) {
-                    cleared = railFinished;
-                } else {
-                    bool hasEnemy = false;
-                    bool allDefeated = true;
-                    for (auto& e : entities_) {
-                        if (e && (e->GetName() == "Enemy" || e->GetName() == "Shark" || e->HasTag("is_enemy"))) {
-                            hasEnemy = true;
-                            if (!e->HasTag("enemy_defeated")) {
-                                allDefeated = false;
-                                break;
-                            }
-                        }
-                    }
-                    cleared = hasEnemy && allDefeated;
-                }
-
-                if (cleared) {
-                    resultTriggered_ = true;
-                    resultTarget_ = "Result";
-                    resultDelayTimer_ = 0.0f;
-                    GameSession::Get().Finish(GameSession::Outcome::Cleared);
-                    // ステージのクリアを記録し、次の面を解放して保存する（Game シーンは対象外）
-                    const int stageIndex = StageProgress::IndexOf(sceneName_);
-                    if (stageIndex >= 0) {
-                        StageProgress::Get().MarkCleared(stageIndex, GameSession::Get().Score());
-                    }
-                }
-            }
-
-            // 決着がついた時点の経過時間を確定させ、Result へ引き渡す。
-            // 1 プレイにつき 1 回だけ（statsFinalized_）。決着後もリザルト遷移待ちの
-            // 2.5 秒のあいだ GameState は Tick し続けるため、毎フレーム上書きすると
-            // 表示される時間が伸びてしまう。
-            if (resultTriggered_ && !statsFinalized_ && gameMode_ && gameMode_->GetGameState()) {
-                GameSession::Get().SetElapsedTime(
-                    gameMode_->GetGameState()->GetElapsedTime());
-                statsFinalized_ = true;
+    // 何をもって決着とするか（死亡・クリア条件、結果の記録）はゲームごとに違うので
+    // GameMode::EvaluateOutcome に任せる。エンジンは決着後の余韻と遷移だけを受け持つ。
+    // GameMode が返すのはきっかけ名（"cleared" など）。行き先と演出は遷移表（SceneFlow）で引く。
+    if (ctx.isSimulating() && !resultTriggered_ && gameMode_) {
+        std::string trigger;
+        if (gameMode_->EvaluateOutcome(*this, ctx, trigger)) {
+            resultTriggered_ = true;
+            resultDelayTimer_ = 0.0f;
+            resultTarget_.clear();
+            resultTransition_ = SceneTransition::Dissolve;
+            SceneFlowResult flow;
+            if (!trigger.empty() && SceneFlow::Get().Resolve(sceneName_, trigger, "", flow)) {
+                resultTarget_ = flow.target;
+                resultTransition_ = ParseSceneTransition(flow.transition);
             }
         }
     }
@@ -549,15 +476,17 @@ public:
             for (auto& e : entities_) {
                 if (e && e->GetTagInt("result_transition_owner", 0) == 1) { ownedByScript = true; break; }
             }
-            if (!ownedByScript) sm.RequestChange(resultTarget_);
+            if (!ownedByScript && !resultTarget_.empty()) sm.RequestChange(resultTarget_, resultTransition_);
             resultChangeRequested_ = true; // 遷移要求を一度だけ送信（決着演出はフェードアウト中も描画継続！）
         }
     }
 
-    // === Play/Editor カメラ切り替え ===
+    // === Play/Editor カメラ切り替え（F1。Debug / Development ビルドだけ） ===
+#if RC_ENABLE_IMGUI
     if (ctx.isPlaying() && ctx.input && ctx.camera && ctx.input->IsKeyTrigger(DIK_F1)) {
         ctx.camera->SetUseDebug(!ctx.camera->IsUsingDebug());
     }
+#endif
     SyncMainCamera(ctx);
   }
 
@@ -1077,13 +1006,17 @@ public:
         }
         if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
             if (pm->HasMesh() && pm->visible && pm->IsEnabled()) {
-                const std::string& name = e->GetName(); // コピーしない（毎フレーム全エンティティ分の確保を避ける）
-                if (name == "PlayerBullet" || name == "EnemyBullet" || name == "Splash") {
+                // 描画方法はエンティティ名ではなくコンポーネントの drawStyle で決める
+                switch (pm->drawStyle) {
+                case PrimitiveDrawStyle::Water:
                     RC::DrawPrimitiveMeshWater(pm->meshHandle, pm->texOverride);
-                } else if (name == "HeavySplash") {
+                    break;
+                case PrimitiveDrawStyle::WaterColumn:
                     RC::DrawPrimitiveMeshWaterColumn(pm->meshHandle, pm->texOverride);
-                } else {
+                    break;
+                default:
                     RC::DrawPrimitiveMesh(pm->meshHandle, pm->texOverride);
+                    break;
                 }
             }
         }
@@ -1239,7 +1172,7 @@ public:
   // =================================================================
 
   /// @brief Save current scene state to JSON file
-  bool Save() {
+  bool Save() override {
     FlushPendingEntities();
     nlohmann::json root;
     root["sceneName"] = sceneName_;
@@ -1273,7 +1206,7 @@ public:
   /// @brief Load entities from JSON file
   bool Load() {
     entities_.clear();
-    gameMode_ = std::make_unique<GameModeBase>(); // GameModeのリセット
+    gameMode_ = GameModeBase::Create(sceneName_); // GameModeのリセット（Application 側のファクトリで作る）
 
     if (!std::filesystem::exists(filePath_)) {
       Log::Print("[DataDrivenScene] File not found: " + filePath_);
@@ -1342,12 +1275,9 @@ public:
           tr.position = enemyData.translation;
           tr.rotation = enemyData.rotation;
 
-          auto& nsc = enemy->AddComponent<NativeScriptComponent>();
-          if (entName == "Shark") {
-            nsc.AddScript("SharkEnemyScript");
-          } else {
-            nsc.AddScript("EnemyAI");
-          }
+          enemy->AddComponent<NativeScriptComponent>();
+          // どのスクリプトを載せるかはゲームごとに違うので GameMode に任せる
+          if (gameMode_) gameMode_->OnLevelEnemySpawned(*enemy, entName);
 
           entities_.push_back(std::move(enemy));
         }
@@ -1393,7 +1323,7 @@ public:
       }
       entities_.clear();
       pendingEntities_.clear();
-      gameMode_ = std::make_unique<GameModeBase>(); // GameModeのリセット
+      gameMode_ = GameModeBase::Create(sceneName_); // GameModeのリセット（Application 側のファクトリで作る）
 
       for (auto& ej : backupJson_) {
           auto entity = std::make_shared<Entity>();
@@ -1407,7 +1337,6 @@ public:
       resultTriggered_ = false;
       resultChangeRequested_ = false;
       resultDelayTimer_ = 0.0f;
-      statsFinalized_ = false;
   }
 
   /// @brief 動的に生成したエンティティのランタイムリソースを初期化する
@@ -1436,9 +1365,9 @@ private:
   // ゲーム結果判定用
   bool resultTriggered_ = false;       ///< 結果判定がトリガーされたか
   bool resultChangeRequested_ = false; ///< シーン遷移要求が送信されたか
-  bool statsFinalized_ = false;        ///< 決着時の記録を確定させたか（1 プレイ 1 回）
   float resultDelayTimer_ = 0.0f;      ///< 遷移までのディレイタイマー
   std::string resultTarget_;          ///< 遷移先シーン名
+  SceneTransition resultTransition_ = SceneTransition::Dissolve; ///< 遷移演出（遷移表の値）
   static constexpr float kResultDelay_ = 2.5f; ///< 結果確定からシーン遷移までの待機時間（秒）
 
   /// @brief TextRendererComponent のフォントを設定に合わせてロード（変更があれば差し替え）

@@ -16,3 +16,21 @@ void GameModeBase::Tick(SceneContext& ctx) {
         gameState_->Tick(ctx.deltaTime);
     }
 }
+
+GameModeBase::Factory& GameModeBase::FactoryStorage() {
+    static Factory factory;
+    return factory;
+}
+
+void GameModeBase::SetFactory(Factory factory) {
+    FactoryStorage() = std::move(factory);
+}
+
+std::unique_ptr<GameModeBase> GameModeBase::Create(const std::string& sceneName) {
+    if (auto& factory = FactoryStorage()) {
+        if (auto mode = factory(sceneName)) {
+            return mode;
+        }
+    }
+    return std::make_unique<GameModeBase>();
+}

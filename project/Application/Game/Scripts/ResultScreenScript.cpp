@@ -10,6 +10,7 @@
 #include "Game/Framework/UnderwaterLook.h"
 #include "Game/Framework/WaterCameraFx.h"
 #include "Scene.h"
+#include "SceneFlow.h"
 
 #include <Windows.h>
 #include <algorithm>
@@ -51,14 +52,13 @@
 ///     "clearText"       : クリア時の一言（既定 "航路 踏破"）
 ///     "failText"        : 未クリア時の一言（既定 "航路 途絶"）
 ///     "retryLabel" / "titleLabel"   : ボタンの文字
-///     "retryScene" / "titleScene"   : 各ボタンの遷移先シーン名
 ///     "nextLabel" / "selectLabel"   : ステージから来たときの「次のステージへ」「セレクトへ」の文字
-///     "selectScene"     : ステージから来たときの「セレクトへ」の遷移先（既定 "Select"）
+///   各ボタンの遷移先と演出は遷移表（Resources/SceneFlow.json）のきっかけで決まる:
+///     "next" / "retry" / "select" / "title"（演出が "dive" のときだけ飛び込み演出を挟む）
 ///   ステージ（Stage1〜5）から来たときのボタン:
-///     クリア      : 次のステージへ ／ もう一度 ／ セレクトへ（最終面は 次へ を出さない）
+///     クリア      : 次のステージへ ／ もう一度 ／ セレクトへ（"next" の行き先が無ければ 次へ を出さない）
 ///     ゲームオーバー: もう一度 ／ セレクトへ
-///     「もう一度」は直前に遊んだステージ（StageProgress::CurrentSceneName）へ戻る。
-///   テスト用の Game シーンから来たときは従来どおり retryScene ／ titleScene の 2 つ。
+///   テスト用の Game シーンから来たときは もう一度 ／ タイトルへ の 2 つ。
 ///     "fontPath"        : 画面全体で使うフォント（既定は Title の 3D 文字と同じ KiwiMaru-Medium）
 ///     "showScore"       : 得点の行を足すか
 ///     "showHint"        : 画面下の操作ヒントを出すか
@@ -71,7 +71,7 @@
 ///     "uiFadeTime"      : 決定してから UI が消えきるまで（秒）。消えきってから水へ飛び込む
 ///     "dive*"           : 飛び込みの調整値（Title と同じキー。WaterCameraFx::DiveParams）
 ///     "underwater"      : 水中の見た目（UnderwaterLook::Params。Title / Game と同じキー）
-///     飛び込みで暗くなりきったら "dive" 遷移で retryScene / titleScene へ。
+///     飛び込みで暗くなりきったら "dive" 遷移でボタンの行き先へ。
 ///     "rise*"           : Dive 遷移（DeathSinkScript：力尽きて沈んだとき）で入ってきたときの浮上。
 ///                         浮上しきってから UI をフェードインし、成績の演出を始める
 ///     Game は DeepRiseIntroScript、Title は TitleScreenScript が深海からの浮上で受け取る。
@@ -85,11 +85,8 @@ public:
   std::string failText = "航路 途絶";
   std::string retryLabel = "もう一度";
   std::string titleLabel = "タイトルへ";
-  std::string retryScene = "Game";
-  std::string titleScene = "Title";
   std::string nextLabel = "次のステージへ";
   std::string selectLabel = "セレクトへ";
-  std::string selectScene = "Select";
 
   // ---- フォント（Title の 3D 文字と同じもの）----
   std::string fontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
@@ -130,11 +127,8 @@ public:
         {"failText", failText},
         {"retryLabel", retryLabel},
         {"titleLabel", titleLabel},
-        {"retryScene", retryScene},
-        {"titleScene", titleScene},
         {"nextLabel", nextLabel},
         {"selectLabel", selectLabel},
-        {"selectScene", selectScene},
         {"fontPath", fontPath},
         {"showScore", showScore},
         {"showHint", showHint},
@@ -171,11 +165,8 @@ public:
     readS("failText", failText);
     readS("retryLabel", retryLabel);
     readS("titleLabel", titleLabel);
-    readS("retryScene", retryScene);
-    readS("titleScene", titleScene);
     readS("nextLabel", nextLabel);
     readS("selectLabel", selectLabel);
-    readS("selectScene", selectScene);
     readS("fontPath", fontPath);
     readB("showScore", showScore);
     readB("showHint", showHint);
@@ -341,8 +332,9 @@ private:
   /// @brief 下段のボタン 1 つ分
   struct Choice {
     std::string label;
-    std::string target;
-    const char *what; ///< ログ用
+    std::string target;     ///< 遷移表で引いた行き先
+    std::string transition; ///< 遷移表で引いた演出
+    const char *what;       ///< 遷移表のきっかけ名（ログにも使う）
   };
   std::vector<Choice> choices_;
   int ChoiceCount() const { return static_cast<int>(choices_.size()); }
@@ -352,16 +344,22 @@ private:
     choices_.clear();
     const StageProgress &prog = StageProgress::Get();
     const bool cleared = GameSession::Get().IsCleared();
+    // 遷移表を引いて、行き先があるボタンだけ並べる
+    auto add = [&](const std::string &label, const char *trigger) {
+      Choice c{label, {}, {}, trigger};
+      if (LookupTransition(trigger, c.target, c.transition) && !c.target.empty()) {
+        choices_.push_back(std::move(c));
+      }
+    };
     if (prog.Current() >= 0) {
-      // ステージから来た
-      const std::string next = prog.NextSceneName();
-      if (cleared && !next.empty()) choices_.push_back({nextLabel, next, "next"});
-      choices_.push_back({retryLabel, prog.CurrentSceneName(), "retry"});
-      choices_.push_back({selectLabel, selectScene, "select"});
+      // ステージから来た（最終面は "next" の行き先 $nextStage が空になるので出ない）
+      if (cleared) add(nextLabel, "next");
+      add(retryLabel, "retry");
+      add(selectLabel, "select");
     } else {
-      // テスト用の Game シーンなど（従来どおり）
-      choices_.push_back({retryLabel, retryScene, "retry"});
-      choices_.push_back({titleLabel, titleScene, "title"});
+      // テスト用の Game シーンなど
+      add(retryLabel, "retry");
+      add(titleLabel, "title");
     }
   }
 
@@ -862,7 +860,7 @@ private:
     const std::string &target = choice.target;
     SceneContext *sc = GetSceneContext();
     if (sc && !sc->isPlaying()) return; // 編集モードでは飛ばない（RequestSceneChange と同じ）
-    if (dive.enabled) {
+    if (dive.enabled && choice.transition == SceneTransitions::kDive) {
       // UI を消してから飛び込む。遷移の要求は暗くなりきったあと UpdateLeave が出す
       decided_ = true;
       leaving_ = true;
