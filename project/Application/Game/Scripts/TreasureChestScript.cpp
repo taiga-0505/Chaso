@@ -12,11 +12,14 @@
 #include "Scene.h"
 #include "Common/Log/Log.h"
 #include "Game/Framework/GameSession.h"
+#include "Game/Framework/PartPose.h"
 
+#include <algorithm>
 #include <cmath>
 #include <format>
 #include <memory>
 #include <string>
+#include <vector>
 
 #if RC_ENABLE_IMGUI
 #include "imgui/imgui.h"
@@ -44,6 +47,20 @@
 //   "bobSpeed"     : 上下の速さ（既定 1.5）
 //   "spinSpeedDeg" : Y 軸回転の速さ(度/秒)。0 で回さない（既定 0）
 //   "openDuration" : 開いてから実体を消すまでの秒数（既定 1.2）
+//   "chestLook"       : 宝箱の見た目にするか（既定 true。false で従来の箱のまま）
+//   "baseHeightRatio" : 本体の箱を下箱として何割の高さにするか（既定 0.62。残りにふたが載る）
+//   "lidOpenDeg"      : 開いたときにふたが開く角度（度、既定 105）
+//   "lidColor" / "metalColor" / "treasureColor" : ふた・金具・中の財宝の色 RGBA
+//
+// 見た目（宝箱）
+//   本体の Box をそのまま下箱にし、ふた（箱＋かまぼこ形）・金の縁取り・角金具・帯・錠前・中の財宝を
+//   別エンティティ（PrimitiveMesh）で付ける。毎フレーム本体の位置・回転・大きさに合わせて置くので、
+//   ふわふわ上下・被弾の点滅・開いたときに跳ねて回って縮む演出にもそのまま付いてくる。
+//   錠前は -Z 側（レールを進む自機から見える面）、ちょうつがいは +Z 側。開くとふたが後ろへ倒れ、
+//   中の財宝（光る金貨の山）がせり上がる。
+//   当たり判定・HP・スコアは今までどおり本体が持つ（部位には当たり判定もスクリプトも無い）。
+//   部位は再生中だけ作る（編集モードで作るとシーン保存や Undo の対象に混ざるため）。
+//   ※ エンジンの描画は Transform の親子を解決しないので、部位のワールド姿勢は PartPose で合成して書き込む。
 
 /// @brief 宝箱。弾を当てると HP が減り、0 になると開いてポイントを獲得する
 class TreasureChestScript : public ScriptableEntity {
@@ -66,6 +83,14 @@ public:
 
   bool isOpened = false;
 
+  // --- 見た目（宝箱）---
+  bool chestLook = true;
+  float baseHeightRatio = 0.62f;
+  float lidOpenDeg = 105.0f;
+  RC::Vector4 lidColor = {0.46f, 0.27f, 0.11f, 1.0f};
+  RC::Vector4 metalColor = {0.93f, 0.74f, 0.26f, 1.0f};
+  RC::Vector4 treasureColor = {1.0f, 0.86f, 0.32f, 1.0f};
+
 protected:
   nlohmann::json Serialize() override {
     nlohmann::json j;
@@ -77,6 +102,13 @@ protected:
     j["spinSpeedDeg"] = spinSpeedDeg;
     j["openDuration"] = openDuration;
     j["popHeight"] = popHeight;
+    auto v4 = [](const RC::Vector4& c) { return nlohmann::json{c.x, c.y, c.z, c.w}; };
+    j["chestLook"] = chestLook;
+    j["baseHeightRatio"] = baseHeightRatio;
+    j["lidOpenDeg"] = lidOpenDeg;
+    j["lidColor"] = v4(lidColor);
+    j["metalColor"] = v4(metalColor);
+    j["treasureColor"] = v4(treasureColor);
     return j;
   }
 
@@ -96,6 +128,17 @@ protected:
     if (j.contains("spinSpeedDeg")) spinSpeedDeg = j["spinSpeedDeg"].get<float>();
     if (j.contains("openDuration")) openDuration = j["openDuration"].get<float>();
     if (j.contains("popHeight")) popHeight = j["popHeight"].get<float>();
+    auto readV4 = [&](const char* key, RC::Vector4& out) {
+      if (!j.contains(key) || !j[key].is_array() || j[key].size() < 4) return;
+      const auto& c = j[key];
+      out = {c[0].get<float>(), c[1].get<float>(), c[2].get<float>(), c[3].get<float>()};
+    };
+    if (j.contains("chestLook") && j["chestLook"].is_boolean()) chestLook = j["chestLook"].get<bool>();
+    if (j.contains("baseHeightRatio") && j["baseHeightRatio"].is_number()) baseHeightRatio = j["baseHeightRatio"].get<float>();
+    if (j.contains("lidOpenDeg") && j["lidOpenDeg"].is_number()) lidOpenDeg = j["lidOpenDeg"].get<float>();
+    readV4("lidColor", lidColor);
+    readV4("metalColor", metalColor);
+    readV4("treasureColor", treasureColor);
     if (maxHp < 1) maxHp = 1;
     if (hp < 1) hp = maxHp;
   }
@@ -153,6 +196,11 @@ protected:
 
     auto* tr = self->GetComponent<TransformComponent>();
     if (!tr) return;
+    // 宝箱の部位は基準の大きさを覚える前に作る（下箱の高さを縮めるので、その値を基準にする）
+    if (!chestBuilt_ && chestLook) {
+      SceneContext* ctx = GetSceneContext();
+      if (ctx && ctx->isPlaying()) BuildChest(*tr);
+    }
     if (!hasBase_) {
       basePosition_ = tr->position;
       baseScale_ = tr->scale;
@@ -171,6 +219,7 @@ protected:
       // UI 用に HP を公開
       self->SetTag("current_hp", hp);
       self->SetTag("max_hp", maxHp);
+      PlaceChest(*tr, 0.0f);
       return;
     }
 
@@ -187,10 +236,24 @@ protected:
     const float shrink = (clamped < 0.5f) ? 1.0f : (1.0f - (clamped - 0.5f) * 2.0f);
     const float s = (shrink < 0.0f) ? 0.0f : shrink;
     tr->scale = {baseScale_.x * s, baseScale_.y * s, baseScale_.z * s};
+    // ふたは跳ね上がる前半（openDuration の 35%）で一気に開く
+    {
+      const float lt = (openDuration > 0.0f) ? (std::min)(1.0f, openTimer_ / (openDuration * 0.35f)) : 1.0f;
+      const float eased = 1.0f - (1.0f - lt) * (1.0f - lt) * (1.0f - lt);
+      PlaceChest(*tr, eased);
+    }
 
     if (openTimer_ >= openDuration) {
       self->Destroy();
     }
+  }
+
+  void OnDestroy() override {
+    for (auto& p : chestParts_) {
+      if (auto e = p.entity.lock()) e->Destroy();
+    }
+    chestParts_.clear();
+    chestBuilt_ = false;
   }
 
 public:
@@ -326,7 +389,15 @@ private:
     }
   }
 
-  void ApplyColor(const RC::Vector4& color) {
+  void ApplyColor(const RC::Vector4& color, bool restoreParts = false) {
+    // 宝箱の部位も同じ色で点滅させる（戻すときは部位それぞれの色へ）
+    for (auto& p : chestParts_) {
+      auto e = p.entity.lock();
+      if (!e) continue;
+      auto* ppm = e->GetComponent<PrimitiveMeshComponent>();
+      if (!ppm || ppm->meshHandle < 0) continue;
+      if (auto* mat = RC::GetPrimitiveMeshMaterialPtr(ppm->meshHandle)) mat->color = restoreParts ? p.color : color;
+    }
     Entity* self = GetEntity();
     if (!self) return;
     if (auto* mr = self->GetComponent<ModelRendererComponent>()) {
@@ -339,7 +410,151 @@ private:
   }
 
   void RestoreColor() {
-    if (hasSavedColor_) ApplyColor(originalColor_);
+    if (hasSavedColor_) ApplyColor(originalColor_, /*restoreParts=*/true);
+  }
+
+  // --- 宝箱の部位 ---
+  enum class ChestGroup { Base, Lid, Treasure };
+  struct ChestPart {
+    std::weak_ptr<Entity> entity;
+    RC::Vector3 offset{};                      ///< 本体中心からの位置（m、本体ローカル、縮小前）
+    RC::Vector3 scale{};                       ///< Transform の scale（m、縮小前）
+    PartPose::Mat3 local = PartPose::Identity(); ///< 本体に対する部位の向き
+    RC::Vector4 color{1, 1, 1, 1};
+    ChestGroup group = ChestGroup::Base;
+  };
+  std::vector<ChestPart> chestParts_;
+  bool chestBuilt_ = false;
+  float chestTopY_ = 0.5f;   ///< 下箱の上面の高さ（本体中心から、m）
+  float chestDepth_ = 1.0f;  ///< 奥行き（m）。ちょうつがいの位置に使う
+
+  void AddChestPart(PrimitiveType type, const RC::Vector4& color, const RC::Vector3& offset,
+                    const RC::Vector3& scale, ChestGroup group,
+                    const PartPose::Mat3& local = PartPose::Identity(), bool unlit = false) {
+    Scene* scene = GetScene();
+    Entity* self = GetEntity();
+    if (!scene || !self) return;
+    auto e = scene->CreateEntity(self->GetName() + "_part");
+    if (!e) return;
+    e->SetParentGuid(self->Guid()); // Hierarchy で宝箱の下にまとまるように（描画上の親子ではない）
+    e->SetTag("transient", 1);
+    auto& ptr = e->AddComponent<TransformComponent>();
+    if (auto* tr = self->GetComponent<TransformComponent>()) ptr.position = tr->position;
+    ptr.scale = {0.01f, 0.01f, 0.01f};
+    auto& pm = e->AddComponent<PrimitiveMeshComponent>();
+    pm.type = type;
+    pm.color = color;
+    pm.shininess = (group == ChestGroup::Base || group == ChestGroup::Lid) && color.x > 0.8f ? 64.0f : 12.0f;
+    if (unlit) pm.lightingMode = 0; // 財宝は自分で光って見えるようにライティングしない
+    scene->InitDynamicEntityRuntime(*e);
+    ChestPart p;
+    p.entity = e;
+    p.offset = offset;
+    p.scale = scale;
+    p.local = local;
+    p.color = color;
+    p.group = group;
+    chestParts_.push_back(p);
+  }
+
+  /// @brief 本体の箱を下箱にして、ふた・金具・錠前・財宝を付ける
+  /// @details 大きさは本体の scale（幅 W・高さ・奥行き D、m）から決める。+X が横幅、-Z が正面（錠前側）。
+  ///          下箱は本体の高さの baseHeightRatio 倍に縮め、その上にふた（高さ ≒ 0.4m）を載せる。
+  ///          本体の当たり判定は半径 × scale の最大値（横幅）なので、高さを縮めても大きさは変わらない。
+  void BuildChest(TransformComponent& tr) {
+    using namespace PartPose;
+    chestBuilt_ = true;
+    const float ratio = std::clamp(baseHeightRatio, 0.2f, 1.0f);
+    tr.scale.y *= ratio;
+    const float W = (std::max)(std::fabs(tr.scale.x), 0.2f);
+    const float Hb = (std::max)(std::fabs(tr.scale.y), 0.1f);
+    const float D = (std::max)(std::fabs(tr.scale.z), 0.2f);
+    const float yT = Hb * 0.5f;
+    chestTopY_ = yT;
+    chestDepth_ = D;
+    const float front = -D * 0.5f; // 錠前側
+    const RC::Vector4 dark = {0.08f, 0.06f, 0.04f, 1.0f};
+    const Mat3 lying = RotZ(kHalfPi); // 円柱の軸（Y）を横（X）へ寝かせる。ローカル X が上下の半径になる
+    const float bandX = W * 0.28f;
+    const float lidH = 0.2f;   // ふたの箱の部分の高さ
+    const float domeH = 0.2f;  // かまぼこの高さ（下半分はふたの箱に隠れる）
+
+    // --- 下箱の金具 ---
+    AddChestPart(PrimitiveType::Box, metalColor, {0, yT - 0.035f, 0}, {W + 0.06f, 0.07f, D + 0.06f}, ChestGroup::Base);
+    AddChestPart(PrimitiveType::Box, metalColor, {0, -yT + 0.03f, 0}, {W + 0.06f, 0.06f, D + 0.06f}, ChestGroup::Base);
+    for (float sx : {1.0f, -1.0f}) {
+      for (float sz : {1.0f, -1.0f}) {
+        AddChestPart(PrimitiveType::Box, metalColor, {sx * W * 0.5f, 0, sz * D * 0.5f}, {0.09f, Hb + 0.02f, 0.09f},
+                     ChestGroup::Base);
+      }
+      AddChestPart(PrimitiveType::Box, metalColor, {sx * bandX, 0, 0}, {0.1f, Hb + 0.02f, D + 0.04f}, ChestGroup::Base);
+    }
+    // 錠前（正面の金の板＋鍵穴）
+    AddChestPart(PrimitiveType::Box, metalColor, {0, yT - 0.14f, front - 0.025f}, {0.28f, 0.3f, 0.05f}, ChestGroup::Base);
+    AddChestPart(PrimitiveType::Box, dark, {0, yT - 0.16f, front - 0.055f}, {0.05f, 0.11f, 0.02f}, ChestGroup::Base);
+
+    // --- ふた（箱＋かまぼこ。ちょうつがいを軸に開く）---
+    AddChestPart(PrimitiveType::Box, lidColor, {0, yT + lidH * 0.5f, 0}, {W, lidH, D}, ChestGroup::Lid);
+    AddChestPart(PrimitiveType::Cylinder, lidColor, {0, yT + lidH, 0}, {domeH, W * 0.995f, D * 0.5f * 0.995f},
+                 ChestGroup::Lid, lying);
+    AddChestPart(PrimitiveType::Box, metalColor, {0, yT + 0.03f, 0}, {W + 0.06f, 0.06f, D + 0.06f}, ChestGroup::Lid);
+    for (float sx : {1.0f, -1.0f}) {
+      AddChestPart(PrimitiveType::Box, metalColor, {sx * bandX, yT + lidH * 0.5f, 0}, {0.1f, lidH + 0.02f, D + 0.04f},
+                   ChestGroup::Lid);
+      AddChestPart(PrimitiveType::Cylinder, metalColor, {sx * bandX, yT + lidH, 0},
+                   {domeH + 0.02f, 0.1f, D * 0.5f + 0.02f}, ChestGroup::Lid, lying);
+    }
+    // 掛け金（ふたから錠前へ垂れる）
+    AddChestPart(PrimitiveType::Box, metalColor, {0, yT + 0.02f, front - 0.035f}, {0.15f, 0.2f, 0.04f}, ChestGroup::Lid);
+
+    // --- 中の財宝（閉じている間は下箱とふたの中に隠れている）---
+    AddChestPart(PrimitiveType::Box, treasureColor, {0, yT - 0.04f, 0}, {W * 0.9f, 0.04f, D * 0.9f},
+                 ChestGroup::Treasure, Identity(), true);
+    const RC::Vector3 piles[3] = {{-W * 0.22f, yT - 0.05f, -D * 0.05f}, {W * 0.02f, yT - 0.02f, D * 0.08f},
+                                  {W * 0.22f, yT - 0.06f, -D * 0.02f}};
+    for (const auto& pp : piles) {
+      AddChestPart(PrimitiveType::Sphere, treasureColor, pp, {W * 0.17f, 0.1f, D * 0.2f}, ChestGroup::Treasure,
+                   Identity(), true);
+    }
+
+    PlaceChest(tr, 0.0f); // 生成直後に原点で 1 フレーム映らないように
+    Log::Print(std::format("[TreasureChest] {} built {} parts", GetEntity() ? GetEntity()->GetName() : "", chestParts_.size()));
+  }
+
+  /// @brief 部位を本体の位置・回転・大きさに合わせる
+  /// @param lidT ふたの開き具合（0: 閉じている / 1: lidOpenDeg まで開いた）
+  void PlaceChest(const TransformComponent& tr, float lidT) {
+    using namespace PartPose;
+    if (chestParts_.empty()) return;
+    // 開く演出で本体が縮むので、その倍率を部位にも掛ける
+    const float k = (hasBase_ && std::fabs(baseScale_.x) > 1e-4f) ? tr.scale.x / baseScale_.x : 1.0f;
+    const Mat3 body = FromEngineEuler(tr.rotation);
+    // ちょうつがい（上面の奥の辺）まわりに回す。正の角で正面側が持ち上がる
+    const Mat3 open = RotX(lidOpenDeg * kDeg * lidT);
+    const RC::Vector3 hinge = {0.0f, chestTopY_, chestDepth_ * 0.5f};
+    for (const auto& p : chestParts_) {
+      auto e = p.entity.lock();
+      if (!e) continue;
+      auto* ptr = e->GetComponent<TransformComponent>();
+      if (!ptr) continue;
+      RC::Vector3 off = p.offset;
+      Mat3 loc = p.local;
+      if (p.group == ChestGroup::Lid) {
+        off = AddV(hinge, Apply({off.x - hinge.x, off.y - hinge.y, off.z - hinge.z}, open));
+        loc = MatMul(loc, open);
+      } else if (p.group == ChestGroup::Treasure) {
+        off.y += 0.12f * lidT; // ふたが開くと財宝がせり上がる
+      }
+      ptr->position = AddV(tr.position, Apply(ScaleV(off, k), body));
+      ptr->rotation = ToEngineEuler(MatMul(loc, body));
+      ptr->scale = ScaleV(p.scale, k);
+      // PrimitiveMesh は次フレーム冒頭まで同期されないので、本体と 1 フレームずれないよう即座に写す
+      if (auto* pm = e->GetComponent<PrimitiveMeshComponent>()) {
+        if (pm->meshHandle >= 0) {
+          if (auto* t = RC::GetPrimitiveMeshTransformPtr(pm->meshHandle)) *t = ptr->ToTransform();
+        }
+      }
+    }
   }
 };
 

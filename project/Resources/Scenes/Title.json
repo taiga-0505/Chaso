@@ -226,6 +226,108 @@
           }
         }
       ]
+    },
+    {
+      "id": "a61d3c8e-2f47-4b90-8e15-9c0b7d4e2a36",
+      "name": "TitleAmbient",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
+          }
+        },
+        {
+          "type": "NativeScriptComponent",
+          "data": {
+            "scriptTypeNames": ["TitleAmbientScript"],
+            "scriptDataList": [
+              {
+                "enabled": true,
+                "firstDelay": 2.0,
+                "intervalMin": 6.0,
+                "intervalMax": 12.0,
+                "maxActive": 3,
+                "screenMargin": 2.0,
+                "shark": {
+                  "enabled": true,
+                  "weight": 1.4,
+                  "maxActive": 1,
+                  "poolSize": 1,
+                  "speedMin": 2.2,
+                  "speedMax": 3.4,
+                  "scaleMin": 3.6,
+                  "scaleMax": 4.6,
+                  "lanes": [],
+                  "modelPath": "Resources/model/shark/shark_lod.glb",
+                  "modelYawOffsetDeg": -90.0,
+                  "sink": 0.22,
+                  "waveFollow": 0.7,
+                  "swayDeg": 12.0,
+                  "swayPeriod": 7.0,
+                  "wagDeg": 7.0,
+                  "wagFrequency": 1.1,
+                  "wake": true
+                },
+                "drift": {
+                  "enabled": true,
+                  "weight": 0.6,
+                  "maxActive": 1,
+                  "poolSize": 3,
+                  "speedMin": 0.6,
+                  "speedMax": 1.0,
+                  "scaleMin": 0.9,
+                  "scaleMax": 1.2,
+                  "lanes": [[-2.8, 1.2], [7.3, 9.4]],
+                  "tiltScale": 0.9,
+                  "spinDeg": 8.0,
+                  "floatBias": 0.0
+                },
+                "gull": {
+                  "enabled": true,
+                  "weight": 0.9,
+                  "maxActive": 3,
+                  "poolSize": 3,
+                  "speedMin": 4.5,
+                  "speedMax": 6.5,
+                  "scaleMin": 0.45,
+                  "scaleMax": 0.55,
+                  "lanes": [],
+                  "heightMin": 8.0,
+                  "heightMax": 11.0,
+                  "flapFrequency": 2.4,
+                  "flapDeg": 32.0,
+                  "dihedralDeg": 8.0,
+                  "glideChance": 0.45,
+                  "flockMax": 3,
+                  "turnDeg": 6.0
+                },
+                "ship": {
+                  "enabled": true,
+                  "weight": 0.5,
+                  "maxActive": 1,
+                  "poolSize": 1,
+                  "speedMin": 1.2,
+                  "speedMax": 1.8,
+                  "scaleMin": 0.9,
+                  "scaleMax": 1.0,
+                  "lanes": [[-2.8, 1.2]],
+                  "tiltScale": 0.8,
+                  "wake": true,
+                  "hullColor": [0.36, 0.22, 0.12, 1.0],
+                  "sailColor": [0.96, 0.94, 0.88, 1.0]
+                }
+              }
+            ],
+            "scriptTypeName": "TitleAmbientScript"
+          }
+        }
+      ]
     }
   ]
 }

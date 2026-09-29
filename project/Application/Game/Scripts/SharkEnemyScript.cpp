@@ -50,7 +50,9 @@ public:
     /// @brief 生成時に水中から始めるか
     bool startSubmerged = true;
 
-    RC::Vector3 modelRotationOffsetDeg = { 180.0f, 80.0f, 180.0f }; // モデルの初期回転・向き補正（度数法）
+    // モデルの初期回転・向き補正（度数法）。shark_game.glb は頭が +X なので、Y を -90° して進行方向（+Z 基準）へ合わせる。
+    // （以前の {180, 80, 180} は Rx(π)·Ry·Rz(π) ＝ Ry(π − yaw) になり、旋回すると逆向きに回っていた）
+    RC::Vector3 modelRotationOffsetDeg = { 0.0f, -90.0f, 0.0f };
 
 protected:
     nlohmann::json Serialize() override {

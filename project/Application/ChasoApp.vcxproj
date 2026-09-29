@@ -203,6 +203,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="..\Application\Game\Scripts\BuoyancyScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\SceneFlowUI.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\TitleScreenScript.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\TitleAmbientScript.cpp" />
+    <ClCompile Include="..\Application\Game\Scripts\ShipVisualScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\DeepRiseIntroScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\DeathSinkScript.cpp" />
     <ClCompile Include="..\Application\Game\Scripts\ResultScreenScript.cpp" />
@@ -250,6 +252,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="..\Chaso\Game\Scene\DataDrivenScene\DataDrivenScene.h" />
     <ClInclude Include="..\Application\Game\Scripts\EnemyBaseScript.h" />
     <ClInclude Include="..\Application\Game\Scripts\CharacterTags.h" />
+    <ClInclude Include="..\Application\Game\Framework\PartPose.h" />
   </ItemGroup>
   <ItemGroup>
     <!-- シェーダー (ビルドから除外 / 参照用) -->

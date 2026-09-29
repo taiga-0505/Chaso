@@ -15821,7 +15821,7 @@
           "data": {
             "scriptDataList": [
               {
-                "colliderRadius": 0.5,
+                "colliderRadius": 0.3333333,
                 "count": 3,
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
@@ -15830,17 +15830,17 @@
                   "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
-                    0.0,
+                    -90.0,
                     0.0
                   ]
                 },
                 "enemyScale": [
-                  4.0,
-                  4.0,
-                  4.0
+                  6.0,
+                  6.0,
+                  6.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "",
+                "modelPath": "Resources/model/shark/shark_game.glb",
                 "primitiveColor": [
                   0.8999999761581421,
                   0.25,
@@ -15987,7 +15987,7 @@
           "data": {
             "scriptDataList": [
               {
-                "colliderRadius": 0.5,
+                "colliderRadius": 0.3333333,
                 "count": 4,
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
@@ -15996,17 +15996,17 @@
                   "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
-                    0.0,
+                    -90.0,
                     0.0
                   ]
                 },
                 "enemyScale": [
-                  4.0,
-                  4.0,
-                  4.0
+                  6.0,
+                  6.0,
+                  6.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "",
+                "modelPath": "Resources/model/shark/shark_game.glb",
                 "primitiveColor": [
                   0.8999999761581421,
                   0.25,
@@ -16153,7 +16153,7 @@
           "data": {
             "scriptDataList": [
               {
-                "colliderRadius": 0.5,
+                "colliderRadius": 0.3333333,
                 "count": 5,
                 "drawGizmo": true,
                 "enemyName": "WaveShark",
@@ -16162,17 +16162,17 @@
                   "maxHp": 3,
                   "modelRotOffset": [
                     0.0,
-                    0.0,
+                    -90.0,
                     0.0
                   ]
                 },
                 "enemyScale": [
-                  4.0,
-                  4.0,
-                  4.0
+                  6.0,
+                  6.0,
+                  6.0
                 ],
                 "enemyScript": "SharkEnemyScript",
-                "modelPath": "",
+                "modelPath": "Resources/model/shark/shark_game.glb",
                 "primitiveColor": [
                   0.8999999761581421,
                   0.25,

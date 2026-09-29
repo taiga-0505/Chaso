@@ -48,7 +48,8 @@ public:
   /// @brief 生成する敵のエンティティ名の接頭辞
   std::string enemyName = "WaveEnemy";
   /// @brief 敵のモデル。空ならデバッグ用の球で代用する
-  std::string modelPath = "Resources/model/shark/shark.obj";
+  /// @details 既定はゲーム用の軽量サメ（shark.obj は 11MB・11 万三角形で、出現のたびに読むと重い）
+  std::string modelPath = "Resources/model/shark/shark_game.glb";
   /// @brief 生成する体数
   int count = 3;
   /// @brief この地点を中心にどれだけ散らすか（0 なら全員同じ座標）
