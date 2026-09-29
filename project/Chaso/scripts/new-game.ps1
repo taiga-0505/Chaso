@@ -19,11 +19,14 @@
 
 .EXAMPLE
   .\project\Chaso\scripts\new-game.ps1 -Name MyNewGame -Dest D:\
-  .\project\Chaso\scripts\new-game.ps1            # 名前を聞かれる。作成先は D:\production
+  .\project\Chaso\scripts\new-game.ps1            # 名前と作成先を聞かれる（作成先はフォルダ選択ダイアログ）
+
+  -Dest を省略した場合はフォルダ選択ダイアログで作成先を選ぶ。
+  選んだ場所は %APPDATA%\Chaso\new-game.json に PC ごとに記憶し、次回の初期値になる。
 #>
 param(
   [string]$Name,
-  [string]$Dest = "D:\production",
+  [string]$Dest,
   [string]$Remote = "https://github.com/taiga-0505/ChasoEngine.git",
   [string]$Branch = "main"
 )
@@ -33,7 +36,44 @@ if (-not $Name) {
   $Name = Read-Host "新しいゲームの名前（リポジトリ名）"
   if (-not $Name) { throw "名前が空です" }
 }
+
+if (-not $Dest) {
+  $configDir  = Join-Path $env:APPDATA "Chaso"
+  $configFile = Join-Path $configDir "new-game.json"
+
+  # 初期値: 前回の作成先 → D:\production → ユーザーフォルダ
+  $lastDest = $null
+  if (Test-Path $configFile) {
+    try { $lastDest = (Get-Content $configFile -Raw -Encoding UTF8 | ConvertFrom-Json).LastDest } catch {}
+  }
+  $initial = @($lastDest, "D:\production", $env:USERPROFILE) |
+    Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+
+  Add-Type -AssemblyName System.Windows.Forms
+  $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+  $dialog.Description         = "「$Name」を作成する親フォルダを選んでください（<選んだフォルダ>\$Name が作られます）"
+  $dialog.SelectedPath        = $initial
+  $dialog.ShowNewFolderButton = $true
+
+  # ダイアログがエディタの裏に隠れないよう最前面のオーナーを付ける
+  $owner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false }
+  try {
+    $result = $dialog.ShowDialog($owner)
+  } finally {
+    $owner.Dispose()
+  }
+  if ($result -ne [System.Windows.Forms.DialogResult]::OK -or -not $dialog.SelectedPath) {
+    Write-Host "キャンセルされました。" -ForegroundColor Yellow
+    exit 1
+  }
+  $Dest = $dialog.SelectedPath
+
+  # 次回の初期値として記憶
+  if (-not (Test-Path $configDir)) { New-Item -ItemType Directory -Path $configDir | Out-Null }
+  @{ LastDest = $Dest } | ConvertTo-Json | Set-Content $configFile -Encoding UTF8
+}
 if (-not (Test-Path $Dest)) { New-Item -ItemType Directory -Path $Dest | Out-Null }
+Write-Host "作成先: $(Join-Path $Dest $Name)" -ForegroundColor Cyan
 
 $target = Join-Path $Dest $Name
 if (Test-Path $target) { throw "$target は既に存在します" }
