@@ -4241,14 +4241,14 @@ void EditorManager::SaveConfig() {
   j["showParticleEditor"] = showParticleEditor_;
   j["showSceneFlow"] = showSceneFlow_;
 
-  std::ofstream ofs("../project/EditorConfig.json");
+  std::ofstream ofs(Chaso::PrepareSettingPath(Chaso::kEditorConfigPath));
   if (ofs) {
     ofs << j.dump(4);
   }
 }
 
 void EditorManager::LoadConfig() {
-  std::ifstream ifs("../project/EditorConfig.json");
+  std::ifstream ifs(Chaso::PrepareSettingPath(Chaso::kEditorConfigPath));
   if (ifs) {
     try {
       nlohmann::json j;

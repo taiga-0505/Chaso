@@ -93,7 +93,7 @@ public:
     ImGui::ColorEdit4("Accent Color", &accentColor.x);
     ImGui::SliderFloat("Dim Alpha", &dimAlpha, 0.0f, 1.0f);
     ImGui::Separator();
-    ImGui::TextUnformatted("GameSettings (shared, saved to ../project/GameSettings.json)");
+    ImGui::TextUnformatted("GameSettings (shared, saved to Resources/Setting/GameSettings.json)");
     GameSettings &gs = GameSettings::Get();
     bool changed = false;
     changed |= ImGui::SliderFloat("Mouse Sensitivity", &gs.mouseSensitivity, GameSettings::kSensitivityMin, GameSettings::kSensitivityMax);

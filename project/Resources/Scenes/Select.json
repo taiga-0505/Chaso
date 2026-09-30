@@ -34,16 +34,16 @@
             "visible": true,
             "color": [
               1.0,
-              1.0,
-              1.0,
+              0.95,
+              0.86,
               1.0
             ],
             "direction": [
-              0.3,
+              0.12,
               -1.0,
-              0.35
+              0.1
             ],
-            "intensity": 1.0
+            "intensity": 1.1
           }
         }
       ]
@@ -170,23 +170,23 @@
             "waveFreq2": 1.5,
             "waveSteepness": 0.32,
             "shallowColor": [
-              0.08,
-              0.3,
-              0.46,
+              0.1,
+              0.66,
+              0.56,
               0.92
             ],
             "deepColor": [
-              0.01,
-              0.05,
-              0.17,
+              0.02,
+              0.26,
+              0.36,
               0.97
             ],
             "fresnelPower": 3.0,
-            "specularPower": 90.0,
+            "specularPower": 260.0,
             "normalScrollSpeed": 0.05,
-            "normalStrength": 1.0,
-            "environmentCoeff": 0.55,
-            "crestTint": 0.8,
+            "normalStrength": 0.7,
+            "environmentCoeff": 0.35,
+            "crestTint": 0.55,
             "normalMapPath": "Resources/Water/water_normal.png"
           }
         }
@@ -264,17 +264,17 @@
                 "diveBubbles": true,
                 "underwater": {
                   "shallowFogColor": [
-                    0.0,
-                    0.3,
-                    0.6,
+                    0.05,
+                    0.55,
+                    0.5,
                     1.0
                   ],
                   "shallowFogStart": 6.0,
                   "shallowFogEnd": 480.0,
                   "deepFogColor": [
                     0.0,
-                    0.012,
-                    0.03,
+                    0.00706,
+                    0.0375,
                     1.0
                   ],
                   "deepFogStart": 0.0,
@@ -282,9 +282,9 @@
                   "deepDepth": 24.0,
                   "deepBias": 1.35,
                   "tintColor": [
-                    0.2,
-                    0.5,
-                    1.0,
+                    0.35,
+                    0.85,
+                    0.8,
                     1.0
                   ],
                   "distortionForce": 0.004,

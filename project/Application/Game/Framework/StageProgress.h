@@ -23,7 +23,7 @@
 ///     StageSelectScript      -> IsUnlocked / IsCleared / BestScore を読んで一覧を描く
 ///     ResultScreenScript     -> Current() / NextSceneName() で「次のステージへ」「もう一度」を決める
 ///
-///   保存先は GameSettings.json と同じ場所（実行ファイルから見て ../project/StageProgress.json）。
+///   保存先は project/StageProgress.json（セーブデータなので Resources/Setting/ には置かない。.gitignore 済み）。
 ///   ファイルが無ければ「ステージ 1 だけ解放」で始まる。
 class StageProgress {
 public:
@@ -219,7 +219,7 @@ private:
     if (!loaded_) const_cast<StageProgress *>(this)->Load();
   }
 
-  static constexpr const char *kPath = "../project/StageProgress.json"; ///< GameSettings.json と同じ置き場所
+  static constexpr const char *kPath = "../project/StageProgress.json"; ///< セーブデータ（配布パッケージには含めない）
 
   bool loaded_ = false;
   bool unlockAll_ = false;

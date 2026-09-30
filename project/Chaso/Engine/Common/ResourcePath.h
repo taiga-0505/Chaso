@@ -59,4 +59,33 @@ inline std::wstring ResolvePath(const std::wstring &path) {
   return ResolvePath(std::filesystem::path(path)).generic_wstring();
 }
 
+// ============================================================
+// 設定ファイル（ゲーム側 Resources/Setting/ に置く）
+// ============================================================
+
+/// @brief 設定ファイルの置き場所（作業ディレクトリ = project/ 基準）
+inline constexpr const char *kSettingDir = "Resources/Setting";
+inline constexpr const char *kAppConfigPath = "Resources/Setting/AppConfig.json";       ///< 解像度・タイトル・起動シーン
+inline constexpr const char *kEditorConfigPath = "Resources/Setting/EditorConfig.json"; ///< エディタのウィンドウ表示状態
+inline constexpr const char *kGameSettingsPath = "Resources/Setting/GameSettings.json"; ///< プレイヤー設定（感度・音量）
+
+/// @brief 設定ファイルのパスを用意する（読み書きの直前に呼ぶ）
+/// @details - Resources/Setting/ が無ければ作る（保存時に ofstream が失敗しないように）
+///          - 旧配置（project/ 直下の同名ファイル）だけがある場合は Resources/Setting/ へ移動する
+/// @param path kAppConfigPath などの設定ファイルパス
+/// @return そのまま path を返す（ifstream / ofstream にそのまま渡せる）
+inline const char *PrepareSettingPath(const char *path) {
+  namespace fs = std::filesystem;
+  std::error_code ec;
+  const fs::path p(path);
+  fs::create_directories(p.parent_path(), ec);
+  if (!fs::exists(p, ec)) {
+    const fs::path legacy = p.filename(); // 旧: project/<name>.json
+    if (fs::exists(legacy, ec)) {
+      fs::rename(legacy, p, ec);
+    }
+  }
+  return path;
+}
+
 } // namespace Chaso

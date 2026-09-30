@@ -20,9 +20,9 @@
           "type": "DirectionalLightComponent",
           "data": {
             "visible": true,
-            "color": [1.0, 1.0, 1.0, 1.0],
-            "direction": [0.3, -1.0, 0.35],
-            "intensity": 1.0
+            "color": [1.0, 0.95, 0.86, 1.0],
+            "direction": [0.12, -1.0, 0.10],
+            "intensity": 1.1
           }
         }
       ]
@@ -107,14 +107,14 @@
             "waveSpeed2": 1.3,
             "waveFreq2": 1.5,
             "waveSteepness": 0.35,
-            "shallowColor": [0.10, 0.42, 0.55, 0.92],
-            "deepColor": [0.01, 0.08, 0.22, 0.97],
+            "shallowColor": [0.10, 0.66, 0.56, 0.90],
+            "deepColor": [0.02, 0.26, 0.36, 0.96],
             "fresnelPower": 3.0,
-            "specularPower": 90.0,
+            "specularPower": 260.0,
             "normalScrollSpeed": 0.06,
-            "normalStrength": 1.0,
-            "environmentCoeff": 0.6,
-            "crestTint": 0.8,
+            "normalStrength": 0.7,
+            "environmentCoeff": 0.35,
+            "crestTint": 0.55,
             "normalMapPath": "Resources/Water/water_normal.png"
           }
         }
@@ -143,18 +143,20 @@
               {
                 "titleText": "水天の射手",
                 "fontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
-                "letterSize": 3.0,
-                "letterDepth": 0.5,
+                "letterSize": 4.0,
+                "letterDepth": 0.7,
                 "letterColor": [0.97, 0.98, 1.0, 1.0],
                 "outlineEnabled": true,
-                "outlineWidth": 0.04,
-                "outlineColor": [0.05, 0.12, 0.25, 1.0],
+                "outlineWidth": 0.09,
+                "outlineColor": [0.02, 0.06, 0.16, 1.0],
+                "letterShininess": 0.0,
+                "letterEnvCoeff": 0.0,
                 "letterPositions": [
-                  [-9.4, 3.6, -0.10],
-                  [-4.8, 1.9, 0.08],
+                  [-10.8, 3.6, -0.10],
+                  [-5.5, 1.9, 0.08],
                   [0.2, 4.1, -0.04],
-                  [4.9, 2.2, 0.12],
-                  [9.5, 3.4, -0.07]
+                  [5.6, 2.2, 0.12],
+                  [10.9, 3.4, -0.07]
                 ],
                 "floatOffset": 0.12,
                 "bobAmplitude": 0.08,
@@ -162,6 +164,22 @@
                 "driftRadius": 0.35,
                 "driftPeriod": 9.0,
                 "tiltScale": 0.7,
+                "titlePost": {
+                  "enabled": true,
+                  "bloom": false,
+                  "bloomThreshold": 0.85,
+                  "bloomIntensity": 0.35,
+                  "bloomRadius": 4.0,
+                  "bloomKnee": 0.2,
+                  "colorGrade": true,
+                  "gradeExposure": 0.1,
+                  "gradeContrast": 1.05,
+                  "gradeSaturation": 1.12,
+                  "gradeTemperature": 0.0,
+                  "gradeTint": 0.0,
+                  "gradeAmount": 1.0,
+                  "vignette": false
+                },
                 "menuFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf",
                 "menuSize": 1.5,
                 "menuDepth": 0.3,
@@ -169,9 +187,43 @@
                   [0.0, -4.4],
                   [0.0, -7.0]
                 ],
-                "menuColor": [0.62, 0.72, 0.82, 1.0],
-                "menuSelectedColor": [1.0, 0.92, 0.62, 1.0],
+                "menuColor": [0.46, 0.56, 0.64, 1.0],
+                "menuSelectedColor": [1.0, 0.78, 0.28, 1.0],
                 "menuOutlineColor": [0.04, 0.10, 0.22, 1.0],
+                "menuOutlineWidth": 0.04,
+                "menuShininess": 0.0,
+                "menuUnselectedScale": 0.85,
+                "menuPulseWhite": 0.25,
+                "menuRing": {
+                  "enabled": true,
+                  "color": [1.0, 0.80, 0.32, 1.0],
+                  "size": 0.42,
+                  "gap": 0.9,
+                  "spinSpeed": 3.0,
+                  "height": 0.35,
+                  "follow": 14.0,
+                  "rippleInterval": 1.1,
+                  "rippleStrength": -0.12,
+                  "rippleRadius": 0.02,
+                  "selectRipple": -0.3
+                },
+                "intro": {
+                  "enabled": true,
+                  "delay": 1.0,
+                  "interval": 0.3,
+                  "riseTime": 0.9,
+                  "depth": 4.0,
+                  "overshoot": 1.6,
+                  "menuDelay": 0.35,
+                  "menuInterval": 0.15,
+                  "menuRiseTime": 0.6,
+                  "menuDepth": 2.0,
+                  "splash": true,
+                  "splashCount": 80,
+                  "rippleStrength": -0.45,
+                  "rippleRadius": 0.03,
+                  "skippable": true
+                },
                 "menuSelectedScale": 1.18,
                 "menuSelectedLift": 0.12,
                 "menuBobAmplitude": 0.04,
@@ -181,6 +233,8 @@
                 "showHint": true,
                 "hintFontPath": "Resources/fonts/Kiwi_Maru/KiwiMaru-Regular.ttf",
                 "hintFontSize": 20.0,
+                "hintBandColor": [0.0, 0.04, 0.08, 0.45],
+                "hintBandPadding": 10.0,
                 "diveEnabled": true,
                 "diveAnticipation": 0.35,
                 "diveLift": 1.5,
@@ -201,15 +255,15 @@
                 "riseSurfaceBlend": 0.5,
                 "riseBubbles": true,
                 "underwater": {
-                  "shallowFogColor": [0.0, 0.3, 0.6, 1.0],
+                  "shallowFogColor": [0.05, 0.55, 0.5, 1.0],
                   "shallowFogStart": 6.0,
                   "shallowFogEnd": 480.0,
-                  "deepFogColor": [0.0, 0.012, 0.03, 1.0],
+                  "deepFogColor": [0.0, 0.00706, 0.0375, 1.0],
                   "deepFogStart": 0.0,
                   "deepFogEnd": 7.0,
                   "deepDepth": 24.0,
                   "deepBias": 1.35,
-                  "tintColor": [0.2, 0.5, 1.0, 1.0],
+                  "tintColor": [0.35, 0.85, 0.8, 1.0],
                   "distortionForce": 0.004,
                   "causticsFadeDepth": 20.0,
                   "causticsScale": 0.3,
@@ -365,6 +419,68 @@
               }
             ],
             "scriptTypeName": "TitleMouseRippleScript"
+          }
+        }
+      ]
+    },
+    {
+      "id": "b7d41e2a-6c35-4f18-9a0e-2d8c5f7b3e61",
+      "name": "TitleReef",
+      "tag": "",
+      "active": true,
+      "visible": true,
+      "components": [
+        {
+          "type": "TransformComponent",
+          "data": {
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0],
+            "scale": [1.0, 1.0, 1.0]
+          }
+        },
+        {
+          "type": "NativeScriptComponent",
+          "data": {
+            "scriptTypeNames": ["TitleReefScript"],
+            "scriptDataList": [
+              {
+                "enabled": false,
+                "seed": 20260930,
+                "floorY": -6.0,
+                "floorSize": 110.0,
+                "sandColor": [0.95, 0.88, 0.70, 1.0],
+                "mounds": [
+                  [-11.0, -1.0, 8.0, 2.2],
+                  [12.0, 3.0, 7.0, 1.8],
+                  [1.0, 10.0, 9.0, 1.5]
+                ],
+                "clusters": [
+                  [-15.0, 6.0, 4.0, 7],
+                  [14.5, -5.5, 4.5, 8],
+                  [-14.0, -6.5, 4.0, 7],
+                  [13.0, 7.5, 3.5, 6],
+                  [-3.0, 8.5, 3.0, 4],
+                  [7.0, -0.5, 2.5, 4],
+                  [-7.5, 0.5, 2.5, 4],
+                  [21.0, 1.0, 3.0, 5],
+                  [-21.0, 0.0, 3.0, 5]
+                ],
+                "scaleMin": 0.8,
+                "scaleMax": 1.4,
+                "maxTopY": -2.6,
+                "palette": [
+                  [1.00, 0.52, 0.55, 1.0],
+                  [1.00, 0.66, 0.30, 1.0],
+                  [0.98, 0.86, 0.36, 1.0],
+                  [0.66, 0.46, 0.92, 1.0],
+                  [0.46, 0.86, 0.70, 1.0],
+                  [0.95, 0.40, 0.70, 1.0]
+                ],
+                "rockColor": [0.42, 0.40, 0.36, 1.0],
+                "hideBelowY": -2.0
+              }
+            ],
+            "scriptTypeName": "TitleReefScript"
           }
         }
       ]

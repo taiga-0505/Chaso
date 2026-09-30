@@ -1,6 +1,7 @@
 #pragma once
 #include "Audio/AudioEngine.h"
 #include "Common/Log/Log.h"
+#include "Common/ResourcePath.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <fstream>
@@ -13,7 +14,7 @@
 ///          値はスクリプトのメンバに持たせない。スクリプトはシーンごとに作り直されるので、
 ///          Result → Game と回った瞬間に既定値へ戻ってしまうため。
 ///
-///          保存先は AppConfig.json / EditorConfig.json と同じ場所（実行ファイルから見て ../project/）。
+///          保存先は AppConfig.json / EditorConfig.json と同じ Resources/Setting/（作業ディレクトリ = project/ 基準）。
 ///          ファイルが無ければ既定値のまま起動する。
 class GameSettings {
 public:
@@ -85,7 +86,7 @@ public:
   /// @brief ファイルから読み込む（無ければ既定値のまま）。起動時に一度呼べばよい
   /// @return 読めたら true
   bool Load() {
-    std::ifstream ifs(kPath);
+    std::ifstream ifs(Chaso::PrepareSettingPath(kPath));
     if (!ifs.is_open()) {
       loaded_ = true;
       return false;
@@ -115,7 +116,7 @@ public:
   /// @brief ファイルへ保存する
   /// @return 書けたら true
   bool Save() const {
-    std::ofstream ofs(kPath);
+    std::ofstream ofs(Chaso::PrepareSettingPath(kPath));
     if (!ofs.is_open()) {
       Log::Print(std::string("[GameSettings] failed to open for write: ") + kPath);
       return false;
@@ -149,6 +150,6 @@ public:
 private:
   GameSettings() = default;
 
-  static constexpr const char *kPath = "../project/GameSettings.json"; ///< AppConfig.json と同じ置き場所
+  static constexpr const char *kPath = Chaso::kGameSettingsPath; ///< Resources/Setting/GameSettings.json
   bool loaded_ = false;
 };

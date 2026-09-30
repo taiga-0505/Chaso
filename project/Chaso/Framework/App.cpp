@@ -3,6 +3,7 @@
 #include "SceneManager.h"
 #include "Audio/AudioEngine.h"
 #include "../Editor/DebugBridge.h"
+#include "Common/ResourcePath.h"
 #include <cassert>
 #include <chrono>
 #include <format>
@@ -118,7 +119,7 @@ bool App::Init() {
   // オーディオデバイスが無い環境では false が返るが、その場合は無音で続行する
   AudioEngine::Get().Init();
 
-  // Game (Initial Scene Load) — 起動シーンは AppConfig.json の "bootScene"
+  // Game (Initial Scene Load) — 起動シーンは Resources/Setting/AppConfig.json の "bootScene"
   game_.SetBootScene(appConfig_.bootScene);
   game_.Init(sceneCtx_);
 
@@ -414,7 +415,7 @@ static std::string ReadPerConfigString_(const nlohmann::json &j, const char *key
 
 void App::LoadAppConfig() {
   bool loaded = false;
-  std::ifstream ifs("../project/AppConfig.json");
+  std::ifstream ifs(Chaso::PrepareSettingPath(Chaso::kAppConfigPath));
   if (ifs) {
     try {
       nlohmann::json j;
@@ -447,7 +448,7 @@ void App::SaveAppConfig() {
   // 既存の JSON を読み込んでからウィンドウ設定だけ上書きする
   nlohmann::json j = nlohmann::json::object();
   {
-    std::ifstream in("../project/AppConfig.json");
+    std::ifstream in(Chaso::PrepareSettingPath(Chaso::kAppConfigPath));
     if (in) {
       try { in >> j; } catch (...) { j = nlohmann::json::object(); }
       if (!j.is_object()) j = nlohmann::json::object();
@@ -457,7 +458,7 @@ void App::SaveAppConfig() {
   j["height"] = appConfig_.height;
   j["fullscreen"] = appConfig_.fullscreen;
 
-  std::ofstream ofs("../project/AppConfig.json");
+  std::ofstream ofs(Chaso::kAppConfigPath);
   if (ofs) {
     ofs << j.dump(4);
     Log::Print("[App] Saved AppConfig.json");

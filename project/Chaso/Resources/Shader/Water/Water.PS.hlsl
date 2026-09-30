@@ -198,6 +198,23 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 N = GetScrolledNormal(input.texcoord, gTime, geoNormal);
 
     // =========================
+    // さざ波のムラ（真上視点のシーンだけ。crestTint > 0 のとき）
+    // =========================
+    // 法線マップは uv*4 / uv*6 で敷き詰めているので、真上から見ると細かい白い照り返しが
+    // 画面全体に同じ密度で並び、模様が均一すぎて不自然に見える。
+    // 同じ法線マップをずっと粗いスケールで引いて「風が当たってざわつく所 / 凪いで鏡のような所」の
+    // マスクを作り、凪の所では細かい法線を弱める。照り返し・映り込みもそれに合わせて疎密が出る。
+    float roughMask = 1.0;
+    if (gFoamParams.z > 0.0)
+    {
+        float2 m1 = input.texcoord * 1.3 + float2(gTime * 0.004, gTime * 0.003);
+        float2 m2 = input.texcoord * 2.1 + float2(-gTime * 0.003, gTime * 0.005);
+        float n = gTexture.Sample(gSampler, m1).x * 0.6 + gTexture.Sample(gSampler, m2).y * 0.4;
+        roughMask = lerp(0.12, 1.0, smoothstep(0.42, 0.62, n));
+        N = normalize(lerp(geoNormal, N, roughMask));
+    }
+
+    // =========================
     // フレネル効果
     // =========================
     float NdotV = saturate(dot(N, V));
@@ -228,6 +245,15 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 troughColor = lerp(waterColor.rgb, gWaterDeepColor.rgb, crestTint * 0.85);
         float3 crestColor  = waterColor.rgb * (1.0 + crestTint * 0.35);
         waterColor.rgb = lerp(troughColor, crestColor, crestT);
+
+        // 浅瀬（真上視点のシーンだけ）：水底が近いほど明るく・透き通らせる。
+        // depthDiff は「水面 → その画素の奥にある不透明物」までの距離（真上視点ならほぼ水深）。
+        // 水底が無い所は depthDiff が遠クリップ近くまで伸びるので shallowT = 0 になり、従来どおりの色。
+        const float kShallowVisibility = 16.0; // この深さ（m）より深いと浅瀬の効果が消える
+        float shallowT = 1.0 - saturate(depthDiff / kShallowVisibility);
+        shallowT = shallowT * shallowT * (3.0 - 2.0 * shallowT);
+        waterColor.rgb = lerp(waterColor.rgb, gWaterShallowColor.rgb * 1.25, shallowT * 0.5);
+        waterColor.a = lerp(waterColor.a, waterColor.a * 0.45, shallowT);
     }
 
     // =========================
@@ -263,7 +289,8 @@ PixelShaderOutput main(VertexShaderOutput input)
     // 山のいちばん高いところだけ薄く白を乗せる（白波）。crestTint が 0 なら何もしない
     if (crestTint > 0.0)
     {
-        float whitecap = pow(crestT, 8.0) * crestTint * 0.35;
+        // 白波も凪の所では立てない（ムラのマスクで疎密を付ける）
+        float whitecap = pow(crestT, 8.0) * crestTint * 0.35 * roughMask;
         finalColor = lerp(finalColor, gFoamColor.rgb, whitecap);
     }
 

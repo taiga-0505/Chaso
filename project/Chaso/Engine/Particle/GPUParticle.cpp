@@ -82,7 +82,18 @@ void GPUParticle::Initialize(SceneContext &ctx) {
   // ==================
   // 6. テクスチャ読み込み
   // ==================
-  texHandle_ = RC::LoadTex("Resources/Particle/circle.png", true);
+  // 初期化より前に SetTexture で指定されていればそれを使う（以前は無条件に circle.png で上書きしていたため、
+  // GPUParticleComponent::texturePath や事前の SetTexture が効かなかった）。
+  // まだ読んでいなければ texturePath_（既定は circle.png）を読み、失敗したら既定の画像に戻す
+  if (texHandle_ < 0) {
+    const std::string path = texturePath_.empty() ? std::string("Resources/Particle/circle.png") : texturePath_;
+    texHandle_ = RC::LoadTex(path, true);
+    if (texHandle_ < 0 && path != "Resources/Particle/circle.png") {
+      Log::Print(std::format("[GPUParticle] failed to load texture: {} (fallback to circle.png)", path));
+      texturePath_ = "Resources/Particle/circle.png";
+      texHandle_ = RC::LoadTex(texturePath_, true);
+    }
+  }
 
   // ==================
   // 7. ComputeShader パイプライン取得（実行は初回 Render に遅延）

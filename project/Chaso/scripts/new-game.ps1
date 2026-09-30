@@ -12,9 +12,10 @@
     <Dest>/<Name>/
       .gitignore, .project-actions.json, .vscode/, scripts/build/   ← Template/_root から
       project/
-        chaso.sln, main.cpp, AppConfig.json, GameSettings.json
+        chaso.sln, main.cpp
         Application/ChasoApp.vcxproj, Application/Game/Scripts/
         Resources/Scenes/Title.json      ← ゲームのリソース
+        Resources/Setting/               ← AppConfig.json, GameSettings.json
         Chaso/                           ← エンジン（subtree）
 
 .EXAMPLE
@@ -120,7 +121,7 @@ if (Test-Path $tplRoot) {
   }
 }
 # タイトルをゲーム名に（構成別）
-$cfg = Join-Path $target "project\AppConfig.json"
+$cfg = Join-Path $target "project\Resources\Setting\AppConfig.json"
 if (Test-Path $cfg) {
   $j = Get-Content $cfg -Raw -Encoding UTF8 | ConvertFrom-Json
   $j.title = [ordered]@{ Debug = "$Name (Debug)"; Development = "$Name (Development)"; Release = $Name }

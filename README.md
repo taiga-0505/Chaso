@@ -315,13 +315,13 @@ RequestTransition("stage", "Stage3");  // Select → Stage3（行き先をスク
 ```
 project/
   chaso.sln, main.cpp                      ← ゲーム側
-  AppConfig.json / GameSettings.json / EditorConfig.json
   Application/ChasoApp.vcxproj             ← ゲーム側
   Application/Game/Scripts/                ← ゲーム側（NativeScript）
   Resources/                               ← 実行時に使う唯一の Resources（ゲーム側 + エンジン由来のコピー）
     Scenes/*.json                          ← データ駆動シーン
     Levels/                                ← Blender から出力したレベルデータ
     SceneFlow.json                         ← シーン遷移表
+    Setting/                               ← AppConfig.json / GameSettings.json / EditorConfig.json
   Chaso/                                   ← エンジン（ChasoEngine の subtree）
 scripts/build/                             ← CLI ビルド・実行・整形スクリプト
 ```
@@ -380,9 +380,8 @@ powershell -ExecutionPolicy Bypass -File "scripts/build/build_and_run.ps1" -Conf
 | :--- | :--- |
 | 実行 (Debug / Dev / Release) | 各構成でビルドして実行 |
 | クリーン＆ビルド | キャッシュをクリアして再ビルド |
-| コード整形 | `format_code.ps1` による自動整形 |
+| 配布パッケージ | Release でビルドし、実行に必要なファイルだけを `generated/package/` に zip でまとめる（`package_release.ps1`） |
 | エンジン反映 / エンジン取込 | `project/Chaso` と ChasoEngine リポジトリの subtree push / pull |
-| リソース同期 | `Chaso/Resources` → `Resources` の同期（ビルド前にも自動実行） |
 | 新規ゲーム | Template から新しいゲームリポジトリを作成（`new-game.ps1`） |
 | GitHub公開 | リポジトリを GitHub に作成して push（`publish-github.ps1`。origin 設定済みなら push のみ） |
 

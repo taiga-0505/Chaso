@@ -25,10 +25,10 @@
       "color": "#c678dd"
     },
     {
-      "text": "$(paintcan) コード整形",
-      "command": "powershell -ExecutionPolicy Bypass -File scripts/build/format_code.ps1",
-      "tooltip": "コードの自動整形を実行します",
-      "color": "#56b6c2"
+      "text": "$(package) 配布パッケージ",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/build/package_release.ps1 -Configuration Release",
+      "tooltip": "Release でビルドし、exe と Resources を generated/package に zip でまとめます（制作用データは除外）",
+      "color": "#d19a66"
     },
     {
       "text": "$(cloud-upload) エンジン反映",
@@ -40,12 +40,6 @@
       "text": "$(cloud-download) エンジン取込",
       "command": "powershell -ExecutionPolicy Bypass -File project/Chaso/scripts/engine-pull.ps1",
       "tooltip": "ChasoEngine リポジトリの最新を project/Chaso に取り込みます（作業ツリーはクリーンにしておくこと）",
-      "color": "#61afef"
-    },
-    {
-      "text": "$(sync) リソース同期",
-      "command": "powershell -ExecutionPolicy Bypass -File project/Chaso/scripts/sync-resources.ps1",
-      "tooltip": "Chaso/Resources と Resources を同期します（ビルド前にも自動で実行されます）",
       "color": "#61afef"
     },
     {

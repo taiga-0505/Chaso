@@ -5,11 +5,12 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 ```
 ゲームリポジトリ/
   project/
-    chaso.sln, main.cpp, AppConfig.json      ← ゲーム側（Template からコピー）
+    chaso.sln, main.cpp                      ← ゲーム側（Template からコピー）
     Application/ChasoApp.vcxproj             ← ゲーム側
     Application/Game/Scripts/                ← ゲーム側（スクリプト）
     Application/Game/Framework/              ← ゲーム側（GameMode の派生・シーンをまたぐ状態・GameSetup.cpp）
     Resources/                               ← 実行時に使う唯一の Resources（ゲーム + エンジン由来のコピー）
+      Setting/                               ← AppConfig.json / GameSettings.json / EditorConfig.json
     Chaso/                                   ← ★ このリポジトリ（subtree）
       Engine/       エンジン本体（ChasoEngine.vcxproj）
       Externals/    imgui / assimp / DirectXTex / nlohmann / curl / httplib
@@ -41,7 +42,7 @@ DirectX 12 製の自作ゲームエンジン。ゲームリポジトリからは
 保険として `Chaso::ResolvePath()`（`Engine/Common/ResourcePath.h`）が「`Resources/` に無ければ `Chaso/Resources/`」も
 探すので、同期前でも起動はできる。
 
-## ゲームごとに変える設定（`project/AppConfig.json`）
+## ゲームごとに変える設定（`project/Resources/Setting/AppConfig.json`）
 
 ```json
 {
