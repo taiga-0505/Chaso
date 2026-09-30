@@ -11,6 +11,7 @@
 #include "Common/Water/WaterSurface.h"
 #include "Common/Log/Log.h"
 #include "Input/Input.h"
+#include "Render/Systems/RenderInteractiveWater.h"
 #include "RenderCommon.h"
 #include "Engine/Render/RenderContext.h"
 #include "Framework/App.h"
@@ -40,6 +41,10 @@
 ///       TextMeshComponent を持つエンティティとして OnCreate で生成する。
 ///       どれも毎フレーム RC::WaterSurface（Water.VS.hlsl と同じ Gerstner 式）で水面の
 ///       高さと法線をサンプルし、浮き沈み・傾きを追従させる（Floater）。
+///     - 波紋（マウス／船の航跡など、GPU の WaveSimulation）にも反応する。
+///       rippleFloat が true のあいだ RenderInteractiveWater のハイトマップ読み戻しを有効にし
+///       （256KB のコピーだけ。GPU 待ちはしない）、CPU 側で読んだ波紋の高さ・法線を
+///       Gerstner の結果に足す。Game ではこのスクリプトが無いので読み戻しは走らない。
 ///     - メニューの選択は色・大きさ・浮き上がりで示す。
 ///       ↑↓ / W S / 十字キー / 左スティックで選択、Space / Enter / A ボタンで決定。
 ///       「スタート」→ 飛び込み演出のあと遷移表のきっかけ "start" の行き先へ、「ゲーム終了」→ PostQuitMessage(0)。
@@ -77,6 +82,8 @@
 ///     "bobAmplitude" / "bobPeriod" : ぷかぷか上下する量（m）と周期（秒）
 ///     "driftRadius" / "driftPeriod" : 文字がゆっくり漂う円運動の半径（m）と周期（秒）
 ///     "tiltScale"      : 水面法線への傾き追従の強さ（0 で傾かない）
+///     "rippleFloat"    : 波紋（マウス・航跡）にも浮き沈み・傾きを追従させるか（文字・メニュー共通）
+///     "rippleTiltScale": 波紋による傾きの強さ（高さは等倍で追従。傾きだけ抑えられる）
 ///     [メニュー]
 ///     "menuFontPath"   : メニュー文字メッシュのフォント
 ///     "menuSize"       : メニューの 1em の高さ（m）
@@ -131,6 +138,8 @@ public:
   float driftRadius = 0.35f;
   float driftPeriod = 9.0f;
   float tiltScale = 0.7f;
+  bool rippleFloat = true;       ///< 波紋（RenderInteractiveWater）にも追従する
+  float rippleTiltScale = 1.0f;  ///< 波紋による傾きの強さ
 
   // ---- メニュー（3D 文字）----
   std::string menuFontPath = "Resources/fonts/Kiwi_Maru/KiwiMaru-Medium.ttf";
@@ -185,6 +194,8 @@ public:
         {"driftRadius", driftRadius},
         {"driftPeriod", driftPeriod},
         {"tiltScale", tiltScale},
+        {"rippleFloat", rippleFloat},
+        {"rippleTiltScale", rippleTiltScale},
         {"menuFontPath", menuFontPath},
         {"menuSize", menuSize},
         {"menuDepth", menuDepth},
@@ -245,6 +256,8 @@ public:
     readF("driftRadius", driftRadius);
     readF("driftPeriod", driftPeriod);
     readF("tiltScale", tiltScale);
+    readB("rippleFloat", rippleFloat);
+    readF("rippleTiltScale", rippleTiltScale);
 
     readS("menuFontPath", menuFontPath);
     readF("menuSize", menuSize);
@@ -286,6 +299,13 @@ public:
     ImGui::DragFloat("Drift Radius", &driftRadius, 0.01f, 0.0f, 5.0f);
     ImGui::DragFloat("Drift Period", &driftPeriod, 0.1f, 0.5f, 60.0f);
     ImGui::DragFloat("Tilt Scale", &tiltScale, 0.05f, 0.0f, 3.0f);
+    if (ImGui::Checkbox("Ripple Float", &rippleFloat)) {
+      RC::SetInteractiveWaterReadback(rippleFloat);
+      readbackOwned_ = rippleFloat;
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled(RC::IsInteractiveWaterReadbackEnabled() ? "(readback on)" : "(readback off)");
+    ImGui::DragFloat("Ripple Tilt", &rippleTiltScale, 0.05f, 0.0f, 3.0f);
     ImGui::SeparatorText("Menu");
     ImGui::ColorEdit4("Menu Color", &menuColor.x);
     ImGui::ColorEdit4("Selected Color", &menuSelectedColor.x);
@@ -327,6 +347,13 @@ protected:
     // 前のシーン（Game）の障害物が水面の定数バッファに残っていると、
     // タイトルの水面に岩の反射波が出てしまう。ここには障害物が無いので空にする。
     RC::SetWaterObstacles(nullptr, 0);
+
+    // 文字・メニューを波紋にも乗せるため、波紋ハイトマップの CPU 読み戻しを有効にする。
+    // タイトルだけの機能なので OnDestroy で必ず戻す（Game では走らせない）。
+    if (rippleFloat && !RC::IsInteractiveWaterReadbackEnabled()) {
+      RC::SetInteractiveWaterReadback(true);
+      readbackOwned_ = true;
+    }
 
     if (showHint) {
       hintFont_ = RC::LoadFont(hintFontPath, hintFontSize);
@@ -390,6 +417,11 @@ protected:
     }
     letters_.clear();
     menu_.clear();
+    // 自分が有効にした読み戻しだけ戻す（他が使っていれば触らない）
+    if (readbackOwned_) {
+      RC::SetInteractiveWaterReadback(false);
+      readbackOwned_ = false;
+    }
     // 飛び込み／浮上の途中でエディタから停止された場合は、カメラと画面を元へ戻す。
     // シーン遷移で抜ける通常の経路では、切り替え側が ClearPostEffects するので
     // ここで戻しても二重にはならない。
@@ -688,6 +720,20 @@ private:
     if (hasWater) {
       const float zc = (f.zMin + f.zMax) * 0.5f * f.scale; // 文字の見た目の中心（ベースラインからのずれ）
       sample = RC::WaterSurface::Sample(params, waterTime, pos.x, pos.z + zc);
+
+      // 波紋（マウス・航跡）：Water.VS.hlsl と同じく Gerstner の高さに足し、法線も同じ式で合成する。
+      // 読み戻しが無効なら高さ 0・法線 (0,1,0) が返るので、そのまま足しても変わらない。
+      const bool useRipple = rippleFloat && RC::IsInteractiveWaterReadbackEnabled();
+      if (useRipple) {
+        float rh = 0.0f;
+        RC::Vector3 rn{0.0f, 1.0f, 0.0f};
+        RC::SampleInteractiveWater(pos.x, pos.z + zc, rh, rn);
+        sample.height += rh;
+        const RC::Vector3 g = sample.normal;
+        RC::Vector3 n{g.x + rn.x * rippleTiltScale, g.y * rn.y, g.z + rn.z * rippleTiltScale};
+        const float len = std::sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+        if (len > 1e-6f) sample.normal = {n.x / len, n.y / len, n.z / len};
+      }
       topWater = sample.height;
 
       const float hw = f.halfW * f.scale;
@@ -701,8 +747,9 @@ private:
           // 文字の向き（yaw）に合わせて回す
           const float wx = pos.x + lx * cy + lz * sy;
           const float wz = pos.z - lx * sy + lz * cy;
-          topWater = (std::max)(topWater,
-                                RC::WaterSurface::SampleHeight(params, waterTime, wx, wz));
+          float h = RC::WaterSurface::SampleHeight(params, waterTime, wx, wz);
+          if (useRipple) h += RC::SampleInteractiveWaterHeight(wx, wz);
+          topWater = (std::max)(topWater, h);
         }
       }
     }
@@ -901,6 +948,7 @@ private:
   int selected_ = kMenuStart;
   int prevStickDir_ = 0;
   bool decided_ = false;
+  bool readbackOwned_ = false; ///< 波紋の読み戻しを自分が有効にしたか（OnDestroy で戻す）
   std::string startTarget_; ///< 「スタート」の行き先（決定時に遷移表から引く）
   static constexpr const char *kTriggerStart = "start"; ///< 遷移表のきっかけ名
   float time_ = 0.0f;

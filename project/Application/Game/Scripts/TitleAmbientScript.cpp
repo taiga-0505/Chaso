@@ -38,7 +38,9 @@
 //   - 出てくるもの（種類ごとに JSON で on/off・頻度・速さ・大きさを変えられる）:
 //       shark : shark.obj を水面すれすれで泳がせる。背中と背ビレだけが水面から出て、
 //               水中の胴は水面シェーダの岸辺フォーム（深度差）で白く泡立って見える。
-//       drift : 木箱・樽・流木。水面の波（WaterSurface）に合わせて浮き沈み・傾く
+//       drift : 木箱・樽・流木。水面の波（WaterSurface）と波紋（RenderInteractiveWater の
+//               読み戻し。タイトルでは TitleScreenScript が有効化）に合わせて浮き沈み・傾く。
+//               サメと船は自分の航跡を拾って暴れるので波紋には乗せない（Gerstner のみ）
 //       gull  : カモメ。プリミティブの組み合わせ（BirdEnemyScript と同じ作り）で羽ばたく。群れで来ることがある
 //       ship  : 帆船。プリミティブの組み合わせ。波で揺れ、船首から航跡の波紋を出す
 //   - 水面に浮くもの（drift / ship）は、タイトル文字やメニューに重ならないよう
@@ -78,15 +80,8 @@ inline void SyncRender(Entity &e) {
 }
 
 /// @brief 水面の波紋（RenderInteractiveWater）へ波源を入れる。UV はワールド 100m 四方の固定写像
-inline void PushWaveSource(float x, float z, float radius, float strength) {
-  const float u = x / 100.0f + 0.5f;
-  const float v = z / 100.0f + 0.5f;
-  if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f) return;
-  RC::WaveSource s;
-  s.uv = RC::Vector2(u, v);
-  s.radius = radius;
-  s.strength = strength;
-  RC::AddWaveSource(s);
+inline bool PushWaveSource(float x, float z, float radius, float strength) {
+  return RC::AddWaveSourceAtWorld(x, z, radius, strength); // 範囲外・64 個超えは捨てられる（false）
 }
 
 } // namespace TitleAmbientDetail
@@ -100,6 +95,12 @@ inline void PushWaveSource(float x, float z, float radius, float strength) {
 ///   "intervalMin" / "intervalMax" : 次を出すまでの間隔（秒、この範囲で乱数）
 ///   "maxActive"     : 同時に画面にいてよい数（全種合計。カモメの群れは 1 羽ずつ数える）
 ///   "screenMargin"  : 画面の外どれだけ離れたところから出し、どこまで行ったら消すか（m）
+///   [航跡波（サメ・船共通）] 船首のへこみ ＋ 後方へ V 字に広がる 2 本の山（ケルビン波の見立て）
+///   "wakeAngleDeg"   : V の半開き角（度。実際の船は約 19.5°）
+///   "wakeBowStrength" / "wakeBowRadius" : 船首のへこみ（毎フレームの押し下げ量 / 半径 UV）
+///   "wakeArmStrength" / "wakeArmMin" / "wakeArmRadius" : V の山（根元の強さ / 末端の強さ / 半径 UV）
+///   "wakeSpacing"    : 通った道筋を記録する間隔（m）。小さいほど V が滑らかだが波源数が増える
+///   ※ 強さは 1.5 m/s のときの値で、速さに比例して増減する。V の長さは種類ごと（shark/ship の "wakeLength"、m）
 ///   [種類ごと] "shark" / "drift" / "gull" / "ship" の各オブジェクトに
 ///   "enabled" / "weight"（選ばれやすさ）/ "maxActive" / "poolSize"（最初に作っておく数）
 ///   "speedMin" / "speedMax"（m/s）/ "scaleMin" / "scaleMax"
@@ -115,6 +116,14 @@ public:
   float intervalMax = 12.0f;
   int maxActive = 3;
   float screenMargin = 2.0f;
+  // ---- 航跡波（サメ・船共通）----
+  float wakeAngleDeg = 19.5f;     ///< V の半開き角（度）
+  float wakeBowStrength = 0.008f; ///< 船首のへこみ：毎フレームの押し下げ量（1.5 m/s 時）
+  float wakeBowRadius = 0.012f;   ///< 船首のへこみの半径（UV。0.01 = 1m）
+  float wakeArmStrength = 0.008f; ///< V の山：根元の毎フレーム加算量（1.5 m/s 時）
+  float wakeArmMin = 0.003f;      ///< V の山：末端の加算量
+  float wakeArmRadius = 0.006f;   ///< V の山の半径（UV）。波紋テクスチャ 1 テクセル ≒ 0.0039
+  float wakeSpacing = 0.8f;       ///< 道筋を記録する間隔（m）
 
   /// @brief 種類ごとの共通設定
   struct KindParams {
@@ -144,7 +153,8 @@ public:
   float sharkSwayPeriod = 7.0f;          ///< 蛇行の周期（秒）
   float sharkWagDeg = 7.0f;              ///< 尾振り（体の首振り角）
   float sharkWagFrequency = 1.1f;        ///< 尾振りの回数（Hz）
-  bool sharkWake = true;                 ///< 頭の位置から波紋を出す
+  bool sharkWake = true;                 ///< 頭の位置から航跡波を出す
+  float sharkWakeLength = 8.0f;          ///< V の長さ（m）
 
   // ---- 漂流物 ----
   KindParams drift = MakeDrift();
@@ -166,7 +176,8 @@ public:
   // ---- 船 ----
   KindParams ship = MakeShip();
   float shipTiltScale = 0.8f;
-  bool shipWake = true;
+  bool shipWake = true;                  ///< 船首から航跡波を出す
+  float shipWakeLength = 10.0f;          ///< V の長さ（m）
   RC::Vector4 shipHullColor = {0.36f, 0.22f, 0.12f, 1.0f};
   RC::Vector4 shipSailColor = {0.96f, 0.94f, 0.88f, 1.0f};
 
@@ -178,6 +189,13 @@ public:
     j["intervalMax"] = intervalMax;
     j["maxActive"] = maxActive;
     j["screenMargin"] = screenMargin;
+    j["wakeAngleDeg"] = wakeAngleDeg;
+    j["wakeBowStrength"] = wakeBowStrength;
+    j["wakeBowRadius"] = wakeBowRadius;
+    j["wakeArmStrength"] = wakeArmStrength;
+    j["wakeArmMin"] = wakeArmMin;
+    j["wakeArmRadius"] = wakeArmRadius;
+    j["wakeSpacing"] = wakeSpacing;
 
     nlohmann::json js = WriteKind(shark);
     js["modelPath"] = sharkModelPath;
@@ -189,6 +207,7 @@ public:
     js["wagDeg"] = sharkWagDeg;
     js["wagFrequency"] = sharkWagFrequency;
     js["wake"] = sharkWake;
+    js["wakeLength"] = sharkWakeLength;
     j["shark"] = js;
 
     nlohmann::json jd = WriteKind(drift);
@@ -211,6 +230,7 @@ public:
     nlohmann::json jp = WriteKind(ship);
     jp["tiltScale"] = shipTiltScale;
     jp["wake"] = shipWake;
+    jp["wakeLength"] = shipWakeLength;
     jp["hullColor"] = {shipHullColor.x, shipHullColor.y, shipHullColor.z, shipHullColor.w};
     jp["sailColor"] = {shipSailColor.x, shipSailColor.y, shipSailColor.z, shipSailColor.w};
     j["ship"] = jp;
@@ -224,6 +244,13 @@ public:
     ReadF(j, "intervalMax", intervalMax);
     ReadI(j, "maxActive", maxActive);
     ReadF(j, "screenMargin", screenMargin);
+    ReadF(j, "wakeAngleDeg", wakeAngleDeg);
+    ReadF(j, "wakeBowStrength", wakeBowStrength);
+    ReadF(j, "wakeBowRadius", wakeBowRadius);
+    ReadF(j, "wakeArmStrength", wakeArmStrength);
+    ReadF(j, "wakeArmMin", wakeArmMin);
+    ReadF(j, "wakeArmRadius", wakeArmRadius);
+    ReadF(j, "wakeSpacing", wakeSpacing);
 
     if (j.contains("shark") && j["shark"].is_object()) {
       const auto &js = j["shark"];
@@ -237,6 +264,7 @@ public:
       ReadF(js, "wagDeg", sharkWagDeg);
       ReadF(js, "wagFrequency", sharkWagFrequency);
       ReadB(js, "wake", sharkWake);
+      ReadF(js, "wakeLength", sharkWakeLength);
     }
     if (j.contains("drift") && j["drift"].is_object()) {
       const auto &jd = j["drift"];
@@ -262,6 +290,7 @@ public:
       ReadKind(jp, ship);
       ReadF(jp, "tiltScale", shipTiltScale);
       ReadB(jp, "wake", shipWake);
+      ReadF(jp, "wakeLength", shipWakeLength);
       ReadVec4(jp, "hullColor", shipHullColor);
       ReadVec4(jp, "sailColor", shipSailColor);
     }
@@ -277,6 +306,15 @@ public:
     ImGui::DragFloat("Interval Max##Ambient", &intervalMax, 0.1f, 0.2f, 60.0f);
     ImGui::DragInt("Max Active##Ambient", &maxActive, 1, 1, 20);
     ImGui::DragFloat("Screen Margin##Ambient", &screenMargin, 0.1f, 0.0f, 20.0f);
+    ImGui::SeparatorText("Wake (shark / ship)");
+    ImGui::Text("sources this frame: %d / 64 (shared with mouse ripple)", wakeSourcesThisFrame_);
+    ImGui::DragFloat("V Angle (deg)##Wake", &wakeAngleDeg, 0.5f, 5.0f, 45.0f);
+    ImGui::DragFloat("Bow Strength##Wake", &wakeBowStrength, 0.0005f, 0.0f, 0.05f, "%.4f");
+    ImGui::DragFloat("Bow Radius (UV)##Wake", &wakeBowRadius, 0.001f, 0.002f, 0.05f, "%.3f");
+    ImGui::DragFloat("Arm Strength##Wake", &wakeArmStrength, 0.0005f, 0.0f, 0.05f, "%.4f");
+    ImGui::DragFloat("Arm Min##Wake", &wakeArmMin, 0.0005f, 0.0f, 0.05f, "%.4f");
+    ImGui::DragFloat("Arm Radius (UV)##Wake", &wakeArmRadius, 0.001f, 0.002f, 0.05f, "%.3f");
+    ImGui::DragFloat("Trail Spacing (m)##Wake", &wakeSpacing, 0.05f, 0.2f, 5.0f);
 
     auto kindUi = [&](const char *label, Kind k, KindParams &p) {
       ImGui::PushID(label);
@@ -289,8 +327,16 @@ public:
       ImGui::DragFloatRange2("Speed", &p.speedMin, &p.speedMax, 0.05f, 0.1f, 30.0f);
       ImGui::DragFloatRange2("Scale", &p.scaleMin, &p.scaleMax, 0.01f, 0.05f, 20.0f);
       if (ImGui::Button("Spawn Now")) {
-        if (view_.valid) TrySpawn(k);
+        if (!view_.valid) {
+          spawnNote_ = std::string(label) + ": view not ready (camera still moving / not playing)";
+        } else if (TrySpawn(k)) {
+          spawnNote_ = std::string(label) + ": spawned";
+        } else {
+          spawnNote_ = std::string(label) + ": " + spawnFail_;
+        }
       }
+      ImGui::SameLine();
+      ImGui::TextDisabled("%s", spawnNote_.c_str());
       ImGui::PopID();
     };
     kindUi("Shark", Kind::Shark, shark);
@@ -301,6 +347,8 @@ public:
     ImGui::DragFloat("Wag Hz##Shark", &sharkWagFrequency, 0.05f, 0.0f, 5.0f);
     ImGui::DragFloat("Model Yaw Offset##Shark", &sharkModelYawOffsetDeg, 1.0f, -180.0f, 180.0f);
     ImGui::Checkbox("Wake##Shark", &sharkWake);
+    ImGui::SameLine();
+    ImGui::DragFloat("Len (m)##SharkWake", &sharkWakeLength, 0.1f, 0.5f, 30.0f);
     kindUi("Drift", Kind::Drift, drift);
     ImGui::DragFloat("Tilt##Drift", &driftTiltScale, 0.05f, 0.0f, 2.0f);
     ImGui::DragFloat("Float Bias##Drift", &driftFloatBias, 0.01f, -1.0f, 1.0f);
@@ -313,6 +361,8 @@ public:
     kindUi("Ship", Kind::Ship, ship);
     ImGui::DragFloat("Tilt##Ship", &shipTiltScale, 0.05f, 0.0f, 2.0f);
     ImGui::Checkbox("Wake##Ship", &shipWake);
+    ImGui::SameLine();
+    ImGui::DragFloat("Len (m)##ShipWake", &shipWakeLength, 0.1f, 0.5f, 30.0f);
     ImGui::TextDisabled("poolSize / modelPath / lanes are applied on scene reload");
   }
 #endif
@@ -339,6 +389,7 @@ protected:
 
     hasWater_ = BuildWaterParams(scene, water_);
     waterTime_ = RC::GetWaterTime();
+    wakeSourcesThisFrame_ = 0;
 
     for (auto &a : actors_) {
       if (!a.active) continue;
@@ -384,6 +435,13 @@ private:
     Mat3 local = TitleAmbientDetail::Identity(); ///< 本体に対する部位の向き
   };
 
+  /// @brief 航跡の道筋 1 点：船首がそこを通ったときの位置・右方向・道のり
+  struct WakeSample {
+    RC::Vector3 pos{};
+    RC::Vector3 right{};
+    float dist = 0.0f;
+  };
+
   struct Actor {
     Kind kind = Kind::Shark;
     int variant = 0;           ///< drift: 0 木箱 / 1 樽 / 2 流木
@@ -403,16 +461,18 @@ private:
     float spin = 0.0f;         ///< 漂流物の自転角
     RC::Vector3 dir{0, 0, 1};  ///< 出現時の進行方向（画面外へ出たかの判定用）
 
+    // 航跡（通った道筋。Wake 参照）
+    std::vector<WakeSample> wake;
+    float wakePath = 0.0f;     ///< 船首が進んだ道のり（m）
+    RC::Vector3 wakeLast{};    ///< 前フレームの船首位置
+    bool wakeHasLast = false;
+
     // カモメ
     float flapPhase = 0.0f;
     float flapWeight = 1.0f;   ///< 1: 羽ばたき / 0: 滑空
     bool gliding = false;
     float glideTimer = 0.0f;
     float roll = 0.0f;
-
-    // 航跡
-    RC::Vector3 prevWake{};
-    bool hasPrevWake = false;
   };
 
   /// @brief 真上視点の画面範囲（水面の高さでの半幅・半高さ）
@@ -632,21 +692,28 @@ private:
     return false;
   }
 
-  float WaterHeight(float x, float z) const {
+  /// @brief 水面の高さ（Gerstner。ripple=true なら波紋も足す）
+  /// @param ripple 波紋（マウス・航跡）にも乗せるか。航跡を出す本人（サメ・船）は false にすること：
+  ///               自分の航跡（船首直下の 30cm 級のへこみ。1〜2 フレーム遅れで届き、0.4m ごとに
+  ///               パルス状に入る）を拾うと前後左右の 4 点差分が暴れてガクガク揺れる
+  float WaterHeight(float x, float z, bool ripple = false) const {
     if (!hasWater_) return view_.waterY;
     // 見た目だけなので逆解きは 1 回で十分（部位ごとに何点も引くため軽くしておく）
-    return RC::WaterSurface::SampleHeight(water_, waterTime_, x, z, nullptr, 0, 1.0f, 3.0f, 1);
+    float h = RC::WaterSurface::SampleHeight(water_, waterTime_, x, z, nullptr, 0, 1.0f, 3.0f, 1);
+    // 波紋は TitleScreenScript が読み戻しを有効にしているときだけ乗る（無効なら 0）
+    if (ripple) h += RC::SampleInteractiveWaterHeight(x, z);
+    return h;
   }
 
   /// @brief 前後・左右の 4 点の水面から、中心の高さとピッチ・ロールを求める
   void WaterPose(const RC::Vector3 &c, float yaw, float halfLen, float halfWid, float &outY,
-                 float &outPitchUp, float &outRoll) const {
+                 float &outPitchUp, float &outRoll, bool ripple = false) const {
     const RC::Vector3 f = TitleAmbientDetail::Forward(yaw);
     const RC::Vector3 r = {f.z, 0.0f, -f.x};
-    const float hF = WaterHeight(c.x + f.x * halfLen, c.z + f.z * halfLen);
-    const float hB = WaterHeight(c.x - f.x * halfLen, c.z - f.z * halfLen);
-    const float hR = WaterHeight(c.x + r.x * halfWid, c.z + r.z * halfWid);
-    const float hL = WaterHeight(c.x - r.x * halfWid, c.z - r.z * halfWid);
+    const float hF = WaterHeight(c.x + f.x * halfLen, c.z + f.z * halfLen, ripple);
+    const float hB = WaterHeight(c.x - f.x * halfLen, c.z - f.z * halfLen, ripple);
+    const float hR = WaterHeight(c.x + r.x * halfWid, c.z + r.z * halfWid, ripple);
+    const float hL = WaterHeight(c.x - r.x * halfWid, c.z - r.z * halfWid, ripple);
     outY = (hF + hB + hR + hL) * 0.25f;
     outPitchUp = std::atan2(hF - hB, 2.0f * halfLen);
     outRoll = std::atan2(hR - hL, 2.0f * halfWid);
@@ -889,10 +956,20 @@ private:
   }
 
   bool TrySpawn(Kind k) {
-    if (!CanSpawn(k)) return false;
+    spawnFail_.clear();
+    if (!CanSpawn(k)) {
+      const KindParams &p = Params(k);
+      if (!p.enabled || p.weight <= 0.0f) spawnFail_ = "disabled / weight 0";
+      else if (CountActive(k) >= p.maxActive) spawnFail_ = "already at max active (previous one still active?)";
+      else spawnFail_ = "no free actor (pool not built yet / model loading)";
+      return false;
+    }
     if (k == Kind::Gull) return SpawnGullFlock();
     Actor *a = FreeActor(k);
-    if (!a) return false;
+    if (!a) {
+      spawnFail_ = "no free actor";
+      return false;
+    }
     const KindParams &p = Params(k);
     a->scale = Rand(p.scaleMin, p.scaleMax);
     a->speed = Rand(p.speedMin, p.speedMax);
@@ -918,7 +995,10 @@ private:
       break;
     }
 
-    if (!PlacePath(*a, p, view_.waterY)) return false;
+    if (!PlacePath(*a, p, view_.waterY)) {
+      spawnFail_ = "lane busy (drift/ship already in every lane, or lane narrower than laneRadius)";
+      return false;
+    }
     Activate(*a);
     return true;
   }
@@ -1030,8 +1110,10 @@ private:
   void Activate(Actor &a) {
     a.active = true;
     a.t = 0.0f;
+    a.wake.clear();
+    a.wakePath = 0.0f;
+    a.wakeHasLast = false;
     a.yaw = a.heading;
-    a.hasPrevWake = false;
     // 先に姿勢を書いてからアクティブにする（前回の位置で 1 フレーム映らないように）
     UpdateActor(a, 0.0f);
     for (auto &p : a.parts) {
@@ -1099,14 +1181,62 @@ private:
     }
   }
 
-  void Wake(Actor &a, const RC::Vector3 &at, float radius, float gain) {
-    if (a.hasPrevWake) {
-      // MoveCollider と同じ作法：前フレーム位置をへこませ、今の位置を押し上げると進む向きに波が立つ
-      TitleAmbientDetail::PushWaveSource(a.prevWake.x, a.prevWake.z, radius, -a.speed * gain);
-      TitleAmbientDetail::PushWaveSource(at.x, at.z, radius, a.speed * gain);
+  /// @brief 航跡波を出す：船首のへこみ ＋ 通った道筋から V 字に広がる 2 本の山
+  /// @param bow 船首（サメは頭）のワールド位置
+  /// @param fwd 進行方向（xz、正規化済み）
+  /// @param length V の長さ（m）。これより古い道筋は捨てる
+  /// @details 波紋シミュレーション（WaveSimulation.CS）は毎フレーム減衰が強く（速度 0.95・高さ 0.99）、
+  ///          波の伝播速度（約 9 m/s）が船（1.5 m/s）よりずっと速いので、点波源を置くだけでは
+  ///          物理的にケルビン波（V 字）は出ない。そこで V を毎フレーム「押し続けて」形を保つ。
+  ///          V は今の向きから生やすのではなく、船首が実際に通った道筋（wakeSpacing ごとに記録）から
+  ///          生やす。各点は「そこを通ったときの右方向」へ、通過後の道のり × tan(角度) だけ開く。
+  ///          こうすると水に残った波として振る舞い、サメが蛇行しても V が一緒に振られない。
+  ///          先端側ほど強く・末端へ向けて弱めることで、後ろへ流れて消えていくように見せる。
+  ///          1 フレームに入れられる波源は全体で 64 個（マウス波紋と共用）。
+  ///          1 体 = 1 + 2 × (length / wakeSpacing) 個。既定（船 10m・サメ 8m、0.8m 間隔）で 27 + 21 = 48 個。
+  void Wake(Actor &a, const RC::Vector3 &bow, const RC::Vector3 &fwd, float length) {
+    // 強さは 1.5 m/s を基準に速さへ比例させる（速いほどはっきり）
+    const float speedScale = std::clamp(a.speed / 1.5f, 0.75f, 2.0f);
+    const float L = (std::max)(length, 0.1f);
+    const float spacing = (std::max)(wakeSpacing, 0.2f);
+
+    // 道のりを積算し、spacing ごとに道筋を記録する
+    if (a.wakeHasLast) {
+      const float dx = bow.x - a.wakeLast.x;
+      const float dz = bow.z - a.wakeLast.z;
+      a.wakePath += std::sqrt(dx * dx + dz * dz);
     }
-    a.prevWake = at;
-    a.hasPrevWake = true;
+    a.wakeLast = bow;
+    a.wakeHasLast = true;
+    if (a.wake.empty() || a.wakePath - a.wake.back().dist >= spacing) {
+      a.wake.push_back({bow, {fwd.z, 0.0f, -fwd.x}, a.wakePath});
+    }
+    // V の長さより古い道筋は捨てる（先頭から順に古い）
+    size_t drop = 0;
+    while (drop < a.wake.size() && a.wakePath - a.wake[drop].dist > L) ++drop;
+    if (drop > 0) a.wake.erase(a.wake.begin(), a.wake.begin() + static_cast<std::ptrdiff_t>(drop));
+
+    // 船首のへこみ
+    if (wakeBowStrength > 0.0f) {
+      if (TitleAmbientDetail::PushWaveSource(bow.x, bow.z, wakeBowRadius, -wakeBowStrength * speedScale)) {
+        ++wakeSourcesThisFrame_;
+      }
+    }
+
+    // V の腕：各道筋点から、通過後の道のり d に応じて左右へ d·tan(角度) だけ開いた位置を押し上げる
+    const float tanA = std::tan(std::clamp(wakeAngleDeg, 1.0f, 80.0f) * TitleAmbientDetail::kDeg);
+    for (const WakeSample &w : a.wake) {
+      const float d = a.wakePath - w.dist;
+      if (d < spacing * 0.5f) continue; // 船首の真下はへこみと重なるので飛ばす
+      const float amp = ((1.0f - d / L) * wakeArmStrength + wakeArmMin) * speedScale;
+      if (amp <= 0.0f) continue;
+      const float side = d * tanA;
+      for (float sgn : {1.0f, -1.0f}) {
+        const float px = w.pos.x + w.right.x * sgn * side;
+        const float pz = w.pos.z + w.right.z * sgn * side;
+        if (TitleAmbientDetail::PushWaveSource(px, pz, wakeArmRadius, amp)) ++wakeSourcesThisFrame_;
+      }
+    }
   }
 
   void UpdateShark(Actor &a, float dt) {
@@ -1147,7 +1277,7 @@ private:
 
     if (sharkWake && dt > 0.0f) {
       const float nose = 0.45f * a.scale;
-      Wake(a, {center.x + fv.x * nose, 0.0f, center.z + fv.z * nose}, 0.03f, 0.03f);
+      Wake(a, {center.x + fv.x * nose, 0.0f, center.z + fv.z * nose}, fv, sharkWakeLength);
     }
   }
 
@@ -1168,7 +1298,8 @@ private:
     halfWid *= a.scale;
 
     float y = 0.0f, pitch = 0.0f, roll = 0.0f;
-    WaterPose(a.pos, a.spin, halfLen, halfWid, y, pitch, roll);
+    // 漂流物は航跡を出さないので、マウスや船の波紋に素直に乗せる
+    WaterPose(a.pos, a.spin, halfLen, halfWid, y, pitch, roll, /*ripple=*/true);
     // ぷかぷか：波とは別に小さく上下
     y += floatOffset * a.scale + driftFloatBias + 0.04f * std::sin(a.t * 2.1f + a.phase);
     const Mat3 body = BodyMatrix(a.spin, pitch * driftTiltScale, roll * driftTiltScale);
@@ -1246,7 +1377,7 @@ private:
 
     if (shipWake && dt > 0.0f) {
       const float bow = 2.6f * a.scale;
-      Wake(a, {a.pos.x + f.x * bow, 0.0f, a.pos.z + f.z * bow}, 0.035f, 0.04f);
+      Wake(a, {a.pos.x + f.x * bow, 0.0f, a.pos.z + f.z * bow}, f, shipWakeLength);
     }
   }
 
@@ -1274,6 +1405,9 @@ private:
   RC::WaterWaveParams water_;
   bool hasWater_ = false;
   float waterTime_ = 0.0f;
+  int wakeSourcesThisFrame_ = 0; ///< このフレームに入れた航跡の波源数（ImGui 表示用）
+  std::string spawnFail_;        ///< 直近の TrySpawn が失敗した理由（ImGui 表示用）
+  std::string spawnNote_;        ///< ImGui の Spawn Now の結果表示
 };
 
 REGISTER_SCRIPT(TitleAmbientScript)
