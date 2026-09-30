@@ -5,8 +5,6 @@ DirectX 12ベースの自作ゲームエンジンです。
 
 [![DebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/DebugBuild.yml)
 [![ReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/ReleaseBuild.yml)
-[![EngineDebugBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineDebugBuild.yml)
-[![EngineReleaseBuild](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml/badge.svg?branch=Engine)](https://github.com/taiga-0505/Chaso/actions/workflows/EngineReleaseBuild.yml)
 [![CheckUnwantedFiles](https://github.com/taiga-0505/Chaso/actions/workflows/CheckUnwantedFiles.yml/badge.svg)](https://github.com/taiga-0505/Chaso/actions/workflows/CheckUnwantedFiles.yml)
 
 ## 概要 (Overview)
@@ -165,6 +163,150 @@ DirectX 12ベースの自作ゲームエンジンです。
 | **Development** | 最適化ありでエディタ・デバッグキー有効（`RC_DEVELOPMENT`） |
 | **Release** | 配布用。エディタ・デバッグキーは無効 |
 
+## アーキテクチャ (Architecture)
+
+### 全体構成
+
+`App` がサブシステムを所有し、`Game` → `SceneManager` → `DataDrivenScene` の順にシーンを駆動します。
+ゲーム固有の処理は Application 側の NativeScript と GameMode に閉じ込め、エンジンはゲームの型を知らない構成です。
+
+```mermaid
+flowchart TD
+  App["App<br/>Window / Dx12Core / Input / PipelineManager / PostProcess"]
+  Editor["EditorManager<br/>(Debug / Development のみ)"]
+  Game["Game"]
+  SM["SceneManager<br/>State パターン（フェード / ロード）"]
+  DDS["DataDrivenScene<br/>Resources/Scenes/*.json"]
+  Entity["Entity + Components"]
+  Script["NativeScript<br/>(ScriptableEntity)"]
+  GM["GameMode / GameState"]
+  Flow["SceneFlow<br/>Resources/SceneFlow.json"]
+  RC["RenderCommon (RC::)<br/>描画 API"]
+  Audio["AudioEngine<br/>XAudio2 / X3DAudio"]
+
+  App --> Game
+  App --> Editor
+  Game --> SM
+  SM --> DDS
+  DDS --> Entity
+  DDS --> GM
+  Entity --> Script
+  Script -- "RequestTransition(trigger)" --> Flow
+  GM -- "EvaluateOutcome → trigger" --> Flow
+  Flow -- "遷移先・演出" --> SM
+  DDS --> RC
+  Entity -- "AudioSource / AudioListener" --> Audio
+  Editor -. "EditorExtension / DebugBridge" .-> Game
+```
+
+### 1 フレームの描画順
+
+`DataDrivenScene::Render` で 3D / 2D を中間レンダーテクスチャに描き、`App` がポストプロセスとエディタ UI を重ねます。
+
+```mermaid
+flowchart LR
+  BG["2D 背景<br/>(ScreenBehind)"] --> SS["スポットライト影<br/>シャドウアトラス"]
+  SS --> DS["平行光源の<br/>シャドウパス"]
+  DS --> MK["マスクパス<br/>(OnMaskRender)"]
+  MK --> M3["メイン 3D<br/>Sky / Model / Water / Particle"]
+  M3 --> OV3["3D オーバーレイ<br/>ギズモ・デバッグ描画"]
+  OV3 --> D2["2D<br/>Sprite / Text / OnRender"]
+  D2 --> PP["ポストプロセス<br/>(マルチパス)"]
+  PP --> OVL["オーバーレイ<br/>(OnOverlayRender)"]
+  OVL --> UI["エディタ UI<br/>(ImGui)"]
+```
+
+ポストプロセス後のオーバーレイには、ポーズメニューのように画面効果を受けたくない UI を描きます。
+
+## スクリプトの書き方 (Quick Start)
+
+### NativeScript の最小例
+
+`Application/Game/Scripts/` に `.cpp` を追加し（`ChasoApp` プロジェクトに登録）、`REGISTER_SCRIPT` で登録すると、Inspector の **Add Component > Native Script** のプルダウンに表示されます。
+
+```cpp
+#include "ECS/ScriptableEntity.h"
+#include "ECS/ScriptRegistry.h"
+#include "ECS/TransformComponent.h"
+#include "ECS/AudioSourceComponent.h"
+#include "Common/SceneContext.h"
+#include "Input/Input.h"
+#if RC_ENABLE_IMGUI
+#include "imgui/imgui.h"
+#endif
+
+/// @brief 回転しながら、Space で音を鳴らし、Enter で次のシーンへ進むスクリプト
+class SpinnerScript : public ScriptableEntity {
+public:
+  float speed = 1.0f; ///< 回転速度（Inspector で調整、シーン JSON に保存）
+
+  void OnCreate() override {}
+
+  void OnUpdate(float deltaTime) override {
+    if (auto* tr = GetComponent<TransformComponent>()) {
+      tr->rotation.y += speed * deltaTime;
+    }
+
+    SceneContext* ctx = GetSceneContext();
+    if (!ctx || !ctx->input) return;
+
+    // 同じエンティティの AudioSourceComponent に登録した "shoot" スロットを鳴らす
+    if (ctx->input->IsKeyTrigger(DIK_SPACE)) {
+      if (auto* audio = GetComponent<AudioSourceComponent>()) audio->Play("shoot");
+    }
+
+    // シーン名は書かず、きっかけ名だけで遷移（行き先は SceneFlow.json が決める）
+    if (ctx->input->IsKeyTrigger(DIK_RETURN)) {
+      RequestTransition("start");
+    }
+  }
+
+  // シーン JSON への保存 / 読み込み
+  nlohmann::json Serialize() override { return {{"speed", speed}}; }
+  void Deserialize(const nlohmann::json& j) override {
+    if (j.contains("speed")) speed = j["speed"].get<float>();
+  }
+
+#if RC_ENABLE_IMGUI
+  // Inspector に出す UI
+  void OnImGui() override { ImGui::DragFloat("Speed", &speed, 0.01f); }
+#endif
+};
+
+REGISTER_SCRIPT(SpinnerScript)
+```
+
+### SceneFlow.json の例
+
+遷移はすべて `project/Resources/SceneFlow.json` の表で決まります。エディタの **Window > Scene Flow** から表形式でも編集できます。
+
+```json
+{
+  "version": 1,
+  "rules": [
+    { "from": "Title",  "trigger": "start",       "to": "Select",   "transition": "dive",     "note": "タイトルの「スタート」" },
+    { "from": "Select", "trigger": "stage",       "to": "$arg",     "transition": "dive",     "note": "選んだステージへ" },
+    { "from": "Stage*", "trigger": "cleared",     "to": "Result",   "transition": "dissolve", "note": "GameMode の決着" },
+    { "from": "Stage*", "trigger": "pause_retry", "to": "$current", "transition": "dissolve", "note": "ポーズ「はじめから」" }
+  ]
+}
+```
+
+| フィールド | 意味 |
+| :--- | :--- |
+| `from` | 遷移元。シーン名 / `"Stage*"`（前方一致）/ `"*"`（全シーン）。複数当てはまる場合は「完全一致 → 長い前方一致 → `*`」の順で優先 |
+| `trigger` | きっかけ名。スクリプトの `RequestTransition()` や GameMode の `EvaluateOutcome()` が渡す |
+| `to` | 遷移先。シーン名、または `$current`（やり直し）/ `$arg`（`RequestTransition` の第 2 引数）/ Application が `RegisterVariable` で登録した変数 |
+| `transition` | 演出名（`dissolve` / `dive`） |
+| `note` | メモ（エディタに表示されるだけ） |
+
+スクリプト側からの呼び出し例です。
+
+```cpp
+RequestTransition("start");            // Title → Select
+RequestTransition("stage", "Stage3");  // Select → Stage3（行き先をスクリプトが決める）
+```
+
 ## ディレクトリ構成 (Folder Structure)
 
 エンジン本体は **[ChasoEngine](https://github.com/taiga-0505/ChasoEngine)** リポジトリで管理し、
@@ -249,17 +391,27 @@ powershell -ExecutionPolicy Bypass -File "scripts/build/build_and_run.ps1" -Conf
 | ワークフロー | トリガー | 内容 |
 | :--- | :--- | :--- |
 | DebugBuild / ReleaseBuild | `master` への push | ソリューションの Debug / Release ビルド |
-| EngineDebugBuild / EngineReleaseBuild | `Engine` ブランチへの push | エンジン側の Debug / Release ビルド |
 | CheckUnwantedFiles | `master` / 手動実行 | 不要ファイルがコミットされていないかの検査 |
 
-## 使用ライブラリ (Libraries)
+## 使用ライブラリとライセンス (Libraries & Licenses)
 
-- [DirectX 12](https://github.com/microsoft/DirectX-Graphics-Samples) / DXC / DirectWrite / Direct2D
-- [Assimp](https://github.com/assimp/assimp)
-- [DirectXTex](https://github.com/microsoft/DirectXTex)
-- [Dear ImGui](https://github.com/ocornut/imgui) / [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
-- [nlohmann/json](https://github.com/nlohmann/json)
-- [libcurl](https://curl.se/libcurl/) / [cpp-httplib](https://github.com/yhirose/cpp-httplib)
+### 同梱している外部ライブラリ (`project/Chaso/Externals/`)
+
+| ライブラリ | 用途 | ライセンス |
+| :--- | :--- | :--- |
+| [Assimp](https://github.com/assimp/assimp) | 3D モデル・アニメーションの読み込み | BSD 3-Clause |
+| [DirectXTex](https://github.com/microsoft/DirectXTex) | テクスチャの読み込み（DDS / WIC） | MIT |
+| [Dear ImGui](https://github.com/ocornut/imgui) | エディタ UI | MIT |
+| [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo) | Viewport のギズモ操作 | MIT |
+| [nlohmann/json](https://github.com/nlohmann/json) | シーン・設定の JSON 入出力 | MIT |
+| [libcurl](https://curl.se/libcurl/) | ネットワーク（準備段階） | [curl License](https://curl.se/docs/copyright.html)（MIT 系） |
+| [cpp-httplib](https://github.com/yhirose/cpp-httplib) | ネットワーク（準備段階） | MIT |
+
+各ライブラリの著作権とライセンス条件は、それぞれの配布元に従います。再配布するときは、各ライブラリのライセンス文を同梱してください。
+
+### Windows SDK のコンポーネント
+
+- DirectX 12 / DXC / DirectWrite / Direct2D（描画・シェーダコンパイル・文字）
 - XAudio2 / X3DAudio（サウンド再生・3D 音響）
 - Media Foundation（音声デコード・動画録画）
 - DirectInput / XInput（入力）
